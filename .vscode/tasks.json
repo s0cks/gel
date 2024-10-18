@@ -1,0 +1,101 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "cmake",
+      "label": "configure",
+      "command": "configure",
+      "preset": "${command:cmake.activeBuildPresetName}",
+      "targets": [
+        "${command:cmake.buildTargetName}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/build/"
+      }
+    },
+    {
+      "type": "cmake",
+      "label": "Build",
+      "command": "build",
+      "preset": "${command:cmake.activeBuildPresetName}",
+      "targets": [
+        "${command:cmake.buildTargetName}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/build/"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+    },
+    {
+      "type": "cmake",
+      "label": "Build: Docs",
+      "dependsOn": "clean: docs",
+      "command": "build",
+      "preset": "${command:cmake.activeBuildPresetName}",
+      "targets": [
+        "doxygen",
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/build/"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": false,
+      },
+    },
+    {
+      "type": "shell",
+      "label": "clean: docs/",
+      "options": {
+        "cwd": "${workspaceFolder}/docs/"
+      },
+      "osx": {
+        "command": "find . '!' -name '.gitkeep' -delete"
+      },
+      "linux": {
+        "command": "find '!' -name '.gitkeep' -delete"
+      },
+      "problemMatcher": [],
+      "detail": "Clean the docs/ directory.",
+    },
+    {
+      "type": "shell",
+      "label": "open: docs/index.html",
+      "dependsOn": "Build: Docs",
+      "options": {
+        "cwd": "${workspaceFolder}/docs/html"
+      },
+      "problemMatcher": [],
+      "detail": "Open Doxygen docs in browser",
+      "osx": {
+        "command": "open index.html"
+      },
+      "linux": {
+        "command": "open index.html",
+      }
+    },
+    {
+      "type": "shell",
+      "label": "Open Sources/ coverage",
+      "command": "open index.html",
+      "options": {
+        "cwd": "${workspaceFolder}/build/Sources/html"
+      },
+      "problemMatcher": [],
+      "detail": "open Sources/ coverage in browser"
+    },
+    {
+      "type": "shell",
+      "label": "Open Tests/ coverage",
+      "command": "open index.html",
+      "options": {
+        "cwd": "${workspaceFolder}/build/Tests/html"
+      },
+      "problemMatcher": [],
+      "detail": "open Tests/ coverage in browser"
+    },
+  ],
+}

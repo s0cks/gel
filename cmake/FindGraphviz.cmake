@@ -1,0 +1,76 @@
+if(APPLE)
+  list(APPEND GV_SEARCH_PATHS
+    /opt/homebrew)
+elseif(WIN32)
+  #TODO: implement
+else()
+  list(APPEND GV_SEARCH_PATHS
+    /usr
+    /usr/local)
+endif()
+
+find_path(GRAPHVIZ_INCLUDE_DIR
+  NAMES graphviz/cgraph.h
+  PATHS ${GV_SEARCH_PATHS}
+  NO_CACHE
+  REQUIRED)
+
+find_library(GRAPHVIZ_GVC_LIB
+  NAMES libgvc gvc
+  PATHS ${GV_SEARCH_PATHS}
+  PATH_SUFFIXES lib
+  NO_CACHE
+  REQUIRED)
+
+find_library(GRAPHVIZ_CGRAPH_LIB
+  NAMES libcgraph cgraph graph
+  PATHS ${GV_SEARCH_PATHS}
+  PATH_SUFFIXES lib
+  NO_CACHE
+  REQUIRED)
+
+find_library(GRAPHVIZ_CDT_LIB
+  NAMES libcdt cdt
+  PATHS ${GV_SEARCH_PATHS}
+  PATH_SUFFIXES lib
+  NO_CACHE
+  REQUIRED)
+
+set(GRAPHVIZ_INCLUDE_DIRS ${GRAPHVIZ_INCLUDE_DIR})
+set(GRAPHVIZ_LIBRARIES ${GRAPHVIZ_GVC_LIB} ${GRAPHVIZ_CGRAPH_LIB} ${GRAPHVIZ_CDT_LIB})
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(Graphviz DEFAULT_MSG GRAPHVIZ_INCLUDE_DIRS GRAPHVIZ_LIBRARIES)
+mark_as_advanced(GRAPHVIZ_INCLUDE_DIR GRAPHVIZ_GVC_LIB GRAPHVIZ_CGRAPH_LIB GRAPHVIZ_CDT_LIB)
+if(GRAPHVIZ_FOUND)
+  find_program(DOT
+    NAMES dot
+    PATHS ${GV_SEARCH_PATHS}
+    NO_CACHE
+    REQUIRED)
+  execute_process(
+    COMMAND ${DOT} --version
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    ERROR_VARIABLE DOT_VERSION)
+  string(REGEX MATCH "[0-9]+\.[0-9]+\.[0-9]+" DOT_VERSION "${DOT_VERSION}")
+
+  message(STATUS "found Graphviz v${DOT_VERSION}")
+  set(GRAPHVIZ_VERSION ${DOT_VERSION})
+  set(GRAPHVIZ_INCLUDE_DIRS ${GV_INCLUDE_DIR})
+  set(GRAPHVIZ_LIBRARIES ${GV_CGRAPH_LIB})
+endif()
+
+add_library(graphviz::cgraph SHARED IMPORTED GLOBAL)
+set_target_properties(graphviz::cgraph PROPERTIES
+  IMPORTED_LOCATION "${GRAPHVIZ_CGRAPH_LIB}"
+  INTERFACE_INCLUDE_DIRECTORIES "${GRAPHVIZ_INCLUDE_DIRS}")
+
+add_library(graphviz::gvc SHARED IMPORTED GLOBAL)
+set_target_properties(graphviz::gvc PROPERTIES
+  IMPORTED_LOCATION "${GRAPHVIZ_GVC_LIB}"
+  INTERFACE_INCLUDE_DIRECTORIES "${GRAPHVIZ_INCLUDE_DIRS}")
+
+add_library(graphviz::cdt SHARED IMPORTED GLOBAL)
+set_target_properties(graphviz::cdt PROPERTIES
+  IMPORTED_LOCATION "${GRAPHVIZ_CDT_LIB}"
+  INTERFACE_INCLUDE_DIRECTORIES "${GRAPHVIZ_INCLUDE_DIRS}")

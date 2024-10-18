@@ -1,0 +1,10 @@
+{
+  "dependencies": [
+    "benchmark",
+    "fmt",
+    "gflags",
+    "glog",
+    "gtest",
+    "tracy"
+  ]
+}

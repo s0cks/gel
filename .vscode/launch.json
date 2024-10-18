@@ -1,0 +1,76 @@
+{
+  "version": "0.2.0",
+  "inputs": [
+    {
+      "id": "test-filter",
+      "type": "promptString",
+      "default": "*",
+      "description": "The filter pattern for GTest"
+    }
+  ],
+  "configurations": [
+    {
+      "name": "All Tests",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/Tests/scheme-tests",
+      "args": [
+        "--gtest_color=yes",
+        "-logtostdout",
+        "-colorlogtostdout"
+      ],
+      "cwd": "${workspaceFolder}",
+      "initCommands": [
+        "command source ${workspaceFolder}/.lldbinit"
+      ]
+    },
+    {
+      "name": "Run Tests",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/Tests/scheme-tests",
+      "args": [
+        "--gtest_filter=${input:test-filter}",
+        "--gtest_color=yes",
+        "-logtostdout",
+        "-colorlogtostdout"
+      ],
+      "cwd": "${workspaceFolder}",
+      "initCommands": [
+        "command source ${workspaceFolder}/.lldbinit"
+      ]
+    },
+    {
+      "name": "Parser Tests",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/Tests/scheme-tests",
+      "args": [
+        "--gtest_filter=Parser*",
+        "--gtest_color=yes",
+        "-logtostdout",
+        "-colorlogtostdout"
+      ],
+      "cwd": "${workspaceFolder}",
+      "initCommands": [
+        "command source ${workspaceFolder}/.lldbinit"
+      ]
+    },
+        {
+      "name": "FlowGraph Tests",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/Tests/scheme-tests",
+      "args": [
+        "--gtest_filter=FlowGraph*",
+        "--gtest_color=yes",
+        "-logtostdout",
+        "-colorlogtostdout"
+      ],
+      "cwd": "${workspaceFolder}",
+      "initCommands": [
+        "command source ${workspaceFolder}/.lldbinit"
+      ]
+    },
+  ]
+}

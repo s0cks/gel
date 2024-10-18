@@ -1,0 +1,20 @@
+OUTPUT_DIRECTORY            = @DOXYGEN_BUILD_DIR@
+INPUT                       = @DOXYGEN_INPUT_DIR@
+PROJECT_NAME                = @PROJECT_NAME@
+EXCLUDE_PATTERNS            = @DOXYGEN_EXCLUDE_PATTERNS@
+RECURSIVE                   = YES
+EXTRACT_ALL                 = YES
+EXTRACT_PRIVATE             = YES
+GENERATE_TODOLIST           = YES
+GENERATE_BUGLIST            = YES
+GENERATE_HTML               = YES
+GENERATE_LATEX              = NO
+GENERATE_TREEVIEW           = YES
+# dot
+HAVE_DOT                    = YES
+DOT_IMAGE_FORMAT            = svg
+DOT_NUM_THREADS             = @NUM_PROCESSORS@
+# styles
+HTML_COLORSTYLE             = LIGHT
+HTML_EXTRA_FILES            = @DOXYGEN_HTML_EXTRA_FILES@
+HTML_EXTRA_STYLESHEET       = @DOXYGEN_HTML_EXTRA_STYLESHEETS@
