@@ -462,18 +462,18 @@ class QuoteExpr : public Expression {
 
 class CallProcExpr : public Expression {
  private:
-  std::string symbol_;
+  Symbol* symbol_;
   Expression* args_;
 
-  explicit CallProcExpr(std::string symbol, Expression* args) :
+  explicit CallProcExpr(Symbol* symbol, Expression* args) :
     Expression(),
-    symbol_(std::move(symbol)),
+    symbol_(symbol),
     args_(args) {}
 
  public:
   ~CallProcExpr() override = default;
 
-  auto GetSymbol() const -> const std::string& {
+  auto GetSymbol() const -> Symbol* {
     return symbol_;
   }
 
@@ -484,8 +484,12 @@ class CallProcExpr : public Expression {
   DECLARE_NODE_TYPE(CallProcExpr);
 
  public:
-  static inline auto New(const std::string& symbol, Expression* args) -> CallProcExpr* {
+  static inline auto New(Symbol* symbol, Expression* args) -> CallProcExpr* {
     return new CallProcExpr(symbol, args);
+  }
+
+  static inline auto New(const std::string& symbol, Expression* args) -> CallProcExpr* {
+    return New(Symbol::New(symbol), args);
   }
 };
 

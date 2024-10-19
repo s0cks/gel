@@ -6,6 +6,7 @@
 
 #include "scheme/ast.h"
 #include "scheme/common.h"
+#include "scheme/instruction.h"
 
 namespace scm {
 auto Parser::ParseLiteral() -> ast::ConstantExpr* {
@@ -47,8 +48,8 @@ auto Parser::ParseExpression() -> ast::Expression* {
     return ParseLiteral();
   switch (peek.kind) {
     case Token::kIdentifier: {
-      const auto ident = ParseIdentifier();
-      return ast::LoadVariableExpr::New(new Variable(ident));
+      const auto symbol = ParseIdentifier();
+      return ast::LoadVariableExpr::New(new Variable(symbol));
     }
     case Token::kLParen:
       stream().Next();
@@ -153,13 +154,21 @@ auto Parser::ParseBinaryOpExpr() -> ast::BinaryOpExpr* {
 }
 
 auto Parser::ParseForm() -> ast::Form* {
+  {
+    const auto& next = stream().Peek();
+    if (next.IsLiteral()) {
+      return ParseLiteral();
+    } else if (next.kind == Token::kIdentifier) {
+    }
+  }
+
   if (!ExpectNext(Token::kLParen))
     return nullptr;
   stream().Next();
 
-  ast::Form* form = nullptr;
   const auto& next = stream().Peek();
   DLOG(INFO) << "peek: " << next;
+  ast::Form* form = nullptr;
   switch (next.kind) {
     case Token::kVariableDef:
       form = ParseVariableDefinition();
@@ -167,16 +176,12 @@ auto Parser::ParseForm() -> ast::Form* {
     case Token::kBeginDef:
       form = ParseBeginDefinition();
       break;
-    case Token::kIdentifier: {
-      form = ParseCallProcExpr();
-      break;
-    }
     case Token::kPlus:
     case Token::kMinus:
       form = ParseBinaryOpExpr();
       break;
     default:
-      LOG(FATAL) << "unexpected token: " << stream().Next();
+      LOG(FATAL) << "unexpected token: " << next;
       return nullptr;
   }
   ASSERT(form);
@@ -187,27 +192,19 @@ auto Parser::ParseForm() -> ast::Form* {
   return form;
 }
 
+static inline auto IsValidFormToken(const Token& token) -> bool {
+  return !token.IsInvalid() && token.kind != Token::kEndOfStream;
+}
+
 auto Parser::ParseProgram() -> ast::Program* {
   const auto program = ast::Program::New();
   ASSERT(program);
-  while (true) {
-    const auto& peek = stream().Peek();
-    DLOG(INFO) << "peek: " << peek;
-    if (peek.IsLiteral()) {
-      program->Append(ParseLiteral());
-      continue;
-    }
-
-    switch (peek.kind) {
-      case Token::kLParen:
-        program->Append(ParseForm());
-      case Token::kEndOfStream:
-        return program;
-      default:
-        LOG(ERROR) << "unexpected token: " << stream().Next();
-        break;
-    }
+  while (IsValidFormToken(stream().Peek())) {
+    const auto form = ParseForm();
+    ASSERT(form);
+    program->Append(form);
   }
+  return program;
 }
 
 auto Parser::Parse(const uint8_t* data, const uint64_t length) -> ast::Program* {

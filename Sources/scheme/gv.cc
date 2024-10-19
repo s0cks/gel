@@ -21,6 +21,7 @@ auto DotGraph::New(Agraph_t* graph) -> DotGraph* {
 
 DotGraphBuilder::DotGraphBuilder(const char* name, Agdesc_t desc) :
   graph_(nullptr) {
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
   const auto graph = agopen(const_cast<char*>(name), desc, nullptr);
   ASSERT(graph);
   graph_ = graph;

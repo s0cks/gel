@@ -14,6 +14,7 @@ namespace scm::ast {
 auto GraphBuilder::CreateEdge(Agnode_t* from, Agnode_t* to, const char* name, const int flags) -> Agedge_t* {
   ASSERT(from);
   ASSERT(to);
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
   const auto edge = agedge(GetGraph(), from, to, const_cast<char*>(name), flags);
   ASSERT(edge);
   edges_.push_back(edge);
@@ -22,6 +23,7 @@ auto GraphBuilder::CreateEdge(Agnode_t* from, Agnode_t* to, const char* name, co
 
 auto GraphBuilder::CreateNode(const char* name, const int flags) -> Agnode_t* {
   ASSERT(node);
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
   const auto node = agnode(GetGraph(), const_cast<char*>(name), flags);
   if (HasParent())
     CreateEdge(GetParent(), node, "");

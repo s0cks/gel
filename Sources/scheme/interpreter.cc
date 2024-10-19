@@ -93,9 +93,7 @@ auto Interpreter::Execute(EntryInstr* entry) -> Datum* {
   ASSERT(entry);
   InstructionIterator iter(entry->GetFirstInstruction());
   while (iter.HasNext()) {
-    const auto current = iter.Next();
-    ASSERT(current);
-    ExecuteInstr(current);
+    ExecuteInstr(iter.Next());
   }
 
   ASSERT(!stack_.empty());

@@ -14,6 +14,7 @@ void FlowGraphToDotGraph::Set(Node* node, const std::string& name, const std::st
   ASSERT(!name.empty());
   ASSERT(!value.empty());
   const auto val = agstrdup(GetGraph(), value.c_str());
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
   agset(node, const_cast<char*>(name.c_str()), val);
   agstrfree(GetGraph(), val);
   DLOG(INFO) << "set attr " << name << " to: " << value;
