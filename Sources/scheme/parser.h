@@ -8,7 +8,7 @@
 #include <utility>
 
 #include "scheme/ast.h"
-#include "scheme/token.h"
+#include "scheme/lexer.h"
 
 namespace scm {
 class Parser {

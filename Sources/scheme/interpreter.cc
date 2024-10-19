@@ -82,7 +82,7 @@ auto Interpreter::VisitBinaryOpInstr(BinaryOpInstr* instr) -> bool {
 void Interpreter::ExecuteInstr(Instruction* instr) {
   ASSERT(instr);
   TRACE_SECTION(ExecuteInstr);
-  ZoneText(instr->GetName(), strlen(instr->GetName()));
+  TRACE_TAG(instr->GetName());
   DLOG(INFO) << "executing: " << instr->ToString();
   if (!instr->Accept(this))
     LOG(FATAL) << "failed to execute: " << instr->ToString();
