@@ -2,8 +2,7 @@
 
 #include <fstream>
 
-#include "scheme/ast_printer.h"
-#include "scheme/ast_renderer.h"
+#include "scheme/ast_dot.h"
 #include "scheme/parser.h"
 
 namespace scm {
@@ -16,7 +15,6 @@ TEST_F(ParserTest, Test_Parse_Literal_True_Lowercase) {  // NOLINT
   Parser parser(stream);
   const auto program = parser.ParseProgram();
   ASSERT_TRUE(program);
-  ast::AstPrinter::Print(program, __FILE__, __LINE__, google::INFO);
 }
 
 TEST_F(ParserTest, Test_Parse_Literal_True_Uppercase) {  // NOLINT
@@ -24,7 +22,6 @@ TEST_F(ParserTest, Test_Parse_Literal_True_Uppercase) {  // NOLINT
   Parser parser(stream);
   const auto program = parser.ParseProgram();
   ASSERT_TRUE(program);
-  ast::AstPrinter::Print(program, __FILE__, __LINE__, google::INFO);
 }
 
 TEST_F(ParserTest, Test_Parse_VariableDef) {  // NOLINT
@@ -32,7 +29,6 @@ TEST_F(ParserTest, Test_Parse_VariableDef) {  // NOLINT
   Parser parser(stream);
   const auto program = parser.ParseProgram();
   ASSERT_TRUE(program);
-  ast::AstPrinter::Print(program, __FILE__, __LINE__, google::INFO);
 }
 
 TEST_F(ParserTest, Test_Parse_BeginDef1) {  // NOLINT
@@ -40,20 +36,17 @@ TEST_F(ParserTest, Test_Parse_BeginDef1) {  // NOLINT
   Parser parser(stream);
   const auto program = parser.ParseProgram();
   ASSERT_TRUE(program);
-  ast::AstPrinter::Print(program, __FILE__, __LINE__, google::INFO);
 }
 
 TEST_F(ParserTest, Test_Parse_BeginDef2) {  // NOLINT
-  ByteTokenStream stream("(begin (define test #t) (define test2 #f))");
+  ByteTokenStream stream("(begin (define test #t) (define test2 #f) (define x 10) (print x))");
   Parser parser(stream);
   const auto program = parser.ParseProgram();
   ASSERT_TRUE(program);
-  ast::AstPrinter::Print(program, __FILE__, __LINE__, google::INFO);
-
-  const auto file = fopen("/Users/tazz/Projects/scheme/graph.png", "wb");
-  ast::RenderToStdout(program);
-  ast::RenderToPng(file, program);
-  ASSERT_TRUE(file);
-  ASSERT_EQ(fclose(file), 0);
+  {
+    const auto dot_graph = ast::NodeToDot::Build("Program", program);
+    ASSERT_TRUE(dot_graph);
+    dot_graph->RenderPngToFilename("/Users/tazz/Projects/scheme/Program_ast.png");
+  }
 }
 }  // namespace scm

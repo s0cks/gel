@@ -1,6 +1,8 @@
 #ifndef SCM_FLOW_GRAPH_DOT_H
 #define SCM_FLOW_GRAPH_DOT_H
 
+#include <fmt/format.h>
+
 #include <vector>
 
 #include "scheme/flow_graph.h"
@@ -9,14 +11,6 @@
 namespace scm {
 
 class FlowGraphToDotGraph : public DotGraphBuilder {
-  static constexpr const auto kDefaultEdgeFlags = 1;
-  static constexpr const auto kDefaultNodeFlags = 1;
-
-  using Node = Agnode_t;
-  using NodeList = std::vector<Node*>;
-  using Edge = Agedge_t;
-  using EdgeList = std::vector<Edge*>;
-
   DEFINE_NON_COPYABLE_TYPE(FlowGraphToDotGraph);
 
  private:
@@ -42,29 +36,11 @@ class FlowGraphToDotGraph : public DotGraphBuilder {
     return GetPrevious() != nullptr;
   }
 
-  inline auto NewNode(const char* name, const int flags = kDefaultNodeFlags) -> Node* {
-    ASSERT(HasGraph());
-    ASSERT(name);
-    return agnode(GetGraph(), const_cast<char*>(name), flags);
-  }
-
-  inline auto NewNode(const std::string& name, const int flags = kDefaultNodeFlags) -> Node* {
-    ASSERT(HasGraph());
-    ASSERT(!name.empty());
-    return NewNode(name.c_str(), flags);
-  }
-
   inline auto NewNode(Instruction* instr, const int flags = kDefaultNodeFlags) -> Node* {
     ASSERT(HasGraph());
     ASSERT(instr);
-    const auto node = NewNode(GetNodeNameFor(instr).c_str(), flags);
-    return node;
-  }
-
-  inline auto NewEdge(Agnode_t* from, Agnode_t* to, const char* name = "", const int flags = kDefaultEdgeFlags) -> Edge* {
-    ASSERT(from);
-    ASSERT(to);
-    return agedge(GetGraph(), from, to, const_cast<char*>(name), flags);  // NOLINT
+    const auto node_id = fmt::format("i{0:d}", ++num_instructions_);
+    return DotGraphBuilder::NewNode(node_id, flags);
   }
 
   inline auto NewEdgeFromPrevious(Agnode_t* to, const char* name = "", const int flags = kDefaultEdgeFlags) -> Edge* {

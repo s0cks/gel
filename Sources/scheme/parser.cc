@@ -86,6 +86,9 @@ auto Parser::ParseDefinition() -> ast::Definition* {
     case Token::kVariableDef:
       defn = ParseVariableDefinition();
       break;
+    case Token::kIdentifier:
+      defn = ParseCallProcExpr();
+      break;
     default:
       LOG(FATAL) << "unexpected: " << peek;
       return nullptr;

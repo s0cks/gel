@@ -6,6 +6,7 @@
 
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "scheme/common.h"
 
@@ -45,9 +46,18 @@ class DotGraph {
 class DotGraphBuilder {
   DEFINE_NON_COPYABLE_TYPE(DotGraphBuilder);
 
- protected:
-  Agraph_t* graph_;  // TODO: memory leak
+ public:
+  static constexpr const auto kDefaultEdgeFlags = 1;
+  static constexpr const auto kDefaultNodeFlags = 1;
+  using Graph = Agraph_t;
+  using Node = Agnode_t;
+  using NodeList = std::vector<Node*>;
+  using Edge = Agedge_t;
+  using EdgeList = std::vector<Edge*>;
 
+ private:
+  Agraph_t* graph_;  // TODO: memory leak
+ protected:
   DotGraphBuilder(const char* name, Agdesc_t desc);
 
   inline void SetGraph(Agraph_t* g) {
@@ -55,12 +65,53 @@ class DotGraphBuilder {
     graph_ = g;
   }
 
-  inline auto GetGraph() const -> Agraph_t* {
+  inline auto GetGraph() const -> Graph* {
     return graph_;
   }
 
   inline auto HasGraph() const -> bool {
     return GetGraph() != nullptr;
+  }
+
+  inline void SetAttr(int kind, const std::string& name, const std::string& value) {
+    agattr(GetGraph(), kind, const_cast<char*>(name.c_str()), const_cast<char*>(value.c_str()));  // NOLINT
+  }
+
+  inline void SetNodeAttr(const std::string& name, const std::string& value) {
+    return SetAttr(AGNODE, name, value);
+  }
+
+  inline void SetGraphAttr(const std::string& name, const std::string& value) {
+    return SetAttr(AGRAPH, name, value);
+  }
+
+  inline void SetEdgeAttr(const std::string& name, const std::string& value) {
+    return SetAttr(AGEDGE, name, value);
+  }
+
+  inline auto NewNode(const char* name, const int flags = kDefaultNodeFlags) -> Node* {
+    ASSERT(HasGraph());
+    ASSERT(name);
+    return agnode(GetGraph(), const_cast<char*>(name), flags);
+  }
+
+  inline auto NewNode(const std::string& name, const int flags = kDefaultNodeFlags) -> Node* {
+    ASSERT(HasGraph());
+    ASSERT(!name.empty());
+    return NewNode(name.c_str(), flags);
+  }
+
+  inline auto NewEdge(Node* from, Node* to, const std::string& name = "", const int flags = kDefaultEdgeFlags) -> Edge* {
+    ASSERT(from);
+    ASSERT(to);
+    return agedge(GetGraph(), from, to, const_cast<char*>(name.c_str()), flags);  // NOLINT
+  }
+
+  inline void SetNodeLabel(Node* node, const std::string& value) {
+    static constexpr const auto kLabelKey = "label";
+    ASSERT(node);
+    ASSERT(!value.empty());
+    agset(node, const_cast<char*>(kLabelKey), value.c_str());  // NOLINT
   }
 
  public:

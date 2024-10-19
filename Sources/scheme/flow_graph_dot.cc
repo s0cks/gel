@@ -6,6 +6,7 @@
 #include <sstream>
 
 #include "scheme/flow_graph.h"
+#include "scheme/gv.h"
 #include "scheme/instruction.h"
 
 namespace scm {
@@ -44,9 +45,7 @@ auto FlowGraphToDotGraph::CreateXLabel(Instruction* instr) -> std::optional<std:
 
 auto FlowGraphToDotGraph::CreateNextNode(Instruction* instr) -> Node* {
   ASSERT(instr);
-  const auto node_id = fmt::format("i{0:d}", ++num_instructions_);
-  DLOG(INFO) << node_id << " := " << instr->ToString();
-  const auto node = NewNode(node_id);
+  const auto node = NewNode(instr);
   ASSERT(node);
   SetLabel(node, instr->GetName());
   const auto xlabel = CreateXLabel(instr);
