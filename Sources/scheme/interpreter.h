@@ -7,7 +7,7 @@
 #include "scheme/instruction.h"
 
 namespace scm {
-class Interpreter {
+class Interpreter : private InstructionVisitor {
   DEFINE_NON_COPYABLE_TYPE(Interpreter);
 
  private:
@@ -26,7 +26,12 @@ class Interpreter {
     return next;
   }
 
+  void ExecuteInstr(Instruction* instr);
   auto LoadVariable(Variable* variable) -> Datum*;
+
+#define DECLARE_VISIT(Name) auto Visit##Name(Name* instr) -> bool override;
+  FOR_EACH_INSTRUCTION(DECLARE_VISIT)
+#undef DECLARE_VISIT
 
  public:
   Interpreter() = default;

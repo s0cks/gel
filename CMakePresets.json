@@ -63,11 +63,30 @@
       ]
     },
     {
+      "name": "tracing",
+      "hidden": true,
+      "cacheVariables": {
+        "ENABLE_TRACING": {
+          "type": "BOOL",
+          "value": "ON"
+        }
+      }
+    },
+    {
       "name": "debug-darwin-arm64",
-      "displayName": "Debug (OSX/arm64)",
+      "displayName": "Debug (Darwin/arm64)",
       "inherits": [
         "debug",
         "darwin-arm64"
+      ]
+    },
+    {
+      "name": "debug-darwin-arm64-tracing",
+      "displayName": "Debug w/ Tracing (Darwin/arm64)",
+      "inherits": [
+        "debug",
+        "darwin-arm64",
+        "tracing"
       ]
     },
     {

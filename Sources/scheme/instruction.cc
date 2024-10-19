@@ -3,6 +3,14 @@
 #include <sstream>
 
 namespace scm {
+#define DEFINE_ACCEPT(Name)                            \
+  auto Name::Accept(InstructionVisitor* vis) -> bool { \
+    ASSERT(vis);                                       \
+    return vis->Visit##Name(this);                     \
+  }
+FOR_EACH_INSTRUCTION(DEFINE_ACCEPT)
+#undef DEFINE_ACCEPT
+
 auto LoadVariableInstr::ToString() const -> std::string {
   std::stringstream ss;
   ss << "LoadVariableInstr(";

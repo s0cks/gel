@@ -82,6 +82,7 @@ void FlowGraphToDotGraph::InitNodes() {
 
 auto FlowGraphToDotGraph::BuildDotGraph() -> DotGraph* {
   ASSERT(HasFlowGraph());
+  agattr(GetGraph(), AGNODE, "shape", "box");
   agattr(GetGraph(), AGNODE, "label", "");
   agattr(GetGraph(), AGNODE, "xlabel", "");
   InitNodes();

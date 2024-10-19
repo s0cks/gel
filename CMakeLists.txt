@@ -56,6 +56,11 @@ if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
   add_compile_definitions(SCM_DEBUG)
 endif()
 
+option(ENABLE_TRACING "Enable Tracy tracing." OFF)
+if(ENABLE_TRACING)
+  add_compile_definitions(SCM_TRACING)
+endif()
+
 add_subdirectory(Sources)
 
 option(ENABLE_TESTS "Enable tests." ON)

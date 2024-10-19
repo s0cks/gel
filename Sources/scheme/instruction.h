@@ -18,9 +18,23 @@ namespace scm {
   V(ReturnInstr)                \
   V(BinaryOpInstr)
 
+class Instruction;
 #define FORWARD_DECLARE(Name) class Name;
 FOR_EACH_INSTRUCTION(FORWARD_DECLARE)
 #undef FORWARD_DECLARE
+
+class InstructionVisitor {
+  DEFINE_NON_COPYABLE_TYPE(InstructionVisitor);
+
+ protected:
+  InstructionVisitor() = default;
+
+ public:
+  virtual ~InstructionVisitor() = default;
+#define DECLARE_VISIT(Name) virtual auto Visit##Name(Name* instr) -> bool = 0;
+  FOR_EACH_INSTRUCTION(DECLARE_VISIT)
+#undef DECLARE_VISIT
+};
 
 class Instruction {
   DEFINE_NON_COPYABLE_TYPE(Instruction);
@@ -46,6 +60,7 @@ class Instruction {
   virtual ~Instruction() = default;
   virtual auto GetName() const -> const char* = 0;
   virtual auto ToString() const -> std::string = 0;
+  virtual auto Accept(InstructionVisitor* vis) -> bool = 0;
 
   auto GetNext() const -> Instruction* {
     return next_;
@@ -112,15 +127,16 @@ class InstructionIterator {
   }
 };
 
-#define DECLARE_INSTRUCTION(Name)                \
-  DEFINE_NON_COPYABLE_TYPE(Name)                 \
- public:                                         \
-  auto ToString() const -> std::string override; \
-  auto GetName() const -> const char* override { \
-    return #Name;                                \
-  }                                              \
-  auto As##Name() -> Name* override {            \
-    return this;                                 \
+#define DECLARE_INSTRUCTION(Name)                        \
+  DEFINE_NON_COPYABLE_TYPE(Name)                         \
+ public:                                                 \
+  auto Accept(InstructionVisitor* vis) -> bool override; \
+  auto ToString() const -> std::string override;         \
+  auto GetName() const -> const char* override {         \
+    return #Name;                                        \
+  }                                                      \
+  auto As##Name() -> Name* override {                    \
+    return this;                                         \
   }
 
 class EntryInstr : public Instruction {
