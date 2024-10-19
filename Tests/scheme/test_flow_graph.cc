@@ -12,7 +12,7 @@ using namespace ::testing;
 class FlowGraphTest : public Test {};
 
 TEST_F(FlowGraphTest, Test_Builder) {  // NOLINT
-  ByteTokenStream stream("(begin (define test #t) (define test2 #t))");
+  ByteTokenStream stream("(print #t)");
   Parser parser(stream);
   const auto program = parser.ParseProgram();
   ASSERT_TRUE(program);
@@ -21,10 +21,12 @@ TEST_F(FlowGraphTest, Test_Builder) {  // NOLINT
   ASSERT_TRUE(flow_graph);
   ASSERT_TRUE(flow_graph->GetEntry());
 #ifdef SCM_DEBUG
-  const auto dot_graph = FlowGraphToDotGraph::Build("FlowGraph", flow_graph);
-  ASSERT_TRUE(dot_graph);
-  ASSERT_NO_FATAL_FAILURE(dot_graph->RenderToStdout());                                                   // NOLINT
-  ASSERT_NO_FATAL_FAILURE(dot_graph->RenderPngToFilename("/Users/tazz/Projects/scheme/flow_graph.png"));  // NOLINT
-#endif                                                                                                    // SCM_DEBUG
+  {
+    const auto dot_graph = FlowGraphToDotGraph::Build("FlowGraph", flow_graph);
+    ASSERT_TRUE(dot_graph);
+    ASSERT_NO_FATAL_FAILURE(dot_graph->RenderPngToFilename("/Users/tazz/Projects/scheme/flow_graph.png"));  // NOLINT
+    ASSERT_NO_FATAL_FAILURE(dot_graph->RenderToStdout());                                                   // NOLINT
+  }
+#endif  // SCM_DEBUG
 }
 }  // namespace scm

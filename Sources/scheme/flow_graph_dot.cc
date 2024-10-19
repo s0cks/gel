@@ -33,6 +33,11 @@ auto FlowGraphToDotGraph::CreateXLabel(Instruction* instr) -> std::optional<std:
     ASSERT(var);
     ss << "var=" << var->GetName();
     return {ss.str()};
+  } else if (instr->IsCallProcInstr()) {
+    const auto symbol = instr->AsCallProcInstr()->GetSymbol();
+    ASSERT(symbol);
+    ss << "symbol=" << symbol->Get();
+    return {ss.str()};
   }
   return std::nullopt;
 }

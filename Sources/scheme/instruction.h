@@ -246,21 +246,15 @@ class StoreVariableInstr : public Definition {
   DECLARE_INSTRUCTION(StoreVariableInstr);
 };
 
-class CallProcInstr : public Instruction {
+class CallProcInstr : public Definition {
  private:
-  Procedure* procedure_ = nullptr;
+  Symbol* symbol_;
   Definition* args_ = nullptr;
 
  protected:
-  explicit CallProcInstr(Procedure* proc, Definition* args) :
-    Instruction() {
-    SetProcedure(proc);
-    SetArgs(args);
-  }
-
-  void SetProcedure(Procedure* proc) {
+  void SetSymbol(Symbol* symbol) {
     ASSERT(proc);
-    procedure_ = proc;
+    symbol_ = symbol;
   }
 
   void SetArgs(Definition* args) {
@@ -269,10 +263,15 @@ class CallProcInstr : public Instruction {
   }
 
  public:
+  explicit CallProcInstr(Symbol* symbol, Definition* args) :
+    Definition() {
+    SetSymbol(symbol);
+    SetArgs(args);
+  }
   ~CallProcInstr() override = default;
 
-  auto GetProcedure() const -> Procedure* {
-    return procedure_;
+  auto GetSymbol() const -> Symbol* {
+    return symbol_;
   }
 
   auto GetArgs() const -> Definition* {

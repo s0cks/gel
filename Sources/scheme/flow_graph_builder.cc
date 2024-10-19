@@ -2,6 +2,8 @@
 
 #include <glog/logging.h>
 
+#include "scheme/instruction.h"
+
 namespace scm {
 static inline auto AppendFragment(EntryInstr* entry, EffectVisitor& vis) -> Instruction* {
   if (vis.IsEmpty())
@@ -103,7 +105,11 @@ auto EffectVisitor::VisitCallProcExpr(ast::CallProcExpr* expr) -> bool {
   ASSERT(expr);
   DLOG(INFO) << "symbol: " << expr->GetSymbol();
   DLOG(INFO) << "args: " << expr->GetArgs()->ToString();
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  ValueVisitor for_args(GetOwner());
+  if (!expr->GetArgs()->Accept(&for_args))
+    return false;
+  Append(for_args);
+  ReturnDefinition(new CallProcInstr(expr->GetSymbol(), for_args.GetValue()));
   return true;
 }
 

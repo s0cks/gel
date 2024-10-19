@@ -176,6 +176,9 @@ auto Parser::ParseForm() -> ast::Form* {
     case Token::kBeginDef:
       form = ParseBeginDefinition();
       break;
+    case Token::kIdentifier:
+      form = ParseCallProcExpr();
+      break;
     case Token::kPlus:
     case Token::kMinus:
       form = ParseBinaryOpExpr();

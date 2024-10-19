@@ -56,7 +56,7 @@ auto GraphEntryInstr::ToString() const -> std::string {
 auto CallProcInstr::ToString() const -> std::string {
   std::stringstream ss;
   ss << "CallProcInstr(";
-  ss << "procedure=" << GetProcedure()->ToString();
+  ss << "symbol=" << GetSymbol()->ToString();
   ss << ")";
   return ss.str();
 }
