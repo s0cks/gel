@@ -2,6 +2,21 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "type": "shell",
+      "label": "start: Tracy",
+      "args": [],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "linux": {
+        "command": "$(which tracy)",
+      },
+      "osx": {
+        "command": "$(which tracy)"
+      }
+    },
+    {
       "type": "cmake",
       "label": "configure",
       "command": "configure",

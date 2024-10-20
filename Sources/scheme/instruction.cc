@@ -22,7 +22,7 @@ auto LoadVariableInstr::ToString() const -> std::string {
 auto StoreVariableInstr::ToString() const -> std::string {
   std::stringstream ss;
   ss << "StoreVariableInstr(";
-  ss << "variable=" << GetVariable()->ToString() << ", ";
+  ss << "symbol=" << GetSymbol()->ToString() << ", ";
   ss << "value=" << GetValue()->ToString();
   ss << ")";
   return ss.str();

@@ -1,7 +1,9 @@
 #ifndef SCM_FLOW_GRAPH_BUILDER_H
 #define SCM_FLOW_GRAPH_BUILDER_H
 
+#include "scheme/expression.h"
 #include "scheme/flow_graph.h"
+#include "scheme/program.h"
 
 namespace scm {
 class FlowGraphBuilder {
@@ -9,7 +11,7 @@ class FlowGraphBuilder {
 
  private:
   GraphEntryInstr* entry_ = nullptr;
-  ast::Program* program_;
+  Program* program_;
 
   inline void SetGraphEntry(GraphEntryInstr* instr) {
     ASSERT(instr);
@@ -17,7 +19,7 @@ class FlowGraphBuilder {
   }
 
  public:
-  explicit FlowGraphBuilder(ast::Program* p) :
+  explicit FlowGraphBuilder(Program* p) :
     program_(p) {
     ASSERT(p);
   }
@@ -31,14 +33,21 @@ class FlowGraphBuilder {
     return GetGraphEntry() != nullptr;
   }
 
-  auto GetProgram() const -> ast::Program* {
+  auto GetProgram() const -> Program* {
     return program_;
   }
 
   auto BuildGraph() -> FlowGraph*;
+
+ public:
+  static inline auto Build(Program* program) -> FlowGraph* {
+    ASSERT(program);
+    FlowGraphBuilder builder(program);
+    return builder.BuildGraph();
+  }
 };
 
-class EffectVisitor : public ast::NodeVisitor {
+class EffectVisitor : public ExpressionVisitor {
   DEFINE_NON_COPYABLE_TYPE(EffectVisitor);
 
  private:
@@ -113,7 +122,7 @@ class EffectVisitor : public ast::NodeVisitor {
 
  public:
   explicit EffectVisitor(FlowGraphBuilder* owner) :
-    ast::NodeVisitor(),
+    ExpressionVisitor(),
     owner_(owner) {}
   ~EffectVisitor() override = default;
 
@@ -137,8 +146,8 @@ class EffectVisitor : public ast::NodeVisitor {
     return IsEmpty() || GetExitInstr() != nullptr;
   }
 
-#define DECLARE_VISIT(Name) virtual auto Visit##Name(ast::Name* name) -> bool override;
-  FOR_EACH_AST_NODE(DECLARE_VISIT)
+#define DECLARE_VISIT(Name) virtual auto Visit##Name(Name##Expr* name) -> bool override;
+  FOR_EACH_EXPRESSION_NODE(DECLARE_VISIT)
 #undef DECLARE_VISIT
 };
 

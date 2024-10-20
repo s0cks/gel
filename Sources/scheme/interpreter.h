@@ -4,6 +4,7 @@
 #include <stack>
 
 #include "scheme/common.h"
+#include "scheme/flow_graph.h"
 #include "scheme/instruction.h"
 
 namespace scm {
@@ -37,6 +38,18 @@ class Interpreter : private InstructionVisitor {
   Interpreter() = default;
   ~Interpreter() = default;
   auto Execute(EntryInstr* entry) -> Datum*;
+
+ public:
+  static inline auto Eval(EntryInstr* instr) -> Datum* {
+    ASSERT(instr);
+    Interpreter interpreter;
+    return interpreter.Execute(instr);
+  }
+
+  static inline auto Eval(FlowGraph* flow_graph) -> Datum* {
+    ASSERT(flow_graph);
+    return Eval(flow_graph->GetEntry());
+  }
 };
 }  // namespace scm
 

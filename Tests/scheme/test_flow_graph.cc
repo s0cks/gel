@@ -12,7 +12,7 @@ using namespace ::testing;
 class FlowGraphTest : public Test {};
 
 TEST_F(FlowGraphTest, Test_Builder) {  // NOLINT
-  ByteTokenStream stream("(print #t)");
+  ByteTokenStream stream("(begin (define test #t) (+ 99 1))");
   Parser parser(stream);
   const auto program = parser.ParseProgram();
   ASSERT_TRUE(program);

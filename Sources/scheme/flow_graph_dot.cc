@@ -30,9 +30,9 @@ auto FlowGraphToDotGraph::CreateXLabel(Instruction* instr) -> std::optional<std:
     ss << "value=" << value->ToString();
     return {ss.str()};
   } else if (instr->IsStoreVariableInstr()) {
-    const auto var = instr->AsStoreVariableInstr()->GetVariable();
+    const auto var = instr->AsStoreVariableInstr()->GetSymbol();
     ASSERT(var);
-    ss << "var=" << var->GetName();
+    ss << "var=" << var->Get();
     return {ss.str()};
   } else if (instr->IsCallProcInstr()) {
     const auto symbol = instr->AsCallProcInstr()->GetSymbol();

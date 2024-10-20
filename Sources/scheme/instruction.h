@@ -3,8 +3,7 @@
 
 #include <string>
 
-#include "scheme/ast.h"
-#include "scheme/common.h"
+#include "scheme/expression.h"
 #include "scheme/procedure.h"
 #include "scheme/variable.h"
 
@@ -225,25 +224,33 @@ class LoadVariableInstr : public Definition {
 
 class StoreVariableInstr : public Definition {
  private:
-  Variable* var_;
-  Definition* val_;
+  Symbol* symbol_;
+  Definition* value_;
+
+  StoreVariableInstr(Symbol* symbol, Definition* value) :
+    Definition(),
+    symbol_(symbol),
+    value_(value) {}
 
  public:
-  StoreVariableInstr(Variable* var, Definition* val) :
-    Definition(),
-    var_(var),
-    val_(val) {}
   ~StoreVariableInstr() override = default;
 
-  auto GetVariable() const -> Variable* {
-    return var_;
+  auto GetSymbol() const -> Symbol* {
+    return symbol_;
   }
 
   auto GetValue() const -> Definition* {
-    return val_;
+    return value_;
   }
 
   DECLARE_INSTRUCTION(StoreVariableInstr);
+
+ public:
+  static inline auto New(Symbol* symbol, Definition* value) -> StoreVariableInstr* {
+    ASSERT(symbol);
+    ASSERT(value);
+    return new StoreVariableInstr(symbol, value);
+  }
 };
 
 class CallProcInstr : public Definition {
@@ -300,19 +307,25 @@ class ReturnInstr : public Definition {
 
 class BinaryOpInstr : public Definition {
  private:
-  ast::BinaryOp op_;
+  expr::BinaryOp op_;
 
- public:
-  explicit BinaryOpInstr(const ast::BinaryOp op) :
+  explicit BinaryOpInstr(const expr::BinaryOp op) :
     Definition(),
     op_(op) {}
+
+ public:
   ~BinaryOpInstr() override = default;
 
-  auto GetOp() const -> ast::BinaryOp {
+  auto GetOp() const -> expr::BinaryOp {
     return op_;
   }
 
   DECLARE_INSTRUCTION(BinaryOpInstr);
+
+ public:
+  static inline auto New(const expr::BinaryOp op) -> BinaryOpInstr* {
+    return new BinaryOpInstr(op);
+  }
 };
 }  // namespace scm
 

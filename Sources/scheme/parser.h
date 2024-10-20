@@ -7,8 +7,9 @@
 #include <ostream>
 #include <utility>
 
-#include "scheme/ast.h"
+#include "scheme/expression.h"
 #include "scheme/lexer.h"
+#include "scheme/program.h"
 
 namespace scm {
 class Parser {
@@ -22,48 +23,41 @@ class Parser {
     return stream_;
   }
 
-  auto ParseIdentifier() -> std::string;
-
-  auto ParseForm() -> ast::Form*;
-  auto ParseLiteral() -> ast::ConstantExpr*;
-
-  auto ParseVariableDefinition() -> ast::VariableDef*;
-  auto ParseVariable() -> Variable*;
-  auto ParseVariableList(VariableList& variables) -> bool;
-
-  auto ParseBeginDefinition() -> ast::BeginDef*;
-  auto ParseCallProcExpr() -> ast::CallProcExpr*;
-
-  auto ParseBinaryOp() -> ast::BinaryOp;
-  auto ParseBinaryOpExpr() -> ast::BinaryOpExpr*;
-
-  auto ParseExpression() -> ast::Expression*;
-  auto ParseExpressionList() -> ast::ExpressionList*;
-
-  auto ParseDefinition() -> ast::Definition*;
-  auto ParseDefinitionList(ast::DefinitionList& definitions) -> bool;
+  auto ParseSymbol() -> Symbol*;
+  auto ParseLiteralExpr() -> LiteralExpr*;
+  auto ParseBeginExpr() -> BeginExpr*;
+  auto ParseBinaryOpExpr() -> BinaryOpExpr*;
+  auto ParseDefineExpr() -> DefineExpr*;
+  auto ParseExpression() -> Expression*;
 
   inline auto PeekEq(const Token::Kind rhs) const -> bool {
     const auto& peek = stream().Peek();
     return peek.kind == rhs;
   }
 
-  inline auto ExpectNext(const Token::Kind rhs) -> bool {
-    const auto& peek = stream().Peek();
-    if (peek.kind == rhs)
-      return true;
-    LOG(FATAL) << "unexpected " << stream().Next() << " expected: " << rhs;
-    return false;
+  inline void ExpectNext(const Token::Kind rhs) {
+    const auto& next = stream().Next();
+    LOG_IF(FATAL, next.kind != rhs) << "unexpected: " << next << ", expected: " << rhs;
   }
 
  public:
   explicit Parser(TokenStream& stream) :
     stream_(stream) {}
   ~Parser() = default;
-  auto ParseProgram() -> ast::Program*;
+  auto ParseProgram() -> Program*;
 
  public:
-  auto Parse(const uint8_t* data, const uint64_t length) -> ast::Program*;
+  auto Parse(const uint8_t* data, const uint64_t length) -> Program*;
+
+  static inline auto Parse(TokenStream& stream) -> Program* {
+    Parser parser(stream);
+    return parser.ParseProgram();
+  }
+
+  static inline auto Parse(const std::string& expr) -> Program* {
+    ByteTokenStream stream(expr);
+    return Parse(stream);
+  }
 };
 }  // namespace scm
 

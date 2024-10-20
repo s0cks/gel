@@ -6,6 +6,12 @@
       "type": "promptString",
       "default": "*",
       "description": "The filter pattern for GTest"
+    },
+    {
+      "id": "expression",
+      "type": "promptString",
+      "default": "(+ 99 1)",
+      "description": "The expression to evaluate"
     }
   ],
   "configurations": [
@@ -41,6 +47,22 @@
       ]
     },
     {
+      "name": "Lexer Tests",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/Tests/scheme-tests",
+      "args": [
+        "--gtest_filter=LexerTest*",
+        "--gtest_color=yes",
+        "-logtostdout",
+        "-colorlogtostdout"
+      ],
+      "cwd": "${workspaceFolder}",
+      "initCommands": [
+        "command source ${workspaceFolder}/.lldbinit"
+      ]
+    },
+    {
       "name": "Parser Tests",
       "type": "lldb",
       "request": "launch",
@@ -56,7 +78,7 @@
         "command source ${workspaceFolder}/.lldbinit"
       ]
     },
-        {
+    {
       "name": "FlowGraph Tests",
       "type": "lldb",
       "request": "launch",
@@ -66,6 +88,40 @@
         "--gtest_color=yes",
         "-logtostdout",
         "-colorlogtostdout"
+      ],
+      "cwd": "${workspaceFolder}",
+      "initCommands": [
+        "command source ${workspaceFolder}/.lldbinit"
+      ]
+    },
+    {
+      "name": "Evaluate Basic Expr",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/Sources/scm",
+      "args": [
+        "-logtostdout",
+        "-colorlogtostdout",
+        "--expr", "${input:expression}",
+        "--reports-dir", "${workspaceFolder}"
+      ],
+      "cwd": "${workspaceFolder}",
+      "initCommands": [
+        "command source ${workspaceFolder}/.lldbinit"
+      ]
+    },
+    {
+      "name": "Evaluate Basic Expr (Debug)",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/Sources/scm",
+      "args": [
+        "-logtostdout",
+        "-colorlogtostdout",
+        "--expr", "${input:expression}",
+        "--reports-dir", "${workspaceFolder}",
+        "--dump-ast",
+        "--dump-flow-graph",
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [

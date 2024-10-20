@@ -2,8 +2,7 @@
 
 #include <glog/logging.h>
 
-#include "scheme/ast.h"
-#include "scheme/common.h"
+#include "scheme/expression.h"
 #include "scheme/instruction.h"
 #include "scheme/tracing.h"
 
@@ -19,6 +18,24 @@ static inline auto Add(Datum* lhs, Datum* rhs) -> Datum* {
   ASSERT(lhs);
   ASSERT(rhs);
   return lhs->Add(rhs);
+}
+
+static inline auto Subtract(Datum* lhs, Datum* rhs) -> Datum* {
+  ASSERT(lhs);
+  ASSERT(rhs);
+  return lhs->Sub(rhs);
+}
+
+static inline auto Multiply(Datum* lhs, Datum* rhs) -> Datum* {
+  ASSERT(lhs);
+  ASSERT(rhs);
+  return lhs->Mul(rhs);
+}
+
+static inline auto Divide(Datum* lhs, Datum* rhs) -> Datum* {
+  ASSERT(lhs);
+  ASSERT(rhs);
+  return lhs->Div(rhs);
 }
 
 auto Interpreter::VisitGraphEntryInstr(GraphEntryInstr* instr) -> bool {
@@ -41,9 +58,9 @@ auto Interpreter::VisitConstantInstr(ConstantInstr* instr) -> bool {
 auto Interpreter::VisitStoreVariableInstr(StoreVariableInstr* instr) -> bool {
   const auto value = Pop();
   ASSERT(value);
-  const auto variable = instr->GetVariable();
-  ASSERT(variable);
-  DLOG(INFO) << "setting " << variable->ToString() << " := " << value->ToString();
+  const auto symbol = instr->GetSymbol();
+  ASSERT(symbol);
+  DLOG(INFO) << "setting " << symbol->ToString() << " := " << value->ToString();
   Push(value);
   return true;
 }
@@ -63,15 +80,24 @@ auto Interpreter::VisitReturnInstr(ReturnInstr* instr) -> bool {
 auto Interpreter::VisitBinaryOpInstr(BinaryOpInstr* instr) -> bool {
   const auto op = instr->GetOp();
   DLOG(INFO) << "op: " << op;
-  const auto left = Pop();
-  ASSERT(left);
-  DLOG(INFO) << "left: " << left;
   const auto right = Pop();
   ASSERT(right);
   DLOG(INFO) << "right: " << right;
+  const auto left = Pop();
+  ASSERT(left);
+  DLOG(INFO) << "left: " << left;
   switch (op) {
-    case ast::kAddOp:
+    case expr::kAdd:
       Push(Add(left, right));
+      return true;
+    case expr::kSub:
+      Push(Subtract(left, right));
+      return true;
+    case expr::kMul:
+      Push(Multiply(left, right));
+      return true;
+    case expr::kDiv:
+      Push(Divide(left, right));
       return true;
     default:
       LOG(ERROR) << "invalid BinaryOp: " << op;

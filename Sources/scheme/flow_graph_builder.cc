@@ -2,6 +2,8 @@
 
 #include <glog/logging.h>
 
+#include "scheme/common.h"
+#include "scheme/expression.h"
 #include "scheme/instruction.h"
 
 namespace scm {
@@ -15,8 +17,12 @@ static inline auto AppendFragment(EntryInstr* entry, EffectVisitor& vis) -> Inst
 auto FlowGraphBuilder::BuildGraph() -> FlowGraph* {
   const auto entry = GraphEntryInstr::New();
   SetGraphEntry(entry);
+
   EffectVisitor for_effect(this);
-  LOG_IF(ERROR, !GetProgram()->Accept(&for_effect)) << "failed to visit: " << GetProgram()->ToString();
+  if (!GetProgram()->Accept(&for_effect)) {
+    LOG(ERROR) << "failed to visit: " << GetProgram()->ToString();
+    return nullptr;  // TODO: free entry
+  }
   AppendFragment(entry, for_effect);
 
   const auto last = entry->GetLastInstruction();
@@ -27,37 +33,24 @@ auto FlowGraphBuilder::BuildGraph() -> FlowGraph* {
   return new FlowGraph(entry);
 }
 
-auto EffectVisitor::VisitProgram(ast::Program* p) -> bool {
-  uint64_t idx = 0;
-  while (IsOpen() && (idx < p->GetTotalNumberOfForms())) {
-    const auto form = p->GetFormAt(idx++);
-    ASSERT(form);
-
-    if (form->IsDefinition()) {
-      EffectVisitor vis(GetOwner());
-      if (!form->Accept(&vis))
-        break;
-      Append(vis);
-    } else if (form->IsExpression()) {
-      ValueVisitor vis(GetOwner());
-      if (!form->Accept(&vis))
-        break;
-      Append(vis);
-    }
-    if (!IsOpen())
-      break;
-  }
-  return true;
+auto EffectVisitor::VisitEval(EvalExpr* expr) -> bool {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
 }
 
-auto EffectVisitor::VisitBeginDef(ast::BeginDef* p) -> bool {
-  ASSERT(p);
+auto EffectVisitor::VisitCallProc(CallProcExpr* expr) -> bool {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
+
+auto EffectVisitor::VisitBegin(BeginExpr* expr) -> bool {
+  ASSERT(expr);
   uint64_t idx = 0;
-  while (IsOpen() && (idx < p->GetTotalNumberOfDefinitions())) {
-    const auto def = p->GetDefinitionAt(idx++);
-    ASSERT(def);
+  while (IsOpen() && (idx < expr->GetNumberOfChildren())) {
+    const auto child = expr->GetChildAt(idx++);
+    ASSERT(child);
     EffectVisitor vis(GetOwner());
-    if (!def->Accept(&vis))
+    if (!child->Accept(&vis))
       break;
     Append(vis);
     if (!IsOpen())
@@ -66,59 +59,27 @@ auto EffectVisitor::VisitBeginDef(ast::BeginDef* p) -> bool {
   return true;
 }
 
-auto EffectVisitor::VisitSyntaxDef(ast::SyntaxDef* p) -> bool {
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return true;
-}
-
-auto EffectVisitor::VisitVariableDef(ast::VariableDef* p) -> bool {
-  ASSERT(p);
+auto EffectVisitor::VisitDefine(DefineExpr* expr) -> bool {
+  ASSERT(expr);
+  // process value
+  const auto value = expr->GetValue();
+  ASSERT(value);
   ValueVisitor for_value(GetOwner());
-  LOG_IF(ERROR, !p->GetVal()->Accept(&for_value)) << "failed to determine value for: " << p->ToString();
+  LOG_IF(ERROR, !value->Accept(&for_value)) << "failed to determine value for: " << expr->ToString();
   Append(for_value);
-  ReturnDefinition(new StoreVariableInstr(p->GetVar(), for_value.GetValue()));
+  const auto symbol = expr->GetSymbol();
+  ASSERT(symbol);
+  ReturnDefinition(StoreVariableInstr::New(symbol, for_value.GetValue()));
   return true;
 }
 
-auto EffectVisitor::VisitConstantExpr(ast::ConstantExpr* p) -> bool {
+auto EffectVisitor::VisitLiteral(LiteralExpr* p) -> bool {
   ASSERT(p);
   ReturnDefinition(new ConstantInstr(p->GetValue()));
   return true;
 }
 
-auto EffectVisitor::VisitQuoteExpr(ast::QuoteExpr* p) -> bool {
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return true;
-}
-
-auto EffectVisitor::VisitLoadVariableExpr(ast::LoadVariableExpr* p) -> bool {
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return true;
-}
-
-auto EffectVisitor::VisitBody(ast::Body* p) -> bool {
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return true;
-}
-
-auto EffectVisitor::VisitCallProcExpr(ast::CallProcExpr* expr) -> bool {
-  ASSERT(expr);
-  DLOG(INFO) << "symbol: " << expr->GetSymbol();
-  DLOG(INFO) << "args: " << expr->GetArgs()->ToString();
-  ValueVisitor for_args(GetOwner());
-  if (!expr->GetArgs()->Accept(&for_args))
-    return false;
-  Append(for_args);
-  ReturnDefinition(new CallProcInstr(expr->GetSymbol(), for_args.GetValue()));
-  return true;
-}
-
-auto EffectVisitor::VisitExpressionList(ast::ExpressionList* expressions) -> bool {
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return true;
-}
-
-auto EffectVisitor::VisitBinaryOpExpr(ast::BinaryOpExpr* expr) -> bool {
+auto EffectVisitor::VisitBinaryOp(BinaryOpExpr* expr) -> bool {
   ASSERT(expr);
 
   ASSERT(expr->HasLeft());
@@ -133,7 +94,7 @@ auto EffectVisitor::VisitBinaryOpExpr(ast::BinaryOpExpr* expr) -> bool {
     return false;
   Append(for_right);
 
-  ReturnDefinition(new BinaryOpInstr(expr->GetOp()));
+  ReturnDefinition(BinaryOpInstr::New(expr->GetOp()));
   return true;
 }
 }  // namespace scm

@@ -1,8 +1,6 @@
 #ifndef SCM_FLOW_GRAPH_H
 #define SCM_FLOW_GRAPH_H
 
-#include "scheme/ast.h"
-#include "scheme/common.h"
 #include "scheme/gv.h"
 #include "scheme/instruction.h"
 

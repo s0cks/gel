@@ -1,5 +1,7 @@
 #include "scheme/lexer.h"
 
+#include <cstdio>
+
 namespace scm {
 auto TokenStream::Peek() -> const Token& {
   if (!peek_.IsInvalid())
@@ -38,6 +40,18 @@ static inline auto IsValidIdentifierChar(const char c, const bool initial = fals
   return false;
 }
 
+static inline auto IsQuote(const char c) -> bool {
+  return c == '\'';
+}
+
+static inline auto IsDoubleQuote(const char c) -> bool {
+  return c == '\"';
+}
+
+static inline auto IsValidStringCharacter(const char c) -> bool {
+  return c != EOF && !IsDoubleQuote(c);
+}
+
 auto TokenStream::Next() -> const Token& {
   if (!peek_.IsInvalid()) {
     next_ = peek_;
@@ -59,6 +73,15 @@ auto TokenStream::Next() -> const Token& {
     case '-':
       Advance();
       return NextToken(Token::kMinus, '-');
+    case '*':
+      Advance();
+      return NextToken(Token::kMultiply, '-');
+    case '/':
+      Advance();
+      return NextToken(Token::kDivide, '-');
+    case '%':
+      Advance();
+      return NextToken(Token::kModulus, '-');
     case '#': {
       switch (tolower(PeekChar(1))) {
         case 'f':
@@ -68,11 +91,14 @@ auto TokenStream::Next() -> const Token& {
           Advance(2);
           return NextToken(Token::kLiteralTrue);
       }
-      return NextToken(Token::kInvalid, GetRemaining());
+      return NextToken(Token::kHash, '#');
     }
     case ' ':
       Advance();
       return Next();
+    case '\'':
+      Advance();
+      return NextToken(Token::kQuote, '\'');
     case ';':
       AdvanceUntil('\n');
       return Next();
@@ -80,7 +106,16 @@ auto TokenStream::Next() -> const Token& {
       return NextToken(Token::kEndOfStream);
   }
 
-  if (isdigit(next)) {
+  if (IsDoubleQuote(next)) {
+    Advance();
+    uint64_t token_len = 0;
+    while (IsValidStringCharacter(PeekChar())) {
+      buffer_[token_len++] = NextChar();
+    }
+    ASSERT(IsQuote(PeekChar()));
+    Advance();
+    return NextToken(Token::kLiteralString, std::string((const char*)&buffer_[0], token_len));
+  } else if (isdigit(next)) {
     bool whole = true;
     uint64_t token_len = 0;
     while (isdigit(PeekChar()) || (next == '.' && whole)) {
@@ -101,6 +136,18 @@ auto TokenStream::Next() -> const Token& {
       return NextToken(Token::kVariableDef);
     else if (ident == "begin")
       return NextToken(Token::kBeginDef);
+    else if (ident == "add")
+      return NextToken(Token::kPlus);
+    else if (ident == "subtract")
+      return NextToken(Token::kMinus);
+    else if (ident == "multiply")
+      return NextToken(Token::kMultiply);
+    else if (ident == "divide")
+      return NextToken(Token::kDivide);
+    else if (ident == "lambda")
+      return NextToken(Token::kLambdaDef);
+    else if (ident == "quote")
+      return NextToken(Token::kQuote);
     return NextToken(Token::kIdentifier, ident);
   }
 

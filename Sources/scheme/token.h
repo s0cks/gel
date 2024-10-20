@@ -14,6 +14,14 @@ struct Position {
   friend auto operator<<(std::ostream& stream, const Position& rhs) -> std::ostream& {
     return stream << "(" << rhs.row << ", " << rhs.column << ")";
   }
+
+  auto operator==(const Position& rhs) const -> bool {
+    return row == rhs.row && column == rhs.column;
+  }
+
+  auto operator!=(const Position& rhs) const -> bool {
+    return row != rhs.row || column != rhs.column;
+  }
 };
 
 struct Token {
@@ -26,11 +34,16 @@ struct Token {
     kRParen,
     kVariableDef,
     kBeginDef,
+    kLambdaDef,
     kIdentifier,
     kPlus,
     kMinus,
     kMultiply,
     kDivide,
+    kModulus,
+    kHash,
+    kQuote,
+    kDoubleQuote,
     kLiteralNumber,
     kLiteralDouble,
     kLiteralLong,
@@ -77,6 +90,10 @@ struct Token {
 
   auto IsInvalid() const -> bool {
     return kind == kInvalid;
+  }
+
+  auto IsEndOfStream() const -> bool {
+    return kind == kEndOfStream;
   }
 
   auto IsLiteral() const -> bool {

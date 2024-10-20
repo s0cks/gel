@@ -1,9 +1,11 @@
 #ifndef SCM_GV_H
 #define SCM_GV_H
 
+#include <fmt/format.h>
 #include <graphviz/cgraph.h>
 #include <graphviz/gvcext.h>
 
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -57,6 +59,12 @@ class DotGraphBuilder {
 
  private:
   Agraph_t* graph_;  // TODO: memory leak
+  uint64_t num_nodes_ = 0;
+
+  inline auto NextNodeId() -> std::string {
+    return fmt::format("n{0:d}", ++num_nodes_);
+  }
+
  protected:
   DotGraphBuilder(const char* name, Agdesc_t desc);
 
@@ -101,17 +109,49 @@ class DotGraphBuilder {
     return NewNode(name.c_str(), flags);
   }
 
+  inline auto NewNode(const int flags = kDefaultNodeFlags) -> Node* {
+    return NewNode(NextNodeId(), flags);
+  }
+
   inline auto NewEdge(Node* from, Node* to, const std::string& name = "", const int flags = kDefaultEdgeFlags) -> Edge* {
     ASSERT(from);
     ASSERT(to);
     return agedge(GetGraph(), from, to, const_cast<char*>(name.c_str()), flags);  // NOLINT
   }
 
-  inline void SetNodeLabel(Node* node, const std::string& value) {
-    static constexpr const auto kLabelKey = "label";
+  inline void Set(Node* node, const char* name, const char* value) {
     ASSERT(node);
-    ASSERT(!value.empty());
-    agset(node, const_cast<char*>(kLabelKey), value.c_str());  // NOLINT
+    ASSERT(name);
+    ASSERT(strlen(name) > 0);
+    ASSERT(value);
+    ASSERT(strlen(value) > 0);
+    agset(node, const_cast<char*>(name), const_cast<char*>(value));
+  }
+
+  inline void SetNodeLabel(Node* node, const char* value) {
+    static constexpr const auto kKey = "label";
+    return Set(node, kKey, value);
+  }
+
+  inline void SetNodeLabel(Node* node, const std::string& value) {
+    return SetNodeLabel(node, value.c_str());
+  }
+
+  inline void SetNodeLabel(Node* node, const std::stringstream& value) {
+    return SetNodeLabel(node, value.str());
+  }
+
+  inline void SetNodeXLabel(Node* node, const char* value) {
+    static constexpr const auto kKey = "xlabel";
+    return Set(node, kKey, value);
+  }
+
+  inline void SetNodeXLabel(Node* node, const std::string& value) {
+    return SetNodeXLabel(node, value.c_str());
+  }
+
+  inline void SetNodeXLabel(Node* node, const std::stringstream& value) {
+    return SetNodeXLabel(node, value.str());
   }
 
  public:

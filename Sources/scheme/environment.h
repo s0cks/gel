@@ -11,7 +11,9 @@ class Environment {
   DEFINE_NON_COPYABLE_TYPE(Environment);
 
  private:
-  using Storage = std::unordered_map<std::string, Datum*>;
+  using Key = std::string;
+  using Value = Datum;
+  using Storage = std::unordered_map<Key, Value*>;
 
  public:
   class Iterator {
@@ -75,10 +77,10 @@ class Environment {
     return std::end(data());
   }
 
-  auto Put(const std::string& k, Datum* v) -> bool;
-  auto Has(const std::string& k) const -> bool;
-  auto Lookup(const std::string& k, Datum** result) const -> bool;
-  auto LocalLookup(const std::string& k, Datum** result) const -> bool;
+  auto Put(const Key& k, Value* v) -> bool;
+  auto Has(const Key& k) const -> bool;
+  auto Lookup(const Key& k, Value** result) const -> bool;
+  auto LocalLookup(const Key& k, Value** result) const -> bool;
 
   auto GetTotalNumberOfLocalValues() const -> uint64_t {
     return data().size();

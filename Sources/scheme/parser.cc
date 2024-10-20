@@ -2,222 +2,141 @@
 
 #include <glog/logging.h>
 
-#include <cctype>
-
-#include "scheme/ast.h"
 #include "scheme/common.h"
+#include "scheme/expression.h"
 #include "scheme/instruction.h"
 
 namespace scm {
-auto Parser::ParseLiteral() -> ast::ConstantExpr* {
+auto Parser::ParseSymbol() -> Symbol* {
   const auto& next = stream().Next();
-  DLOG(INFO) << "next: " << next;
+  LOG_IF(FATAL, next.kind != Token::kIdentifier) << "unexpected: " << next << ", expected: " << Token::kIdentifier;
+  ASSERT(next.kind == Token::kIdentifier);
+  return Symbol::New(next.text);
+}
+
+auto Parser::ParseLiteralExpr() -> LiteralExpr* {
+  const auto& next = stream().Next();
+  DLOG(INFO) << "parsing literal: " << next;
   switch (next.kind) {
     case Token::kLiteralTrue:
-      return ast::ConstantExpr::New(Bool::True());
+      return LiteralExpr::New(Bool::True());
     case Token::kLiteralFalse:
-      return ast::ConstantExpr::New(Bool::False());
-    case Token::kLiteralNumber:
+      return LiteralExpr::New(Bool::False());
     case Token::kLiteralLong:
-      return ast::ConstantExpr::New(Number::New(next.AsLong()));
+    case Token::kLiteralNumber:
+      return LiteralExpr::New(Number::New(next.AsLong()));
     case Token::kLiteralDouble:
-      return ast::ConstantExpr::New(Number::New(static_cast<uint64_t>(next.AsDouble())));
+    case Token::kLiteralString:
     default:
-      LOG(ERROR) << "unexpected token: " << next;
+      LOG(FATAL) << "unexpected: " << stream().Next();
       return nullptr;
   }
 }
 
-auto Parser::ParseIdentifier() -> std::string {
-  if (!ExpectNext(Token::kIdentifier))
-    return nullptr;
-  const auto& next = stream().Next();
-  ASSERT(next.kind == Token::kIdentifier);
-  ASSERT(!next.text.empty());
-  return next.text;
-}
-
-auto Parser::ParseVariable() -> Variable* {
-  const auto ident = ParseIdentifier();
-  return new Variable(ident);
-}
-
-auto Parser::ParseExpression() -> ast::Expression* {
-  const auto& peek = stream().Peek();
-  if (peek.IsLiteral())
-    return ParseLiteral();
-  switch (peek.kind) {
-    case Token::kIdentifier: {
-      const auto symbol = ParseIdentifier();
-      return ast::LoadVariableExpr::New(new Variable(symbol));
-    }
-    case Token::kLParen:
-      stream().Next();
-      return ParseCallProcExpr();
-    default:
-      LOG(FATAL) << "unexpected: " << peek;
-      return nullptr;
+auto Parser::ParseBeginExpr() -> BeginExpr* {
+  const auto begin = BeginExpr::New();
+  while (stream().Peek().kind != Token::kRParen) {
+    begin->Append(ParseExpression());
   }
+  ASSERT(stream().Peek().kind == Token::kRParen);
+  return begin;
 }
 
-auto Parser::ParseVariableDefinition() -> ast::VariableDef* {
-  if (!ExpectNext(Token::kVariableDef))
-    return nullptr;
-  stream().Next();
-  const auto var = ParseVariable();
-  ASSERT(var);
-  DLOG(INFO) << "var: " << var->ToString();
-  const auto expr = ParseExpression();
-  ASSERT(expr);
-  return ast::VariableDef::New(var, ast::Value::New(expr));
-}
-
-auto Parser::ParseDefinition() -> ast::Definition* {
-  if (!ExpectNext(Token::kLParen))
-    return nullptr;
-  stream().Next();
-
-  ast::Definition* defn = nullptr;
-  const auto& peek = stream().Peek();
-  switch (peek.kind) {
-    case Token::kBeginDef:
-      defn = ParseBeginDefinition();
-      break;
-    case Token::kVariableDef:
-      defn = ParseVariableDefinition();
-      break;
-    case Token::kIdentifier:
-      defn = ParseCallProcExpr();
-      break;
-    default:
-      LOG(FATAL) << "unexpected: " << peek;
-      return nullptr;
-  }
-
-  if (!ExpectNext(Token::kRParen))
-    return nullptr;
-  stream().Next();
-  return defn;
-}
-
-auto Parser::ParseDefinitionList(ast::DefinitionList& definitions) -> bool {
-  while (!PeekEq(Token::kRParen)) {  // TODO: cleanup
-    const auto defn = ParseDefinition();
-    ASSERT(defn);
-    definitions.push_back(defn);
-  }
-  return true;
-}
-
-auto Parser::ParseBeginDefinition() -> ast::BeginDef* {
-  if (!ExpectNext(Token::kBeginDef))
-    return nullptr;
-  stream().Next();
-  ast::DefinitionList definitions;
-  if (!ParseDefinitionList(definitions))
-    return nullptr;
-  return ast::BeginDef::New(definitions);
-}
-
-auto Parser::ParseExpressionList() -> ast::ExpressionList* {
-  const auto values = ast::ExpressionList::New();
-  do {
-    const auto& peek = stream().Peek();
-    switch (peek.kind) {
-      case Token::kRParen:
-        return values;
-      default:
-        values->Append(ParseExpression());
-        continue;
-    }
-  } while (true);
-}
-
-auto Parser::ParseCallProcExpr() -> ast::CallProcExpr* {
-  const auto ident = ParseIdentifier();
-  const auto args = ParseExpressionList();
-  ASSERT(args);
-  return ast::CallProcExpr::New(ident, args);
-}
-
-auto Parser::ParseBinaryOpExpr() -> ast::BinaryOpExpr* {
-  const auto& next = stream().Next();
-  switch (next.kind) {
-    case Token::kPlus: {
-      const auto left = ast::Value::New(ParseExpression());
-      const auto right = ast::Value::New(ParseExpression());
-      return ast::BinaryOpExpr::New(ast::kAddOp, left, right);
-    }
+static inline auto ToBinaryOp(const Token& rhs) -> BinaryOp {
+  switch (rhs.kind) {
+    case Token::kPlus:
+      return BinaryOp::kAdd;
     case Token::kMinus:
+      return BinaryOp::kSub;
+    case Token::kMultiply:
+      return BinaryOp::kMul;
     case Token::kDivide:
+      return BinaryOp::kDiv;
+    case Token::kModulus:
+      return BinaryOp::kMod;
     default:
-      LOG(FATAL) << "unexpected: " << next;
-      return nullptr;
+      LOG(FATAL) << "unexpected: " << rhs;
   }
 }
 
-auto Parser::ParseForm() -> ast::Form* {
-  {
-    const auto& next = stream().Peek();
-    if (next.IsLiteral()) {
-      return ParseLiteral();
-    } else if (next.kind == Token::kIdentifier) {
-    }
-  }
+auto Parser::ParseBinaryOpExpr() -> BinaryOpExpr* {
+  const auto& next = stream().Next();
+  const auto op = ToBinaryOp(next);
+  DLOG(INFO) << "BinaryOp: " << op;
+  const auto left_expr = ParseExpression();
+  DLOG(INFO) << "left expr: " << left_expr->ToString();
+  const auto right_expr = ParseExpression();
+  DLOG(INFO) << "right expr: " << right_expr->ToString();
+  return BinaryOpExpr::New(op, left_expr, right_expr);
+}
 
-  if (!ExpectNext(Token::kLParen))
-    return nullptr;
-  stream().Next();
-
-  const auto& next = stream().Peek();
-  DLOG(INFO) << "peek: " << next;
-  ast::Form* form = nullptr;
-  switch (next.kind) {
-    case Token::kVariableDef:
-      form = ParseVariableDefinition();
-      break;
-    case Token::kBeginDef:
-      form = ParseBeginDefinition();
-      break;
-    case Token::kIdentifier:
-      form = ParseCallProcExpr();
-      break;
+static inline auto IsBinaryOp(const Token& rhs) -> bool {
+  switch (rhs.kind) {
+    case Token::kModulus:
     case Token::kPlus:
     case Token::kMinus:
-      form = ParseBinaryOpExpr();
-      break;
+    case Token::kMultiply:
+    case Token::kDivide:
+      return true;
     default:
-      LOG(FATAL) << "unexpected token: " << next;
-      return nullptr;
+      return false;
   }
-  ASSERT(form);
-
-  if (!ExpectNext(Token::kRParen))
-    return nullptr;
-  stream().Next();
-  return form;
 }
 
-static inline auto IsValidFormToken(const Token& token) -> bool {
-  return !token.IsInvalid() && token.kind != Token::kEndOfStream;
+auto Parser::ParseExpression() -> Expression* {
+  DLOG(INFO) << "peek: " << stream().Peek();
+  if (stream().Peek().IsLiteral())
+    return ParseLiteralExpr();
+
+  Expression* expr = nullptr;
+  ExpectNext(Token::kLParen);
+  if (IsBinaryOp(stream().Peek())) {
+    expr = ParseBinaryOpExpr();
+  } else {
+    const auto& next = stream().Next();
+    switch (next.kind) {
+      case Token::kVariableDef:
+        expr = ParseDefineExpr();
+        break;
+      case Token::kBeginDef:
+        expr = ParseBeginExpr();
+        break;
+      default:
+        LOG(FATAL) << "unexpected: " << next;
+        return nullptr;
+    }
+  }
+  ASSERT(expr);
+  ExpectNext(Token::kRParen);
+  return expr;
 }
 
-auto Parser::ParseProgram() -> ast::Program* {
-  const auto program = ast::Program::New();
-  ASSERT(program);
-  while (IsValidFormToken(stream().Peek())) {
-    const auto form = ParseForm();
-    ASSERT(form);
-    program->Append(form);
-  }
+auto Parser::ParseDefineExpr() -> DefineExpr* {
+  const auto symbol = ParseSymbol();
+  ASSERT(symbo);
+  const auto value = ParseExpression();
+  ASSERT(value);
+  return DefineExpr::New(symbol, value);
+}
+
+auto Parser::ParseProgram() -> Program* {
+  const auto program = Program::New();
+  do {
+    const auto& next = stream().Peek();
+    if (next.IsEndOfStream())
+      break;
+    program->Append(ParseExpression());
+  } while (true);
   return program;
 }
 
-auto Parser::Parse(const uint8_t* data, const uint64_t length) -> ast::Program* {
+auto Parse(const uint8_t* data, const uint64_t length) -> Program* {
   ASSERT(data);
-  ASSERT(length >= 0 && length <= TokenStream::kChunkSize);
+  ASSERT(length >= 1);
   ByteTokenStream stream(data, length);
   Parser parser(stream);
-  return parser.ParseProgram();
+  const auto program = parser.ParseProgram();
+  ASSERT(program);
+  return program;
 }
 }  // namespace scm

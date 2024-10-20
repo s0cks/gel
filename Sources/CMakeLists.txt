@@ -1,8 +1,8 @@
 configure_file(scheme/scheme.h.in ${CMAKE_CURRENT_BINARY_DIR}/scheme/scheme.h)
-file(GLOB_RECURSE SCHEME_SOURCES
-  "${CMAKE_CURRENT_SOURCE_DIR}/**/*.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/**/*.cc"
-  "${CMAKE_CURRENT_BINARY_DIR}/**/*.h")
+file(GLOB_RECURSE SCM_SOURCES
+  "${CMAKE_CURRENT_SOURCE_DIR}/scheme/*.h"
+  "${CMAKE_CURRENT_SOURCE_DIR}/scheme/*.cc"
+  "${CMAKE_CURRENT_BINARY_DIR}/scheme/*.h")
 
 find_package(Graphviz REQUIRED)
 find_package(Tracy CONFIG)
@@ -20,7 +20,7 @@ if(ENABLE_TRACING)
 endif()
 
 add_library(scheme STATIC
-  ${SCHEME_SOURCES})
+  ${SCM_SOURCES})
 target_compile_options(scheme
   PUBLIC ${SCHEME_COMPILE_OPTS})
 target_include_directories(scheme
@@ -28,3 +28,8 @@ target_include_directories(scheme
          ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(scheme
   PUBLIC ${SCM_LIBRARIES})
+
+add_executable(scm
+  main.cc)
+target_link_libraries(scm
+  PUBLIC scheme)
