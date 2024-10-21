@@ -32,6 +32,7 @@ class Parser {
   auto ParseExpression() -> Expression*;
   auto ParseLoadSymbol() -> LoadVariableInstr*;
   auto ParseSymbolExpr() -> SymbolExpr*;
+  auto ParseCallProcExpr(std::string symbol) -> CallProcExpr*;
 
   inline auto PeekEq(const Token::Kind rhs) const -> bool {
     const auto& peek = stream().Peek();

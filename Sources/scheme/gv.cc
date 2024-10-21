@@ -1,50 +1,20 @@
 #include "scheme/gv.h"
 
 #include <glog/logging.h>
-#include <graphviz/cgraph.h>
-#include <graphviz/gvc.h>
 
-namespace scm {
-DotGraph::DotGraph(Agraph_t* graph) :
-  graph_(graph) {
-  ASSERT(graph);
+namespace scm::dot {
+GraphBuilder::GraphBuilder(const char* name, Agdesc_t desc) {
+  SetGraph(Graph::New(name, desc));
 }
 
-DotGraph::~DotGraph() {
-  agclose(graph_);
-  graph_ = nullptr;
-}
-
-auto DotGraph::New(Agraph_t* graph) -> DotGraph* {
-  return new DotGraph(graph);
-}
-
-DotGraphBuilder::DotGraphBuilder(const char* name, Agdesc_t desc) :
-  graph_(nullptr) {
-  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
-  const auto graph = agopen(const_cast<char*>(name), desc, nullptr);
-  ASSERT(graph);
-  graph_ = graph;
-}
-
-DotGraphRenderer::DotGraphRenderer() :
-  context_(nullptr) {
-  SetContext(gvContext());
-}
-
-DotGraphRenderer::~DotGraphRenderer() {
-  if (HasContext())
-    gvFreeContext(GetContext());
-}
-
-void DotGraphRenderer::RenderDotTo(DotGraph* graph, FILE* stream) {
+void GraphRenderer::RenderDotTo(Graph* graph, FILE* stream) {
   ASSERT(HasContext());
   ASSERT(graph);
   ASSERT(stream);
   return RenderTo(graph, stream, "dot", "dot");
 }
 
-void DotGraphRenderer::RenderTo(DotGraph* graph, FILE* stream, const std::string& layout, const std::string& format) {
+void GraphRenderer::RenderTo(Graph* graph, FILE* stream, const std::string& layout, const std::string& format) {
   ASSERT(HasContext());
   ASSERT(stream);
   ASSERT(graph);
@@ -55,19 +25,19 @@ void DotGraphRenderer::RenderTo(DotGraph* graph, FILE* stream, const std::string
   gvFreeLayout(GetContext(), graph->get());
 }
 
-void DotGraph::RenderTo(FILE* stream) {
+void Graph::RenderTo(FILE* stream) {
   ASSERT(stream);
-  DotGraphRenderer render;
+  GraphRenderer render;
   render.RenderDotTo(this, stream);
 }
 
-void DotGraph::RenderPngTo(FILE* stream) {
+void Graph::RenderPngTo(FILE* stream) {
   ASSERT(stream);
-  DotGraphRenderer render;
+  GraphRenderer render;
   render.RenderPngTo(this, stream);
 }
 
-void DotGraph::RenderPngToFilename(const std::string& filename) {
+void Graph::RenderPngToFilename(const std::string& filename) {
   ASSERT(!filename.empty());
   const auto file = fopen(filename.c_str(), "wb");
   LOG_IF(FATAL, !file) << "failed to open: " << filename;
@@ -76,4 +46,4 @@ void DotGraph::RenderPngToFilename(const std::string& filename) {
   const auto result = fclose(file);
   LOG_IF(FATAL, result != 0) << "failed to close: " << filename;
 }
-}  // namespace scm
+}  // namespace scm::dot

@@ -7,35 +7,38 @@
 #include "scheme/environment.h"
 #include "scheme/flow_graph.h"
 #include "scheme/instruction.h"
+#include "scheme/state.h"
 
 namespace scm {
 class Interpreter : private InstructionVisitor {
   DEFINE_NON_COPYABLE_TYPE(Interpreter);
 
  private:
-  std::stack<Datum*> stack_{};
-  Environment* env_ = nullptr;
+  State* state_ = nullptr;
 
-  inline void Push(Datum* value) {
-    ASSERT(value);
-    stack_.push(value);
-  }
-
-  inline auto Pop() -> Datum* {
-    if (stack_.empty())
-      return nullptr;
-    const auto next = stack_.top();
-    stack_.pop();
-    return next;
+  inline void SetState(State* state) {
+    ASSERT(state);
+    state_ = state;
   }
 
   void ExecuteInstr(Instruction* instr);
   void StoreSymbol(Symbol* symbol, Datum* value);
   auto LoadSymbol(Symbol* symbol) -> bool;
 
-  void SetEnvironment(Environment* env) {
-    ASSERT(env);
-    env_ = env;
+  auto DefineSymbol(Symbol* symbol, Type* value) -> bool;
+  auto LookupSymbol(Symbol* symbol, Type** result) -> bool;
+
+  inline void Push(Type* value) {
+    ASSERT(value);
+    const auto state = GetState();
+    ASSERT(state);
+    state->Push(value);
+  }
+
+  inline auto Pop() -> Type* {
+    const auto state = GetState();
+    ASSERT(state);
+    return state->Pop();
   }
 
 #define DECLARE_VISIT(Name) auto Visit##Name(Name* instr) -> bool override;
@@ -43,15 +46,15 @@ class Interpreter : private InstructionVisitor {
 #undef DECLARE_VISIT
 
  public:
-  Interpreter() {
-    SetEnvironment(Environment::New());
-  }
-  ~Interpreter() {
-    delete env_;
+  Interpreter();
+  ~Interpreter();
+
+  auto GetState() const -> State* {
+    return state_;
   }
 
-  auto GetEnvironment() const -> Environment* {
-    return env_;
+  inline auto HasState() const -> bool {
+    return GetState() != nullptr;
   }
 
   auto Execute(EntryInstr* entry) -> Datum*;

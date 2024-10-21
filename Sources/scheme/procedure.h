@@ -19,13 +19,17 @@ class Procedure : public Type {
     return rhs && rhs->IsProcedure();
   }
 
-  virtual auto Apply(Runtime*, Datum* rhs) const -> Datum* = 0;
+  auto AsProcedure() -> Procedure* override {
+    return this;
+  }
+
+  virtual auto Apply(Environment*, Datum* rhs) const -> Datum* = 0;
 };
 
 class Lambda : public Procedure {
  public:
   DECLARE_TYPE(Lambda);
-  auto Apply(Runtime*, Datum* rhs) const -> Datum* override;
+  auto Apply(Environment*, Datum* rhs) const -> Datum* override;
 };
 
 class Macro : public Procedure {

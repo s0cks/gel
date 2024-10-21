@@ -14,11 +14,10 @@ void FlowGraphToDotGraph::Set(Node* node, const std::string& name, const std::st
   ASSERT(node);
   ASSERT(!name.empty());
   ASSERT(!value.empty());
-  const auto val = agstrdup(GetGraph(), value.c_str());
+  const auto val = agstrdup(GetGraph()->get(), value.c_str());
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
   agset(node, const_cast<char*>(name.c_str()), val);
-  agstrfree(GetGraph(), val);
-  DLOG(INFO) << "set attr " << name << " to: " << value;
+  agstrfree(GetGraph()->get(), val);
 }
 
 auto FlowGraphToDotGraph::CreateXLabel(Instruction* instr) -> std::optional<std::string> {
@@ -85,13 +84,13 @@ void FlowGraphToDotGraph::InitNodes() {
   }
 }
 
-auto FlowGraphToDotGraph::BuildDotGraph() -> DotGraph* {
+auto FlowGraphToDotGraph::Build() -> dot::Graph* {
   ASSERT(HasFlowGraph());
-  agattr(GetGraph(), AGNODE, "shape", "box");
-  agattr(GetGraph(), AGNODE, "label", "");
-  agattr(GetGraph(), AGNODE, "xlabel", "");
+  agattr(GetGraph()->get(), AGNODE, "shape", "box");
+  agattr(GetGraph()->get(), AGNODE, "label", "");
+  agattr(GetGraph()->get(), AGNODE, "xlabel", "");
   InitNodes();
   InitEdges();
-  return DotGraph::New(GetGraph());
+  return GetGraph();
 }
 }  // namespace scm

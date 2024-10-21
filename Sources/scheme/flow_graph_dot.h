@@ -10,7 +10,7 @@
 
 namespace scm {
 
-class FlowGraphToDotGraph : public DotGraphBuilder {
+class FlowGraphToDotGraph : public dot::GraphBuilder {
   DEFINE_NON_COPYABLE_TYPE(FlowGraphToDotGraph);
 
  private:
@@ -40,7 +40,7 @@ class FlowGraphToDotGraph : public DotGraphBuilder {
     ASSERT(HasGraph());
     ASSERT(instr);
     const auto node_id = fmt::format("i{0:d}", ++num_instructions_);
-    return DotGraphBuilder::NewNode(node_id, flags);
+    return GraphBuilder::NewNode(node_id, flags);
   }
 
   inline auto NewEdgeFromPrevious(Agnode_t* to, const char* name = "", const int flags = kDefaultEdgeFlags) -> Edge* {
@@ -69,7 +69,7 @@ class FlowGraphToDotGraph : public DotGraphBuilder {
 
  public:
   explicit FlowGraphToDotGraph(const char* name, const FlowGraph* flow_graph) :
-    DotGraphBuilder(name, Agdirected),
+    dot::GraphBuilder(name, Agdirected),
     flow_graph_(flow_graph) {
     ASSERT(flow_graph);
   }
@@ -87,14 +87,14 @@ class FlowGraphToDotGraph : public DotGraphBuilder {
     return GetFlowGraph()->GetEntry();
   }
 
-  auto BuildDotGraph() -> DotGraph* override;
+  auto Build() -> dot::Graph* override;
 
  public:
-  static inline auto Build(const char* name, const FlowGraph* flow_graph) -> DotGraph* {
+  static inline auto BuildGraph(const char* name, const FlowGraph* flow_graph) -> dot::Graph* {
     ASSERT(name);
     ASSERT(flow_graph);
     FlowGraphToDotGraph builder(name, flow_graph);
-    const auto dot_graph = builder.BuildDotGraph();
+    const auto dot_graph = builder.Build();
     ASSERT(dot_graph);
     return dot_graph;
   }

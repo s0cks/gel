@@ -28,6 +28,6 @@
 
 #define NOT_IMPLEMENTED(Level) LOG(Level) << __FUNCTION__ << " is not implemented.";
 
-namespace scm {}
+namespace scm {}  // namespace scm
 
 #endif  // SCM_COMMON_H

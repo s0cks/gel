@@ -12,7 +12,7 @@ class Environment {
 
  private:
   using Key = std::string;
-  using Value = Datum;
+  using Value = Type;
   using Storage = std::unordered_map<Key, Value*>;
 
  public:

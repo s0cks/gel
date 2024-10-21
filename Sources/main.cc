@@ -3,6 +3,7 @@
 
 #include <cstdlib>
 #include <filesystem>
+#include <iostream>
 
 #include "scheme/expression_dot.h"
 #include "scheme/flags.h"
@@ -32,7 +33,7 @@ auto main(int argc, char** argv) -> int {
     ASSERT(program);
     if (FLAGS_dump_ast) {
       // TODO: merge program graphs
-      const auto dot_graph = ExpressionToDot::Build("expr0", program->GetExpressionAt(0));
+      const auto dot_graph = ExpressionToDot::BuildGraph("expr0", program->GetExpressionAt(0));
       ASSERT(dot_graph);
       dot_graph->RenderPngToFilename(GetReportFilename("expr0_ast.png"));
     }
@@ -41,13 +42,13 @@ auto main(int argc, char** argv) -> int {
     ASSERT(flow_graph->GetEntry());
     if (FLAGS_dump_ast) {
       // TODO: merge program graphs
-      const auto dot_graph = FlowGraphToDotGraph::Build("expr0", flow_graph);
+      const auto dot_graph = FlowGraphToDotGraph::BuildGraph("expr0", flow_graph);
       ASSERT(dot_graph);
       dot_graph->RenderPngToFilename(GetReportFilename("expr0_flow_graph.png"));
     }
     const auto result = Interpreter::Eval(flow_graph);
     ASSERT(result);
-    LOG(INFO) << "result: " << result->ToString();
+    PrintValue(std::cout, result) << std::endl;
   }
 
   return EXIT_SUCCESS;

@@ -2,6 +2,7 @@
 #define SCM_TYPE_H
 
 #include <functional>
+#include <ostream>
 #include <string>
 #include <unordered_set>
 
@@ -247,9 +248,9 @@ class Symbol : public Datum {
  private:
   std::string value_;
 
-  explicit Symbol(std::string value) :
+  explicit Symbol(const std::string& value) :
     Datum(),
-    value_(std::move(value)) {}
+    value_(value) {}
 
  public:
   auto Get() const -> const std::string& {
@@ -294,6 +295,18 @@ class List : public Datum {
     return new List(data);
   }
 };
+
+static inline auto PrintValue(std::ostream& stream, Type* value) -> std::ostream& {
+  ASSERT(value);
+  if (value->IsNull()) {
+    return stream << "`()";
+  } else if (value->IsBool()) {
+    return stream << (value->AsBool()->Get() ? "#t" : "#f");
+  } else if (value->IsNumber()) {
+    return stream << value->AsNumber()->GetValue();
+  }
+  return stream << value->ToString();
+}
 }  // namespace scm
 
 #endif  // SCM_TYPE_H

@@ -265,8 +265,7 @@ class StoreVariableInstr : public Definition {
 
 class CallProcInstr : public Definition {
  private:
-  Symbol* symbol_;
-  Definition* args_ = nullptr;
+  Symbol* symbol_ = nullptr;
 
  protected:
   void SetSymbol(Symbol* symbol) {
@@ -274,16 +273,10 @@ class CallProcInstr : public Definition {
     symbol_ = symbol;
   }
 
-  void SetArgs(Definition* args) {
-    ASSERT(args);
-    args_ = args;
-  }
-
  public:
-  explicit CallProcInstr(Symbol* symbol, Definition* args) :
+  explicit CallProcInstr(Symbol* symbol) :
     Definition() {
     SetSymbol(symbol);
-    SetArgs(args);
   }
   ~CallProcInstr() override = default;
 
@@ -291,11 +284,13 @@ class CallProcInstr : public Definition {
     return symbol_;
   }
 
-  auto GetArgs() const -> Definition* {
-    return args_;
-  }
-
   DECLARE_INSTRUCTION(CallProcInstr);
+
+ public:
+  static inline auto New(Symbol* symbol) -> CallProcInstr* {
+    ASSERT(symbol);
+    return new CallProcInstr(symbol);
+  }
 };
 
 class ReturnInstr : public Definition {

@@ -16,7 +16,6 @@ auto Parser::ParseSymbol() -> Symbol* {
 
 auto Parser::ParseLiteralExpr() -> LiteralExpr* {
   const auto& next = stream().Next();
-  DLOG(INFO) << "parsing literal: " << next;
   switch (next.kind) {
     case Token::kLiteralTrue:
       return LiteralExpr::New(Bool::True());
@@ -42,18 +41,30 @@ auto Parser::ParseBeginExpr() -> BeginExpr* {
   return begin;
 }
 
+auto Parser::ParseCallProcExpr(std::string name) -> CallProcExpr* {
+  ExpressionList args;
+  while (stream().Peek().kind != Token::kRParen) {
+    const auto arg = ParseExpression();
+    ASSERT(arg);
+    args.push_back(arg);
+  }
+  const auto symbol = Symbol::New(name);
+  ASSERT(symbol);
+  return CallProcExpr::New(symbol, args);
+}
+
 static inline auto ToBinaryOp(const Token& rhs) -> BinaryOp {
   switch (rhs.kind) {
     case Token::kPlus:
       return BinaryOp::kAdd;
     case Token::kMinus:
-      return BinaryOp::kSub;
+      return BinaryOp::kSubtract;
     case Token::kMultiply:
-      return BinaryOp::kMul;
+      return BinaryOp::kMultiply;
     case Token::kDivide:
-      return BinaryOp::kDiv;
+      return BinaryOp::kDivide;
     case Token::kModulus:
-      return BinaryOp::kMod;
+      return BinaryOp::kModulus;
     default:
       LOG(FATAL) << "unexpected: " << rhs;
   }
@@ -62,11 +73,8 @@ static inline auto ToBinaryOp(const Token& rhs) -> BinaryOp {
 auto Parser::ParseBinaryOpExpr() -> BinaryOpExpr* {
   const auto& next = stream().Next();
   const auto op = ToBinaryOp(next);
-  DLOG(INFO) << "BinaryOp: " << op;
   const auto left_expr = ParseExpression();
-  DLOG(INFO) << "left expr: " << left_expr->ToString();
   const auto right_expr = ParseExpression();
-  DLOG(INFO) << "right expr: " << right_expr->ToString();
   return BinaryOpExpr::New(op, left_expr, right_expr);
 }
 
@@ -90,7 +98,6 @@ auto Parser::ParseSymbolExpr() -> SymbolExpr* {
 }
 
 auto Parser::ParseExpression() -> Expression* {
-  DLOG(INFO) << "peek: " << stream().Peek();
   if (stream().Peek().IsLiteral())
     return ParseLiteralExpr();
   else if (stream().Peek().kind == Token::kIdentifier)
@@ -108,6 +115,9 @@ auto Parser::ParseExpression() -> Expression* {
         break;
       case Token::kBeginDef:
         expr = ParseBeginExpr();
+        break;
+      case Token::kIdentifier:
+        expr = ParseCallProcExpr(next.text);
         break;
       default:
         LOG(FATAL) << "unexpected: " << next;

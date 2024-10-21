@@ -2,31 +2,86 @@
 
 #include <glog/logging.h>
 
+#include <iostream>
+
 #include "scheme/common.h"
 #include "scheme/expression.h"
 #include "scheme/instruction.h"
 #include "scheme/tracing.h"
 
 namespace scm {
+class print : public Procedure {
+  DEFINE_NON_COPYABLE_TYPE(print);
+
+ public:
+  print() = default;
+  ~print() override = default;
+
+  auto Apply(Environment* env, Datum* rhs) const -> Datum* override {
+    ASSERT(rhs);
+    PrintValue(std::cout, rhs) << std::endl;
+    return Null::Get();
+  }
+
+  auto ToString() const -> std::string override {
+    return "print";
+  }
+};
+
+static inline auto CreateGlobalEnvironment() -> Environment* {
+  const auto env = Environment::New();
+  ASSERT(env);
+  env->Put("print", new print());
+  return env;
+}
+
+Interpreter::Interpreter() {
+  SetState(State::New(CreateGlobalEnvironment()));
+}
+
+Interpreter::~Interpreter() {
+  delete state_;
+}
+
+auto Interpreter::DefineSymbol(Symbol* symbol, Type* value) -> bool {
+  ASSERT(HasState());
+  ASSERT(symbol);
+  ASSERT(value);
+  const auto state = GetState();
+  ASSERT(state);
+  const auto globals = state->GetGlobals();
+  ASSERT(globals);
+  return globals->Put(symbol->Get(), value);
+}
+
+auto Interpreter::LookupSymbol(Symbol* symbol, Type** result) -> bool {
+  ASSERT(HasState());
+  ASSERT(symbol);
+  const auto globals = GetState()->GetGlobals();
+  ASSERT(globals);
+  return globals->Lookup(symbol->Get(), result);
+}
+
 auto Interpreter::LoadSymbol(Symbol* symbol) -> bool {
-  Datum* result = nullptr;
-  if (!GetEnvironment()->Lookup(symbol, &result)) {
-    LOG(ERROR) << "failed to get " << symbol;
+  ASSERT(symbol);
+  Type* result = nullptr;
+  if (!LookupSymbol(symbol, &result)) {
+    LOG(FATAL) << "failed to find symbol: " << symbol;
     return false;
   }
   ASSERT(result);
-  Push(result);
+  ASSERT(result->IsDatum());
+  Push(reinterpret_cast<Datum*>(result));
   return true;
 }
 
 void Interpreter::StoreSymbol(Symbol* symbol, Datum* value) {
   ASSERT(symbol);
   ASSERT(value);
-  if (!GetEnvironment()->Put(symbol, value)) {
+  if (!DefineSymbol(symbol, value)) {
     LOG(ERROR) << "failed to set " << symbol << " to: " << value;
     return;
   }
-  DLOG(INFO) << "set " << symbol << " to: " << value;
 }
 
 static inline auto Add(Datum* lhs, Datum* rhs) -> Datum* {
@@ -58,8 +113,39 @@ auto Interpreter::VisitGraphEntryInstr(GraphEntryInstr* instr) -> bool {
   return true;
 }
 
+static inline auto LookupProcedure(Environment* env, Symbol* name, Procedure** result) -> bool {
+  ASSERT(env);
+  ASSERT(name);
+  Type* value = nullptr;
+  if (!env->Lookup(name, &value)) {
+    (*result) = nullptr;
+    LOG(ERROR) << "failed to resolve procedure named: " << name->Get();
+    return false;
+  }
+  ASSERT(value);
+  if (!value->IsProcedure()) {
+    (*result) = nullptr;
+    LOG(ERROR) << "'" << name->Get() << "' (" << value->ToString() << ") is not a procedure.";
+    return false;
+  }
+  (*result) = value->AsProcedure();
+  return true;
+}
+
 auto Interpreter::VisitCallProcInstr(CallProcInstr* instr) -> bool {
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  ASSERT(instr);
+  const auto symbol = instr->GetSymbol();
+  ASSERT(symbol);
+  Procedure* proc = nullptr;
+  if (!LookupProcedure(GetState()->GetGlobals(), symbol, &proc))
+    return false;
+  ASSERT(proc);
+  ASSERT(proc->IsProcedure());
+  const auto args = Pop();  // TODO: fetch args
+  ASSERT(args->IsDatum());
+  const auto result = proc->Apply(GetState()->GetGlobals(), reinterpret_cast<Datum*>(args));
+  ASSERT(result);
+  Push(result);
   return true;
 }
 
@@ -73,9 +159,10 @@ auto Interpreter::VisitConstantInstr(ConstantInstr* instr) -> bool {
 auto Interpreter::VisitStoreVariableInstr(StoreVariableInstr* instr) -> bool {
   const auto value = Pop();
   ASSERT(value);
+  ASSERT(value->IsDatum());
   const auto symbol = instr->GetSymbol();
   ASSERT(symbol);
-  StoreSymbol(symbol, value);
+  StoreSymbol(symbol, reinterpret_cast<Datum*>(value));
   return true;
 }
 
@@ -90,25 +177,22 @@ auto Interpreter::VisitReturnInstr(ReturnInstr* instr) -> bool {
 
 auto Interpreter::VisitBinaryOpInstr(BinaryOpInstr* instr) -> bool {
   const auto op = instr->GetOp();
-  DLOG(INFO) << "op: " << op;
   const auto right = Pop();
   ASSERT(right);
-  DLOG(INFO) << "right: " << right;
   const auto left = Pop();
   ASSERT(left);
-  DLOG(INFO) << "left: " << left;
   switch (op) {
     case expr::kAdd:
-      Push(Add(left, right));
+      Push(Add((Datum*)left, (Datum*)right));
       return true;
-    case expr::kSub:
-      Push(Subtract(left, right));
+    case expr::kSubtract:
+      Push(Subtract((Datum*)left, (Datum*)right));
       return true;
-    case expr::kMul:
-      Push(Multiply(left, right));
+    case expr::kMultiply:
+      Push(Multiply((Datum*)left, (Datum*)right));
       return true;
-    case expr::kDiv:
-      Push(Divide(left, right));
+    case expr::kDivide:
+      Push(Divide((Datum*)left, (Datum*)right));
       return true;
     default:
       LOG(ERROR) << "invalid BinaryOp: " << op;
@@ -120,7 +204,7 @@ void Interpreter::ExecuteInstr(Instruction* instr) {
   ASSERT(instr);
   TRACE_SECTION(ExecuteInstr);
   TRACE_TAG(instr->GetName());
-  DLOG(INFO) << "executing: " << instr->GetName();
+  DVLOG(10) << "executing: " << instr->GetName();
   if (!instr->Accept(this))
     LOG(FATAL) << "failed to execute: " << instr->ToString();
 }
@@ -133,12 +217,15 @@ auto Interpreter::Execute(EntryInstr* entry) -> Datum* {
     ExecuteInstr(iter.Next());
   }
 
-  if (stack_.empty())
+  const auto state = GetState();
+  ASSERT(state);
+  if (state->IsStackEmpty())
     return Null::Get();
 
   const auto result = Pop();
   ASSERT(result);
+  ASSERT(result->IsDatum());
   ASSERT(stack_.empty());
-  return result;
+  return reinterpret_cast<Datum*>(result);
 }
 }  // namespace scm

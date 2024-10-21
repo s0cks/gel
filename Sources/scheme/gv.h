@@ -3,6 +3,7 @@
 
 #include <fmt/format.h>
 #include <graphviz/cgraph.h>
+#include <graphviz/gvc.h>
 #include <graphviz/gvcext.h>
 
 #include <sstream>
@@ -12,24 +13,29 @@
 
 #include "scheme/common.h"
 
-namespace scm {
-class DotGraph {
-  using Symbol = Agsym_t;
-  DEFINE_NON_COPYABLE_TYPE(DotGraph);
+namespace scm::dot {
+using Symbol = Agsym_t;
+class Graph {
+  using Handle = Agraph_t;
+  DEFINE_NON_COPYABLE_TYPE(Graph);
 
  private:
-  static Symbol* kNodeLabelAttr;
+  Handle* handle_ = nullptr;
 
- private:
-  Agraph_t* graph_;
+  explicit Graph(Handle* handle) {
+    SetHandle(handle);
+  }
 
-  explicit DotGraph(Agraph_t* graph);
+  inline void SetHandle(Handle* handle) {
+    ASSERT(handle);
+    handle_ = handle;
+  }
 
  public:
-  ~DotGraph();
+  ~Graph();
 
-  auto get() const -> Agraph_t* {
-    return graph_;
+  auto get() const -> Handle* {
+    return handle_;
   }
 
   void RenderTo(FILE* stream);
@@ -41,24 +47,32 @@ class DotGraph {
   }
 
  public:
-  static void Init();
-  static auto New(Agraph_t* graph) -> DotGraph*;
+  static inline auto New(Handle* handle) -> Graph* {
+    return new Graph(handle);
+  }
+
+  static inline auto New(const char* name, Agdesc_t desc, Agdisc_t* disc = nullptr) -> Graph* {
+    return New(agopen(const_cast<char*>(name), desc, disc));  // NOLINT
+  }
+
+  static inline auto New(const std::string& name, Agdesc_t desc, Agdisc_t* disc = nullptr) -> Graph* {
+    return New(name.c_str(), desc, disc);
+  }
 };
 
-class DotGraphBuilder {
-  DEFINE_NON_COPYABLE_TYPE(DotGraphBuilder);
+class GraphBuilder {
+  DEFINE_NON_COPYABLE_TYPE(GraphBuilder);
 
  public:
   static constexpr const auto kDefaultEdgeFlags = 1;
   static constexpr const auto kDefaultNodeFlags = 1;
-  using Graph = Agraph_t;
   using Node = Agnode_t;
   using NodeList = std::vector<Node*>;
   using Edge = Agedge_t;
   using EdgeList = std::vector<Edge*>;
 
  private:
-  Agraph_t* graph_;  // TODO: memory leak
+  Graph* graph_ = nullptr;
   uint64_t num_nodes_ = 0;
 
   inline auto NextNodeId() -> std::string {
@@ -66,9 +80,9 @@ class DotGraphBuilder {
   }
 
  protected:
-  DotGraphBuilder(const char* name, Agdesc_t desc);
+  GraphBuilder(const char* name, Agdesc_t desc);
 
-  inline void SetGraph(Agraph_t* g) {
+  inline void SetGraph(Graph* g) {
     ASSERT(g);
     graph_ = g;
   }
@@ -82,7 +96,7 @@ class DotGraphBuilder {
   }
 
   inline void SetAttr(int kind, const std::string& name, const std::string& value) {
-    agattr(GetGraph(), kind, const_cast<char*>(name.c_str()), const_cast<char*>(value.c_str()));  // NOLINT
+    agattr(GetGraph()->get(), kind, const_cast<char*>(name.c_str()), const_cast<char*>(value.c_str()));  // NOLINT
   }
 
   inline void SetNodeAttr(const std::string& name, const std::string& value) {
@@ -100,7 +114,7 @@ class DotGraphBuilder {
   inline auto NewNode(const char* name, const int flags = kDefaultNodeFlags) -> Node* {
     ASSERT(HasGraph());
     ASSERT(name);
-    return agnode(GetGraph(), const_cast<char*>(name), flags);
+    return agnode(GetGraph()->get(), const_cast<char*>(name), flags);
   }
 
   inline auto NewNode(const std::string& name, const int flags = kDefaultNodeFlags) -> Node* {
@@ -116,7 +130,7 @@ class DotGraphBuilder {
   inline auto NewEdge(Node* from, Node* to, const std::string& name = "", const int flags = kDefaultEdgeFlags) -> Edge* {
     ASSERT(from);
     ASSERT(to);
-    return agedge(GetGraph(), from, to, const_cast<char*>(name.c_str()), flags);  // NOLINT
+    return agedge(GetGraph()->get(), from, to, const_cast<char*>(name.c_str()), flags);  // NOLINT
   }
 
   inline void Set(Node* node, const char* name, const char* value) {
@@ -155,22 +169,23 @@ class DotGraphBuilder {
   }
 
  public:
-  virtual ~DotGraphBuilder() = default;
-  virtual auto BuildDotGraph() -> DotGraph* = 0;
+  virtual ~GraphBuilder() = default;
+  virtual auto Build() -> Graph* = 0;
 };
 
-class DotGraphRenderer {
-  DEFINE_NON_COPYABLE_TYPE(DotGraphRenderer);
+class GraphRenderer {
+  using Context = GVC_t;
+  DEFINE_NON_COPYABLE_TYPE(GraphRenderer);
 
  private:
-  GVC_t* context_;
+  Context* context_ = nullptr;
 
-  void SetContext(GVC_t* ctx) {
+  void SetContext(Context* ctx) {
     ASSERT(ctx);
     context_ = ctx;
   }
 
-  auto GetContext() const -> GVC_t* {
+  auto GetContext() const -> Context* {
     return context_;
   }
 
@@ -178,23 +193,39 @@ class DotGraphRenderer {
     return GetContext() != nullptr;
   }
 
- public:
-  DotGraphRenderer();
-  ~DotGraphRenderer();
-  void RenderTo(DotGraph* graph, FILE* stream, const std::string& layout, const std::string& format);
-  void RenderDotTo(DotGraph* graph, FILE* stream);
+ private:
+  static inline auto NewContext() -> Context* {
+    return gvContext();
+  }
 
-  inline void RenderDotToStdout(DotGraph* graph) {
+  static inline void DeleteContext(Context* ctx) {
+    ASSERT(ctx);
+    gvFreeContext(ctx);
+  }
+
+ public:
+  GraphRenderer() {
+    SetContext(NewContext());
+  }
+  ~GraphRenderer() {
+    if (HasContext())
+      DeleteContext(GetContext());
+  }
+
+  void RenderTo(Graph* graph, FILE* stream, const std::string& layout, const std::string& format);
+  void RenderDotTo(Graph* graph, FILE* stream);
+
+  inline void RenderDotToStdout(Graph* graph) {
     return RenderDotTo(graph, stdout);
   }
 
-  inline void RenderPngTo(DotGraph* graph, FILE* stream, const std::string& layout = "dot") {
+  inline void RenderPngTo(Graph* graph, FILE* stream, const std::string& layout = "dot") {
     ASSERT(stream);
     ASSERT(graph);
     ASSERT(!layout.empty());
     return RenderTo(graph, stream, layout, "png");
   }
 };
-}  // namespace scm
+}  // namespace scm::dot
 
 #endif  // SCM_GV_H

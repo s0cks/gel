@@ -12,7 +12,7 @@ auto Lambda::Equals(Type* rhs) const -> bool {
   return false;
 }
 
-auto Lambda::Apply(scm::Runtime*, scm::Datum*) const -> Datum* {
+auto Lambda::Apply(Environment*, scm::Datum*) const -> Datum* {
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return Null::Get();
 }

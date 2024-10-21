@@ -1,13 +1,15 @@
 #ifndef SCM_EXPRESSION_DOT_H
 #define SCM_EXPRESSION_DOT_H
 
+#include <glog/logging.h>
+
 #include "scheme/common.h"
 #include "scheme/expression.h"
 #include "scheme/gv.h"
 
 namespace scm {
 namespace expr {
-class ExpressionToDot : public DotGraphBuilder, public ExpressionVisitor {
+class ExpressionToDot : public dot::GraphBuilder, public ExpressionVisitor {
   friend class NodeScope;
   DEFINE_NON_COPYABLE_TYPE(ExpressionToDot);
 
@@ -96,12 +98,21 @@ class ExpressionToDot : public DotGraphBuilder, public ExpressionVisitor {
   explicit ExpressionToDot(const char* graph_name);
   ~ExpressionToDot() override = default;
 
-  auto BuildDotGraph() -> DotGraph* override;
+  auto Build() -> dot::Graph* override;
 #define DEFINE_VISIT(Name) auto Visit##Name(Name##Expr* expr) -> bool override;
   FOR_EACH_EXPRESSION_NODE(DEFINE_VISIT)
 #undef DEFINE_VISIT
  public:
-  static auto Build(const char* name, Expression* expr) -> DotGraph*;
+  static auto BuildGraph(const char* name, Expression* expr) -> dot::Graph* {
+    ASSERT(name);
+    ASSERT(expr);
+    ExpressionToDot builder(name);
+    if (!expr->Accept(&builder)) {
+      DLOG(ERROR) << "failed to visit: " << expr->ToString();
+      return nullptr;
+    }
+    return builder.Build();
+  }
 };
 }  // namespace expr
 using namespace expr;

@@ -157,24 +157,30 @@ class LiteralExpr : public Expression {
 
 enum BinaryOp : uint64_t {
   kAdd,
-  kSub,
-  kMul,
-  kDiv,
-  kMod,
+  kSubtract,
+  kMultiply,
+  kDivide,
+  kModulus,
+  kBinaryAnd,
+  kBinaryOr,
 };
 
 static inline auto operator<<(std::ostream& stream, const BinaryOp& rhs) -> std::ostream& {
   switch (rhs) {
     case kAdd:
       return stream << "+";
-    case kSub:
+    case kSubtract:
       return stream << "-";
-    case kMul:
+    case kMultiply:
       return stream << "*";
-    case kDiv:
+    case kDivide:
       return stream << "/";
-    case kMod:
+    case kModulus:
       return stream << "%";
+    case kBinaryAnd:
+      return stream << "&";
+    case kBinaryOr:
+      return stream << "|";
     default:
       return stream << "Unknown BinaryOp: " << static_cast<int64_t>(rhs);
   }
@@ -361,13 +367,13 @@ class EvalExpr : public TemplateExpression<1> {
   }
 };
 
-class CallProcExpr : public TemplateExpression<1> {
+class CallProcExpr : public SequenceExpr {
  private:
   Symbol* symbol_ = nullptr;
 
  protected:
-  explicit CallProcExpr(Symbol* symbol) :
-    TemplateExpression<1>() {
+  explicit CallProcExpr(Symbol* symbol, const ExpressionList& args) :
+    SequenceExpr(args) {
     SetSymbol(symbol);
   }
 
@@ -388,6 +394,11 @@ class CallProcExpr : public TemplateExpression<1> {
   }
 
   DECLARE_EXPRESSION(CallProc);
+
+ public:
+  static inline auto New(Symbol* symbol, const ExpressionList& args = {}) -> CallProcExpr* {
+    return new CallProcExpr(symbol, args);
+  }
 };
 
 class SymbolExpr : public TemplateExpression<0> {
