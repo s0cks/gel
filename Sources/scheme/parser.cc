@@ -83,10 +83,18 @@ static inline auto IsBinaryOp(const Token& rhs) -> bool {
   }
 }
 
+auto Parser::ParseSymbolExpr() -> SymbolExpr* {
+  const auto symbol = ParseSymbol();
+  ASSERT(symbol);
+  return SymbolExpr::New(symbol);
+}
+
 auto Parser::ParseExpression() -> Expression* {
   DLOG(INFO) << "peek: " << stream().Peek();
   if (stream().Peek().IsLiteral())
     return ParseLiteralExpr();
+  else if (stream().Peek().kind == Token::kIdentifier)
+    return ParseSymbolExpr();
 
   Expression* expr = nullptr;
   ExpectNext(Token::kLParen);

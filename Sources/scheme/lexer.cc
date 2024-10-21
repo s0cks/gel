@@ -40,10 +40,6 @@ static inline auto IsValidIdentifierChar(const char c, const bool initial = fals
   return false;
 }
 
-static inline auto IsQuote(const char c) -> bool {
-  return c == '\'';
-}
-
 static inline auto IsDoubleQuote(const char c) -> bool {
   return c == '\"';
 }

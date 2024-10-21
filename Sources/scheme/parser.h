@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "scheme/expression.h"
+#include "scheme/instruction.h"
 #include "scheme/lexer.h"
 #include "scheme/program.h"
 
@@ -29,6 +30,8 @@ class Parser {
   auto ParseBinaryOpExpr() -> BinaryOpExpr*;
   auto ParseDefineExpr() -> DefineExpr*;
   auto ParseExpression() -> Expression*;
+  auto ParseLoadSymbol() -> LoadVariableInstr*;
+  auto ParseSymbolExpr() -> SymbolExpr*;
 
   inline auto PeekEq(const Token::Kind rhs) const -> bool {
     const auto& peek = stream().Peek();

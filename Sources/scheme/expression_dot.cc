@@ -116,6 +116,11 @@ auto ExpressionToDot::VisitCallProc(CallProcExpr* expr) -> bool {
   return true;
 }
 
+auto ExpressionToDot::VisitSymbol(SymbolExpr* expr) -> bool {
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return true;
+}
+
 auto ExpressionToDot::VisitLiteral(LiteralExpr* expr) -> bool {
   ASSERT(expr);
   const auto node = NewNode();

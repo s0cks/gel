@@ -80,7 +80,18 @@ class Environment {
   auto Put(const Key& k, Value* v) -> bool;
   auto Has(const Key& k) const -> bool;
   auto Lookup(const Key& k, Value** result) const -> bool;
+
+  inline auto Lookup(const Symbol* key, Value** result) -> bool {
+    ASSERT(key);
+    return Lookup(key->Get(), result);
+  }
+
   auto LocalLookup(const Key& k, Value** result) const -> bool;
+
+  inline auto Put(const Symbol* symbol, Value* value) -> bool {
+    ASSERT(symbol);
+    return Put(symbol->Get(), value);
+  }
 
   auto GetTotalNumberOfLocalValues() const -> uint64_t {
     return data().size();

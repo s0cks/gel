@@ -22,8 +22,9 @@ class TokenStream {
 
   TokenStream() = default;
   TokenStream(const uint8_t* data, const uint64_t length) :
-    buffer_(),
-    wpos_(length) {
+
+    wpos_(length),
+    buffer_() {
     ASSERT(data);
     ASSERT(length >= 1 && length <= kChunkSize);
     memcpy(&chunk_[0], &data[0], length);  // NOLINT

@@ -4,6 +4,7 @@
 #include <stack>
 
 #include "scheme/common.h"
+#include "scheme/environment.h"
 #include "scheme/flow_graph.h"
 #include "scheme/instruction.h"
 
@@ -13,6 +14,7 @@ class Interpreter : private InstructionVisitor {
 
  private:
   std::stack<Datum*> stack_{};
+  Environment* env_ = nullptr;
 
   inline void Push(Datum* value) {
     ASSERT(value);
@@ -28,15 +30,30 @@ class Interpreter : private InstructionVisitor {
   }
 
   void ExecuteInstr(Instruction* instr);
-  auto LoadVariable(Variable* variable) -> Datum*;
+  void StoreSymbol(Symbol* symbol, Datum* value);
+  auto LoadSymbol(Symbol* symbol) -> bool;
+
+  void SetEnvironment(Environment* env) {
+    ASSERT(env);
+    env_ = env;
+  }
 
 #define DECLARE_VISIT(Name) auto Visit##Name(Name* instr) -> bool override;
   FOR_EACH_INSTRUCTION(DECLARE_VISIT)
 #undef DECLARE_VISIT
 
  public:
-  Interpreter() = default;
-  ~Interpreter() = default;
+  Interpreter() {
+    SetEnvironment(Environment::New());
+  }
+  ~Interpreter() {
+    delete env_;
+  }
+
+  auto GetEnvironment() const -> Environment* {
+    return env_;
+  }
+
   auto Execute(EntryInstr* entry) -> Datum*;
 
  public:

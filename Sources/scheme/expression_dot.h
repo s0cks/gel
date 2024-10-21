@@ -68,6 +68,7 @@ class ExpressionToDot : public DotGraphBuilder, public ExpressionVisitor {
 
  private:
   Node* parent_ = nullptr;
+  EdgeList edges_{};
 
   inline void SetParent(Node* node) {
     ASSERT(node);
@@ -88,6 +89,7 @@ class ExpressionToDot : public DotGraphBuilder, public ExpressionVisitor {
     ASSERT(node);
     const auto edge = NewEdge(GetParent(), node);
     ASSERT(edge);
+    edges_.push_back(edge);
   }
 
  public:

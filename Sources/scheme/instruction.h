@@ -205,21 +205,31 @@ class ConstantInstr : public Definition {
 
 class LoadVariableInstr : public Definition {
  private:
-  Variable* var_;
+  Symbol* symbol_ = nullptr;
+
+  inline void SetSymbol(Symbol* symbol) {
+    ASSERT(symbol);
+    symbol_ = symbol;
+  }
 
  public:
-  explicit LoadVariableInstr(Variable* var) :
-    Definition(),
-    var_(var) {
-    ASSERT(var);
+  explicit LoadVariableInstr(Symbol* symbol) :
+    Definition() {
+    SetSymbol(symbol);
   }
   ~LoadVariableInstr() override = default;
 
-  auto GetVariable() const -> Variable* {
-    return var_;
+  auto GetSymbol() const -> Symbol* {
+    return symbol_;
   }
 
   DECLARE_INSTRUCTION(LoadVariableInstr);
+
+ public:
+  static inline auto New(Symbol* symbol) -> LoadVariableInstr* {
+    ASSERT(symbol);
+    return new LoadVariableInstr(symbol);
+  }
 };
 
 class StoreVariableInstr : public Definition {

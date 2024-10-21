@@ -1,5 +1,6 @@
 fail_fast: true
 repos:
+  # Git
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.18.4
     hooks:
@@ -8,10 +9,21 @@ repos:
     rev: v0.19.1
     hooks:
       - id: gitlint
+  # GitHub
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.1
     hooks:
       - id: actionlint
+  # CMake
+  - repo: https://github.com/cmake-lint/cmake-lint
+    rev: 1.4.3
+    hooks:
+      - id: cmakelint
+  - repo: https://github.com/cheshirekow/cmake-format-precommit
+    rev: v0.6.13
+    hooks:
+    - id: cmake-format
+  # JSON
   - repo: https://github.com/python-jsonschema/check-jsonschema
     rev: 0.29.2
     hooks:

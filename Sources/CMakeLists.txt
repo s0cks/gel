@@ -22,7 +22,7 @@ endif()
 add_library(scheme STATIC
   ${SCM_SOURCES})
 target_compile_options(scheme
-  PUBLIC ${SCHEME_COMPILE_OPTS})
+  PUBLIC ${SCM_CXX_FLAGS} -fPIC)
 target_include_directories(scheme
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
          ${CMAKE_CURRENT_BINARY_DIR})

@@ -1,4 +1,7 @@
 {
   "filewatcher.autoClearConsole": true,
   "C/C++ Include Guard.Prefix": "SCM_",
+  "cmakeFormat.args": [
+    "--config-file ${workspaceFolder}/.cmake-format.yaml"
+  ],
 }

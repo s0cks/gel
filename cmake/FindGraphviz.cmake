@@ -56,8 +56,8 @@ if(GRAPHVIZ_FOUND)
 
   message(STATUS "found Graphviz v${DOT_VERSION}")
   set(GRAPHVIZ_VERSION ${DOT_VERSION})
-  set(GRAPHVIZ_INCLUDE_DIRS ${GV_INCLUDE_DIR})
-  set(GRAPHVIZ_LIBRARIES ${GV_CGRAPH_LIB})
+  message(STATUS "Graphviz include dirs: ${GRAPHVIZ_INCLUDE_DIRS}")
+  message(STATUS "Graphviz libraries: ${GRAPHVIZ_LIBRARIES}")
 endif()
 
 add_library(graphviz::cgraph SHARED IMPORTED GLOBAL)

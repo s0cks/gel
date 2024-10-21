@@ -14,7 +14,7 @@ FOR_EACH_INSTRUCTION(DEFINE_ACCEPT)
 auto LoadVariableInstr::ToString() const -> std::string {
   std::stringstream ss;
   ss << "LoadVariableInstr(";
-  ss << "variable=" << GetVariable()->ToString();
+  ss << "symbol=" << GetSymbol()->ToString();
   ss << ")";
   return ss.str();
 }

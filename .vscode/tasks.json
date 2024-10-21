@@ -3,6 +3,48 @@
   "tasks": [
     {
       "type": "shell",
+      "label": "cmake-format: CMakeLists.txt",
+      "command": "cmake-format",
+      "problemMatcher": [],
+      "args": [
+        "-c", "${workspaceFolder}/.cmake-format.yaml",
+        "-o", "${workspaceFolder}/CMakeLists.txt",
+        "CMakeLists.txt"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "type": "shell",
+      "label": "cmake-format: Sources/CMakeLists.txt",
+      "command": "cmake-format",
+      "problemMatcher": [],
+      "args": [
+        "-c", "${workspaceFolder}/.cmake-format.yaml",
+        "-o", "${workspaceFolder}/Sources/CMakeLists.txt",
+        "Sources/CMakeLists.txt"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "type": "shell",
+      "label": "cmake-format: Benchmarks/CMakeLists.txt",
+      "command": "cmake-format",
+      "problemMatcher": [],
+      "args": [
+        "-c", "${workspaceFolder}/.cmake-format.yaml",
+        "-o", "${workspaceFolder}/Benchmarks/CMakeLists.txt",
+        "Benchmarks/CMakeLists.txt"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "type": "shell",
       "label": "start: Tracy",
       "args": [],
       "options": {

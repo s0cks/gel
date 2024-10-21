@@ -43,6 +43,14 @@ auto EffectVisitor::VisitCallProc(CallProcExpr* expr) -> bool {
   return false;
 }
 
+auto EffectVisitor::VisitSymbol(SymbolExpr* expr) -> bool {
+  ASSERT(expr);
+  const auto symbol = expr->GetSymbol();
+  ASSERT(symbol);
+  ReturnDefinition(LoadVariableInstr::New(symbol));
+  return true;
+}
+
 auto EffectVisitor::VisitBegin(BeginExpr* expr) -> bool {
   ASSERT(expr);
   uint64_t idx = 0;

@@ -19,6 +19,7 @@ namespace expr {
   V(Begin)                          \
   V(Eval)                           \
   V(Define)                         \
+  V(Symbol)                         \
   V(CallProc)
 
 class Expression;
@@ -387,6 +388,41 @@ class CallProcExpr : public TemplateExpression<1> {
   }
 
   DECLARE_EXPRESSION(CallProc);
+};
+
+class SymbolExpr : public TemplateExpression<0> {
+ private:
+  Symbol* symbol_ = nullptr;
+
+ protected:
+  explicit SymbolExpr(Symbol* symbol) :
+    TemplateExpression<0>() {
+    SetSymbol(symbol);
+  }
+
+  inline void SetSymbol(Symbol* symbol) {
+    ASSERT(symbol);
+    symbol_ = symbol;
+  }
+
+ public:
+  ~SymbolExpr() override = default;
+
+  auto GetSymbol() const -> Symbol* {
+    return symbol_;
+  }
+
+  inline auto HasSymbol() const -> bool {
+    return GetSymbol() != nullptr;
+  }
+
+  DECLARE_EXPRESSION(Symbol);
+
+ public:
+  static inline auto New(Symbol* symbol) -> SymbolExpr* {
+    ASSERT(symbol);
+    return new SymbolExpr(symbol);
+  }
 };
 }  // namespace expr
 

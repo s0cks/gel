@@ -2,16 +2,31 @@
 
 #include <glog/logging.h>
 
+#include "scheme/common.h"
 #include "scheme/expression.h"
 #include "scheme/instruction.h"
 #include "scheme/tracing.h"
 
 namespace scm {
-auto Interpreter::LoadVariable(Variable* var) -> Datum* {
-  ASSERT(var);
-  DLOG(INFO) << "loading " << var->ToString() << "....";
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return nullptr;
+auto Interpreter::LoadSymbol(Symbol* symbol) -> bool {
+  Datum* result = nullptr;
+  if (!GetEnvironment()->Lookup(symbol, &result)) {
+    LOG(ERROR) << "failed to get " << symbol;
+    return false;
+  }
+  ASSERT(result);
+  Push(result);
+  return true;
+}
+
+void Interpreter::StoreSymbol(Symbol* symbol, Datum* value) {
+  ASSERT(symbol);
+  ASSERT(value);
+  if (!GetEnvironment()->Put(symbol, value)) {
+    LOG(ERROR) << "failed to set " << symbol << " to: " << value;
+    return;
+  }
+  DLOG(INFO) << "set " << symbol << " to: " << value;
 }
 
 static inline auto Add(Datum* lhs, Datum* rhs) -> Datum* {
@@ -60,16 +75,12 @@ auto Interpreter::VisitStoreVariableInstr(StoreVariableInstr* instr) -> bool {
   ASSERT(value);
   const auto symbol = instr->GetSymbol();
   ASSERT(symbol);
-  DLOG(INFO) << "setting " << symbol->ToString() << " := " << value->ToString();
-  Push(value);
+  StoreSymbol(symbol, value);
   return true;
 }
 
 auto Interpreter::VisitLoadVariableInstr(LoadVariableInstr* instr) -> bool {
-  const auto variable = instr->GetVariable();
-  const auto value = LoadVariable(variable);
-  Push(value);
-  return true;
+  return LoadSymbol(instr->GetSymbol());
 }
 
 auto Interpreter::VisitReturnInstr(ReturnInstr* instr) -> bool {
@@ -109,7 +120,7 @@ void Interpreter::ExecuteInstr(Instruction* instr) {
   ASSERT(instr);
   TRACE_SECTION(ExecuteInstr);
   TRACE_TAG(instr->GetName());
-  DLOG(INFO) << "executing: " << instr->ToString();
+  DLOG(INFO) << "executing: " << instr->GetName();
   if (!instr->Accept(this))
     LOG(FATAL) << "failed to execute: " << instr->ToString();
 }
@@ -122,7 +133,9 @@ auto Interpreter::Execute(EntryInstr* entry) -> Datum* {
     ExecuteInstr(iter.Next());
   }
 
-  ASSERT(!stack_.empty());
+  if (stack_.empty())
+    return Null::Get();
+
   const auto result = Pop();
   ASSERT(result);
   ASSERT(stack_.empty());

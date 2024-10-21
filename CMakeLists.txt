@@ -6,21 +6,38 @@ project(
   HOMEPAGE_URL ${BUILD_JSON_HOMEPAGE}
   LANGUAGES C CXX)
 
-option(ENABLE_CLANG_TIDY "Enable clang-tidy" ON)
-if(ENABLE_CLANG_TIDY)
-  include(ClangTidy)
-  enable_clang_tidy()
+list(APPEND SCM_CXX_FLAGS -Wall -Wno-sign-compare
+     -Wno-writable-strings # TODO: remove no-writable-strings
+     -frtti)
+
+option(WERROR "Turn warnings into errors." ON)
+if(WERROR)
+  list(APPEND SCM_CXX_FLAGS -Werror)
+endif()
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "([aA]pple)?[cC]lang|GNU")
+  option(ENABLE_ADDRESS_SCANITIZER "Enable Clang AddressSanitizer" OFF)
+  if(ENABLE_ADDRESS_SCANITIZER AND CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
+    list(APPEND SCM_CXX_FLAGS -01 -fno-omit-frame-pointer -fsanitize=address)
+  endif()
+
+  option(ENABLE_UNDEFINED_SANITIZER "Enable Clang UndefinedBehaviorSanitizer"
+         OFF)
+  if(ENABLE_UNDEFINED_SANITIZER AND CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
+    list(APPEND SCM_CXX_FLAGS -fsanitize=undefined -fsanitize=integer)
+  endif()
+
+  option(ENABLE_CLANG_TIDY "Enable clang-tidy" ON)
+  if(ENABLE_CLANG_TIDY)
+    include(ClangTidy)
+    enable_clang_tidy()
+  endif()
 endif()
 
 option(ENABLE_DOXYGEN "Build documentation using Doxygen" ON)
 if(ENABLE_DOXYGEN)
   include(Doxygen)
 endif()
-
-list(APPEND SCHEME_COMPILE_OPTS
-  -Wno-writable-strings
-  -fPIC
-  -frtti)
 
 option(ENABLE_COVERAGE "Enable code coverage reports using gcov/lcov" OFF)
 if(ENABLE_COVERAGE)
@@ -29,7 +46,7 @@ if(ENABLE_COVERAGE)
   if(${CMAKE_CXX_COMPILER_ID} MATCHES "([aA]pple)?[cC]lang|GNU")
     list(
       APPEND
-      SCHEME_COMPILE_OPTS
+      SCM_CXX_FLAGS
       -O0
       -g
       -fprofile-instr-generate
