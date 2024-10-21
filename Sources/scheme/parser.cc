@@ -65,6 +65,8 @@ static inline auto ToBinaryOp(const Token& rhs) -> BinaryOp {
       return BinaryOp::kDivide;
     case Token::kModulus:
       return BinaryOp::kModulus;
+    case Token::kEquals:
+      return BinaryOp::kEquals;
     default:
       LOG(FATAL) << "unexpected: " << rhs;
   }
@@ -73,9 +75,17 @@ static inline auto ToBinaryOp(const Token& rhs) -> BinaryOp {
 auto Parser::ParseBinaryOpExpr() -> BinaryOpExpr* {
   const auto& next = stream().Next();
   const auto op = ToBinaryOp(next);
-  const auto left_expr = ParseExpression();
-  const auto right_expr = ParseExpression();
-  return BinaryOpExpr::New(op, left_expr, right_expr);
+
+  auto left_expr = ParseExpression();
+  auto right_expr = ParseExpression();
+  do {
+    left_expr = BinaryOpExpr::New(op, left_expr, right_expr);
+    if (stream().Peek().kind == Token::kRParen)
+      break;
+    right_expr = ParseExpression();
+  } while (true);
+  ASSERT(left_expr->IsBinaryOp());
+  return left_expr->AsBinaryOp();
 }
 
 static inline auto IsBinaryOp(const Token& rhs) -> bool {
@@ -85,6 +95,7 @@ static inline auto IsBinaryOp(const Token& rhs) -> bool {
     case Token::kMinus:
     case Token::kMultiply:
     case Token::kDivide:
+    case Token::kEquals:
       return true;
     default:
       return false;

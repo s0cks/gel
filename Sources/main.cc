@@ -26,6 +26,8 @@ auto main(int argc, char** argv) -> int {
   ::google::InitGoogleLogging(argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
   ::google::ParseCommandLineFlags(&argc, &argv, true);
 
+  Type::Init();
+
   const auto expr = GetExpressionFlag();
   if (expr) {
     DLOG(INFO) << "evaluating expression: " << (*expr);

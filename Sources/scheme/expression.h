@@ -163,6 +163,7 @@ enum BinaryOp : uint64_t {
   kModulus,
   kBinaryAnd,
   kBinaryOr,
+  kEquals,
 };
 
 static inline auto operator<<(std::ostream& stream, const BinaryOp& rhs) -> std::ostream& {

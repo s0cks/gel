@@ -9,6 +9,10 @@ build/*
 docs/*
 !/docs/.gitkeep
 
+# keep reports/ dir
+reports/*
+!/reports/.gitkeep
+
 /.gitkeep
 *.profraw
 

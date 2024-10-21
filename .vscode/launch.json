@@ -119,7 +119,7 @@
         "-logtostdout",
         "-colorlogtostdout",
         "--expr", "${input:expression}",
-        "--reports-dir", "${workspaceFolder}",
+        "--reports-dir", "${workspaceFolder}/reports",
         "--dump-ast",
         "--dump-flow-graph",
       ],

@@ -22,7 +22,7 @@ class Interpreter : private InstructionVisitor {
   }
 
   void ExecuteInstr(Instruction* instr);
-  void StoreSymbol(Symbol* symbol, Datum* value);
+  void StoreSymbol(Symbol* symbol, Type* value);
   auto LoadSymbol(Symbol* symbol) -> bool;
 
   auto DefineSymbol(Symbol* symbol, Type* value) -> bool;
@@ -57,16 +57,16 @@ class Interpreter : private InstructionVisitor {
     return GetState() != nullptr;
   }
 
-  auto Execute(EntryInstr* entry) -> Datum*;
+  auto Execute(EntryInstr* entry) -> Type*;
 
  public:
-  static inline auto Eval(EntryInstr* instr) -> Datum* {
+  static inline auto Eval(EntryInstr* instr) -> Type* {
     ASSERT(instr);
     Interpreter interpreter;
     return interpreter.Execute(instr);
   }
 
-  static inline auto Eval(FlowGraph* flow_graph) -> Datum* {
+  static inline auto Eval(FlowGraph* flow_graph) -> Type* {
     ASSERT(flow_graph);
     return Eval(flow_graph->GetEntry());
   }

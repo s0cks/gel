@@ -43,6 +43,7 @@ struct Token {
     kModulus,
     kHash,
     kQuote,
+    kEquals,
     kDoubleQuote,
     kLiteralNumber,
     kLiteralDouble,

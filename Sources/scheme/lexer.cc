@@ -59,25 +59,28 @@ auto TokenStream::Next() -> const Token& {
   switch (next) {
     case '(':
       Advance();
-      return NextToken(Token::kLParen, '(');
+      return NextToken(Token::kLParen);
     case ')':
       Advance();
-      return NextToken(Token::kRParen, ')');
+      return NextToken(Token::kRParen);
     case '+':
       Advance();
-      return NextToken(Token::kPlus, '+');
+      return NextToken(Token::kPlus);
     case '-':
       Advance();
-      return NextToken(Token::kMinus, '-');
+      return NextToken(Token::kMinus);
     case '*':
       Advance();
-      return NextToken(Token::kMultiply, '-');
+      return NextToken(Token::kMultiply);
     case '/':
       Advance();
-      return NextToken(Token::kDivide, '-');
+      return NextToken(Token::kDivide);
     case '%':
       Advance();
-      return NextToken(Token::kModulus, '-');
+      return NextToken(Token::kModulus);
+    case '=':
+      Advance();
+      return NextToken(Token::kEquals);
     case '#': {
       switch (tolower(PeekChar(1))) {
         case 'f':
@@ -144,6 +147,8 @@ auto TokenStream::Next() -> const Token& {
       return NextToken(Token::kLambdaDef);
     else if (ident == "quote")
       return NextToken(Token::kQuote);
+    else if (ident == "eq?")
+      return NextToken(Token::kEquals);
     return NextToken(Token::kIdentifier, ident);
   }
 

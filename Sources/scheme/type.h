@@ -25,6 +25,7 @@ namespace scm {
 FOR_EACH_TYPE(FORWARD_DECLARE)
 #undef FORWARD_DECLARE
 
+class Datum;
 class Type {
   DEFINE_NON_COPYABLE_TYPE(Type)
  protected:
@@ -35,8 +36,12 @@ class Type {
   virtual auto Equals(Type* rhs) const -> bool = 0;
   virtual auto ToString() const -> std::string = 0;
 
-  virtual auto IsDatum() const -> bool {
-    return false;
+  virtual auto AsDatum() -> Datum* {
+    return nullptr;
+  }
+
+  auto IsDatum() -> bool {
+    return AsDatum() != nullptr;
   }
 
   virtual auto IsAtom() const -> bool {
@@ -79,8 +84,8 @@ class Datum : public Type {
     return true;
   }
 
-  auto IsDatum() const -> bool override {
-    return true;
+  auto AsDatum() -> Datum* override {
+    return this;
   }
 
   virtual auto Add(Datum* rhs) const -> Datum*;

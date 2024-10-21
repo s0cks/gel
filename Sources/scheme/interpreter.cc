@@ -70,12 +70,11 @@ auto Interpreter::LoadSymbol(Symbol* symbol) -> bool {
     return false;
   }
   ASSERT(result);
-  ASSERT(result->IsDatum());
-  Push(reinterpret_cast<Datum*>(result));
+  Push(result);
   return true;
 }
 
-void Interpreter::StoreSymbol(Symbol* symbol, Datum* value) {
+void Interpreter::StoreSymbol(Symbol* symbol, Type* value) {
   ASSERT(symbol);
   ASSERT(value);
   if (!DefineSymbol(symbol, value)) {
@@ -84,28 +83,34 @@ void Interpreter::StoreSymbol(Symbol* symbol, Datum* value) {
   }
 }
 
-static inline auto Add(Datum* lhs, Datum* rhs) -> Datum* {
-  ASSERT(lhs);
-  ASSERT(rhs);
-  return lhs->Add(rhs);
+static inline auto Add(Type* lhs, Type* rhs) -> Type* {
+  ASSERT(lhs && lhs->IsDatum());
+  ASSERT(rhs && rhs->IsDatum());
+  return lhs->AsDatum()->Add(rhs->AsDatum());
 }
 
-static inline auto Subtract(Datum* lhs, Datum* rhs) -> Datum* {
-  ASSERT(lhs);
-  ASSERT(rhs);
-  return lhs->Sub(rhs);
+static inline auto Subtract(Type* lhs, Type* rhs) -> Type* {
+  ASSERT(lhs && lhs->IsDatum());
+  ASSERT(rhs && rhs->IsDatum());
+  return lhs->AsDatum()->Sub(rhs->AsDatum());
 }
 
-static inline auto Multiply(Datum* lhs, Datum* rhs) -> Datum* {
-  ASSERT(lhs);
-  ASSERT(rhs);
-  return lhs->Mul(rhs);
+static inline auto Multiply(Type* lhs, Type* rhs) -> Type* {
+  ASSERT(lhs && lhs->IsDatum());
+  ASSERT(rhs && rhs->IsDatum());
+  return lhs->AsDatum()->Mul(rhs->AsDatum());
 }
 
-static inline auto Divide(Datum* lhs, Datum* rhs) -> Datum* {
+static inline auto Divide(Type* lhs, Type* rhs) -> Type* {
+  ASSERT(lhs && lhs->IsDatum());
+  ASSERT(rhs && rhs->IsDatum());
+  return lhs->AsDatum()->Div(rhs->AsDatum());
+}
+
+static inline auto Equals(Type* lhs, Type* rhs) -> Datum* {
   ASSERT(lhs);
   ASSERT(rhs);
-  return lhs->Div(rhs);
+  return lhs->Equals(rhs) ? Bool::True() : Bool::False();
 }
 
 auto Interpreter::VisitGraphEntryInstr(GraphEntryInstr* instr) -> bool {
@@ -143,7 +148,7 @@ auto Interpreter::VisitCallProcInstr(CallProcInstr* instr) -> bool {
   ASSERT(proc->IsProcedure());
   const auto args = Pop();  // TODO: fetch args
   ASSERT(args->IsDatum());
-  const auto result = proc->Apply(GetState()->GetGlobals(), reinterpret_cast<Datum*>(args));
+  const auto result = proc->Apply(GetState()->GetGlobals(), args->AsDatum());
   ASSERT(result);
   Push(result);
   return true;
@@ -162,7 +167,7 @@ auto Interpreter::VisitStoreVariableInstr(StoreVariableInstr* instr) -> bool {
   ASSERT(value->IsDatum());
   const auto symbol = instr->GetSymbol();
   ASSERT(symbol);
-  StoreSymbol(symbol, reinterpret_cast<Datum*>(value));
+  StoreSymbol(symbol, value);
   return true;
 }
 
@@ -178,21 +183,22 @@ auto Interpreter::VisitReturnInstr(ReturnInstr* instr) -> bool {
 auto Interpreter::VisitBinaryOpInstr(BinaryOpInstr* instr) -> bool {
   const auto op = instr->GetOp();
   const auto right = Pop();
-  ASSERT(right);
   const auto left = Pop();
-  ASSERT(left);
   switch (op) {
     case expr::kAdd:
-      Push(Add((Datum*)left, (Datum*)right));
+      Push(Add(left, right));
       return true;
     case expr::kSubtract:
-      Push(Subtract((Datum*)left, (Datum*)right));
+      Push(Subtract(left, right));
       return true;
     case expr::kMultiply:
-      Push(Multiply((Datum*)left, (Datum*)right));
+      Push(Multiply(left, right));
       return true;
     case expr::kDivide:
-      Push(Divide((Datum*)left, (Datum*)right));
+      Push(Divide(left, right));
+      return true;
+    case expr::kEquals:
+      Push(Equals(left, right));
       return true;
     default:
       LOG(ERROR) << "invalid BinaryOp: " << op;
@@ -209,7 +215,7 @@ void Interpreter::ExecuteInstr(Instruction* instr) {
     LOG(FATAL) << "failed to execute: " << instr->ToString();
 }
 
-auto Interpreter::Execute(EntryInstr* entry) -> Datum* {
+auto Interpreter::Execute(EntryInstr* entry) -> Type* {
   TRACE_BEGIN;
   ASSERT(entry);
   InstructionIterator iter(entry->GetFirstInstruction());
@@ -224,8 +230,7 @@ auto Interpreter::Execute(EntryInstr* entry) -> Datum* {
 
   const auto result = Pop();
   ASSERT(result);
-  ASSERT(result->IsDatum());
   ASSERT(stack_.empty());
-  return reinterpret_cast<Datum*>(result);
+  return result;
 }
 }  // namespace scm
