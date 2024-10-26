@@ -74,9 +74,9 @@ auto EvalExpr::ToString() const -> std::string {
 }
 
 auto BeginExpr::ToString() const -> std::string {
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
   std::stringstream ss;
   ss << "BeginExpr(";
+  ss << "num_expressions=" << GetNumberOfChildren();
   ss << ")";
   return ss.str();
 }
@@ -102,6 +102,29 @@ auto SymbolExpr::ToString() const -> std::string {
   std::stringstream ss;
   ss << "SymbolExpr(";
   ss << "symbol=" << GetSymbol();
+  ss << ")";
+  return ss.str();
+}
+
+auto CondExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
+  ASSERT(vis);
+  if (!GetTest()->Accept(vis))
+    return false;
+  if (!GetConseq()->Accept(vis))
+    return false;
+  if (HasAlternate()) {
+    if (!GetAlternate()->Accept(vis))
+      return false;
+  }
+  return true;
+}
+
+auto CondExpr::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "CondExpr(";
+  ss << "test=" << GetTest() << ", ";
+  ss << "consequent=" << GetConseq() << ", ";
+  ss << "alternate=" << GetAlternate();
   ss << ")";
   return ss.str();
 }

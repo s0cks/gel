@@ -28,6 +28,8 @@ class FlowGraph {
     return GetEntry() != nullptr;
   }
 
+  auto Accept(InstructionVisitor* vis) const -> bool;
+
  public:
   static inline auto New(GraphEntryInstr* entry) {
     ASSERT(entry);

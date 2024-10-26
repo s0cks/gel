@@ -3,6 +3,7 @@
 
 #include <string>
 
+#include "scheme/common.h"
 #include "scheme/expression.h"
 #include "scheme/procedure.h"
 #include "scheme/variable.h"
@@ -13,9 +14,13 @@ namespace scm {
   V(StoreVariableInstr)         \
   V(LoadVariableInstr)          \
   V(GraphEntryInstr)            \
+  V(TargetEntryInstr)           \
+  V(JoinEntryInstr)             \
   V(CallProcInstr)              \
   V(ReturnInstr)                \
-  V(BinaryOpInstr)
+  V(BinaryOpInstr)              \
+  V(BranchInstr)                \
+  V(GotoInstr)
 
 class Instruction;
 #define FORWARD_DECLARE(Name) class Name;
@@ -77,8 +82,10 @@ class Instruction {
     return GetPrevious() != nullptr;
   }
 
+  void Append(Instruction* instr);
+
   virtual auto IsEntryInstr() const -> bool {
-    return true;
+    return false;
   }
 
   virtual auto IsDefinition() const -> bool {
@@ -139,25 +146,70 @@ class InstructionIterator {
   }
 
 class EntryInstr : public Instruction {
+  friend class EffectVisitor;
+  friend class FlowGraphBuilder;
   DEFINE_NON_COPYABLE_TYPE(EntryInstr);
 
+ private:
+  uint64_t block_id_ = 0;
+  EntryInstr* dominator_ = nullptr;
+  std::vector<EntryInstr*> dominated_{};
+
  protected:
-  EntryInstr() = default;
+  explicit EntryInstr(const uint64_t blk_id) :
+    block_id_(blk_id) {}
+
+  inline void SetDominator(EntryInstr* instr) {
+    ASSERT(instr);
+    dominator_ = instr;
+  }
+
+  inline void AddDominated(EntryInstr* instr) {
+    ASSERT(instr);
+    instr->SetDominator(this);
+    dominated_.push_back(instr);
+  }
 
  public:
   ~EntryInstr() override = default;
+
+  auto GetBlockId() const -> uint64_t {
+    return block_id_;
+  }
 
   auto IsEntryInstr() const -> bool override {
     return true;
   }
 
-  virtual auto GetFirstInstruction() const -> Instruction* = 0;
+  auto GetDominator() const -> EntryInstr* {
+    return dominator_;
+  }
+
+  auto HasDominator() const -> bool {
+    return GetDominator() != nullptr;
+  }
+
+  auto GetNumberOfDominatedBlocks() const -> uint64_t {
+    return dominated_.size();
+  }
+
+  auto GetDominatedBlockAt(const uint64_t idx) const -> EntryInstr* {
+    ASSERT(idx >= 0 && idx <= GetNumberOfDominatedBlocks());
+    return dominated_[idx];
+  }
+
+  virtual auto GetFirstInstruction() const -> Instruction* {
+    return GetNext();
+  }
+
   auto GetLastInstruction() const -> Instruction*;
+  auto VisitDominated(InstructionVisitor* vis) -> bool;
 };
 
 class GraphEntryInstr : public EntryInstr {
  private:
-  GraphEntryInstr() = default;
+  explicit GraphEntryInstr(const uint64_t blk_id) :
+    EntryInstr(blk_id) {}
 
  public:
   ~GraphEntryInstr() override = default;
@@ -167,8 +219,38 @@ class GraphEntryInstr : public EntryInstr {
   DECLARE_INSTRUCTION(GraphEntryInstr);
 
  public:
-  static inline auto New() -> GraphEntryInstr* {
-    return new GraphEntryInstr();
+  static inline auto New(const uint64_t blk_id) -> GraphEntryInstr* {
+    return new GraphEntryInstr(blk_id);
+  }
+};
+
+class TargetEntryInstr : public EntryInstr {
+ private:
+  explicit TargetEntryInstr(const uint64_t blk_id) :
+    EntryInstr(blk_id) {}
+
+ public:
+  ~TargetEntryInstr() override = default;
+  DECLARE_INSTRUCTION(TargetEntryInstr);
+
+ public:
+  static inline auto New(const uint64_t blk_id) -> TargetEntryInstr* {
+    return new TargetEntryInstr(blk_id);
+  }
+};
+
+class JoinEntryInstr : public EntryInstr {
+ private:
+  explicit JoinEntryInstr(const uint64_t blk_id) :
+    EntryInstr(blk_id) {}
+
+ public:
+  ~JoinEntryInstr() override = default;
+  DECLARE_INSTRUCTION(JoinEntryInstr);
+
+ public:
+  static inline auto New(const uint64_t blk_id) -> JoinEntryInstr* {
+    return new JoinEntryInstr(blk_id);
   }
 };
 
@@ -269,7 +351,7 @@ class CallProcInstr : public Definition {
 
  protected:
   void SetSymbol(Symbol* symbol) {
-    ASSERT(proc);
+    ASSERT(symbol);
     symbol_ = symbol;
   }
 
@@ -330,6 +412,116 @@ class BinaryOpInstr : public Definition {
  public:
   static inline auto New(const expr::BinaryOp op) -> BinaryOpInstr* {
     return new BinaryOpInstr(op);
+  }
+};
+
+class BranchInstr : public Definition {
+ private:
+  Definition* test_ = nullptr;
+  TargetEntryInstr* true_target_ = nullptr;
+  TargetEntryInstr* false_target_ = nullptr;
+  JoinEntryInstr* join_ = nullptr;
+
+ protected:
+  explicit BranchInstr(Definition* test, TargetEntryInstr* true_target, TargetEntryInstr* false_target, JoinEntryInstr* join) :
+    Definition() {
+    SetTest(test);
+    SetTrueTarget(true_target);
+    if (false_target)
+      SetFalseTarget(false_target);
+    SetJoin(join);
+  }
+
+  inline void SetTest(Definition* test) {
+    ASSERT(test);
+    test_ = test;
+  }
+
+  inline void SetTrueTarget(TargetEntryInstr* target) {
+    ASSERT(target);
+    true_target_ = target;
+  }
+
+  inline void SetFalseTarget(TargetEntryInstr* target) {
+    ASSERT(target);
+    false_target_ = target;
+  }
+
+  inline void SetJoin(JoinEntryInstr* join) {
+    ASSERT(join);
+    join_ = join;
+  }
+
+ public:
+  ~BranchInstr() override = default;
+
+  auto GetTest() const -> Definition* {
+    return test_;
+  }
+
+  auto GetTrueTarget() const -> TargetEntryInstr* {
+    return true_target_;
+  }
+
+  auto GetFalseTarget() const -> TargetEntryInstr* {
+    return false_target_;
+  }
+
+  auto HasFalseTarget() const -> bool {
+    return GetFalseTarget() != nullptr;
+  }
+
+  auto GetJoin() const -> JoinEntryInstr* {
+    return join_;
+  }
+
+  auto HasJoin() const -> bool {
+    return GetJoin() != nullptr;
+  }
+
+  DECLARE_INSTRUCTION(BranchInstr);
+
+ public:
+  static inline auto New(Definition* test, TargetEntryInstr* true_target, TargetEntryInstr* false_target = nullptr,
+                         JoinEntryInstr* join = nullptr) -> BranchInstr* {
+    ASSERT(test);
+    ASSERT(true_target);
+    return new BranchInstr(test, true_target, false_target, join);
+  }
+};
+
+class GotoInstr : public Definition {
+ private:
+  EntryInstr* target_ = nullptr;
+
+ protected:
+  explicit GotoInstr(EntryInstr* target) :
+    Definition() {
+    SetTarget(target);
+  }
+
+  inline void SetTarget(EntryInstr* target) {
+    ASSERT(target);
+    target_ = target;
+  }
+
+ public:
+  ~GotoInstr() override = default;
+
+  auto GetTarget() const -> EntryInstr* {
+    return target_;
+  }
+
+  auto HasTarget() const -> bool {
+    return GetTarget() != nullptr;
+  }
+
+  DECLARE_INSTRUCTION(GotoInstr);
+
+ public:
+  static inline auto New(EntryInstr* target) -> GotoInstr* {
+    ASSERT(target);
+    return new GotoInstr(target);
   }
 };
 }  // namespace scm

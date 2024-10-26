@@ -6,7 +6,9 @@ project(
   HOMEPAGE_URL ${BUILD_JSON_HOMEPAGE}
   LANGUAGES C CXX)
 
-list(APPEND SCM_CXX_FLAGS -Wall -Wno-sign-compare
+list(APPEND SCM_CXX_FLAGS
+     -Wall
+     -Wno-sign-compare
      -Wno-writable-strings # TODO: remove no-writable-strings
      -frtti)
 

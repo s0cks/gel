@@ -18,9 +18,6 @@ class FlowGraphToDotGraph : public dot::GraphBuilder {
   const FlowGraph* flow_graph_;
   NodeList nodes_{};
   EdgeList edges_{};
-
-  uint64_t num_constants_ = 0;
-  Node* graph_entry_ = nullptr;
   Node* previous_ = nullptr;
 
   inline void SetPrevious(Node* previous) {
@@ -36,36 +33,14 @@ class FlowGraphToDotGraph : public dot::GraphBuilder {
     return GetPrevious() != nullptr;
   }
 
-  inline auto NewNode(Instruction* instr, const int flags = kDefaultNodeFlags) -> Node* {
-    ASSERT(HasGraph());
+  inline auto NewNode(Instruction* instr) -> Node* {
     ASSERT(instr);
-    const auto node_id = fmt::format("i{0:d}", ++num_instructions_);
-    return GraphBuilder::NewNode(node_id, flags);
+    const auto node_id = fmt::format("i{0:d}", num_instructions_++);
+    const auto node = GraphBuilder::NewNode(node_id);
+    ASSERT(node);
+    SetNodeLabel(node, instr->GetName());
+    return node;
   }
-
-  inline auto NewEdgeFromPrevious(Agnode_t* to, const char* name = "", const int flags = kDefaultEdgeFlags) -> Edge* {
-    ASSERT(HasPrevious());
-    return NewEdge(GetPrevious(), to, name, flags);
-  }
-
-  static inline auto GetNodeNameFor(Instruction* instr) -> std::string {
-    return instr->ToString();
-  }
-
-  void Set(Node* node, const std::string& name, const std::string& value);
-
-  inline void SetLabel(Node* node, const std::string& value) {
-    return Set(node, "label", value);
-  }
-
-  inline void SetXLabel(Node* node, const std::string& value) {
-    return Set(node, "xlabel", value);
-  }
-
-  auto CreateXLabel(Instruction* instr) -> std::optional<std::string>;
-  auto CreateNextNode(Instruction* instr) -> Node*;
-  void InitNodes();
-  void InitEdges();
 
  public:
   explicit FlowGraphToDotGraph(const char* name, const FlowGraph* flow_graph) :

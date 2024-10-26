@@ -28,6 +28,10 @@ auto Datum::Div(Datum* rhs) const -> Datum* {
   return Null::Get();
 }
 
+auto Datum::Mod(Datum* rhs) const -> Datum* {
+  return Null::Get();
+}
+
 static Bool* kTrue = nullptr;   // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 static Bool* kFalse = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
@@ -104,6 +108,13 @@ auto Number::Div(Datum* rhs) const -> Datum* {
     return Number::New(GetValue() / rhs->AsNumber()->GetValue());
   }
   LOG(ERROR) << this << " / " << rhs << " is invalid!";
+  return Null::Get();
+}
+
+auto Number::Mod(Datum* rhs) const -> Datum* {
+  if (rhs->IsNumber())
+    return Number::New(GetValue() % rhs->AsNumber()->GetValue());
+  LOG(ERROR) << this << " % " << rhs << " is invalid!";
   return Null::Get();
 }
 

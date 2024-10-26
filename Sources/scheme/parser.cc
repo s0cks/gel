@@ -5,6 +5,7 @@
 #include "scheme/common.h"
 #include "scheme/expression.h"
 #include "scheme/instruction.h"
+#include "scheme/token.h"
 
 namespace scm {
 auto Parser::ParseSymbol() -> Symbol* {
@@ -88,6 +89,23 @@ auto Parser::ParseBinaryOpExpr() -> BinaryOpExpr* {
   return left_expr->AsBinaryOp();
 }
 
+auto Parser::ParseCondExpr() -> CondExpr* {
+  const auto test = ParseExpression();
+  ASSERT(test);
+  const auto consequent = ParseExpression();
+  ASSERT(consequent);
+  if (PeekEq(Token::kRParen))
+    return CondExpr::New(test, consequent);
+  const auto alternate = ParseExpression();
+
+  const auto& next = stream().Peek();
+  if (next.kind != Token::kRParen) {
+    LOG(FATAL) << "unexpected: " << next << "expected: " << Token::kRParen;
+    return nullptr;
+  }
+  return CondExpr::New(test, consequent, alternate);
+}
+
 static inline auto IsBinaryOp(const Token& rhs) -> bool {
   switch (rhs.kind) {
     case Token::kModulus:
@@ -130,6 +148,9 @@ auto Parser::ParseExpression() -> Expression* {
       case Token::kIdentifier:
         expr = ParseCallProcExpr(next.text);
         break;
+      case Token::kCond:
+        expr = ParseCondExpr();
+        break;
       default:
         LOG(FATAL) << "unexpected: " << next;
         return nullptr;
@@ -142,7 +163,7 @@ auto Parser::ParseExpression() -> Expression* {
 
 auto Parser::ParseDefineExpr() -> DefineExpr* {
   const auto symbol = ParseSymbol();
-  ASSERT(symbo);
+  ASSERT(symbol);
   const auto value = ParseExpression();
   ASSERT(value);
   return DefineExpr::New(symbol, value);

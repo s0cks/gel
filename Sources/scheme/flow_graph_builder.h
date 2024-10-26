@@ -3,19 +3,38 @@
 
 #include "scheme/expression.h"
 #include "scheme/flow_graph.h"
+#include "scheme/instruction.h"
 #include "scheme/program.h"
 
 namespace scm {
 class FlowGraphBuilder {
+  friend class EffectVisitor;
   DEFINE_NON_COPYABLE_TYPE(FlowGraphBuilder);
 
  private:
   GraphEntryInstr* entry_ = nullptr;
   Program* program_;
+  EntryInstr* block_ = nullptr;
+  uint64_t num_blocks_ = 0;
+
+  inline void SetCurrentBlock(EntryInstr* instr) {
+    ASSERT(instr);
+    block_ = instr;
+  }
+
+  inline auto GetCurrentBlock() const -> EntryInstr* {
+    return block_;
+  }
 
   inline void SetGraphEntry(GraphEntryInstr* instr) {
     ASSERT(instr);
     entry_ = instr;
+  }
+
+  inline auto GetNextBlockId() -> uint64_t {
+    const auto next = num_blocks_;
+    num_blocks_++;
+    return next;
   }
 
  public:
@@ -54,6 +73,7 @@ class EffectVisitor : public ExpressionVisitor {
   FlowGraphBuilder* owner_;
   Instruction* entry_ = nullptr;
   Instruction* exit_ = nullptr;
+  EntryInstr* block_ = nullptr;
 
  protected:
   virtual void Do(Definition* defn) {
@@ -116,6 +136,15 @@ class EffectVisitor : public ExpressionVisitor {
     }
     SetExitInstr(defn);
     return defn;
+  }
+
+  inline void SetCurrentBlock(EntryInstr* instr) {
+    ASSERT(instr);
+    block_ = instr;
+  }
+
+  inline auto GetCurrentBlock() const -> EntryInstr* {
+    return block_;
   }
 
   virtual void ReturnValue(Definition* defn) {}

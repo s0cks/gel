@@ -3,8 +3,9 @@
 #include <glog/logging.h>
 
 namespace scm::dot {
-GraphBuilder::GraphBuilder(const char* name, Agdesc_t desc) {
-  SetGraph(Graph::New(name, desc));
+auto Graph::New(GraphBuilder* builder) -> Graph* {
+  ASSERT(builder);
+  return new Graph(builder->GetGraph());
 }
 
 void GraphRenderer::RenderDotTo(Graph* graph, FILE* stream) {

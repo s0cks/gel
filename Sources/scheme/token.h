@@ -45,6 +45,7 @@ struct Token {
     kQuote,
     kEquals,
     kDoubleQuote,
+    kCond,
     kLiteralNumber,
     kLiteralDouble,
     kLiteralLong,

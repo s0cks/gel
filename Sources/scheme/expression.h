@@ -20,7 +20,8 @@ namespace expr {
   V(Eval)                           \
   V(Define)                         \
   V(Symbol)                         \
-  V(CallProc)
+  V(CallProc)                       \
+  V(Cond)
 
 class Expression;
 #define FORWARD_DECLARE(Name) class Name##Expr;
@@ -223,8 +224,16 @@ class BinaryOpExpr : public TemplateExpression<2> {
     return GetChildAt(kLeftInput);
   }
 
+  inline auto HasLeft() const -> bool {
+    return GetLeft() != nullptr;
+  }
+
   auto GetRight() const -> Expression* {
     return GetChildAt(kRightInput);
+  }
+
+  inline auto HasRight() const -> bool {
+    return GetRight() != nullptr;
   }
 
   auto IsConstantExpr() const -> bool override;
@@ -244,7 +253,7 @@ class DefineExpr : public TemplateExpression<1> {
   Symbol* symbol_ = nullptr;
 
   inline void SetSymbol(Symbol* symbol) {
-    ASSERT(var);
+    ASSERT(symbol);
     symbol_ = symbol;
   }
 
@@ -326,9 +335,7 @@ class SequenceExpr : public Expression {
 class BeginExpr : public SequenceExpr {
  protected:
   explicit BeginExpr(const ExpressionList& expressions) :
-    SequenceExpr(expressions) {
-    ASSERT(!expressions.empty());
-  }
+    SequenceExpr(expressions) {}
 
  public:
   ~BeginExpr() = default;
@@ -434,6 +441,66 @@ class SymbolExpr : public TemplateExpression<0> {
   static inline auto New(Symbol* symbol) -> SymbolExpr* {
     ASSERT(symbol);
     return new SymbolExpr(symbol);
+  }
+};
+
+class CondExpr : public Expression {
+ private:
+  Expression* test_ = nullptr;
+  Expression* conseq_ = nullptr;
+  Expression* alt_ = nullptr;
+
+ protected:
+  CondExpr(Expression* test, Expression* conseq, Expression* alt) :
+    Expression() {
+    SetTest(test);
+    SetConseq(conseq);
+    if (alt)
+      SetAlt(alt);
+  }
+
+  inline void SetTest(Expression* expr) {
+    ASSERT(expr);
+    test_ = expr;
+  }
+
+  inline void SetConseq(Expression* expr) {
+    ASSERT(expr);
+    conseq_ = expr;
+  }
+
+  inline void SetAlt(Expression* expr) {
+    ASSERT(expr);
+    alt_ = expr;
+  }
+
+ public:
+  ~CondExpr() override = default;
+
+  auto GetTest() const -> Expression* {
+    return test_;
+  }
+
+  auto GetConseq() const -> Expression* {
+    return conseq_;
+  }
+
+  auto GetAlternate() const -> Expression* {
+    return alt_;
+  }
+
+  inline auto HasAlternate() const -> bool {
+    return GetAlternate() != nullptr;
+  }
+
+  auto VisitChildren(ExpressionVisitor* vis) -> bool override;
+  DECLARE_EXPRESSION(Cond);
+
+ public:
+  static inline auto New(Expression* test, Expression* conseq, Expression* alt = nullptr) -> CondExpr* {
+    ASSERT(test);
+    ASSERT(conseq);
+    return new CondExpr(test, conseq, alt);
   }
 };
 }  // namespace expr

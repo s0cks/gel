@@ -9,7 +9,7 @@
 
 namespace scm {
 ExpressionToDot::ExpressionToDot(const char* graph_name) :
-  dot::GraphBuilder(graph_name, Agdirected) {
+  dot::GraphBuilder(graph_name) {
   SetNodeAttr("label", "");
   SetNodeAttr("xlabel", "");
 }
@@ -172,7 +172,30 @@ auto ExpressionToDot::VisitLiteral(LiteralExpr* expr) -> bool {
   return true;
 }
 
+auto ExpressionToDot::VisitCond(CondExpr* expr) -> bool {
+  ASSERT(expr);
+  const auto node = NewNode();
+  ASSERT(node);
+  {
+    // create node labels
+    // label
+    std::stringstream label;
+    label << expr->GetName() << "Expr" << std::endl;
+    SetNodeLabel(node, label);
+  }
+  {
+    // process children
+    NodeScope scope(this, node);
+    if (!expr->VisitChildren(this)) {
+      LOG(ERROR) << "failed to visit children of: " << expr->ToString();
+      return false;
+    }
+  }
+  CreateEdgeFromParent(node);
+  return true;
+}
+
 auto ExpressionToDot::Build() -> dot::Graph* {
-  return GetGraph();
+  return dot::Graph::New(this);
 }
 }  // namespace scm

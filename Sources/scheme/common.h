@@ -1,7 +1,7 @@
 #ifndef SCM_COMMON_H
 #define SCM_COMMON_H
 
-#ifndef SCM_DEBUG
+#ifdef SCM_DEBUG
 
 #include <cassert>
 #define ASSERT(x) assert(x);

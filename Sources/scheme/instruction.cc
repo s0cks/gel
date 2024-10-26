@@ -3,6 +3,14 @@
 #include <sstream>
 
 namespace scm {
+void Instruction::Append(Instruction* instr) {
+  ASSERT(instr);
+  if (HasNext())
+    return GetNext()->Append(instr);
+  SetNext(instr);
+  instr->SetPrevious(this);
+}
+
 #define DEFINE_ACCEPT(Name)                            \
   auto Name::Accept(InstructionVisitor* vis) -> bool { \
     ASSERT(vis);                                       \
@@ -38,18 +46,43 @@ auto ConstantInstr::ToString() const -> std::string {
 
 auto EntryInstr::GetLastInstruction() const -> Instruction* {
   Instruction* last = nullptr;
-  InstructionIterator iter(const_cast<EntryInstr*>(this));  // NOLINT
+  InstructionIterator iter(GetFirstInstruction());  // NOLINT
   while (iter.HasNext()) last = iter.Next();
   return last;
 }
 
+auto EntryInstr::VisitDominated(InstructionVisitor* vis) -> bool {
+  ASSERT(vis);
+  for (const auto& dominated : dominated_) {
+    if (!dominated->Accept(vis))
+      return false;
+  }
+  return true;
+}
+
 auto GraphEntryInstr::GetFirstInstruction() const -> Instruction* {
-  return GetNext();
+  const auto next = GetNext();
+  ASSERT(next);
+  return next->IsTargetEntryInstr() ? next->AsTargetEntryInstr()->GetFirstInstruction() : next;
 }
 
 auto GraphEntryInstr::ToString() const -> std::string {
   std::stringstream ss;
   ss << "GraphEntryInstr()";
+  return ss.str();
+}
+
+auto TargetEntryInstr::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "TargetEntryInstr(";
+  ss << ")";
+  return ss.str();
+}
+
+auto JoinEntryInstr::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "JoinEntryInstr(";
+  ss << ")";
   return ss.str();
 }
 
@@ -73,6 +106,20 @@ auto BinaryOpInstr::ToString() const -> std::string {
   std::stringstream ss;
   ss << "BinaryOpInstr(";
   ss << "op=" << GetOp();
+  ss << ")";
+  return ss.str();
+}
+
+auto BranchInstr::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "BranchInstr(";
+  ss << ")";
+  return ss.str();
+}
+
+auto GotoInstr::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "GotoInstr(";
   ss << ")";
   return ss.str();
 }

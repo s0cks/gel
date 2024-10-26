@@ -43,11 +43,12 @@ class ExpressionToDot : public dot::GraphBuilder, public ExpressionVisitor {
       if (!HasOwner())
         return;
       SetCurrent(current);
-      SetPrevious(GetOwner()->GetParent());
+      if (GetOwner()->HasParent())
+        SetPrevious(GetOwner()->GetParent());
       GetOwner()->SetParent(current);
     }
     ~NodeScope() {
-      if (HasOwner())
+      if (HasOwner() && HasPrevious())
         GetOwner()->SetParent(GetPrevious());
     }
 
@@ -68,9 +69,19 @@ class ExpressionToDot : public dot::GraphBuilder, public ExpressionVisitor {
     }
   };
 
+  inline auto NextNodeId() -> std::string {
+    return fmt::format("e{0:d}", num_expressions_++);
+  }
+
+  inline auto NewNode() -> Node* {
+    const auto node_id = NextNodeId();
+    return dot::GraphBuilder::NewNode(node_id);
+  }
+
  private:
   Node* parent_ = nullptr;
   EdgeList edges_{};
+  uint64_t num_expressions_ = 0;
 
   inline void SetParent(Node* node) {
     ASSERT(node);
@@ -89,7 +100,7 @@ class ExpressionToDot : public dot::GraphBuilder, public ExpressionVisitor {
     if (!HasParent())
       return;
     ASSERT(node);
-    const auto edge = NewEdge(GetParent(), node);
+    const auto edge = NewEdge(GetParent(), node, fmt::format("e{0:d}", edges_.size()).c_str());
     ASSERT(edge);
     edges_.push_back(edge);
   }

@@ -92,6 +92,7 @@ class Datum : public Type {
   virtual auto Sub(Datum* rhs) const -> Datum*;
   virtual auto Mul(Datum* rhs) const -> Datum*;
   virtual auto Div(Datum* rhs) const -> Datum*;
+  virtual auto Mod(Datum* rhs) const -> Datum*;
 };
 
 static inline auto operator<<(std::ostream& stream, Datum* rhs) -> std::ostream& {
@@ -188,6 +189,7 @@ class Number : public Datum {
   auto Sub(Datum* rhs) const -> Datum* override;
   auto Mul(Datum* rhs) const -> Datum* override;
   auto Div(Datum* rhs) const -> Datum* override;
+  auto Mod(Datum* rhs) const -> Datum* override;
   DECLARE_TYPE(Number);
 
  public:

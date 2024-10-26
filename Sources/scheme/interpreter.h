@@ -15,6 +15,7 @@ class Interpreter : private InstructionVisitor {
 
  private:
   State* state_ = nullptr;
+  Instruction* current_ = nullptr;
 
   inline void SetState(State* state) {
     ASSERT(state);
@@ -39,6 +40,19 @@ class Interpreter : private InstructionVisitor {
     const auto state = GetState();
     ASSERT(state);
     return state->Pop();
+  }
+
+  inline void SetCurrentInstr(Instruction* instr) {
+    ASSERT(instr);
+    current_ = instr;
+  }
+
+  inline auto GetCurrentInstr() const -> Instruction* {
+    return current_;
+  }
+
+  inline auto HasCurrentInstr() const -> bool {
+    return GetCurrentInstr() != nullptr;
   }
 
 #define DECLARE_VISIT(Name) auto Visit##Name(Name* instr) -> bool override;

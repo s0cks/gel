@@ -15,21 +15,28 @@ static inline auto AppendFragment(EntryInstr* entry, EffectVisitor& vis) -> Inst
 }
 
 auto FlowGraphBuilder::BuildGraph() -> FlowGraph* {
-  const auto entry = GraphEntryInstr::New();
-  SetGraphEntry(entry);
+  const auto graph_entry = GraphEntryInstr::New(GetNextBlockId());
+  ASSERT(graph_entry);
 
+  const auto target_entry = TargetEntryInstr::New(GetNextBlockId());
+  ASSERT(target_entry);
+  SetCurrentBlock(target_entry);
   EffectVisitor for_effect(this);
   if (!GetProgram()->Accept(&for_effect)) {
     LOG(ERROR) << "failed to visit: " << GetProgram()->ToString();
     return nullptr;  // TODO: free entry
   }
-  AppendFragment(entry, for_effect);
+  AppendFragment(target_entry, for_effect);
 
-  const auto last = entry->GetLastInstruction();
+  const auto last = target_entry->GetLastInstruction();
   ASSERT(last);
   if (!last->IsReturnInstr() && last->IsDefinition())
     Instruction::Link(last, new ReturnInstr(reinterpret_cast<Definition*>(last)));  // NOLINT
-  return new FlowGraph(entry);
+
+  SetGraphEntry(graph_entry);
+  graph_entry->Append(target_entry);
+  graph_entry->AddDominated(target_entry);
+  return new FlowGraph(graph_entry);
 }
 
 auto EffectVisitor::VisitEval(EvalExpr* expr) -> bool {
@@ -40,7 +47,7 @@ auto EffectVisitor::VisitEval(EvalExpr* expr) -> bool {
 auto EffectVisitor::VisitCallProc(CallProcExpr* expr) -> bool {
   for (auto idx = 0; idx < expr->GetNumberOfChildren(); idx++) {
     const auto arg = expr->GetChildAt(idx);
-    ASSERT(value);
+    ASSERT(arg);
     ValueVisitor for_value(GetOwner());
     LOG_IF(ERROR, !arg->Accept(&for_value)) << "failed to determine value for: " << expr->ToString();
     Append(for_value);
@@ -75,13 +82,62 @@ auto EffectVisitor::VisitBegin(BeginExpr* expr) -> bool {
   return true;
 }
 
+auto EffectVisitor::VisitCond(CondExpr* expr) -> bool {
+  ASSERT(expr);
+  const auto join = JoinEntryInstr::New(GetOwner()->GetNextBlockId());
+
+  // process conseq
+  const auto conseq_target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
+  ValueVisitor for_conseq(GetOwner());
+  if (!expr->GetConseq()->Accept(&for_conseq)) {
+    LOG(ERROR) << "failed to visit conseq for cond: " << expr->ToString();
+    return false;
+  }
+  AppendFragment(conseq_target, for_conseq);
+  conseq_target->Append(GotoInstr::New(join));
+  GetOwner()->GetCurrentBlock()->AddDominated(conseq_target);
+
+  // process alt
+  const auto alt_target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
+  ValueVisitor for_alt(GetOwner());
+  if (expr->HasAlternate()) {
+    if (!expr->GetAlternate()->Accept(&for_alt)) {
+      LOG(ERROR) << "failed to visit alternate for cond: " << expr->ToString();
+      return false;
+    }
+    AppendFragment(alt_target, for_alt);
+    alt_target->Append(GotoInstr::New(join));
+    GetOwner()->GetCurrentBlock()->AddDominated(alt_target);
+  }
+
+  // process test
+  ValueVisitor for_test(GetOwner());
+  if (!expr->GetTest()->Accept(&for_test)) {
+    LOG(ERROR) << "failed to visit test for cond: " << expr->ToString();
+    return false;
+  }
+  Append(for_test);
+
+  const auto branch = expr->HasAlternate() ? BranchInstr::New(for_test.GetValue(), conseq_target, alt_target, join)
+                                           : BranchInstr::New(for_test.GetValue(), conseq_target, nullptr, join);
+  ASSERT(branch);
+  ReturnDefinition(branch);
+  SetExitInstr(join);
+
+  GetOwner()->GetCurrentBlock()->AddDominated(join);
+  return true;
+}
+
 auto EffectVisitor::VisitDefine(DefineExpr* expr) -> bool {
   ASSERT(expr);
   // process value
   const auto value = expr->GetValue();
   ASSERT(value);
   ValueVisitor for_value(GetOwner());
-  LOG_IF(ERROR, !value->Accept(&for_value)) << "failed to determine value for: " << expr->ToString();
+  if (!value->Accept(&for_value)) {
+    LOG(FATAL) << "failed to determine value for: " << expr->ToString();
+    return false;
+  }
   Append(for_value);
   const auto symbol = expr->GetSymbol();
   ASSERT(symbol);

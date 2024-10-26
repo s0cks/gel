@@ -113,9 +113,10 @@ static inline auto Equals(Type* lhs, Type* rhs) -> Datum* {
   return lhs->Equals(rhs) ? Bool::True() : Bool::False();
 }
 
-auto Interpreter::VisitGraphEntryInstr(GraphEntryInstr* instr) -> bool {
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return true;
+static inline auto Modulus(Type* lhs, Type* rhs) -> Datum* {
+  ASSERT(lhs && lhs->IsDatum());
+  ASSERT(rhs && rhs->IsDatum());
+  return lhs->AsDatum()->Mod(rhs->AsDatum());
 }
 
 static inline auto LookupProcedure(Environment* env, Symbol* name, Procedure** result) -> bool {
@@ -134,6 +135,18 @@ static inline auto LookupProcedure(Environment* env, Symbol* name, Procedure** r
     return false;
   }
   (*result) = value->AsProcedure();
+  return true;
+}
+
+auto Interpreter::VisitGraphEntryInstr(GraphEntryInstr* instr) -> bool {
+  return true;
+}
+
+auto Interpreter::VisitTargetEntryInstr(TargetEntryInstr* instr) -> bool {
+  return true;
+}
+
+auto Interpreter::VisitJoinEntryInstr(JoinEntryInstr* instr) -> bool {
   return true;
 }
 
@@ -176,7 +189,31 @@ auto Interpreter::VisitLoadVariableInstr(LoadVariableInstr* instr) -> bool {
 }
 
 auto Interpreter::VisitReturnInstr(ReturnInstr* instr) -> bool {
-  ASSERT(!stack_.empty());
+  ASSERT(!GetState()->IsStackEmpty());
+  return true;
+}
+
+auto Interpreter::VisitGotoInstr(GotoInstr* instr) -> bool {
+  ASSERT(instr);
+  ASSERT(instr->HasTarget());
+  SetCurrentInstr(instr->GetTarget());
+  return true;
+}
+
+static inline auto Truth(scm::Type* rhs) -> bool {
+  ASSERT(rhs);
+  if (rhs->IsBool())
+    return rhs->AsBool()->Get();
+  return !rhs->IsNull();  // TODO: better truth?
+}
+
+auto Interpreter::VisitBranchInstr(BranchInstr* instr) -> bool {
+  ASSERT(instr);
+  if (Truth(Pop())) {
+    SetCurrentInstr(instr->GetTrueTarget());
+  } else {
+    SetCurrentInstr(instr->GetFalseTarget());
+  }
   return true;
 }
 
@@ -200,6 +237,9 @@ auto Interpreter::VisitBinaryOpInstr(BinaryOpInstr* instr) -> bool {
     case expr::kEquals:
       Push(Equals(left, right));
       return true;
+    case expr::kModulus:
+      Push(Modulus(left, right));
+      return true;
     default:
       LOG(ERROR) << "invalid BinaryOp: " << op;
       return false;
@@ -210,7 +250,7 @@ void Interpreter::ExecuteInstr(Instruction* instr) {
   ASSERT(instr);
   TRACE_SECTION(ExecuteInstr);
   TRACE_TAG(instr->GetName());
-  DVLOG(10) << "executing: " << instr->GetName();
+  DVLOG(10) << "executing: " << instr->ToString();
   if (!instr->Accept(this))
     LOG(FATAL) << "failed to execute: " << instr->ToString();
 }
@@ -218,9 +258,16 @@ void Interpreter::ExecuteInstr(Instruction* instr) {
 auto Interpreter::Execute(EntryInstr* entry) -> Type* {
   TRACE_BEGIN;
   ASSERT(entry);
-  InstructionIterator iter(entry->GetFirstInstruction());
-  while (iter.HasNext()) {
-    ExecuteInstr(iter.Next());
+  SetCurrentInstr(entry->GetFirstInstruction());
+  while (HasCurrentInstr()) {
+    const auto next = GetCurrentInstr();
+    ASSERT(next);
+    ExecuteInstr(next);
+    if (next->IsEntryInstr()) {
+      current_ = (dynamic_cast<EntryInstr*>(next))->GetFirstInstruction();
+    } else if (!next->IsBranchInstr() && !next->IsGotoInstr()) {
+      current_ = next->GetNext();
+    }
   }
 
   const auto state = GetState();
@@ -230,7 +277,7 @@ auto Interpreter::Execute(EntryInstr* entry) -> Type* {
 
   const auto result = Pop();
   ASSERT(result);
-  ASSERT(stack_.empty());
+  ASSERT(state->IsStackEmpty());
   return result;
 }
 }  // namespace scm

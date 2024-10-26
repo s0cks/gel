@@ -111,7 +111,7 @@ auto TokenStream::Next() -> const Token& {
     while (IsValidStringCharacter(PeekChar())) {
       buffer_[token_len++] = NextChar();
     }
-    ASSERT(IsQuote(PeekChar()));
+    ASSERT(IsDoubleQuote(PeekChar()));
     Advance();
     return NextToken(Token::kLiteralString, std::string((const char*)&buffer_[0], token_len));
   } else if (isdigit(next)) {
@@ -149,6 +149,8 @@ auto TokenStream::Next() -> const Token& {
       return NextToken(Token::kQuote);
     else if (ident == "eq?")
       return NextToken(Token::kEquals);
+    else if (ident == "cond")
+      return NextToken(Token::kCond);
     return NextToken(Token::kIdentifier, ident);
   }
 
