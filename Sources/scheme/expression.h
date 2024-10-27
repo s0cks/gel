@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "scheme/common.h"
+#include "scheme/lambda.h"
 #include "scheme/type.h"
 #include "scheme/variable.h"
 
@@ -21,7 +22,8 @@ namespace expr {
   V(Define)                         \
   V(Symbol)                         \
   V(CallProc)                       \
-  V(Cond)
+  V(Cond)                           \
+  V(Lambda)
 
 class Expression;
 #define FORWARD_DECLARE(Name) class Name##Expr;
@@ -501,6 +503,37 @@ class CondExpr : public Expression {
     ASSERT(test);
     ASSERT(conseq);
     return new CondExpr(test, conseq, alt);
+  }
+};
+
+class LambdaExpr : public Expression {
+  friend class scm::Parser;
+
+ protected:
+  ArgumentSet args_;
+  Expression* body_;
+
+  explicit LambdaExpr(const ArgumentSet& args, Expression* body) :
+    Expression(),
+    args_(args),
+    body_(body) {}
+
+ public:
+  ~LambdaExpr() override = default;
+
+  auto GetArgs() const -> const ArgumentSet& {
+    return args_;
+  }
+
+  auto GetBody() const -> Expression* {
+    return body_;
+  }
+
+  DECLARE_EXPRESSION(Lambda);
+
+ public:
+  static inline auto New(const ArgumentSet& args, Expression* body) -> LambdaExpr* {
+    return new LambdaExpr(args, body);
   }
 };
 }  // namespace expr

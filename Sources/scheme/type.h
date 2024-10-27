@@ -271,7 +271,20 @@ class Symbol : public Datum {
   static auto New(const std::string& rhs) -> Symbol*;
 };
 
+using SymbolList = std::vector<Symbol*>;
 using SymbolSet = std::unordered_set<Symbol*, Symbol::Comparator>;
+
+static inline auto operator<<(std::ostream& stream, const SymbolList& rhs) -> std::ostream& {
+  stream << "[";
+  auto remaining = rhs.size();
+  for (const auto& symbol : rhs) {
+    stream << symbol;
+    if (--remaining >= 1)
+      stream << ", ";
+  }
+  stream << "]";
+  return stream;
+}
 
 class List : public Datum {
  private:

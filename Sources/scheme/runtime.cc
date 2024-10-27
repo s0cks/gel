@@ -1,13 +1,15 @@
-#include "scheme/interpreter.h"
+#include "scheme/runtime.h"
 
 #include <glog/logging.h>
 
 #include <iostream>
 
 #include "scheme/common.h"
+#include "scheme/environment.h"
 #include "scheme/expression.h"
 #include "scheme/instruction.h"
 #include "scheme/tracing.h"
+#include "scheme/type.h"
 
 namespace scm {
 class print : public Procedure {
@@ -17,9 +19,11 @@ class print : public Procedure {
   print() = default;
   ~print() override = default;
 
-  auto Apply(Environment* env, Datum* rhs) const -> Datum* override {
-    ASSERT(rhs);
-    PrintValue(std::cout, rhs) << std::endl;
+  auto Apply(Runtime* state) const -> bool override {
+    ASSERT(state);
+    const auto value = state->Pop();
+    ASSERT(value);
+    PrintValue(std::cout, (*value)) << std::endl;
     return Null::Get();
   }
 
@@ -28,41 +32,26 @@ class print : public Procedure {
   }
 };
 
-static inline auto CreateGlobalEnvironment() -> Environment* {
-  const auto env = Environment::New();
-  ASSERT(env);
-  env->Put("print", new print());
-  return env;
+Runtime::Runtime(Environment* env) {
+  SetEnv(env);
 }
 
-Interpreter::Interpreter() {
-  SetState(State::New(CreateGlobalEnvironment()));
+Runtime::~Runtime() {
+  delete env_;
 }
 
-Interpreter::~Interpreter() {
-  delete state_;
-}
-
-auto Interpreter::DefineSymbol(Symbol* symbol, Type* value) -> bool {
-  ASSERT(HasState());
+auto Runtime::DefineSymbol(Symbol* symbol, Type* value) -> bool {
   ASSERT(symbol);
   ASSERT(value);
-  const auto state = GetState();
-  ASSERT(state);
-  const auto globals = state->GetGlobals();
-  ASSERT(globals);
-  return globals->Put(symbol->Get(), value);
+  return GetEnv()->Put(symbol->Get(), value);
 }
 
-auto Interpreter::LookupSymbol(Symbol* symbol, Type** result) -> bool {
-  ASSERT(HasState());
+auto Runtime::LookupSymbol(Symbol* symbol, Type** result) -> bool {
   ASSERT(symbol);
-  const auto globals = GetState()->GetGlobals();
-  ASSERT(globals);
-  return globals->Lookup(symbol->Get(), result);
+  return GetEnv()->Lookup(symbol->Get(), result);
 }
 
-auto Interpreter::LoadSymbol(Symbol* symbol) -> bool {
+auto Runtime::LoadSymbol(Symbol* symbol) -> bool {
   ASSERT(symbol);
   Type* result = nullptr;
   if (!LookupSymbol(symbol, &result)) {
@@ -74,7 +63,7 @@ auto Interpreter::LoadSymbol(Symbol* symbol) -> bool {
   return true;
 }
 
-void Interpreter::StoreSymbol(Symbol* symbol, Type* value) {
+void Runtime::StoreSymbol(Symbol* symbol, Type* value) {
   ASSERT(symbol);
   ASSERT(value);
   if (!DefineSymbol(symbol, value)) {
@@ -138,62 +127,59 @@ static inline auto LookupProcedure(Environment* env, Symbol* name, Procedure** r
   return true;
 }
 
-auto Interpreter::VisitGraphEntryInstr(GraphEntryInstr* instr) -> bool {
+auto Runtime::VisitGraphEntryInstr(GraphEntryInstr* instr) -> bool {
   return true;
 }
 
-auto Interpreter::VisitTargetEntryInstr(TargetEntryInstr* instr) -> bool {
+auto Runtime::VisitTargetEntryInstr(TargetEntryInstr* instr) -> bool {
   return true;
 }
 
-auto Interpreter::VisitJoinEntryInstr(JoinEntryInstr* instr) -> bool {
+auto Runtime::VisitJoinEntryInstr(JoinEntryInstr* instr) -> bool {
   return true;
 }
 
-auto Interpreter::VisitCallProcInstr(CallProcInstr* instr) -> bool {
+auto Runtime::CallProcedure(Procedure* procedure) -> bool {
+  ASSERT(procedure);
+  return procedure->Apply(this);
+}
+
+auto Runtime::VisitCallProcInstr(CallProcInstr* instr) -> bool {
   ASSERT(instr);
   const auto symbol = instr->GetSymbol();
   ASSERT(symbol);
   Procedure* proc = nullptr;
-  if (!LookupProcedure(GetState()->GetGlobals(), symbol, &proc))
+  if (!LookupProcedure(GetEnv(), symbol, &proc))
     return false;
   ASSERT(proc);
-  ASSERT(proc->IsProcedure());
-  const auto args = Pop();  // TODO: fetch args
-  ASSERT(args->IsDatum());
-  const auto result = proc->Apply(GetState()->GetGlobals(), args->AsDatum());
-  ASSERT(result);
-  Push(result);
-  return true;
+  return CallProcedure(proc);
 }
 
-auto Interpreter::VisitConstantInstr(ConstantInstr* instr) -> bool {
+auto Runtime::VisitConstantInstr(ConstantInstr* instr) -> bool {
   const auto value = instr->GetValue();
   ASSERT(value);
   Push(value);
   return true;
 }
 
-auto Interpreter::VisitStoreVariableInstr(StoreVariableInstr* instr) -> bool {
+auto Runtime::VisitStoreVariableInstr(StoreVariableInstr* instr) -> bool {
   const auto value = Pop();
   ASSERT(value);
-  ASSERT(value->IsDatum());
   const auto symbol = instr->GetSymbol();
   ASSERT(symbol);
-  StoreSymbol(symbol, value);
+  StoreSymbol(symbol, *value);
   return true;
 }
 
-auto Interpreter::VisitLoadVariableInstr(LoadVariableInstr* instr) -> bool {
+auto Runtime::VisitLoadVariableInstr(LoadVariableInstr* instr) -> bool {
   return LoadSymbol(instr->GetSymbol());
 }
 
-auto Interpreter::VisitReturnInstr(ReturnInstr* instr) -> bool {
-  ASSERT(!GetState()->IsStackEmpty());
+auto Runtime::VisitReturnInstr(ReturnInstr* instr) -> bool {
   return true;
 }
 
-auto Interpreter::VisitGotoInstr(GotoInstr* instr) -> bool {
+auto Runtime::VisitGotoInstr(GotoInstr* instr) -> bool {
   ASSERT(instr);
   ASSERT(instr->HasTarget());
   SetCurrentInstr(instr->GetTarget());
@@ -207,38 +193,43 @@ static inline auto Truth(scm::Type* rhs) -> bool {
   return !rhs->IsNull();  // TODO: better truth?
 }
 
-auto Interpreter::VisitBranchInstr(BranchInstr* instr) -> bool {
+auto Runtime::VisitBranchInstr(BranchInstr* instr) -> bool {
   ASSERT(instr);
-  if (Truth(Pop())) {
-    SetCurrentInstr(instr->GetTrueTarget());
-  } else {
-    SetCurrentInstr(instr->GetFalseTarget());
+  const auto test = Pop();
+  if (!test) {
+    DLOG(ERROR) << "no test value to pop from stack.";
+    return false;
   }
+  const auto target = Truth(*test) ? instr->GetTrueTarget() : instr->GetFalseTarget();
+  ASSERT(target);
+  SetCurrentInstr(target);
   return true;
 }
 
-auto Interpreter::VisitBinaryOpInstr(BinaryOpInstr* instr) -> bool {
+auto Runtime::VisitBinaryOpInstr(BinaryOpInstr* instr) -> bool {
   const auto op = instr->GetOp();
   const auto right = Pop();
+  ASSERT(right);
   const auto left = Pop();
+  ASSERT(left);
   switch (op) {
     case expr::kAdd:
-      Push(Add(left, right));
+      Push(Add(*left, *right));
       return true;
     case expr::kSubtract:
-      Push(Subtract(left, right));
+      Push(Subtract(*left, *right));
       return true;
     case expr::kMultiply:
-      Push(Multiply(left, right));
+      Push(Multiply(*left, *right));
       return true;
     case expr::kDivide:
-      Push(Divide(left, right));
+      Push(Divide(*left, *right));
       return true;
     case expr::kEquals:
-      Push(Equals(left, right));
+      Push(Equals(*left, *right));
       return true;
     case expr::kModulus:
-      Push(Modulus(left, right));
+      Push(Modulus(*left, *right));
       return true;
     default:
       LOG(ERROR) << "invalid BinaryOp: " << op;
@@ -246,16 +237,16 @@ auto Interpreter::VisitBinaryOpInstr(BinaryOpInstr* instr) -> bool {
   }
 }
 
-void Interpreter::ExecuteInstr(Instruction* instr) {
+void Runtime::ExecuteInstr(Instruction* instr) {
   ASSERT(instr);
   TRACE_SECTION(ExecuteInstr);
   TRACE_TAG(instr->GetName());
-  DVLOG(10) << "executing: " << instr->ToString();
+  DLOG(INFO) << "executing: " << instr->GetName();
   if (!instr->Accept(this))
     LOG(FATAL) << "failed to execute: " << instr->ToString();
 }
 
-auto Interpreter::Execute(EntryInstr* entry) -> Type* {
+auto Runtime::Execute(EntryInstr* entry) -> Type* {
   TRACE_BEGIN;
   ASSERT(entry);
   SetCurrentInstr(entry->GetFirstInstruction());
@@ -270,14 +261,7 @@ auto Interpreter::Execute(EntryInstr* entry) -> Type* {
     }
   }
 
-  const auto state = GetState();
-  ASSERT(state);
-  if (state->IsStackEmpty())
-    return Null::Get();
-
   const auto result = Pop();
-  ASSERT(result);
-  ASSERT(state->IsStackEmpty());
-  return result;
+  return result.value_or(Null::Get());
 }
 }  // namespace scm

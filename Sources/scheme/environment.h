@@ -69,6 +69,10 @@ class Environment {
     return parent_;
   }
 
+  inline auto HasParent() const -> bool {
+    return GetParent() != nullptr;
+  }
+
   auto begin() const -> Storage::const_iterator {
     return std::begin(data());
   }
@@ -109,6 +113,11 @@ class Environment {
 
   auto IsEmpty() const -> bool {
     return data().empty();
+  }
+
+  auto GetRoot() const -> Environment* {
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
+    return HasParent() ? GetParent()->GetRoot() : const_cast<Environment*>(this);
   }
 
  public:

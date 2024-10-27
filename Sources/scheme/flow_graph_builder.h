@@ -12,8 +12,8 @@ class FlowGraphBuilder {
   DEFINE_NON_COPYABLE_TYPE(FlowGraphBuilder);
 
  private:
+  Expression* expr_;
   GraphEntryInstr* entry_ = nullptr;
-  Program* program_;
   EntryInstr* block_ = nullptr;
   uint64_t num_blocks_ = 0;
 
@@ -38,11 +38,13 @@ class FlowGraphBuilder {
   }
 
  public:
-  explicit FlowGraphBuilder(Program* p) :
-    program_(p) {
-    ASSERT(p);
-  }
+  explicit FlowGraphBuilder(Expression* expr) :
+    expr_(expr) {}
   ~FlowGraphBuilder() = default;
+
+  auto GetExpr() const -> Expression* {
+    return expr_;
+  }
 
   auto GetGraphEntry() const -> GraphEntryInstr* {
     return entry_;
@@ -52,16 +54,19 @@ class FlowGraphBuilder {
     return GetGraphEntry() != nullptr;
   }
 
-  auto GetProgram() const -> Program* {
-    return program_;
-  }
-
   auto BuildGraph() -> FlowGraph*;
 
  public:
+  static inline auto Build(Expression* expr) -> FlowGraph* {
+    ASSERT(expr);
+    FlowGraphBuilder builder(expr);
+    return builder.BuildGraph();
+  }
+
   static inline auto Build(Program* program) -> FlowGraph* {
     ASSERT(program);
-    FlowGraphBuilder builder(program);
+    ASSERT(program->GetNumberOfExpressions() >= 1);
+    FlowGraphBuilder builder(program->GetExpressionAt(0));
     return builder.BuildGraph();
   }
 };

@@ -270,19 +270,26 @@ class Definition : public Instruction {
 
 class ConstantInstr : public Definition {
  private:
-  Datum* value_;
+  Type* value_;
 
- public:
-  ConstantInstr(Datum* value) :
+  explicit ConstantInstr(Type* value) :
     Definition(),
     value_(value) {}
+
+ public:
   ~ConstantInstr() override = default;
 
-  auto GetValue() const -> Datum* {
+  auto GetValue() const -> Type* {
     return value_;
   }
 
   DECLARE_INSTRUCTION(ConstantInstr);
+
+ public:
+  static inline auto New(Type* value) -> ConstantInstr* {
+    ASSERT(value);
+    return new ConstantInstr(value);
+  }
 };
 
 class LoadVariableInstr : public Definition {
@@ -314,13 +321,13 @@ class LoadVariableInstr : public Definition {
   }
 };
 
-class StoreVariableInstr : public Definition {
+class StoreVariableInstr : public Instruction {
  private:
   Symbol* symbol_;
   Definition* value_;
 
   StoreVariableInstr(Symbol* symbol, Definition* value) :
-    Definition(),
+    Instruction(),
     symbol_(symbol),
     value_(value) {}
 

@@ -128,4 +128,12 @@ auto CondExpr::ToString() const -> std::string {
   ss << ")";
   return ss.str();
 }
+
+auto LambdaExpr::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "LambdaExpr(";
+  ss << "args=" << GetArgs();
+  ss << ")";
+  return ss.str();
+}
 }  // namespace scm::expr

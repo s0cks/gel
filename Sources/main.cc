@@ -9,9 +9,9 @@
 #include "scheme/flags.h"
 #include "scheme/flow_graph_builder.h"
 #include "scheme/flow_graph_dot.h"
-#include "scheme/interpreter.h"
 #include "scheme/lexer.h"
 #include "scheme/parser.h"
+#include "scheme/runtime.h"
 
 using namespace scm;
 
@@ -50,7 +50,7 @@ auto main(int argc, char** argv) -> int {
       // dot_graph->RenderToStdout();
       dot_graph->RenderPngToFilename(GetReportFilename("expr0_flow_graph.png"));
     }
-    const auto result = Interpreter::Eval(flow_graph);
+    const auto result = Runtime::Eval(flow_graph);
     ASSERT(result);
     PrintValue(std::cout, result) << std::endl;
   }

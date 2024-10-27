@@ -126,6 +126,40 @@ auto Parser::ParseSymbolExpr() -> SymbolExpr* {
   return SymbolExpr::New(symbol);
 }
 
+auto Parser::ParseArguments(ArgumentSet& args) -> bool {
+  uint64_t num_args = 0;
+  while (PeekEq(Token::kIdentifier)) {
+    const auto& next = stream().Next();
+    ASSERT(next.kind == Token::kIdentifier);
+    args.insert(Argument(num_args++, next.text));
+  }
+  return true;
+}
+
+auto Parser::ParseSymbolList(SymbolList& symbols) -> bool {
+  while (PeekEq(Token::kIdentifier)) {
+    const auto next = ParseSymbol();
+    ASSERT(next);
+    symbols.push_back(next);
+  }
+  return true;
+}
+
+auto Parser::ParseLambdaExpr() -> LambdaExpr* {
+  ExpectNext(Token::kLParen);
+  ArgumentSet args;
+  if (!ParseArguments(args)) {
+    LOG(FATAL) << "failed to parse lambda arguments.";
+    return nullptr;
+  }
+  DLOG(INFO) << "parsed lambda args:";
+  std::ranges::for_each(std::begin(args), std::end(args), [](const Argument& arg) {
+    DLOG(INFO) << "- " << arg;
+  });
+  ExpectNext(Token::kRParen);
+  return LambdaExpr::New(args, ParseExpression());
+}
+
 auto Parser::ParseExpression() -> Expression* {
   if (stream().Peek().IsLiteral())
     return ParseLiteralExpr();
@@ -147,6 +181,9 @@ auto Parser::ParseExpression() -> Expression* {
         break;
       case Token::kIdentifier:
         expr = ParseCallProcExpr(next.text);
+        break;
+      case Token::kLambdaDef:
+        expr = ParseLambdaExpr();
         break;
       case Token::kCond:
         expr = ParseCondExpr();

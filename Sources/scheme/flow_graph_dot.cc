@@ -27,7 +27,6 @@ class DotVisitor : public InstructionVisitor, dot::GraphDecorator {
 
   inline void SetBlock(EntryInstr* blk) {
     ASSERT(blk);
-    DLOG(INFO) << "set block #" << blk->GetBlockId() << ": " << blk->ToString();
     block_ = blk;
   }
 
@@ -97,7 +96,6 @@ class DotVisitor : public InstructionVisitor, dot::GraphDecorator {
       const auto previous = GetExitNode();
       const auto edge = NewEdge(previous, node, "");
       ASSERT(edge);
-      DLOG(INFO) << "created edge: " << edge;
     }
     SetExitNode(node);
   }
@@ -153,7 +151,6 @@ class DotVisitor : public InstructionVisitor, dot::GraphDecorator {
     while (iter.HasNext()) {
       const auto next = iter.Next();
       ASSERT(next);
-      DLOG(INFO) << "next: " << next->ToString();
       if (!next->Accept(this))
         return false;
     }

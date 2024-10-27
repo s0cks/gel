@@ -9,6 +9,7 @@
 
 #include "scheme/expression.h"
 #include "scheme/instruction.h"
+#include "scheme/lambda.h"
 #include "scheme/lexer.h"
 #include "scheme/program.h"
 
@@ -34,6 +35,9 @@ class Parser {
   auto ParseLoadSymbol() -> LoadVariableInstr*;
   auto ParseSymbolExpr() -> SymbolExpr*;
   auto ParseCallProcExpr(std::string symbol) -> CallProcExpr*;
+  auto ParseArguments(ArgumentSet& args) -> bool;
+  auto ParseLambdaExpr() -> LambdaExpr*;
+  auto ParseSymbolList(SymbolList& symbols) -> bool;
 
   inline auto PeekEq(const Token::Kind rhs) const -> bool {
     const auto& peek = stream().Peek();

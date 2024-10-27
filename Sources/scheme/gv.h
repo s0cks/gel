@@ -140,7 +140,6 @@ class GraphDecorator {
 
   inline auto NewNode(const std::string& name) -> Node* {
     ASSERT(!name.empty());
-    DLOG(INFO) << "creating new node: " << name;
     return NewNode(name.c_str());
   }
 

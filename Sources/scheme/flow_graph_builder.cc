@@ -5,6 +5,8 @@
 #include "scheme/common.h"
 #include "scheme/expression.h"
 #include "scheme/instruction.h"
+#include "scheme/lambda.h"
+#include "scheme/procedure.h"
 
 namespace scm {
 static inline auto AppendFragment(EntryInstr* entry, EffectVisitor& vis) -> Instruction* {
@@ -22,8 +24,8 @@ auto FlowGraphBuilder::BuildGraph() -> FlowGraph* {
   ASSERT(target_entry);
   SetCurrentBlock(target_entry);
   EffectVisitor for_effect(this);
-  if (!GetProgram()->Accept(&for_effect)) {
-    LOG(ERROR) << "failed to visit: " << GetProgram()->ToString();
+  if (!GetExpr()->Accept(&for_effect)) {
+    LOG(ERROR) << "failed to visit: " << GetExpr()->ToString();
     return nullptr;  // TODO: free entry
   }
   AppendFragment(target_entry, for_effect);
@@ -31,7 +33,7 @@ auto FlowGraphBuilder::BuildGraph() -> FlowGraph* {
   const auto last = target_entry->GetLastInstruction();
   ASSERT(last);
   if (!last->IsReturnInstr() && last->IsDefinition())
-    Instruction::Link(last, new ReturnInstr(reinterpret_cast<Definition*>(last)));  // NOLINT
+    last->Append(new ReturnInstr(dynamic_cast<Definition*>(last)));  // NOLINT
 
   SetGraphEntry(graph_entry);
   graph_entry->Append(target_entry);
@@ -128,6 +130,14 @@ auto EffectVisitor::VisitCond(CondExpr* expr) -> bool {
   return true;
 }
 
+auto EffectVisitor::VisitLambda(LambdaExpr* expr) -> bool {
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  const auto lambda = Lambda::New(expr->GetArgs(), expr->GetBody());
+  ASSERT(lambda);
+  ReturnDefinition(ConstantInstr::New(lambda));
+  return true;
+}
+
 auto EffectVisitor::VisitDefine(DefineExpr* expr) -> bool {
   ASSERT(expr);
   // process value
@@ -141,13 +151,13 @@ auto EffectVisitor::VisitDefine(DefineExpr* expr) -> bool {
   Append(for_value);
   const auto symbol = expr->GetSymbol();
   ASSERT(symbol);
-  ReturnDefinition(StoreVariableInstr::New(symbol, for_value.GetValue()));
+  Add(StoreVariableInstr::New(symbol, for_value.GetValue()));
   return true;
 }
 
 auto EffectVisitor::VisitLiteral(LiteralExpr* p) -> bool {
   ASSERT(p);
-  ReturnDefinition(new ConstantInstr(p->GetValue()));
+  ReturnDefinition(ConstantInstr::New(p->GetValue()));
   return true;
 }
 

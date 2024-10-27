@@ -5,6 +5,7 @@
 #include "scheme/type.h"
 
 namespace scm {
+class State;
 class Runtime;
 class Procedure : public Type {
   DEFINE_NON_COPYABLE_TYPE(Procedure);
@@ -23,13 +24,7 @@ class Procedure : public Type {
     return this;
   }
 
-  virtual auto Apply(Environment*, Datum* rhs) const -> Datum* = 0;
-};
-
-class Lambda : public Procedure {
- public:
-  DECLARE_TYPE(Lambda);
-  auto Apply(Environment*, Datum* rhs) const -> Datum* override;
+  virtual auto Apply(Runtime* state) const -> bool = 0;
 };
 
 class Macro : public Procedure {
