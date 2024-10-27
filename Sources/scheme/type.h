@@ -271,6 +271,27 @@ class Symbol : public Datum {
   static auto New(const std::string& rhs) -> Symbol*;
 };
 
+class String : public Datum {
+ private:
+  std::string value_;
+
+  explicit String(const std::string& value) :
+    Datum(),
+    value_(value) {}
+
+ public:
+  auto Get() const -> const std::string& {
+    return value_;
+  }
+
+  DECLARE_TYPE(String);
+
+ public:
+  static inline auto New(const std::string& value) -> String* {
+    return new String(value);
+  }
+};
+
 using SymbolList = std::vector<Symbol*>;
 using SymbolSet = std::unordered_set<Symbol*, Symbol::Comparator>;
 
@@ -324,6 +345,8 @@ static inline auto PrintValue(std::ostream& stream, Type* value) -> std::ostream
     return stream << (value->AsBool()->Get() ? "#t" : "#f");
   } else if (value->IsNumber()) {
     return stream << value->AsNumber()->GetValue();
+  } else if (value->IsString()) {
+    return stream << '"' << value->AsString()->Get() << '"';
   }
   return stream << value->ToString();
 }

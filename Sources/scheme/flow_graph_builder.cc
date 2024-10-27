@@ -23,7 +23,7 @@ auto FlowGraphBuilder::BuildGraph() -> FlowGraph* {
   const auto target_entry = TargetEntryInstr::New(GetNextBlockId());
   ASSERT(target_entry);
   SetCurrentBlock(target_entry);
-  EffectVisitor for_effect(this);
+  ValueVisitor for_effect(this);
   if (!GetExpr()->Accept(&for_effect)) {
     LOG(ERROR) << "failed to visit: " << GetExpr()->ToString();
     return nullptr;  // TODO: free entry

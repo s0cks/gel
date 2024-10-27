@@ -179,4 +179,21 @@ auto Null::Get() -> Null* {
   }
   return kNull;
 }
+
+auto String::Equals(Type* rhs) const -> bool {
+  ASSERT(rhs);
+  if (!rhs->IsString())
+    return false;
+  const auto other = rhs->AsString();
+  ASSERT(other);
+  return Get() == other->Get();
+}
+
+auto String::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "String(";
+  ss << "value=" << Get();
+  ss << ")";
+  return ss.str();
+}
 }  // namespace scm

@@ -25,8 +25,9 @@ auto Parser::ParseLiteralExpr() -> LiteralExpr* {
     case Token::kLiteralLong:
     case Token::kLiteralNumber:
       return LiteralExpr::New(Number::New(next.AsLong()));
-    case Token::kLiteralDouble:
     case Token::kLiteralString:
+      return LiteralExpr::New(String::New(next.text));
+    case Token::kLiteralDouble:
     default:
       LOG(FATAL) << "unexpected: " << stream().Next();
       return nullptr;
@@ -152,10 +153,6 @@ auto Parser::ParseLambdaExpr() -> LambdaExpr* {
     LOG(FATAL) << "failed to parse lambda arguments.";
     return nullptr;
   }
-  DLOG(INFO) << "parsed lambda args:";
-  std::ranges::for_each(std::begin(args), std::end(args), [](const Argument& arg) {
-    DLOG(INFO) << "- " << arg;
-  });
   ExpectNext(Token::kRParen);
   return LambdaExpr::New(args, ParseExpression());
 }

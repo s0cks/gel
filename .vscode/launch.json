@@ -12,6 +12,12 @@
       "type": "promptString",
       "default": "(+ 99 1)",
       "description": "The expression to evaluate"
+    },
+    {
+      "id": "even-value",
+      "type": "promptString",
+      "default": "10",
+      "description": "A value that is even."
     }
   ],
   "configurations": [
@@ -172,7 +178,7 @@
       "args": [
         "-logtostdout",
         "-colorlogtostdout",
-        "--expr", "(begin (define even? (lambda (x) (eq? (% x 2) 0))) (cond (even? 10) 11 99))",
+        "--expr", "(begin (define even? (lambda (x) (eq? (% x 2) 0))) (define y ${input:even-value}) (print y) (cond (even? y) \"even\" \"odd\"))",
         "--reports-dir", "${workspaceFolder}/reports",
         "--dump-ast",
         "--dump-flow-graph",
