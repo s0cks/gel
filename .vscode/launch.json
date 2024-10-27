@@ -95,7 +95,7 @@
       ]
     },
     {
-      "name": "Evaluate Basic Expr",
+      "name": "Eval Basic Expr",
       "type": "lldb",
       "request": "launch",
       "program": "${workspaceFolder}/build/Sources/scm",
@@ -111,7 +111,7 @@
       ]
     },
     {
-      "name": "Evaluate Basic Expr (Debug)",
+      "name": "Eval Expr (Debug)",
       "type": "lldb",
       "request": "launch",
       "program": "${workspaceFolder}/build/Sources/scm",
@@ -129,7 +129,7 @@
       ]
     },
     {
-      "name": "Evaluate Basic Cond Expr (Debug)",
+      "name": "Eval Basic Cond Expr (Debug)",
       "type": "lldb",
       "request": "launch",
       "program": "${workspaceFolder}/build/Sources/scm",
@@ -147,7 +147,7 @@
       ]
     },
     {
-      "name": "Evaluate Sq X Cond Expr (Debug)",
+      "name": "Eval Sq Expr (Debug)",
       "type": "lldb",
       "request": "launch",
       "program": "${workspaceFolder}/build/Sources/scm",
@@ -155,6 +155,24 @@
         "-logtostdout",
         "-colorlogtostdout",
         "--expr", "(begin (define sq (lambda (x) (* x x))) (sq 10))",
+        "--reports-dir", "${workspaceFolder}/reports",
+        "--dump-ast",
+        "--dump-flow-graph",
+      ],
+      "cwd": "${workspaceFolder}",
+      "initCommands": [
+        "command source ${workspaceFolder}/.lldbinit"
+      ]
+    },
+    {
+      "name": "Eval even? Expr (Debug)",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/Sources/scm",
+      "args": [
+        "-logtostdout",
+        "-colorlogtostdout",
+        "--expr", "(begin (define even? (lambda (x) (eq? (% x 2) 0))) (cond (even? 10) 11 99))",
         "--reports-dir", "${workspaceFolder}/reports",
         "--dump-ast",
         "--dump-flow-graph",
