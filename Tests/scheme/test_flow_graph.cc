@@ -16,13 +16,13 @@ TEST_F(FlowGraphTest, Test_Builder) {  // NOLINT
   Parser parser(stream);
   const auto program = parser.ParseProgram();
   ASSERT_TRUE(program);
-  FlowGraphBuilder builder(program);
+  FlowGraphBuilder builder(program->GetExpressionAt(0));
   const auto flow_graph = builder.BuildGraph();
   ASSERT_TRUE(flow_graph);
   ASSERT_TRUE(flow_graph->GetEntry());
 #ifdef SCM_DEBUG
   {
-    const auto dot_graph = FlowGraphToDotGraph::Build("FlowGraph", flow_graph);
+    const auto dot_graph = FlowGraphToDotGraph::BuildGraph("FlowGraph", flow_graph);
     ASSERT_TRUE(dot_graph);
     ASSERT_NO_FATAL_FAILURE(dot_graph->RenderPngToFilename("/Users/tazz/Projects/scheme/flow_graph.png"));  // NOLINT
     ASSERT_NO_FATAL_FAILURE(dot_graph->RenderToStdout());                                                   // NOLINT

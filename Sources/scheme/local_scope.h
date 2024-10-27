@@ -31,6 +31,7 @@ class LocalScope {
   auto Has(const Symbol* symbol, const bool recursive = false) -> bool;
   auto Add(LocalVariable* local) -> bool;
   auto Add(Symbol* symbol, Type* value = nullptr) -> bool;
+  auto Add(LocalScope* scope) -> bool;
   auto Lookup(const std::string& name, LocalVariable** result, const bool recursive = true) -> bool;
   auto Lookup(const Symbol* symbol, LocalVariable** result, const bool recursive = true) -> bool;
 
@@ -44,10 +45,17 @@ class LocalScope {
 
   inline auto Add(const std::string& name, Type* value = nullptr) -> bool {
     ASSERT(!name.empty());
-    const auto local = new LocalVariable(this, GetNumberOfLocals(), name, value);
-    ASSERT(local);
-    return Add(local);
+
+    LocalVariable* local = nullptr;
+    if (!Lookup(name, &local, false))
+      return Add(local = new LocalVariable(this, GetNumberOfLocals(), name, value));
+    if (local->HasValue())
+      return false;
+    local->SetConstantValue(value);
+    return true;
   }
+
+  auto VisitAllLocals(LocalVariableVisitor* vis) -> bool;
 
  public:
   static inline auto New(LocalScope* parent = nullptr) -> LocalScope* {

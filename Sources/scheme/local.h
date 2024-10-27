@@ -8,7 +8,20 @@
 #include "scheme/common.h"
 
 namespace scm {
+class LocalVariable;
+class LocalVariableVisitor {
+  DEFINE_NON_COPYABLE_TYPE(LocalVariableVisitor);
+
+ protected:
+  LocalVariableVisitor() = default;
+
+ public:
+  virtual ~LocalVariableVisitor() = default;
+  virtual auto VisitLocal(LocalVariable* local) -> bool = 0;
+};
+
 class Type;
+class Symbol;
 class LocalScope;
 class LocalVariable {
   friend class LocalScope;
@@ -82,6 +95,18 @@ class LocalVariable {
     stream << ")";
     return stream;
   }
+
+ public:
+  static inline auto New(LocalScope* owner, const uint64_t index, const std::string& name, Type* value = nullptr)
+      -> LocalVariable* {
+    ASSERT(owner);
+    ASSERT(index >= 0);
+    ASSERT(!name.empty());
+    return new LocalVariable(owner, index, name, value);
+  }
+
+  static auto New(LocalScope* owner, const std::string& name, Type* value = nullptr) -> LocalVariable*;
+  static auto New(LocalScope* owner, const Symbol* symbol, Type* value = nullptr) -> LocalVariable*;
 };
 }  // namespace scm
 

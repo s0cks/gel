@@ -33,6 +33,7 @@ struct Token {
     kLParen,
     kRParen,
     kVariableDef,
+    kModuleDef,
     kBeginDef,
     kLambdaDef,
     kIdentifier,

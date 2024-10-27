@@ -2,7 +2,6 @@
 
 #include <fstream>
 
-#include "scheme/ast_dot.h"
 #include "scheme/expression_dot.h"
 #include "scheme/parser.h"
 
@@ -59,7 +58,7 @@ TEST_F(ParserTest, Test_Parse_BeginDef2) {  // NOLINT
   const auto program = parser.ParseProgram();
   ASSERT_TRUE(program);
   {
-    const auto dot_graph = ExpressionToDot::Build("expr0", program->GetExpressionAt(0));
+    const auto dot_graph = ExpressionToDot::BuildGraph("expr0", program->GetExpressionAt(0));
     ASSERT_TRUE(dot_graph);
     dot_graph->RenderToStdout();
     dot_graph->RenderPngToFilename("/Users/tazz/Projects/scheme/expr0_ast.png");

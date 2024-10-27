@@ -15,7 +15,7 @@ class Runtime : private InstructionVisitor {
   DEFINE_NON_COPYABLE_TYPE(Runtime);
 
  private:
-  LocalScope* scope_ = nullptr;
+  LocalScope* scope_;
   Instruction* current_ = nullptr;
   Stack stack_{};
 
@@ -42,6 +42,23 @@ class Runtime : private InstructionVisitor {
     stack_ = rhs;
   }
 
+  inline void PushScope() {
+    ASSERT(HasScope());
+    const auto new_scope = LocalScope::New(GetScope());
+    ASSERT(new_scope);
+    SetScope(new_scope);
+  }
+
+  inline void PopScope() {
+    ASSERT(HasScope());
+    const auto curr_scope = GetScope();
+    ASSERT(curr_scope);
+    ASSERT(curr_scope->HasParent());
+    SetScope(curr_scope->GetParent());
+    ASSERT(HasScope());
+  }
+
+ public:
   static auto CreateInitScope() -> LocalScope*;
 
  protected:
@@ -56,9 +73,8 @@ class Runtime : private InstructionVisitor {
 #undef DECLARE_VISIT
 
  public:
-  Runtime(LocalScope* init_scope = CreateInitScope()) {
-    SetScope(init_scope);
-  }
+  Runtime(LocalScope* init_scope) :
+    scope_(init_scope) {}
   ~Runtime() {
     if (HasScope())
       delete scope_;
@@ -93,16 +109,22 @@ class Runtime : private InstructionVisitor {
   auto Execute(EntryInstr* entry) -> Type*;
 
  public:
-  static inline auto Eval(EntryInstr* instr) -> Type* {
+  static inline auto New(LocalScope* init_scope = CreateInitScope()) -> Runtime* {
+    return new Runtime(init_scope);
+  }
+
+  static inline auto Eval(EntryInstr* instr, LocalScope* init_scope = CreateInitScope()) -> Type* {
     ASSERT(instr);
-    Runtime interpreter;
+    Runtime interpreter(init_scope);
     return interpreter.Execute(instr);
   }
 
-  static inline auto Eval(FlowGraph* flow_graph) -> Type* {
+  static inline auto Eval(FlowGraph* flow_graph, LocalScope* init_scope = CreateInitScope()) -> Type* {
     ASSERT(flow_graph);
-    return Eval(flow_graph->GetEntry());
+    return Eval(flow_graph->GetEntry(), init_scope);
   }
+
+  static auto EvalWithScope(FlowGraph* flow_graph, LocalScope* scope) -> Type*;
 };
 
 class RuntimeScopeScope {

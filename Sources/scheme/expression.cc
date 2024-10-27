@@ -45,6 +45,29 @@ auto BinaryOpExpr::IsConstantExpr() const -> bool {
   return GetLeft()->IsConstantExpr() && GetRight()->IsConstantExpr();
 }
 
+auto BinaryOpExpr::EvalToConstant() const -> Type* {
+  ASSERT(IsConstantExpr());
+  const auto left = GetLeft()->EvalToConstant();
+  ASSERT(left && left->IsAtom());
+  const auto right = GetRight()->EvalToConstant();
+  ASSERT(right && right->IsAtom());
+  switch (GetOp()) {
+    case BinaryOp::kAdd:
+      return dynamic_cast<Datum*>(left)->Add(dynamic_cast<Datum*>(right));
+    case BinaryOp::kSubtract:
+      return dynamic_cast<Datum*>(left)->Sub(dynamic_cast<Datum*>(right));
+    case BinaryOp::kMultiply:
+      return dynamic_cast<Datum*>(left)->Mul(dynamic_cast<Datum*>(right));
+    case BinaryOp::kDivide:
+      return dynamic_cast<Datum*>(left)->Div(dynamic_cast<Datum*>(right));
+    case BinaryOp::kModulus:
+      return dynamic_cast<Datum*>(left)->Mod(dynamic_cast<Datum*>(right));
+    default:
+      LOG(FATAL) << "invalid binary op: " << GetOp();
+      return nullptr;
+  }
+}
+
 auto BinaryOpExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
   ASSERT(vis);
   if (!GetLeft()->Accept(vis))

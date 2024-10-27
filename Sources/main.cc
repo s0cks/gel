@@ -28,10 +28,30 @@ auto main(int argc, char** argv) -> int {
 
   Type::Init();
 
+  Module* m = nullptr;
+  const auto module_flag = GetModuleFlag();
+  if (module_flag) {
+    m = Parser::ParseModule((*module_flag));
+    ASSERT(m);
+    PRINT_MODULE(INFO, m);
+  }
+
+  const auto scope = Runtime::CreateInitScope();
+  ASSERT(scope);
+  if (m && m->GetBody() != nullptr) {
+    scope->Add(m->GetScope());
+    const auto flow_graph = FlowGraphBuilder::Build(m->GetBody());
+    ASSERT(flow_graph);
+    const auto result = Runtime::EvalWithScope(flow_graph, scope);
+    DLOG_IF(INFO, result) << "module result: " << result->ToString();
+  }
+
   const auto expr = GetExpressionFlag();
   if (expr) {
     DLOG(INFO) << "evaluating expression: " << (*expr);
-    const auto program = Parser::Parse((*expr));
+    ByteTokenStream stream((*expr));
+    Parser parser(stream, scope);
+    const auto program = parser.ParseProgram();
     ASSERT(program);
     if (FLAGS_dump_ast) {
       // TODO: merge program graphs
@@ -50,7 +70,7 @@ auto main(int argc, char** argv) -> int {
       // dot_graph->RenderToStdout();
       dot_graph->RenderPngToFilename(GetReportFilename("expr0_flow_graph.png"));
     }
-    const auto result = Runtime::Eval(flow_graph);
+    const auto result = Runtime::EvalWithScope(flow_graph, scope);
     ASSERT(result);
     PrintValue(std::cout, result) << std::endl;
   }

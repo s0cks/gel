@@ -151,6 +151,8 @@ auto TokenStream::Next() -> const Token& {
       return NextToken(Token::kEquals);
     else if (ident == "cond")
       return NextToken(Token::kCond);
+    else if (ident == "defmodule")
+      return NextToken(Token::kModuleDef);
     return NextToken(Token::kIdentifier, ident);
   }
 

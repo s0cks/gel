@@ -26,16 +26,6 @@ static inline auto HasText(const std::string& expected, const Token& actual) -> 
   return AssertionSuccess();
 }
 
-static inline auto HasPos(const Position& expected, const Token& actual) -> AssertionResult {
-  if (actual.pos != expected)
-    return AssertionFailure() << "expected " << actual << " to be: " << expected;
-  return AssertionSuccess();
-}
-
-static inline auto HasPos(const uint64_t column, const uint64_t row, const Token& actual) -> AssertionResult {
-  return HasPos(Position{.row = row, .column = column}, actual);
-}
-
 static inline auto IsNext(const Token::Kind expected_kind, TokenStream& stream) -> AssertionResult {
   const auto& next = stream.Next();
   {

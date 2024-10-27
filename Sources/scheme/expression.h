@@ -70,6 +70,10 @@ class Expression {
     return false;
   }
 
+  virtual auto EvalToConstant() const -> Type* {
+    return nullptr;
+  }
+
   virtual auto VisitChildren(ExpressionVisitor* vis) -> bool {
     return false;
   }
@@ -147,6 +151,10 @@ class LiteralExpr : public Expression {
 
   auto IsConstantExpr() const -> bool override {
     return true;
+  }
+
+  auto EvalToConstant() const -> Type* override {
+    return value_;
   }
 
   DECLARE_EXPRESSION(Literal);
@@ -239,6 +247,7 @@ class BinaryOpExpr : public TemplateExpression<2> {
   }
 
   auto IsConstantExpr() const -> bool override;
+  auto EvalToConstant() const -> Type* override;
   auto VisitChildren(ExpressionVisitor* vis) -> bool override;
   DECLARE_EXPRESSION(BinaryOp);
 
@@ -301,11 +310,12 @@ class SequenceExpr : public Expression {
   DEFINE_NON_COPYABLE_TYPE(SequenceExpr);
 
  private:
-  ExpressionList children_;
+  ExpressionList children_{};
 
  protected:
-  SequenceExpr(ExpressionList children) :
-    children_(std::move(children)) {}
+  SequenceExpr(const ExpressionList& children) {
+    children_.insert(std::end(children_), std::begin(children), std::end(children));
+  }
 
   inline void Append(Expression* expr) {
     ASSERT(expr);

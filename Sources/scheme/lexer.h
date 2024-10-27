@@ -26,7 +26,7 @@ class TokenStream {
     wpos_(length),
     buffer_() {
     ASSERT(data);
-    ASSERT(length >= 1 && length <= kChunkSize);
+    ASSERT(length >= 0 && length <= kChunkSize);
     memcpy(&chunk_[0], &data[0], length);  // NOLINT
     buffer_.reserve(1024);
   }

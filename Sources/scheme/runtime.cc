@@ -41,6 +41,7 @@ auto Runtime::CreateInitScope() -> LocalScope* {
 auto Runtime::DefineSymbol(Symbol* symbol, Type* value) -> bool {
   ASSERT(symbol);
   ASSERT(value);
+  ASSERT(HasScope());
   return GetScope()->Add(symbol, value);
 }
 
@@ -274,5 +275,12 @@ auto Runtime::Execute(EntryInstr* entry) -> Type* {
 
   const auto result = Pop();
   return result.value_or(Null::Get());
+}
+
+auto Runtime::EvalWithScope(FlowGraph* flow_graph, LocalScope* scope) -> Type* {
+  ASSERT(flow_graph);
+  ASSERT(scope);
+  Runtime runtime(scope);
+  return runtime.Execute(flow_graph->GetEntry());
 }
 }  // namespace scm

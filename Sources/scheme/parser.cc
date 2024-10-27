@@ -5,9 +5,29 @@
 #include "scheme/common.h"
 #include "scheme/expression.h"
 #include "scheme/instruction.h"
+#include "scheme/local.h"
+#include "scheme/local_scope.h"
 #include "scheme/token.h"
 
 namespace scm {
+void Parser::PushScope() {
+  DLOG(INFO) << "pushing scope....";
+  const auto old_scope = GetScope();
+  ASSERT(old_scope);
+  const auto new_scope = LocalScope::New(old_scope);
+  ASSERT(new_scope);
+  SetScope(new_scope);
+}
+
+void Parser::PopScope() {
+  DLOG(INFO) << "popping scope...";
+  const auto old_scope = GetScope();
+  ASSERT(old_scope);
+  const auto new_scope = old_scope->GetParent();
+  ASSERT(new_scope);
+  SetScope(new_scope);
+}
+
 auto Parser::ParseSymbol() -> Symbol* {
   const auto& next = stream().Next();
   LOG_IF(FATAL, next.kind != Token::kIdentifier) << "unexpected: " << next << ", expected: " << Token::kIdentifier;
@@ -35,11 +55,13 @@ auto Parser::ParseLiteralExpr() -> LiteralExpr* {
 }
 
 auto Parser::ParseBeginExpr() -> BeginExpr* {
+  PushScope();
   const auto begin = BeginExpr::New();
   while (stream().Peek().kind != Token::kRParen) {
     begin->Append(ParseExpression());
   }
   ASSERT(stream().Peek().kind == Token::kRParen);
+  PopScope();
   return begin;
 }
 
@@ -198,9 +220,45 @@ auto Parser::ParseExpression() -> Expression* {
 auto Parser::ParseDefineExpr() -> DefineExpr* {
   const auto symbol = ParseSymbol();
   ASSERT(symbol);
+  if (GetScope()->Has(symbol)) {
+    LOG(FATAL) << "cannot redefine symbol: " << symbol;
+    return nullptr;
+  }
   const auto value = ParseExpression();
   ASSERT(value);
+  const auto local = LocalVariable::New(GetScope(), symbol, value->IsConstantExpr() ? value->EvalToConstant() : nullptr);
+  ASSERT(local);
+  LOG_IF(FATAL, !GetScope()->Add(local)) << "failed to add local: " << local->GetName();
   return DefineExpr::New(symbol, value);
+}
+
+auto Parser::ParseIdentifier(std::string& result) -> bool {
+  const auto& next = stream().Next();
+  if (next.kind != Token::kIdentifier) {
+    result.clear();
+    return Unexpected(Token::kIdentifier, next);
+  }
+  result = next.text;
+  return true;
+}
+
+auto Parser::ParseModule() -> Module* {
+  PushScope();
+  ExpectNext(Token::kLParen);
+  ExpectNext(Token::kModuleDef);
+  std::string name;
+  if (!ParseIdentifier(name)) {
+    LOG(ERROR) << "failed to parse module.";
+    return nullptr;
+  }
+  Expression* body = nullptr;
+  if (!PeekEq(Token::kRParen))
+    body = ParseExpression();
+  ExpectNext(Token::kRParen);
+  const auto module = Module::New(name, GetScope(), body);
+  ASSERT(module);
+  PopScope();
+  return module;
 }
 
 auto Parser::ParseProgram() -> Program* {
