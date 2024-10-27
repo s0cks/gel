@@ -5,7 +5,6 @@
 #include <iostream>
 
 #include "scheme/common.h"
-#include "scheme/environment.h"
 #include "scheme/expression.h"
 #include "scheme/instruction.h"
 #include "scheme/tracing.h"
@@ -32,23 +31,29 @@ class print : public Procedure {
   }
 };
 
-Runtime::Runtime(Environment* env) {
-  SetEnv(env);
-}
-
-Runtime::~Runtime() {
-  delete env_;
+auto Runtime::CreateInitScope() -> LocalScope* {
+  const auto scope = LocalScope::New();
+  ASSERT(scope);
+  LOG_IF(FATAL, !scope->Add("print", new print())) << "failed to register print procedure.";
+  return scope;
 }
 
 auto Runtime::DefineSymbol(Symbol* symbol, Type* value) -> bool {
   ASSERT(symbol);
   ASSERT(value);
-  return GetEnv()->Put(symbol->Get(), value);
+  return GetScope()->Add(symbol, value);
 }
 
 auto Runtime::LookupSymbol(Symbol* symbol, Type** result) -> bool {
   ASSERT(symbol);
-  return GetEnv()->Lookup(symbol->Get(), result);
+  LocalVariable* local = nullptr;
+  if (!GetScope()->Lookup(symbol, &local)) {
+    LOG(ERROR) << "failed to find local: " << symbol;
+    return false;
+  }
+  ASSERT(local);
+  (*result) = local->GetValue();
+  return local->HasValue();
 }
 
 auto Runtime::LoadSymbol(Symbol* symbol) -> bool {
@@ -108,16 +113,22 @@ static inline auto Modulus(Type* lhs, Type* rhs) -> Datum* {
   return lhs->AsDatum()->Mod(rhs->AsDatum());
 }
 
-static inline auto LookupProcedure(Environment* env, Symbol* name, Procedure** result) -> bool {
-  ASSERT(env);
+static inline auto LookupProcedure(LocalScope* scope, Symbol* name, Procedure** result) -> bool {
+  ASSERT(scope);
   ASSERT(name);
-  Type* value = nullptr;
-  if (!env->Lookup(name, &value)) {
+  LocalVariable* local = nullptr;
+  if (!scope->Lookup(name, &local)) {
     (*result) = nullptr;
     LOG(ERROR) << "failed to resolve procedure named: " << name->Get();
     return false;
   }
-  ASSERT(value);
+  ASSERT(local);
+  if (!local->HasValue()) {
+    LOG(ERROR) << "failed to get value for: " << (*local);
+    (*result) = nullptr;
+    return false;
+  }
+  const auto value = local->GetValue();
   if (!value->IsProcedure()) {
     (*result) = nullptr;
     LOG(ERROR) << "'" << name->Get() << "' (" << value->ToString() << ") is not a procedure.";
@@ -149,7 +160,7 @@ auto Runtime::VisitCallProcInstr(CallProcInstr* instr) -> bool {
   const auto symbol = instr->GetSymbol();
   ASSERT(symbol);
   Procedure* proc = nullptr;
-  if (!LookupProcedure(GetEnv(), symbol, &proc))
+  if (!LookupProcedure(GetScope(), symbol, &proc))
     return false;
   ASSERT(proc);
   return CallProcedure(proc);
@@ -241,7 +252,7 @@ void Runtime::ExecuteInstr(Instruction* instr) {
   ASSERT(instr);
   TRACE_SECTION(ExecuteInstr);
   TRACE_TAG(instr->GetName());
-  DLOG(INFO) << "executing: " << instr->GetName();
+  DVLOG(10) << "executing: " << instr->GetName();
   if (!instr->Accept(this))
     LOG(FATAL) << "failed to execute: " << instr->ToString();
 }

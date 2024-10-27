@@ -131,7 +131,6 @@ auto EffectVisitor::VisitCond(CondExpr* expr) -> bool {
 }
 
 auto EffectVisitor::VisitLambda(LambdaExpr* expr) -> bool {
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
   const auto lambda = Lambda::New(expr->GetArgs(), expr->GetBody());
   ASSERT(lambda);
   ReturnDefinition(ConstantInstr::New(lambda));

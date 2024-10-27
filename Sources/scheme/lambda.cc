@@ -23,14 +23,11 @@ auto Lambda::Apply(Runtime* runtime) const -> bool {
   ASSERT(flow_graph);
   ASSERT(flow_graph->HasEntry());
 
-  RuntimeEnvScope scope(runtime);
-  const auto env = scope.GetCurrentEnv();
-  ASSERT(env);
-
+  RuntimeScopeScope scope(runtime);
   for (const auto& arg : std::ranges::reverse_view(GetArgs())) {
     const auto value = runtime->Pop();
     ASSERT(value);
-    if (!env->Put(Symbol::New(arg.GetName()), *value)) {
+    if (!scope->Add(Symbol::New(arg.GetName()), *value)) {
       LOG(ERROR) << "failed to define argument value.";
       return false;
     }

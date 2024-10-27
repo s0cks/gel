@@ -1,7 +1,7 @@
 #ifndef SCM_PROCEDURE_H
 #define SCM_PROCEDURE_H
 
-#include "scheme/environment.h"
+#include "scheme/local_scope.h"
 #include "scheme/type.h"
 
 namespace scm {

@@ -4,18 +4,18 @@
 #include <stack>
 
 #include "scheme/common.h"
-#include "scheme/environment.h"
 #include "scheme/flow_graph.h"
 #include "scheme/instruction.h"
+#include "scheme/local_scope.h"
 
 namespace scm {
 class Runtime : private InstructionVisitor {
-  friend class RuntimeEnvScope;
+  friend class RuntimeScopeScope;
   using Stack = std::stack<Type*>;
   DEFINE_NON_COPYABLE_TYPE(Runtime);
 
  private:
-  Environment* env_ = nullptr;
+  LocalScope* scope_ = nullptr;
   Instruction* current_ = nullptr;
   Stack stack_{};
 
@@ -32,15 +32,17 @@ class Runtime : private InstructionVisitor {
     return GetCurrentInstr() != nullptr;
   }
 
-  inline void SetEnv(Environment* env) {
-    ASSERT(env);
-    env_ = env;
+  inline void SetScope(LocalScope* scope) {
+    ASSERT(scope);
+    scope_ = scope;
   }
 
   inline void SetStack(const Stack& rhs) {
     ASSERT(!rhs.empty());
     stack_ = rhs;
   }
+
+  static auto CreateInitScope() -> LocalScope*;
 
  protected:
   void ExecuteInstr(Instruction* instr);
@@ -54,11 +56,20 @@ class Runtime : private InstructionVisitor {
 #undef DECLARE_VISIT
 
  public:
-  Runtime(Environment* env = Environment::New());
-  ~Runtime();
+  Runtime(LocalScope* init_scope = CreateInitScope()) {
+    SetScope(init_scope);
+  }
+  ~Runtime() {
+    if (HasScope())
+      delete scope_;
+  }
 
-  auto GetEnv() const -> Environment* {
-    return env_;
+  auto GetScope() const -> LocalScope* {
+    return scope_;
+  }
+
+  inline auto HasScope() const -> bool {
+    return GetScope() != nullptr;
   }
 
   auto GetStack() const -> const Stack& {
@@ -94,34 +105,46 @@ class Runtime : private InstructionVisitor {
   }
 };
 
-class RuntimeEnvScope {
-  DEFINE_NON_COPYABLE_TYPE(RuntimeEnvScope);
+class RuntimeScopeScope {
+  DEFINE_NON_COPYABLE_TYPE(RuntimeScopeScope);
 
  private:
   Runtime* runtime_;
-  Environment* previous_ = nullptr;
 
  public:
-  explicit RuntimeEnvScope(Runtime* runtime, Environment* env = nullptr) :
+  explicit RuntimeScopeScope(Runtime* runtime) :
     runtime_(runtime) {
     ASSERT(runtime);
-    previous_ = GetRuntime()->GetEnv();
-    GetRuntime()->SetEnv(env ? env : Environment::New(previous_));
+    const auto new_scope = LocalScope::New(GetRuntime()->GetScope());
+    ASSERT(new_scope);
+    GetRuntime()->SetScope(new_scope);
   }
-  ~RuntimeEnvScope() {
-    GetRuntime()->SetEnv(GetPreviousEnv());
+  ~RuntimeScopeScope() {
+    const auto curr_scope = GetRuntime()->GetScope();
+    ASSERT(curr_scope);
+    const auto next_scope = curr_scope->GetParent();
+    ASSERT(next_scope);
+    GetRuntime()->SetScope(next_scope);
   }
 
-  auto GetRuntime() const -> Runtime* {
+  inline auto GetRuntime() const -> Runtime* {
     return runtime_;
   }
 
-  auto GetPreviousEnv() const -> Environment* {
-    return previous_;
+  inline auto GetCurrentScope() const -> LocalScope* {
+    return GetRuntime()->GetScope();
   }
 
-  auto GetCurrentEnv() const -> Environment* {
-    return GetRuntime()->GetEnv();
+  inline auto GetParentScope() const -> LocalScope* {
+    return GetCurrentScope()->GetParent();
+  }
+
+  inline auto HasParentScope() const -> bool {
+    return GetParentScope() != nullptr;
+  }
+
+  inline auto operator->() const -> LocalScope* {
+    return GetCurrentScope();
   }
 };
 }  // namespace scm
