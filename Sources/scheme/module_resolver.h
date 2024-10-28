@@ -14,7 +14,7 @@ class ModuleResolver {
 
  public:
   virtual ~ModuleResolver() = default;
-  virtual auto Resolve(Symbol* symbol) -> Module* = 0;
+  virtual auto ResolveModule(Symbol* symbol) -> Module* = 0;
 };
 }  // namespace scm
 

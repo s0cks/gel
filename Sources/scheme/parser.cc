@@ -216,6 +216,7 @@ auto Parser::ParseExpression() -> Expression* {
 }
 
 auto Parser::ParseLocalDef() -> LocalDef* {
+  ExpectNext(Token::kLocalDef);
   const auto symbol = ParseSymbol();
   ASSERT(symbol);
   if (GetScope()->Has(symbol)) {
@@ -246,15 +247,32 @@ auto Parser::ParseModuleDef() -> expr::ModuleDef* {
   ExpectNext(Token::kModuleDef);
   const auto symbol = ParseSymbol();
   ASSERT(symbol);
-  Expression* body = nullptr;
-  if (!PeekEq(Token::kRParen)) {
-    body = ParseExpression();
-    ASSERT(body);
-    DLOG(INFO) << "parsed module body: " << body->ToString();
+  const auto module = ModuleDef::New(symbol);
+  ASSERT(module);
+  while (PeekEq(Token::kLParen)) {
+    module->Append(ParseDefinition());
   }
   ExpectNext(Token::kRParen);
   PopScope();
-  return ModuleDef::New(symbol, body);
+  return module;
+}
+
+auto Parser::ParseDefinition() -> expr::Definition* {
+  ExpectNext(Token::kLParen);
+  expr::Definition* defn = nullptr;
+  const auto& next = stream().Peek();
+  ASSERT(IsValidDefinition<false>(next));
+  switch (next.kind) {
+    case Token::kLocalDef:
+      defn = ParseLocalDef();
+      break;
+    default:
+      LOG(FATAL) << "unexpected: " << next << ", expected definition.";
+      return nullptr;
+  }
+  ExpectNext(Token::kRParen);
+  ASSERT(defn);
+  return defn;
 }
 
 auto Parser::ParseProgram() -> Program* {

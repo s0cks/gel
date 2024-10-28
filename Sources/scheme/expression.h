@@ -54,6 +54,10 @@ class Expression {
  protected:
   Expression() = default;
 
+  virtual void SetChildAt(const uint64_t idx, Expression* expr) {
+    // do nothing
+  }
+
  public:
   virtual ~Expression() = default;
   virtual auto GetName() const -> const char* = 0;
@@ -66,6 +70,10 @@ class Expression {
 
   virtual auto GetChildAt(const uint64_t idx) const -> Expression* {
     return nullptr;
+  }
+
+  inline auto HasChildAt(const uint64_t idx) const -> bool {
+    return GetChildAt(idx) != nullptr;
   }
 
   virtual auto IsConstantExpr() const -> bool {
@@ -107,7 +115,7 @@ class TemplateExpression : public Expression {
  protected:
   TemplateExpression() = default;
 
-  void SetChildAt(const uint64_t idx, Expression* value) {
+  void SetChildAt(const uint64_t idx, Expression* value) override {
     ASSERT(idx >= 0 && idx <= NumInputs);
     ASSERT(value);
     children_.at(idx) = value;
@@ -287,7 +295,7 @@ class SequenceExpr : public Expression {
     children_.push_back(expr);
   }
 
-  inline void SetChildAt(const uint64_t idx, Expression* value) {
+  void SetChildAt(const uint64_t idx, Expression* value) override {
     ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
     ASSERT(value);
     children_[idx] = value;
@@ -528,6 +536,20 @@ class Definition : public Expression {
   }
 };
 
+using DefinitionList = std::vector<Definition*>;
+
+static inline auto operator<<(std::ostream& stream, const DefinitionList& rhs) -> std::ostream& {
+  stream << "[";
+  auto remaining = rhs.size();
+  for (const auto& defn : rhs) {
+    stream << defn->ToString();
+    if (--remaining >= 1)
+      stream << ",";
+  }
+  stream << "]";
+  return stream;
+}
+
 template <const uint64_t NumInputs>
 class TemplateDefinition : public Definition {
   DEFINE_NON_COPYABLE_TYPE(TemplateDefinition<NumInputs>);
@@ -538,7 +560,7 @@ class TemplateDefinition : public Definition {
  protected:
   TemplateDefinition() = default;
 
-  void SetChildAt(const uint64_t idx, Expression* value) {
+  void SetChildAt(const uint64_t idx, Expression* value) override {
     ASSERT(idx >= 0 && idx <= NumInputs);
     ASSERT(value);
     children_[idx] = value;  // NOLINT
@@ -554,10 +576,6 @@ class TemplateDefinition : public Definition {
   auto GetChildAt(const uint64_t idx) const -> Expression* override {
     ASSERT(idx >= 0 && idx <= NumInputs);
     return children_[idx];  // NOLINT
-  }
-
-  inline auto HasChildAt(const uint64_t idx) const -> bool {
-    return GetChildAt(idx) != nullptr;
   }
 
   auto VisitChildren(ExpressionVisitor* vis) -> bool override {
@@ -616,16 +634,17 @@ class LocalDef : public TemplateDefinition<1> {
   }
 };
 
-class ModuleDef : public TemplateDefinition<1> {
+class ModuleDef : public Definition {
+  friend class scm::Parser;
+
  private:
   Symbol* symbol_ = nullptr;
+  DefinitionList definitions_{};
 
  protected:
-  ModuleDef(Symbol* symbol, Expression* body) :
-    TemplateDefinition<1>() {
+  ModuleDef(Symbol* symbol) :
+    Definition() {
     SetSymbol(symbol);
-    if (body)
-      SetBody(body);
   }
 
   inline void SetSymbol(Symbol* symbol) {
@@ -633,9 +652,16 @@ class ModuleDef : public TemplateDefinition<1> {
     symbol_ = symbol;
   }
 
-  inline void SetBody(Expression* expr) {
+  void SetChildAt(const uint64_t idx, Expression* expr) override {
+    ASSERT(idx >= 0 && idx < GetNumberOfChildren())
     ASSERT(expr);
-    SetChildAt(0, expr);
+    ASSERT(expr->IsDefinition());
+    definitions_[idx] = expr->AsDefinition();
+  }
+
+  inline void Append(Definition* defn) {
+    ASSERT(defn);
+    definitions_.push_back(defn);
   }
 
  public:
@@ -645,20 +671,26 @@ class ModuleDef : public TemplateDefinition<1> {
     return symbol_;
   }
 
-  inline auto GetBody() const -> Expression* {
-    return GetChildAt(0);
+  auto GetNumberOfChildren() const -> uint64_t override {
+    return definitions_.size();
   }
 
-  inline auto HasBody() const -> bool {
-    return GetBody() != nullptr;
+  auto GetChildAt(const uint64_t idx) const -> Expression* override {
+    ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
+    return definitions_[idx];
   }
 
+  auto GetDefinitionAt(const uint64_t idx) const -> Definition* {
+    return GetChildAt(idx)->AsDefinition();
+  }
+
+  auto VisitChildren(ExpressionVisitor* vis) -> bool override;
   DECLARE_EXPRESSION(ModuleDef);
 
  public:
-  static inline auto New(Symbol* symbol, Expression* body = nullptr) -> ModuleDef* {
+  static inline auto New(Symbol* symbol) -> ModuleDef* {
     ASSERT(symbol);
-    return new ModuleDef(symbol, body);
+    return new ModuleDef(symbol);
   }
 };
 }  // namespace expr

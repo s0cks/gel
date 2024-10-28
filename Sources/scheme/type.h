@@ -62,6 +62,10 @@ class Type {
   static void Init();
 };
 
+static inline auto operator<<(std::ostream& stream, Type* rhs) -> std::ostream& {
+  return stream << rhs->ToString();
+}
+
 #define DECLARE_TYPE(Name)                           \
   DEFINE_NON_COPYABLE_TYPE(Name)                     \
  public:                                             \
@@ -98,10 +102,6 @@ class Datum : public Type {
   virtual auto Div(Datum* rhs) const -> Datum*;
   virtual auto Mod(Datum* rhs) const -> Datum*;
 };
-
-static inline auto operator<<(std::ostream& stream, Datum* rhs) -> std::ostream& {
-  return stream << rhs->ToString();
-}
 
 class Null : public Datum {
  protected:

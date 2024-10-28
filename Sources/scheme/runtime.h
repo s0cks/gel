@@ -4,20 +4,31 @@
 #include <stack>
 
 #include "scheme/common.h"
+#include "scheme/flags.h"
 #include "scheme/flow_graph.h"
 #include "scheme/instruction.h"
 #include "scheme/local_scope.h"
 
 namespace scm {
+DECLARE_string(module_dir);
+
+namespace proc {
+class import;
+}
+
+class Module;
 class Runtime : private InstructionVisitor {
+  friend class proc::import;
   friend class RuntimeScopeScope;
   using Stack = std::stack<Type*>;
+  using ModuleList = std::vector<Module*>;
   DEFINE_NON_COPYABLE_TYPE(Runtime);
 
  private:
   LocalScope* scope_;
   Instruction* current_ = nullptr;
   Stack stack_{};
+  ModuleList modules_{};
 
   inline void SetCurrentInstr(Instruction* instr) {
     ASSERT(instr);
@@ -68,6 +79,9 @@ class Runtime : private InstructionVisitor {
   auto DefineSymbol(Symbol* symbol, Type* value) -> bool;
   auto LookupSymbol(Symbol* symbol, Type** result) -> bool;
   auto CallProcedure(Procedure* procedure) -> bool;
+
+  auto ImportModule(Module* module) -> bool;
+  auto ImportModule(Symbol* symbol) -> bool;
 #define DECLARE_VISIT(Name) auto Visit##Name(Name* instr) -> bool override;
   FOR_EACH_INSTRUCTION(DECLARE_VISIT)
 #undef DECLARE_VISIT

@@ -162,12 +162,20 @@ auto LocalDef::ToString() const -> std::string {
   return ss.str();
 }
 
+auto ModuleDef::VisitChildren(ExpressionVisitor* vis) -> bool {
+  ASSERT(vis);
+  for (const auto& defn : definitions_) {
+    if (!defn->Accept(vis))
+      return false;
+  }
+  return true;
+}
+
 auto ModuleDef::ToString() const -> std::string {
   std::stringstream ss;
   ss << GetName() << "(";
   ss << "symbol=" << GetSymbol() << ", ";
-  if (HasBody())
-    ss << "body=" << GetBody()->ToString();
+  ss << "definitions=" << definitions_;
   ss << ")";
   return ss.str();
 }

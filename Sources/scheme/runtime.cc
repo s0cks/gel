@@ -2,15 +2,92 @@
 
 #include <glog/logging.h>
 
+#include <fstream>
 #include <iostream>
 
+#include "scheme/common.h"
 #include "scheme/expression.h"
 #include "scheme/instruction.h"
+#include "scheme/local_scope.h"
+#include "scheme/module_compiler.h"
+#include "scheme/module_resolver.h"
 #include "scheme/natives.h"
+#include "scheme/parser.h"
 #include "scheme/tracing.h"
 #include "scheme/type.h"
 
 namespace scm {
+DEFINE_string(module_dir, "", "The directories to load modules from.");
+
+static inline auto FileExists(const std::string& filename) -> bool {
+  std::ifstream file(filename);
+  return file.good();
+}
+
+class RuntimeModuleResolver : public ModuleResolver {
+  DEFINE_NON_COPYABLE_TYPE(RuntimeModuleResolver);
+
+ private:
+  RuntimeModuleResolver() = default;
+
+ public:
+  ~RuntimeModuleResolver() override = default;
+
+  auto ResolveModule(Symbol* symbol) -> Module* override {
+    ASSERT(symbol);
+    ASSERT(!FLAGS_module_dir.empty());
+    const auto module_filename = fmt::format("{0:s}/{1:s}.ss", FLAGS_module_dir, symbol->Get());
+    if (!FileExists(module_filename)) {
+      LOG(FATAL) << "cannot load module " << symbol << " from: " << module_filename;
+      return nullptr;
+    }
+    DLOG(INFO) << "importing module " << symbol << " from: " << module_filename;
+
+    std::ifstream file(module_filename, std::ios::in | std::ios::binary);
+    ASSERT(file.good());
+    std::stringstream contents;
+    contents << file.rdbuf();
+
+    const auto code = contents.str();
+    DLOG(INFO) << "code:" << std::endl << code;
+
+    const auto module_expr = Parser::ParseModule(code);
+    ASSERT(module_expr);
+    const auto module = ModuleCompiler::Compile(module_expr);
+    ASSERT(module);
+    DLOG(INFO) << symbol << " := " << module;
+    return module;
+  }
+
+ public:
+  static inline auto Resolve(Symbol* symbol) -> Module* {
+    ASSERT(symbol);
+    RuntimeModuleResolver resolver;
+    return resolver.ResolveModule(symbol);
+  }
+};
+
+auto Runtime::ImportModule(Module* module) -> bool {
+  ASSERT(module);
+  const auto scope = module->GetScope();
+  ASSERT(scope);
+  scope_->Add(scope);
+  modules_.push_back(module);
+  return true;
+}
+
+auto Runtime::ImportModule(Symbol* symbol) -> bool {
+  ASSERT(symbol);
+  if (FLAGS_module_dir.empty()) {
+    LOG(ERROR) << "cannot import module " << symbol << ", no module dir specified.";
+    return true;
+  }
+  const auto module = RuntimeModuleResolver::Resolve(symbol);
+  ASSERT(module);
+  ASSERT(module->IsNamed(symbol));
+  return ImportModule(module);
+}
+
 template <class Proc>
 static inline void RegisterProc(LocalScope* scope, Proc* proc = new Proc()) {
   ASSERT(scope);
@@ -26,6 +103,7 @@ auto Runtime::CreateInitScope() -> LocalScope* {
   ASSERT(scope);
   RegisterProc<proc::print>(scope);
   RegisterProc<proc::type>(scope);
+  RegisterProc<proc::import>(scope);
   return scope;
 }
 

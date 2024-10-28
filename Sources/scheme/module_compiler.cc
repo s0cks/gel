@@ -11,117 +11,113 @@
 #include "scheme/module.h"
 
 namespace scm {
-class ModuleCompilerVisitor : public expr::ExpressionVisitor {
-  DEFINE_NON_COPYABLE_TYPE(ModuleCompilerVisitor);
-
- private:
-  ModuleCompiler* owner_;
-
-  inline auto GetScope() const -> LocalScope* {
-    return GetOwner()->GetScope();
-  }
-
- public:
-  explicit ModuleCompilerVisitor(ModuleCompiler* owner) :
-    owner_(owner) {}
-  ~ModuleCompilerVisitor() override = default;
-
-  auto GetOwner() const -> ModuleCompiler* {
-    return owner_;
-  }
-
-  auto VisitModuleDef(expr::ModuleDef* expr) -> bool override {
-    NOT_IMPLEMENTED(FATAL);  // TODO: implement
+auto DefinitionVisitor::VisitLocalDef(expr::LocalDef* expr) -> bool {
+  ASSERT(expr);
+  const auto symbol = expr->GetSymbol();
+  ASSERT(symbol);
+  if (GetScope()->Has(symbol, false)) {
+    LOG(FATAL) << "cannot redefine: " << symbol;
     return false;
   }
 
-  auto VisitLiteralExpr(expr::LiteralExpr* expr) -> bool override {
-    NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  const auto value = expr->GetValue();
+  ASSERT(value);
+  DefinitionValueVisitor for_value(GetOwner());
+  if (!expr->GetValue()->Accept(&for_value)) {
+    LOG(FATAL) << "failed to visit: " << value;
     return false;
   }
 
-  auto VisitEvalExpr(expr::EvalExpr* expr) -> bool override {
-    NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  const auto local = LocalVariable::New(GetScope(), symbol, for_value.GetResult());
+  ASSERT(local);
+  if (!GetScope()->Add(local)) {
+    LOG(FATAL) << "failed to define: " << (*local);
     return false;
   }
 
-  auto VisitBeginExpr(expr::BeginExpr* expr) -> bool override {
-    NOT_IMPLEMENTED(FATAL);  // TODO: implement
-    return false;
-  }
+  DLOG(INFO) << "defined module constant: " << (*local);
+  return true;
+}
 
-  auto VisitLambdaExpr(expr::LambdaExpr* expr) -> bool override {
-    NOT_IMPLEMENTED(FATAL);  // TODO: implement
-    return false;
-  }
+auto DefinitionVisitor::VisitBinaryOpExpr(expr::BinaryOpExpr* expr) -> bool {
+  ASSERT(expr);
+  ASSERT(expr->IsConstantExpr());
+  ReturnValue(expr->EvalToConstant());
+  return true;
+}
 
-  auto VisitCondExpr(expr::CondExpr* expr) -> bool override {
-    NOT_IMPLEMENTED(FATAL);  // TODO: implement
-    return false;
-  }
-
-  auto VisitCallProcExpr(expr::CallProcExpr* expr) -> bool override {
-    NOT_IMPLEMENTED(FATAL);  // TODO: implement
-    return false;
-  }
-
-  auto VisitSymbolExpr(expr::SymbolExpr* expr) -> bool override {
-    NOT_IMPLEMENTED(FATAL);  // TODO: implement
-    return false;
-  }
-
-  auto VisitLocalDef(expr::LocalDef* expr) -> bool override {
-    ASSERT(expr);
-    const auto symbol = expr->GetSymbol();
-    ASSERT(symbol);
-    if (GetScope()->Has(symbol, false)) {
-      LOG(FATAL) << "cannot redefine: " << symbol;
+auto DefinitionVisitor::VisitModuleDef(expr::ModuleDef* expr) -> bool {
+  for (auto idx = 0; idx < expr->GetNumberOfChildren(); idx++) {
+    const auto defn = expr->GetDefinitionAt(idx);
+    ASSERT(defn);
+    DefinitionVisitor vis(GetOwner());
+    if (!defn->Accept(&vis)) {
+      LOG(FATAL) << "failed to visit module definition #" << idx << ": " << defn->ToString();
       return false;
     }
-
-    const auto value = expr->GetValue();
-    ASSERT(value);
-    if (!value->IsConstantExpr() && !value->IsLambdaExpr()) {
-      LOG(FATAL) << "cannot define " << symbol << " as non-constant expression: " << value->ToString();
-      return false;
-    }
-
-    const auto local = LocalVariable::New(GetScope(), symbol, value->EvalToConstant());
-    ASSERT(local);
-    if (!GetScope()->Add(local)) {
-      LOG(FATAL) << "failed to define: " << (*local);
-      return false;
-    }
-
-    DLOG(INFO) << "defined module constant: " << (*local);
-    return true;
   }
+  return true;
+}
 
-  auto VisitBinaryOpExpr(expr::BinaryOpExpr* expr) -> bool override {
-    NOT_IMPLEMENTED(FATAL);  // TODO: implement
-    return false;
-  }
-};
+auto DefinitionVisitor::VisitLiteralExpr(expr::LiteralExpr* expr) -> bool {
+  ASSERT(expr);
+  ASSERT(expr->IsConstantExpr());
+  ReturnValue(expr->EvalToConstant());
+  return true;
+}
+
+auto DefinitionVisitor::VisitEvalExpr(expr::EvalExpr* expr) -> bool {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
+
+auto DefinitionVisitor::VisitBeginExpr(expr::BeginExpr* expr) -> bool {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
+
+auto DefinitionVisitor::VisitLambdaExpr(expr::LambdaExpr* expr) -> bool {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
+
+auto DefinitionVisitor::VisitCondExpr(expr::CondExpr* expr) -> bool {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
+
+auto DefinitionVisitor::VisitCallProcExpr(expr::CallProcExpr* expr) -> bool {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
+
+auto DefinitionVisitor::VisitSymbolExpr(expr::SymbolExpr* expr) -> bool {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
 
 auto ModuleCompiler::CompileModule(expr::ModuleDef* expr) -> Module* {
   ASSERT(expr);
   DLOG(INFO) << "compiling " << expr->ToString() << "....";
   const auto symbol = expr->GetSymbol();
-  if (!expr->HasBody())
-    return Module::New(symbol, GetScope());
-  const auto body = expr->GetBody();
-  ASSERT(body);
-  ModuleCompilerVisitor vis(this);
-  if (!body->Accept(&vis)) {
-    LOG(FATAL) << "failed to visit: " << body->ToString();
+  DefinitionVisitor vis(this);
+  if (!expr->Accept(&vis)) {
+    LOG(FATAL) << "failed to visit: " << expr->ToString();
     return nullptr;
   }
+
   if (FLAGS_dump_ast) {
     const auto dot_graph = expr::ExpressionToDot::BuildGraph(symbol, expr);
     ASSERT(dot_graph);
     dot_graph->RenderPngToFilename(GetReportFilename(fmt::format("module_{0:s}_ast.png", symbol->Get())));
   }
   // TODO: dump flow graph?
-  return Module::New(symbol, GetScope(), body);
+  return Module::New(symbol, GetScope());
+}
+
+auto DefinitionValueVisitor::VisitLambdaExpr(expr::LambdaExpr* expr) -> bool {
+  ASSERT(expr);
+  ReturnValue(Lambda::New(expr->GetArgs(), expr->GetBody()));
+  return true;
 }
 }  // namespace scm

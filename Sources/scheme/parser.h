@@ -54,6 +54,19 @@ class Parser {
   auto ParseIdentifier(std::string& result) -> bool;
 
   // Definitions
+  template <const bool IsTopLevel = false>
+  static inline auto IsValidDefinition(const Token& rhs) -> bool {
+    switch (rhs.kind) {
+      case Token::kModuleDef:
+        return IsTopLevel;
+      case Token::kLocalDef:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  auto ParseDefinition() -> expr::Definition*;
   auto ParseLocalDef() -> LocalDef*;
 
   template <const google::LogSeverity Severity = google::ERROR>

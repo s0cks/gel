@@ -10,8 +10,16 @@ Module::~Module() {
   delete symbol_;
   ASSERT(scope_);
   delete scope_;
-  if (HasBody())
-    delete body_;
+}
+
+auto Module::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "Module(";
+  ss << "symbol=" << GetSymbol();
+  if (!IsEmpty())
+    ss << ", scope=" << GetScope();
+  ss << ")";
+  return ss.str();
 }
 
 #define __ ((google::LogMessage(GetFile(), GetLine(), GetSeverity())).stream() << GetIndent())
@@ -46,9 +54,6 @@ void ModulePrinter::Print(Module* module) {
       }
       Deindent();
     }
-  }
-  if (module->HasBody()) {
-    __ << "Body Expr: " << module->GetBody()->ToString();
   }
 }
 #undef __

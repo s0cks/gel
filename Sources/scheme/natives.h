@@ -6,6 +6,7 @@
 
 namespace scm::proc {
 DECLARE_NATIVE_PROCEDURE(print);
+DECLARE_NATIVE_PROCEDURE(import);
 _DECLARE_NATIVE_PROCEDURE(type, "type?");
 }  // namespace scm::proc
 

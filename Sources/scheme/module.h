@@ -6,6 +6,7 @@
 #include <string>
 
 #include "scheme/common.h"
+#include "scheme/expression.h"
 #include "scheme/lambda.h"
 #include "scheme/local.h"
 #include "scheme/local_scope.h"
@@ -22,12 +23,10 @@ class Module {
  private:
   Symbol* symbol_ = nullptr;
   LocalScope* scope_ = nullptr;
-  expr::Expression* body_ = nullptr;
 
-  explicit Module(Symbol* symbol, LocalScope* scope, expr::Expression* body) {
+  explicit Module(Symbol* symbol, LocalScope* scope) {
     SetSymbol(symbol);
     SetScope(scope);
-    SetBody(body);
   }
 
   inline void SetSymbol(Symbol* symbol) {
@@ -38,10 +37,6 @@ class Module {
   inline void SetScope(LocalScope* scope) {
     ASSERT(scope);
     scope_ = scope;
-  }
-
-  inline void SetBody(expr::Expression* body) {
-    body_ = body;
   }
 
  public:
@@ -55,21 +50,29 @@ class Module {
     return scope_;
   }
 
-  auto GetBody() const -> expr::Expression* {
-    return body_;
+  inline auto IsEmpty() const -> bool {
+    return GetScope()->IsEmpty();
   }
 
-  inline auto HasBody() const -> bool {
-    return GetBody() != nullptr;
+  inline auto IsNamed(Symbol* rhs) const -> bool {
+    ASSERT(rhs);
+    return GetSymbol()->Equals(rhs);
   }
+
+  auto ToString() const -> std::string;
 
  public:
-  static inline auto New(Symbol* symbol, LocalScope* scope = LocalScope::New(), expr::Expression* body = nullptr) -> Module* {
+  static inline auto New(Symbol* symbol, LocalScope* scope = LocalScope::New()) -> Module* {
     ASSERT(symbol);
     ASSERT(scope);
-    return new Module(symbol, scope, body);
+    return new Module(symbol, scope);
   }
 };
+
+static inline auto operator<<(std::ostream& stream, const Module* rhs) -> std::ostream& {
+  ASSERT(rhs);
+  return stream << rhs->ToString();
+}
 
 class ModulePrinter : public LocalVariableVisitor {
   DEFINE_NON_COPYABLE_TYPE(ModulePrinter);
