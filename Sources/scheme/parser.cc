@@ -110,6 +110,14 @@ auto Parser::ParseBinaryOpExpr() -> BinaryOpExpr* {
   return left_expr->AsBinaryOpExpr();
 }
 
+auto Parser::ParseConsExpr() -> ConsExpr* {
+  const auto car = ParseExpression();
+  ASSERT(car);
+  const auto cdr = ParseExpression();
+  ASSERT(cdr);
+  return ConsExpr::New(car, cdr);
+}
+
 auto Parser::ParseCondExpr() -> CondExpr* {
   const auto test = ParseExpression();
   ASSERT(test);
@@ -205,6 +213,9 @@ auto Parser::ParseExpression() -> Expression* {
       case Token::kCond:
         expr = ParseCondExpr();
         break;
+      case Token::kConsExpr:
+        expr = ParseConsExpr();
+        break;
       default:
         LOG(FATAL) << "unexpected: " << next;
         return nullptr;
@@ -216,14 +227,12 @@ auto Parser::ParseExpression() -> Expression* {
 }
 
 auto Parser::ParseImportDef() -> expr::ImportDef* {
-  ExpectNext(Token::kImportDef);
   const auto symbol = ParseSymbol();
   ASSERT(symbol);
   return ImportDef::New(symbol);
 }
 
 auto Parser::ParseLocalDef() -> LocalDef* {
-  ExpectNext(Token::kLocalDef);
   const auto symbol = ParseSymbol();
   ASSERT(symbol);
   if (GetScope()->Has(symbol)) {
@@ -267,7 +276,7 @@ auto Parser::ParseModuleDef() -> expr::ModuleDef* {
 auto Parser::ParseDefinition() -> expr::Definition* {
   ExpectNext(Token::kLParen);
   expr::Definition* defn = nullptr;
-  const auto& next = stream().Peek();
+  const auto& next = stream().Next();
   switch (next.kind) {
     case Token::kLocalDef:
       defn = ParseLocalDef();

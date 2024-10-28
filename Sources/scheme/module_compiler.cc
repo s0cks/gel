@@ -102,6 +102,11 @@ auto DefinitionVisitor::VisitSymbolExpr(expr::SymbolExpr* expr) -> bool {
   return false;
 }
 
+auto DefinitionVisitor::VisitConsExpr(expr::ConsExpr* expr) -> bool {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
+
 auto ModuleCompiler::CompileModule(expr::ModuleDef* expr) -> Module* {
   ASSERT(expr);
   DVLOG(10) << "compiling " << expr->ToString() << "....";

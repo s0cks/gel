@@ -70,6 +70,7 @@ class DefinitionVisitor : public expr::ExpressionVisitor {
   auto VisitLocalDef(expr::LocalDef* expr) -> bool override;
   auto VisitBinaryOpExpr(expr::BinaryOpExpr* expr) -> bool override;
   auto VisitImportDef(expr::ImportDef* expr) -> bool override;
+  auto VisitConsExpr(expr::ConsExpr* expr) -> bool override;
 };
 
 class DefinitionValueVisitor : public DefinitionVisitor {

@@ -96,6 +96,33 @@ auto EffectVisitor::VisitBeginExpr(BeginExpr* expr) -> bool {
   return true;
 }
 
+auto EffectVisitor::VisitConsExpr(ConsExpr* expr) -> bool {
+  ASSERT(expr);
+
+  ValueVisitor for_car(GetOwner());
+  {
+    ASSERT(expr->HasCar());
+    if (!expr->GetCar()->Accept(&for_car)) {
+      LOG(FATAL) << "failed to visit cons car: " << expr->GetCar()->ToString();
+      return false;
+    }
+  }
+  Append(for_car);
+
+  ValueVisitor for_cdr(GetOwner());
+  {
+    ASSERT(expr->HasCdr());
+    if (!expr->GetCdr()->Accept(&for_cdr)) {
+      LOG(FATAL) << "failed to visit cons cdr: " << expr->GetCdr()->ToString();
+      return false;
+    }
+  }
+  Append(for_cdr);
+
+  ReturnDefinition(ConsInstr::New(for_car.GetValue(), for_cdr.GetValue()));
+  return true;
+}
+
 auto EffectVisitor::VisitCondExpr(CondExpr* expr) -> bool {
   ASSERT(expr);
   const auto join = JoinEntryInstr::New(GetOwner()->GetNextBlockId());

@@ -111,6 +111,28 @@ auto ExpressionToDot::VisitEvalExpr(EvalExpr* expr) -> bool {
   return true;
 }
 
+auto ExpressionToDot::VisitConsExpr(ConsExpr* expr) -> bool {
+  ASSERT(expr);
+  const auto node = NewNode();
+  ASSERT(node);
+  {
+    // create node labels
+    std::stringstream label;
+    label << expr->GetName() << std::endl;
+    SetNodeLabel(node, label);
+  }
+  {
+    // process children
+    NodeScope scope(this, node);
+    if (!expr->VisitChildren(this)) {
+      LOG(ERROR) << "failed to visit children of: " << expr->ToString();
+      return false;
+    }
+  }
+  CreateEdgeFromParent(node);
+  return true;
+}
+
 auto ExpressionToDot::VisitCallProcExpr(CallProcExpr* expr) -> bool {
   ASSERT(expr);
   // create new node

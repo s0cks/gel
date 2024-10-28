@@ -77,6 +77,28 @@ auto BinaryOpExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
   return true;
 }
 
+auto ConsExpr::IsConstantExpr() const -> bool {
+  return GetCar()->IsConstantExpr() && GetCdr()->IsConstantExpr();
+}
+
+auto ConsExpr::EvalToConstant() const -> Type* {
+  ASSERT(IsConstantExpr());
+  const auto car = GetCar()->EvalToConstant();
+  ASSERT(car);
+  const auto cdr = GetCdr()->EvalToConstant();
+  ASSERT(cdr);
+  return Pair::New(car, cdr);
+}
+
+auto ConsExpr::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << GetName() << "(";
+  ss << "car=" << GetCar()->ToString() << ", ";
+  ss << "cdr=" << GetCdr()->ToString();
+  ss << ")";
+  return ss.str();
+}
+
 auto BinaryOpExpr::ToString() const -> std::string {
   std::stringstream ss;
   ss << GetName() << "(";

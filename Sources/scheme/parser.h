@@ -44,6 +44,7 @@ class Parser {
   auto ParseBeginExpr() -> BeginExpr*;
   auto ParseBinaryOpExpr() -> BinaryOpExpr*;
   auto ParseCondExpr() -> CondExpr*;
+  auto ParseConsExpr() -> ConsExpr*;
   auto ParseLoadSymbol() -> LoadVariableInstr*;
   auto ParseSymbolExpr() -> SymbolExpr*;
   auto ParseCallProcExpr(std::string symbol) -> CallProcExpr*;

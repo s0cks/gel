@@ -37,6 +37,7 @@ struct Token {
     kImportDef,
     kLambdaExpr,
     kBeginExpr,
+    kConsExpr,
     kIdentifier,
     kPlus,
     kMinus,

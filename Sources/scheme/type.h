@@ -352,6 +352,12 @@ static inline auto PrintValue(std::ostream& stream, Type* value) -> std::ostream
     return stream << value->AsNumber()->GetValue();
   } else if (value->IsString()) {
     return stream << '"' << value->AsString()->Get() << '"';
+  } else if (value->IsPair()) {
+    stream << "(";
+    PrintValue(stream, value->AsPair()->GetCar()) << ", ";
+    PrintValue(stream, value->AsPair()->GetCdr());
+    stream << ")";
+    return stream;
   }
   return stream << value->ToString();
 }

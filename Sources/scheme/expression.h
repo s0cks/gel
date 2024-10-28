@@ -22,6 +22,7 @@ namespace expr {
   V(SymbolExpr)                     \
   V(CallProcExpr)                   \
   V(CondExpr)                       \
+  V(ConsExpr)                       \
   V(LambdaExpr)                     \
   V(LocalDef)                       \
   V(ModuleDef)                      \
@@ -134,6 +135,15 @@ class TemplateExpression : public Expression {
 
   inline auto HasChildAt(const uint64_t idx) const -> bool {
     return GetChildAt(idx) != nullptr;
+  }
+
+  auto VisitChildren(ExpressionVisitor* vis) -> bool override {
+    ASSERT(vis);
+    for (const auto& child : children_) {
+      if (!child->Accept(vis))
+        return false;
+    }
+    return true;
   }
 };
 
@@ -276,6 +286,58 @@ class BinaryOpExpr : public TemplateExpression<2> {
     ASSERT(left);
     ASSERT(right);
     return new BinaryOpExpr(op, left, right);
+  }
+};
+
+class ConsExpr : public TemplateExpression<2> {
+  static constexpr const auto kLeftInput = 0;
+  static constexpr const auto kRightInput = 1;
+
+ protected:
+  explicit ConsExpr(Expression* left, Expression* right) :
+    TemplateExpression<2>() {
+    SetCar(left);
+    SetCdr(right);
+  }
+
+  inline void SetCar(Expression* value) {
+    ASSERT(value);
+    SetChildAt(kLeftInput, value);
+  }
+
+  inline void SetCdr(Expression* value) {
+    ASSERT(value);
+    SetChildAt(kRightInput, value);
+  }
+
+ public:
+  ~ConsExpr() override = default;
+
+  auto GetCar() const -> Expression* {
+    return GetChildAt(kLeftInput);
+  }
+
+  inline auto HasCar() const -> bool {
+    return GetCar() != nullptr;
+  }
+
+  auto GetCdr() const -> Expression* {
+    return GetChildAt(kRightInput);
+  }
+
+  inline auto HasCdr() const -> bool {
+    return GetCdr() != nullptr;
+  }
+
+  auto IsConstantExpr() const -> bool override;
+  auto EvalToConstant() const -> Type* override;
+  DECLARE_EXPRESSION(ConsExpr);
+
+ public:
+  static inline auto New(Expression* car, Expression* cdr) -> ConsExpr* {
+    ASSERT(car);
+    ASSERT(cdr);
+    return new ConsExpr(car, cdr);
   }
 };
 
