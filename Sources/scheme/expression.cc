@@ -9,10 +9,10 @@
 #include "scheme/common.h"
 
 namespace scm::expr {
-#define DEFINE_ACCEPT(Name)                                 \
-  auto Name##Expr::Accept(ExpressionVisitor* vis) -> bool { \
-    ASSERT(vis);                                            \
-    return vis->Visit##Name(this);                          \
+#define DEFINE_ACCEPT(Name)                           \
+  auto Name::Accept(ExpressionVisitor* vis) -> bool { \
+    ASSERT(vis);                                      \
+    return vis->Visit##Name(this);                    \
   }
 FOR_EACH_EXPRESSION_NODE(DEFINE_ACCEPT)
 #undef DEFINE_ACCEPT
@@ -35,7 +35,7 @@ auto SequenceExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
 
 auto LiteralExpr::ToString() const -> std::string {
   std::stringstream ss;
-  ss << "LiteralExpr(";
+  ss << GetName() << "(";
   ss << "value=" << GetValue()->ToString();
   ss << ")";
   return ss.str();
@@ -79,7 +79,7 @@ auto BinaryOpExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
 
 auto BinaryOpExpr::ToString() const -> std::string {
   std::stringstream ss;
-  ss << "BinaryOpExpr(";
+  ss << GetName() << "(";
   ss << "op=" << GetOp() << ", ";
   ss << "left=" << GetLeft()->ToString() << ", ";
   ss << "right=" << GetRight()->ToString();
@@ -89,7 +89,7 @@ auto BinaryOpExpr::ToString() const -> std::string {
 
 auto EvalExpr::ToString() const -> std::string {
   std::stringstream ss;
-  ss << "EvalExpr(";
+  ss << GetName() << "(";
   if (HasExpression())
     ss << "expr=" << GetExpression()->ToString();
   ss << ")";
@@ -98,7 +98,7 @@ auto EvalExpr::ToString() const -> std::string {
 
 auto BeginExpr::ToString() const -> std::string {
   std::stringstream ss;
-  ss << "BeginExpr(";
+  ss << GetName() << "(";
   ss << "num_expressions=" << GetNumberOfChildren();
   ss << ")";
   return ss.str();
@@ -106,7 +106,7 @@ auto BeginExpr::ToString() const -> std::string {
 
 auto CallProcExpr::ToString() const -> std::string {
   std::stringstream ss;
-  ss << "CallProcExpr(";
+  ss << GetName() << "(";
   ss << "symbol=" << GetSymbol();
   ss << ")";
   return ss.str();
@@ -114,7 +114,7 @@ auto CallProcExpr::ToString() const -> std::string {
 
 auto SymbolExpr::ToString() const -> std::string {
   std::stringstream ss;
-  ss << "SymbolExpr(";
+  ss << GetName() << "(";
   ss << "symbol=" << GetSymbol();
   ss << ")";
   return ss.str();
@@ -135,7 +135,7 @@ auto CondExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
 
 auto CondExpr::ToString() const -> std::string {
   std::stringstream ss;
-  ss << "CondExpr(";
+  ss << GetName() << "(";
   ss << "test=" << GetTest() << ", ";
   ss << "consequent=" << GetConseq() << ", ";
   ss << "alternate=" << GetAlternate();
@@ -145,7 +145,7 @@ auto CondExpr::ToString() const -> std::string {
 
 auto LambdaExpr::ToString() const -> std::string {
   std::stringstream ss;
-  ss << "LambdaExpr(";
+  ss << GetName() << "(";
   ss << "args=" << GetArgs();
   ss << ")";
   return ss.str();
@@ -153,18 +153,18 @@ auto LambdaExpr::ToString() const -> std::string {
 
 // Definitions
 
-auto LocalDefExpr::ToString() const -> std::string {
+auto LocalDef::ToString() const -> std::string {
   std::stringstream ss;
-  ss << "DefineExpr(";
+  ss << GetName() << "(";
   ss << "symbol=" << GetSymbol() << ", ";
   ss << "value=" << GetValue()->ToString();
   ss << ")";
   return ss.str();
 }
 
-auto ModuleDefExpr::ToString() const -> std::string {
+auto ModuleDef::ToString() const -> std::string {
   std::stringstream ss;
-  ss << "ModuleDefExpr(";
+  ss << GetName() << "(";
   ss << "symbol=" << GetSymbol() << ", ";
   if (HasBody())
     ss << "body=" << GetBody()->ToString();

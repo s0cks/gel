@@ -30,47 +30,47 @@ class ModuleCompilerVisitor : public expr::ExpressionVisitor {
     return owner_;
   }
 
-  auto VisitModuleDef(expr::ModuleDefExpr* expr) -> bool override {
+  auto VisitModuleDef(expr::ModuleDef* expr) -> bool override {
     NOT_IMPLEMENTED(FATAL);  // TODO: implement
     return false;
   }
 
-  auto VisitLiteral(expr::LiteralExpr* expr) -> bool override {
+  auto VisitLiteralExpr(expr::LiteralExpr* expr) -> bool override {
     NOT_IMPLEMENTED(FATAL);  // TODO: implement
     return false;
   }
 
-  auto VisitEval(expr::EvalExpr* expr) -> bool override {
+  auto VisitEvalExpr(expr::EvalExpr* expr) -> bool override {
     NOT_IMPLEMENTED(FATAL);  // TODO: implement
     return false;
   }
 
-  auto VisitBegin(expr::BeginExpr* expr) -> bool override {
+  auto VisitBeginExpr(expr::BeginExpr* expr) -> bool override {
     NOT_IMPLEMENTED(FATAL);  // TODO: implement
     return false;
   }
 
-  auto VisitLambda(expr::LambdaExpr* expr) -> bool override {
+  auto VisitLambdaExpr(expr::LambdaExpr* expr) -> bool override {
     NOT_IMPLEMENTED(FATAL);  // TODO: implement
     return false;
   }
 
-  auto VisitCond(expr::CondExpr* expr) -> bool override {
+  auto VisitCondExpr(expr::CondExpr* expr) -> bool override {
     NOT_IMPLEMENTED(FATAL);  // TODO: implement
     return false;
   }
 
-  auto VisitCallProc(expr::CallProcExpr* expr) -> bool override {
+  auto VisitCallProcExpr(expr::CallProcExpr* expr) -> bool override {
     NOT_IMPLEMENTED(FATAL);  // TODO: implement
     return false;
   }
 
-  auto VisitSymbol(expr::SymbolExpr* expr) -> bool override {
+  auto VisitSymbolExpr(expr::SymbolExpr* expr) -> bool override {
     NOT_IMPLEMENTED(FATAL);  // TODO: implement
     return false;
   }
 
-  auto VisitLocalDef(expr::LocalDefExpr* expr) -> bool override {
+  auto VisitLocalDef(expr::LocalDef* expr) -> bool override {
     ASSERT(expr);
     const auto symbol = expr->GetSymbol();
     ASSERT(symbol);
@@ -81,7 +81,7 @@ class ModuleCompilerVisitor : public expr::ExpressionVisitor {
 
     const auto value = expr->GetValue();
     ASSERT(value);
-    if (!value->IsConstantExpr() && !value->IsLambda()) {
+    if (!value->IsConstantExpr() && !value->IsLambdaExpr()) {
       LOG(FATAL) << "cannot define " << symbol << " as non-constant expression: " << value->ToString();
       return false;
     }
@@ -97,13 +97,13 @@ class ModuleCompilerVisitor : public expr::ExpressionVisitor {
     return true;
   }
 
-  auto VisitBinaryOp(expr::BinaryOpExpr* expr) -> bool override {
+  auto VisitBinaryOpExpr(expr::BinaryOpExpr* expr) -> bool override {
     NOT_IMPLEMENTED(FATAL);  // TODO: implement
     return false;
   }
 };
 
-auto ModuleCompiler::CompileModule(expr::ModuleDefExpr* expr) -> Module* {
+auto ModuleCompiler::CompileModule(expr::ModuleDef* expr) -> Module* {
   ASSERT(expr);
   DLOG(INFO) << "compiling " << expr->ToString() << "....";
   const auto symbol = expr->GetSymbol();

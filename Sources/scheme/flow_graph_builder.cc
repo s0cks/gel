@@ -41,12 +41,12 @@ auto FlowGraphBuilder::BuildGraph() -> FlowGraph* {
   return new FlowGraph(graph_entry);
 }
 
-auto EffectVisitor::VisitEval(EvalExpr* expr) -> bool {
+auto EffectVisitor::VisitEvalExpr(EvalExpr* expr) -> bool {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
   return false;
 }
 
-auto EffectVisitor::VisitCallProc(CallProcExpr* expr) -> bool {
+auto EffectVisitor::VisitCallProcExpr(CallProcExpr* expr) -> bool {
   for (auto idx = 0; idx < expr->GetNumberOfChildren(); idx++) {
     const auto arg = expr->GetChildAt(idx);
     ASSERT(arg);
@@ -60,7 +60,7 @@ auto EffectVisitor::VisitCallProc(CallProcExpr* expr) -> bool {
   return true;
 }
 
-auto EffectVisitor::VisitSymbol(SymbolExpr* expr) -> bool {
+auto EffectVisitor::VisitSymbolExpr(SymbolExpr* expr) -> bool {
   ASSERT(expr);
   const auto symbol = expr->GetSymbol();
   ASSERT(symbol);
@@ -68,13 +68,13 @@ auto EffectVisitor::VisitSymbol(SymbolExpr* expr) -> bool {
   return true;
 }
 
-auto EffectVisitor::VisitModuleDef(expr::ModuleDefExpr* expr) -> bool {
+auto EffectVisitor::VisitModuleDef(ModuleDef* expr) -> bool {
   ASSERT(expr);
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
   return false;
 }
 
-auto EffectVisitor::VisitBegin(BeginExpr* expr) -> bool {
+auto EffectVisitor::VisitBeginExpr(BeginExpr* expr) -> bool {
   ASSERT(expr);
   uint64_t idx = 0;
   while (IsOpen() && (idx < expr->GetNumberOfChildren())) {
@@ -90,7 +90,7 @@ auto EffectVisitor::VisitBegin(BeginExpr* expr) -> bool {
   return true;
 }
 
-auto EffectVisitor::VisitCond(CondExpr* expr) -> bool {
+auto EffectVisitor::VisitCondExpr(CondExpr* expr) -> bool {
   ASSERT(expr);
   const auto join = JoinEntryInstr::New(GetOwner()->GetNextBlockId());
 
@@ -136,14 +136,14 @@ auto EffectVisitor::VisitCond(CondExpr* expr) -> bool {
   return true;
 }
 
-auto EffectVisitor::VisitLambda(LambdaExpr* expr) -> bool {
+auto EffectVisitor::VisitLambdaExpr(LambdaExpr* expr) -> bool {
   const auto lambda = Lambda::New(expr->GetArgs(), expr->GetBody());
   ASSERT(lambda);
   ReturnDefinition(ConstantInstr::New(lambda));
   return true;
 }
 
-auto EffectVisitor::VisitLocalDef(LocalDefExpr* expr) -> bool {
+auto EffectVisitor::VisitLocalDef(LocalDef* expr) -> bool {
   ASSERT(expr);
   // process value
   const auto value = expr->GetValue();
@@ -160,13 +160,13 @@ auto EffectVisitor::VisitLocalDef(LocalDefExpr* expr) -> bool {
   return true;
 }
 
-auto EffectVisitor::VisitLiteral(LiteralExpr* p) -> bool {
+auto EffectVisitor::VisitLiteralExpr(LiteralExpr* p) -> bool {
   ASSERT(p);
   ReturnDefinition(ConstantInstr::New(p->GetValue()));
   return true;
 }
 
-auto EffectVisitor::VisitBinaryOp(BinaryOpExpr* expr) -> bool {
+auto EffectVisitor::VisitBinaryOpExpr(BinaryOpExpr* expr) -> bool {
   ASSERT(expr);
 
   ASSERT(expr->HasLeft());

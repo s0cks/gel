@@ -54,7 +54,7 @@ class Parser {
   auto ParseIdentifier(std::string& result) -> bool;
 
   // Definitions
-  auto ParseLocalDef() -> LocalDefExpr*;
+  auto ParseLocalDef() -> LocalDef*;
 
   template <const google::LogSeverity Severity = google::ERROR>
   inline auto Unexpected(const Token::Kind expected, const Token& actual) -> bool {
@@ -81,7 +81,7 @@ class Parser {
   }
   ~Parser() = default;
 
-  auto ParseModuleDef() -> expr::ModuleDefExpr*;
+  auto ParseModuleDef() -> expr::ModuleDef*;
   auto ParseProgram() -> Program*;
   auto Parse(const uint8_t* data, const uint64_t length) -> Program*;
 
@@ -96,12 +96,12 @@ class Parser {
     return Parse(stream);
   }
 
-  static inline auto ParseModule(TokenStream& stream) -> expr::ModuleDefExpr* {
+  static inline auto ParseModule(TokenStream& stream) -> expr::ModuleDef* {
     Parser parser(stream);
     return parser.ParseModuleDef();
   }
 
-  static inline auto ParseModule(const std::string& expr) -> expr::ModuleDefExpr* {
+  static inline auto ParseModule(const std::string& expr) -> expr::ModuleDef* {
     ASSERT(!expr.empty());
     ByteTokenStream stream(expr);
     return ParseModule(stream);

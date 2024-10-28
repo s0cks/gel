@@ -26,10 +26,10 @@ class ModuleCompiler {
     return scope_;
   }
 
-  virtual auto CompileModule(expr::ModuleDefExpr* expr) -> Module*;
+  virtual auto CompileModule(ModuleDef* expr) -> Module*;
 
  public:
-  static inline auto Compile(expr::ModuleDefExpr* expr) -> Module* {
+  static inline auto Compile(ModuleDef* expr) -> Module* {
     ASSERT(expr);
     ModuleCompiler compiler;
     return compiler.CompileModule(expr);

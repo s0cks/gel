@@ -180,7 +180,7 @@ class EffectVisitor : public ExpressionVisitor {
     return IsEmpty() || GetExitInstr() != nullptr;
   }
 
-#define DECLARE_VISIT(Name) virtual auto Visit##Name(Name##Expr* name) -> bool override;
+#define DECLARE_VISIT(Name) virtual auto Visit##Name(Name* name) -> bool override;
   FOR_EACH_EXPRESSION_NODE(DECLARE_VISIT)
 #undef DECLARE_VISIT
 };

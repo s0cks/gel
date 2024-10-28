@@ -110,7 +110,7 @@ class ExpressionToDot : public dot::GraphBuilder, public ExpressionVisitor {
   ~ExpressionToDot() override = default;
 
   auto Build() -> dot::Graph* override;
-#define DEFINE_VISIT(Name) auto Visit##Name(Name##Expr* expr) -> bool override;
+#define DEFINE_VISIT(Name) auto Visit##Name(Name* expr) -> bool override;
   FOR_EACH_EXPRESSION_NODE(DEFINE_VISIT)
 #undef DEFINE_VISIT
  public:

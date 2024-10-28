@@ -15,33 +15,33 @@ class Parser;
 
 namespace expr {
 #define FOR_EACH_EXPRESSION_NODE(V) \
-  V(BinaryOp)                       \
-  V(Literal)                        \
-  V(Begin)                          \
-  V(Eval)                           \
-  V(Symbol)                         \
-  V(CallProc)                       \
-  V(Cond)                           \
-  V(Lambda)                         \
+  V(BinaryOpExpr)                   \
+  V(LiteralExpr)                    \
+  V(BeginExpr)                      \
+  V(EvalExpr)                       \
+  V(SymbolExpr)                     \
+  V(CallProcExpr)                   \
+  V(CondExpr)                       \
+  V(LambdaExpr)                     \
   V(LocalDef)                       \
   V(ModuleDef)
 
 class Expression;
 class Definition;
-#define FORWARD_DECLARE(Name) class Name##Expr;
+#define FORWARD_DECLARE(Name) class Name;
 FOR_EACH_EXPRESSION_NODE(FORWARD_DECLARE)
 #undef FORWARD_DECLARE
 
 class ExpressionVisitor {
   DEFINE_NON_COPYABLE_TYPE(ExpressionVisitor);
-#define FORWARD_DECLARE(Name) friend class Name##Expr;
+#define FORWARD_DECLARE(Name) friend class Name;
   FOR_EACH_EXPRESSION_NODE(FORWARD_DECLARE)
 #undef FORWARD_DECLARE
 
  protected:
   ExpressionVisitor() = default;
 
-#define DEFINE_VISIT(Name) virtual auto Visit##Name(Name##Expr* expr) -> bool = 0;
+#define DEFINE_VISIT(Name) virtual auto Visit##Name(Name* expr) -> bool = 0;
   FOR_EACH_EXPRESSION_NODE(DEFINE_VISIT)
 #undef DEFINE_VISIT
  public:
@@ -88,12 +88,12 @@ class Expression {
     return false;
   }
 
-#define DEFINE_TYPE_CHECK(Name)            \
-  virtual auto As##Name() -> Name##Expr* { \
-    return nullptr;                        \
-  }                                        \
-  auto Is##Name() -> bool {                \
-    return As##Name() != nullptr;          \
+#define DEFINE_TYPE_CHECK(Name)      \
+  virtual auto As##Name() -> Name* { \
+    return nullptr;                  \
+  }                                  \
+  auto Is##Name() -> bool {          \
+    return As##Name() != nullptr;    \
   }
   FOR_EACH_EXPRESSION_NODE(DEFINE_TYPE_CHECK)
 #undef DEFINE_TYPE_CHECK
@@ -132,7 +132,7 @@ using ExpressionList = std::vector<Expression*>;
 
 #define DECLARE_EXPRESSION(Name)                        \
   friend class ExpressionVisitor;                       \
-  DEFINE_NON_COPYABLE_TYPE(Name##Expr);                 \
+  DEFINE_NON_COPYABLE_TYPE(Name);                       \
                                                         \
  public:                                                \
   auto Accept(ExpressionVisitor* vis) -> bool override; \
@@ -140,7 +140,7 @@ using ExpressionList = std::vector<Expression*>;
   auto GetName() const -> const char* override {        \
     return #Name;                                       \
   }                                                     \
-  auto As##Name() -> Name##Expr* override {             \
+  auto As##Name() -> Name* override {                   \
     return this;                                        \
   }
 
@@ -168,7 +168,7 @@ class LiteralExpr : public Expression {
     return value_;
   }
 
-  DECLARE_EXPRESSION(Literal);
+  DECLARE_EXPRESSION(LiteralExpr);
 
  public:
   static inline auto New(Datum* value) -> LiteralExpr* {
@@ -260,7 +260,7 @@ class BinaryOpExpr : public TemplateExpression<2> {
   auto IsConstantExpr() const -> bool override;
   auto EvalToConstant() const -> Type* override;
   auto VisitChildren(ExpressionVisitor* vis) -> bool override;
-  DECLARE_EXPRESSION(BinaryOp);
+  DECLARE_EXPRESSION(BinaryOpExpr);
 
  public:
   static inline auto New(const BinaryOp op, Expression* left, Expression* right) -> BinaryOpExpr* {
@@ -317,7 +317,7 @@ class BeginExpr : public SequenceExpr {
  public:
   ~BeginExpr() = default;
 
-  DECLARE_EXPRESSION(Begin);
+  DECLARE_EXPRESSION(BeginExpr);
 
  public:
   static inline auto New(const ExpressionList& expressions = {}) -> BeginExpr* {
@@ -343,7 +343,7 @@ class EvalExpr : public TemplateExpression<1> {
     return HasChildAt(0);
   }
 
-  DECLARE_EXPRESSION(Eval);
+  DECLARE_EXPRESSION(EvalExpr);
 
  public:
   static inline auto New(Expression* expr) -> EvalExpr* {
@@ -378,7 +378,7 @@ class CallProcExpr : public SequenceExpr {
     return GetSymbol() != nullptr;
   }
 
-  DECLARE_EXPRESSION(CallProc);
+  DECLARE_EXPRESSION(CallProcExpr);
 
  public:
   static inline auto New(Symbol* symbol, const ExpressionList& args = {}) -> CallProcExpr* {
@@ -412,7 +412,7 @@ class SymbolExpr : public TemplateExpression<0> {
     return GetSymbol() != nullptr;
   }
 
-  DECLARE_EXPRESSION(Symbol);
+  DECLARE_EXPRESSION(SymbolExpr);
 
  public:
   static inline auto New(Symbol* symbol) -> SymbolExpr* {
@@ -471,7 +471,7 @@ class CondExpr : public Expression {
   }
 
   auto VisitChildren(ExpressionVisitor* vis) -> bool override;
-  DECLARE_EXPRESSION(Cond);
+  DECLARE_EXPRESSION(CondExpr);
 
  public:
   static inline auto New(Expression* test, Expression* conseq, Expression* alt = nullptr) -> CondExpr* {
@@ -504,7 +504,7 @@ class LambdaExpr : public Expression {
     return body_;
   }
 
-  DECLARE_EXPRESSION(Lambda);
+  DECLARE_EXPRESSION(LambdaExpr);
 
  public:
   static inline auto New(const ArgumentSet& args, Expression* body) -> LambdaExpr* {
@@ -570,7 +570,7 @@ class TemplateDefinition : public Definition {
   }
 };
 
-class LocalDefExpr : public TemplateDefinition<1> {
+class LocalDef : public TemplateDefinition<1> {
  private:
   Symbol* symbol_ = nullptr;
 
@@ -580,14 +580,14 @@ class LocalDefExpr : public TemplateDefinition<1> {
   }
 
  protected:
-  LocalDefExpr(Symbol* symbol, Expression* value) :
+  LocalDef(Symbol* symbol, Expression* value) :
     TemplateDefinition<1>() {
     SetSymbol(symbol);
     SetChildAt(0, value);
   }
 
  public:
-  ~LocalDefExpr() override = default;
+  ~LocalDef() override = default;
 
   auto GetSymbol() const -> Symbol* {
     return symbol_;
@@ -609,19 +609,19 @@ class LocalDefExpr : public TemplateDefinition<1> {
   DECLARE_EXPRESSION(LocalDef);
 
  public:
-  static inline auto New(Symbol* symbol, Expression* value) -> LocalDefExpr* {
+  static inline auto New(Symbol* symbol, Expression* value) -> LocalDef* {
     ASSERT(symbol);
     ASSERT(value);
-    return new LocalDefExpr(symbol, value);
+    return new LocalDef(symbol, value);
   }
 };
 
-class ModuleDefExpr : public TemplateDefinition<1> {
+class ModuleDef : public TemplateDefinition<1> {
  private:
   Symbol* symbol_ = nullptr;
 
  protected:
-  ModuleDefExpr(Symbol* symbol, Expression* body) :
+  ModuleDef(Symbol* symbol, Expression* body) :
     TemplateDefinition<1>() {
     SetSymbol(symbol);
     if (body)
@@ -639,7 +639,7 @@ class ModuleDefExpr : public TemplateDefinition<1> {
   }
 
  public:
-  ~ModuleDefExpr() override = default;
+  ~ModuleDef() override = default;
 
   auto GetSymbol() const -> Symbol* {
     return symbol_;
@@ -656,9 +656,9 @@ class ModuleDefExpr : public TemplateDefinition<1> {
   DECLARE_EXPRESSION(ModuleDef);
 
  public:
-  static inline auto New(Symbol* symbol, Expression* body = nullptr) -> ModuleDefExpr* {
+  static inline auto New(Symbol* symbol, Expression* body = nullptr) -> ModuleDef* {
     ASSERT(symbol);
-    return new ModuleDefExpr(symbol, body);
+    return new ModuleDef(symbol, body);
   }
 };
 }  // namespace expr
@@ -667,7 +667,7 @@ using expr::BinaryOp;
 using expr::Expression;
 using expr::ExpressionList;
 using expr::ExpressionVisitor;
-#define DEFINE_USE(Name) using expr::Name##Expr;
+#define DEFINE_USE(Name) using expr::Name;
 FOR_EACH_EXPRESSION_NODE(DEFINE_USE)
 #undef DEFINE_USE
 }  // namespace scm

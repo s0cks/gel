@@ -106,8 +106,8 @@ auto Parser::ParseBinaryOpExpr() -> BinaryOpExpr* {
       break;
     right_expr = ParseExpression();
   } while (true);
-  ASSERT(left_expr->IsBinaryOp());
-  return left_expr->AsBinaryOp();
+  ASSERT(left_expr->IsBinaryOpExpr());
+  return left_expr->AsBinaryOpExpr();
 }
 
 auto Parser::ParseCondExpr() -> CondExpr* {
@@ -215,7 +215,7 @@ auto Parser::ParseExpression() -> Expression* {
   return expr;
 }
 
-auto Parser::ParseLocalDef() -> LocalDefExpr* {
+auto Parser::ParseLocalDef() -> LocalDef* {
   const auto symbol = ParseSymbol();
   ASSERT(symbol);
   if (GetScope()->Has(symbol)) {
@@ -227,7 +227,7 @@ auto Parser::ParseLocalDef() -> LocalDefExpr* {
   const auto local = LocalVariable::New(GetScope(), symbol, value->IsConstantExpr() ? value->EvalToConstant() : nullptr);
   ASSERT(local);
   LOG_IF(FATAL, !GetScope()->Add(local)) << "failed to add local: " << local->GetName();
-  return LocalDefExpr::New(symbol, value);
+  return LocalDef::New(symbol, value);
 }
 
 auto Parser::ParseIdentifier(std::string& result) -> bool {
@@ -240,7 +240,7 @@ auto Parser::ParseIdentifier(std::string& result) -> bool {
   return true;
 }
 
-auto Parser::ParseModuleDef() -> expr::ModuleDefExpr* {
+auto Parser::ParseModuleDef() -> expr::ModuleDef* {
   PushScope();
   ExpectNext(Token::kLParen);
   ExpectNext(Token::kModuleDef);
@@ -254,7 +254,7 @@ auto Parser::ParseModuleDef() -> expr::ModuleDefExpr* {
   }
   ExpectNext(Token::kRParen);
   PopScope();
-  return ModuleDefExpr::New(symbol, body);
+  return ModuleDef::New(symbol, body);
 }
 
 auto Parser::ParseProgram() -> Program* {

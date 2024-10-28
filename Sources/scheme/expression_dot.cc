@@ -27,7 +27,7 @@ static inline auto ToString(Datum* datum) -> std::string {
   return ss.str();
 }
 
-auto ExpressionToDot::VisitLocalDef(LocalDefExpr* expr) -> bool {
+auto ExpressionToDot::VisitLocalDef(LocalDef* expr) -> bool {
   ASSERT(expr);
   // create new node
   const auto node = NewNode();
@@ -37,7 +37,7 @@ auto ExpressionToDot::VisitLocalDef(LocalDefExpr* expr) -> bool {
     const auto symbol = expr->GetSymbol();
     ASSERT(symbol);
     std::stringstream label;
-    label << expr->GetName() << "Expr" << std::endl;
+    label << expr->GetName() << std::endl;
     label << "Symbol := " << ToString(symbol);
     SetNodeLabel(node, label);
   }
@@ -55,7 +55,7 @@ auto ExpressionToDot::VisitLocalDef(LocalDefExpr* expr) -> bool {
   return true;
 }
 
-auto ExpressionToDot::VisitBegin(BeginExpr* expr) -> bool {
+auto ExpressionToDot::VisitBeginExpr(BeginExpr* expr) -> bool {
   ASSERT(expr);
   // create new node
   const auto node = NewNode();
@@ -64,7 +64,7 @@ auto ExpressionToDot::VisitBegin(BeginExpr* expr) -> bool {
     // create node labels
     // label
     std::stringstream label;
-    label << expr->GetName() << "Expr" << std::endl;
+    label << expr->GetName() << std::endl;
     SetNodeLabel(node, label);
     // xlabel
     std::stringstream xlabel;
@@ -83,14 +83,14 @@ auto ExpressionToDot::VisitBegin(BeginExpr* expr) -> bool {
   return true;
 }
 
-auto ExpressionToDot::VisitBinaryOp(BinaryOpExpr* expr) -> bool {
+auto ExpressionToDot::VisitBinaryOpExpr(BinaryOpExpr* expr) -> bool {
   ASSERT(expr);
   const auto node = NewNode();
   ASSERT(node);
   {
     // create node labels
     std::stringstream label;
-    label << expr->GetName() << "Expr" << std::endl;
+    label << expr->GetName() << std::endl;
     label << "Op: " << expr->GetOp();
     SetNodeLabel(node, label);
   }
@@ -106,12 +106,12 @@ auto ExpressionToDot::VisitBinaryOp(BinaryOpExpr* expr) -> bool {
   return true;
 }
 
-auto ExpressionToDot::VisitEval(EvalExpr* expr) -> bool {
+auto ExpressionToDot::VisitEvalExpr(EvalExpr* expr) -> bool {
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return true;
 }
 
-auto ExpressionToDot::VisitCallProc(CallProcExpr* expr) -> bool {
+auto ExpressionToDot::VisitCallProcExpr(CallProcExpr* expr) -> bool {
   ASSERT(expr);
   // create new node
   const auto node = NewNode();
@@ -122,7 +122,7 @@ auto ExpressionToDot::VisitCallProc(CallProcExpr* expr) -> bool {
     const auto symbol = expr->GetSymbol();
     ASSERT(symbol);
     std::stringstream label;
-    label << expr->GetName() << "Expr" << std::endl;
+    label << expr->GetName() << std::endl;
     label << "Symbol := " << symbol->Get();
     SetNodeLabel(node, label);
   }
@@ -138,7 +138,7 @@ auto ExpressionToDot::VisitCallProc(CallProcExpr* expr) -> bool {
   return true;
 }
 
-auto ExpressionToDot::VisitSymbol(SymbolExpr* expr) -> bool {
+auto ExpressionToDot::VisitSymbolExpr(SymbolExpr* expr) -> bool {
   ASSERT(expr);
   const auto node = NewNode();
   ASSERT(node);
@@ -146,7 +146,7 @@ auto ExpressionToDot::VisitSymbol(SymbolExpr* expr) -> bool {
     // create node labels
     // label
     std::stringstream label;
-    label << expr->GetName() << "Expr" << std::endl;
+    label << expr->GetName() << std::endl;
     label << "Symbol := " << expr->GetSymbol()->Get();
     SetNodeLabel(node, label);
   }
@@ -154,7 +154,7 @@ auto ExpressionToDot::VisitSymbol(SymbolExpr* expr) -> bool {
   return true;
 }
 
-auto ExpressionToDot::VisitLiteral(LiteralExpr* expr) -> bool {
+auto ExpressionToDot::VisitLiteralExpr(LiteralExpr* expr) -> bool {
   ASSERT(expr);
   const auto node = NewNode();
   ASSERT(node);
@@ -162,7 +162,7 @@ auto ExpressionToDot::VisitLiteral(LiteralExpr* expr) -> bool {
     // create node labels
     // label
     std::stringstream label;
-    label << expr->GetName() << "Expr" << std::endl;
+    label << expr->GetName() << std::endl;
     const auto value = expr->GetValue();
     ASSERT(value);
     label << "Value := " << ToString(value);
@@ -172,7 +172,7 @@ auto ExpressionToDot::VisitLiteral(LiteralExpr* expr) -> bool {
   return true;
 }
 
-auto ExpressionToDot::VisitLambda(LambdaExpr* expr) -> bool {
+auto ExpressionToDot::VisitLambdaExpr(LambdaExpr* expr) -> bool {
   ASSERT(expr);
   const auto node = NewNode();
   ASSERT(node);
@@ -180,14 +180,14 @@ auto ExpressionToDot::VisitLambda(LambdaExpr* expr) -> bool {
     // create node labels
     // label
     std::stringstream label;
-    label << expr->GetName() << "Expr" << std::endl;
+    label << expr->GetName() << std::endl;
     SetNodeLabel(node, label);
   }
   CreateEdgeFromParent(node);
   return true;
 }
 
-auto ExpressionToDot::VisitCond(CondExpr* expr) -> bool {
+auto ExpressionToDot::VisitCondExpr(CondExpr* expr) -> bool {
   ASSERT(expr);
   const auto node = NewNode();
   ASSERT(node);
@@ -195,7 +195,7 @@ auto ExpressionToDot::VisitCond(CondExpr* expr) -> bool {
     // create node labels
     // label
     std::stringstream label;
-    label << expr->GetName() << "Expr" << std::endl;
+    label << expr->GetName() << std::endl;
     SetNodeLabel(node, label);
   }
   {
@@ -210,7 +210,7 @@ auto ExpressionToDot::VisitCond(CondExpr* expr) -> bool {
   return true;
 }
 
-auto ExpressionToDot::VisitModuleDef(ModuleDefExpr* expr) -> bool {
+auto ExpressionToDot::VisitModuleDef(ModuleDef* expr) -> bool {
   ASSERT(expr);
   const auto node = NewNode();
   ASSERT(node);
@@ -218,7 +218,7 @@ auto ExpressionToDot::VisitModuleDef(ModuleDefExpr* expr) -> bool {
     // create node labels
     // label
     std::stringstream label;
-    label << expr->GetName() << "Expr" << std::endl;
+    label << expr->GetName() << std::endl;
     label << "Symbol := " << expr->GetSymbol()->Get();
     SetNodeLabel(node, label);
   }
