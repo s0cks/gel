@@ -92,6 +92,9 @@ auto TokenStream::Next() -> const Token& {
       }
       return NextToken(Token::kHash, '#');
     }
+    case '\n':
+    case '\t':
+    case '\r':
     case ' ':
       Advance();
       return Next();

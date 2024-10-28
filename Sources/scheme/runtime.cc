@@ -17,7 +17,28 @@
 #include "scheme/type.h"
 
 namespace scm {
+DEFINE_bool(kernel, true, "Load the kernel at boot.");
 DEFINE_string(module_dir, "", "The directories to load modules from.");
+
+Runtime::Runtime(LocalScope* scope) {
+  ASSERT(scope);
+  SetScope(scope);
+  if (FLAGS_kernel)
+    LoadKernelModule();
+}
+
+Runtime::~Runtime() {
+  if (HasScope()) {
+    delete scope_;
+    scope_ = nullptr;
+  }
+}
+
+void Runtime::LoadKernelModule() {
+  ASSERT(FLAGS_kernel);
+  DLOG(INFO) << "loading kernel module....";
+  LOG_IF(FATAL, !ImportModule("kernel")) << "failed to import kernel module.";
+}
 
 static inline auto FileExists(const std::string& filename) -> bool {
   std::ifstream file(filename);
@@ -328,8 +349,10 @@ void Runtime::ExecuteInstr(Instruction* instr) {
 }
 
 auto Runtime::Execute(EntryInstr* entry) -> Type* {
-  TRACE_BEGIN;
   ASSERT(entry);
+  ASSERT(HasScope());
+
+  TRACE_BEGIN;
   SetCurrentInstr(entry->GetFirstInstruction());
   while (HasCurrentInstr()) {
     const auto next = GetCurrentInstr();

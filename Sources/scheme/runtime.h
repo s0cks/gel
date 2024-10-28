@@ -1,6 +1,8 @@
 #ifndef SCM_RUNTIME_H
 #define SCM_RUNTIME_H
 
+#include <gflags/gflags_declare.h>
+
 #include <stack>
 
 #include "scheme/common.h"
@@ -10,6 +12,7 @@
 #include "scheme/local_scope.h"
 
 namespace scm {
+DECLARE_bool(kernel);
 DECLARE_string(module_dir);
 
 namespace proc {
@@ -25,7 +28,7 @@ class Runtime : private InstructionVisitor {
   DEFINE_NON_COPYABLE_TYPE(Runtime);
 
  private:
-  LocalScope* scope_;
+  LocalScope* scope_ = nullptr;
   Instruction* current_ = nullptr;
   Stack stack_{};
   ModuleList modules_{};
@@ -69,6 +72,8 @@ class Runtime : private InstructionVisitor {
     ASSERT(HasScope());
   }
 
+  void LoadKernelModule();
+
  public:
   static auto CreateInitScope() -> LocalScope*;
 
@@ -82,17 +87,18 @@ class Runtime : private InstructionVisitor {
 
   auto ImportModule(Module* module) -> bool;
   auto ImportModule(Symbol* symbol) -> bool;
+
+  inline auto ImportModule(const std::string& name) -> bool {
+    return ImportModule(Symbol::New(name));
+  }
+
 #define DECLARE_VISIT(Name) auto Visit##Name(Name* instr) -> bool override;
   FOR_EACH_INSTRUCTION(DECLARE_VISIT)
 #undef DECLARE_VISIT
 
  public:
-  Runtime(LocalScope* init_scope) :
-    scope_(init_scope) {}
-  ~Runtime() {
-    if (HasScope())
-      delete scope_;
-  }
+  Runtime(LocalScope* init_scope);
+  ~Runtime();
 
   auto GetScope() const -> LocalScope* {
     return scope_;
