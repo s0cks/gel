@@ -275,6 +275,16 @@ auto Runtime::VisitLoadVariableInstr(LoadVariableInstr* instr) -> bool {
   return LoadSymbol(instr->GetSymbol());
 }
 
+auto Runtime::VisitConsInstr(ConsInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto cdr = Pop();
+  ASSERT(cdr);
+  const auto car = Pop();
+  ASSERT(car);
+  Push(Pair::New((*car), (*cdr)));
+  return true;
+}
+
 auto Runtime::VisitReturnInstr(ReturnInstr* instr) -> bool {
   return true;
 }

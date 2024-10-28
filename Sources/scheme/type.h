@@ -205,16 +205,16 @@ class Number : public Datum {
 
 class Pair : public Datum {
  private:
-  Datum* car_;
-  Datum* cdr_;
+  Type* car_;
+  Type* cdr_;
 
  protected:
-  explicit Pair(Datum* car = nullptr, Datum* cdr = nullptr) :
+  explicit Pair(Type* car = nullptr, Type* cdr = nullptr) :
     car_(car),
     cdr_(cdr) {}
 
  public:
-  auto GetCar() const -> Datum* {
+  auto GetCar() const -> Type* {
     return car_;
   }
 
@@ -227,7 +227,7 @@ class Pair : public Datum {
     car_ = rhs;
   }
 
-  auto GetCdr() const -> Datum* {
+  auto GetCdr() const -> Type* {
     return cdr_;
   }
 
@@ -243,7 +243,7 @@ class Pair : public Datum {
   DECLARE_TYPE(Pair);
 
  public:
-  static inline auto New(Datum* car = nullptr, Datum* cdr = nullptr) -> Pair* {
+  static inline auto New(Type* car = nullptr, Type* cdr = nullptr) -> Pair* {
     return new Pair(car, cdr);
   }
 };

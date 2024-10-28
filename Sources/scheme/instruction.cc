@@ -123,4 +123,13 @@ auto GotoInstr::ToString() const -> std::string {
   ss << ")";
   return ss.str();
 }
+
+auto ConsInstr::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "ConsInstr(";
+  ss << "car=" << GetCar()->ToString() << ", ";
+  ss << "cdr=" << GetCdr()->ToString();
+  ss << ")";
+  return ss.str();
+}
 }  // namespace scm::instr

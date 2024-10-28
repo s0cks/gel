@@ -23,7 +23,8 @@ namespace instr {
   V(ReturnInstr)                \
   V(BinaryOpInstr)              \
   V(BranchInstr)                \
-  V(GotoInstr)
+  V(GotoInstr)                  \
+  V(ConsInstr)
 
 class Instruction;
 #define FORWARD_DECLARE(Name) class Name;
@@ -532,6 +533,38 @@ class GotoInstr : public Definition {
   static inline auto New(EntryInstr* target) -> GotoInstr* {
     ASSERT(target);
     return new GotoInstr(target);
+  }
+};
+
+class ConsInstr : public Definition {
+ private:
+  Definition* car_;
+  Definition* cdr_;
+
+ protected:
+  ConsInstr(Definition* car, Definition* cdr) :
+    Definition(),
+    car_(car),
+    cdr_(cdr) {}
+
+ public:
+  ~ConsInstr() override = default;
+
+  auto GetCar() const -> Definition* {
+    return car_;
+  }
+
+  auto GetCdr() const -> Definition* {
+    return cdr_;
+  }
+
+  DECLARE_INSTRUCTION(ConsInstr);
+
+ public:
+  static inline auto New(Definition* car, Definition* cdr) -> ConsInstr* {
+    ASSERT(car);
+    ASSERT(cdr);
+    return new ConsInstr(car, cdr);
   }
 };
 }  // namespace instr
