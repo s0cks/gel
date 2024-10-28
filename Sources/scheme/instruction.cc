@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-namespace scm {
+namespace scm::instr {
 void Instruction::Append(Instruction* instr) {
   ASSERT(instr);
   if (HasNext())
@@ -123,4 +123,4 @@ auto GotoInstr::ToString() const -> std::string {
   ss << ")";
   return ss.str();
 }
-}  // namespace scm
+}  // namespace scm::instr

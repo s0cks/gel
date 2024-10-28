@@ -57,7 +57,34 @@ class NativeProcedure : public Procedure {
   }
 
   auto ToString() const -> std::string override;
+
+  auto GetTypename() const -> const char* override {
+    return "NativeProcedure";
+  }
 };
+
+#define _DEFINE_NATIVE_PROCEDURE_TYPE(Name, Sym) \
+  DEFINE_NON_COPYABLE_TYPE(Name);                \
+                                                 \
+ public:                                         \
+  Name() :                                       \
+    NativeProcedure(Symbol::New(Sym)) {}         \
+  ~Name() override = default;                    \
+  auto Apply(Runtime* state) const -> bool override;
+
+#define DEFINE_NATIVE_PROCEDURE_TYPE(Name) _DEFINE_NATIVE_PROCEDURE_TYPE(Name, #Name)
+
+#define _DECLARE_NATIVE_PROCEDURE(Name, Sym)  \
+  class Name : public NativeProcedure {       \
+    _DEFINE_NATIVE_PROCEDURE_TYPE(Name, Sym); \
+  };
+
+#define DECLARE_NATIVE_PROCEDURE(Name)  \
+  class Name : public NativeProcedure { \
+    DEFINE_NATIVE_PROCEDURE_TYPE(Name); \
+  };
+
+#define NATIVE_PROCEDURE_F(Name) auto Name::Apply(Runtime* state) const -> bool
 
 class Macro : public Procedure {
  public:

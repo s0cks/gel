@@ -33,7 +33,7 @@ auto FlowGraphBuilder::BuildGraph() -> FlowGraph* {
   const auto last = target_entry->GetLastInstruction();
   ASSERT(last);
   if (!last->IsReturnInstr() && last->IsDefinition())
-    last->Append(new ReturnInstr(dynamic_cast<Definition*>(last)));  // NOLINT
+    last->Append(new ReturnInstr(dynamic_cast<instr::Definition*>(last)));  // NOLINT
 
   SetGraphEntry(graph_entry);
   graph_entry->Append(target_entry);
@@ -66,6 +66,12 @@ auto EffectVisitor::VisitSymbol(SymbolExpr* expr) -> bool {
   ASSERT(symbol);
   ReturnDefinition(LoadVariableInstr::New(symbol));
   return true;
+}
+
+auto EffectVisitor::VisitModuleDef(expr::ModuleDefExpr* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
 }
 
 auto EffectVisitor::VisitBegin(BeginExpr* expr) -> bool {

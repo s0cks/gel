@@ -240,6 +240,22 @@ auto Parser::ParseIdentifier(std::string& result) -> bool {
   return true;
 }
 
+auto Parser::ParseModuleDef() -> expr::ModuleDefExpr* {
+  PushScope();
+  ExpectNext(Token::kLParen);
+  ExpectNext(Token::kModuleDef);
+  const auto symbol = ParseSymbol();
+  ASSERT(symbol);
+  Expression* body = nullptr;
+  if (!PeekEq(Token::kRParen)) {
+    body = ParseExpression();
+    ASSERT(body);
+  }
+  ExpectNext(Token::kRParen);
+  PopScope();
+  return ModuleDefExpr::New(symbol, body);
+}
+
 auto Parser::ParseModule() -> Module* {
   PushScope();
   ExpectNext(Token::kLParen);

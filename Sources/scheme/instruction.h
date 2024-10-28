@@ -9,6 +9,9 @@
 #include "scheme/variable.h"
 
 namespace scm {
+class EffectVisitor;
+class FlowGraphBuilder;
+namespace instr {
 #define FOR_EACH_INSTRUCTION(V) \
   V(ConstantInstr)              \
   V(StoreVariableInstr)         \
@@ -146,8 +149,8 @@ class InstructionIterator {
   }
 
 class EntryInstr : public Instruction {
-  friend class EffectVisitor;
-  friend class FlowGraphBuilder;
+  friend class scm::EffectVisitor;
+  friend class scm::FlowGraphBuilder;
   DEFINE_NON_COPYABLE_TYPE(EntryInstr);
 
  private:
@@ -531,6 +534,15 @@ class GotoInstr : public Definition {
     return new GotoInstr(target);
   }
 };
+}  // namespace instr
+
+using instr::EntryInstr;
+using instr::Instruction;
+using instr::InstructionIterator;
+using instr::InstructionVisitor;
+#define DEFINE_USE(Name) using instr::Name;
+FOR_EACH_INSTRUCTION(DEFINE_USE)
+#undef DEFINE_USE
 }  // namespace scm
 
 #endif  // SCM_INSTRUCTION_H

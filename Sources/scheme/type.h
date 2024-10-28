@@ -33,6 +33,7 @@ class Type {
 
  public:
   virtual ~Type() = default;
+  virtual auto GetTypename() const -> const char* = 0;
   virtual auto Equals(Type* rhs) const -> bool = 0;
   virtual auto ToString() const -> std::string = 0;
 
@@ -61,14 +62,17 @@ class Type {
   static void Init();
 };
 
-#define DECLARE_TYPE(Name)                       \
-  DEFINE_NON_COPYABLE_TYPE(Name)                 \
- public:                                         \
-  ~Name() override = default;                    \
-  auto Equals(Type* rhs) const -> bool override; \
-  auto ToString() const -> std::string override; \
-  auto As##Name() -> Name* override {            \
-    return this;                                 \
+#define DECLARE_TYPE(Name)                           \
+  DEFINE_NON_COPYABLE_TYPE(Name)                     \
+ public:                                             \
+  ~Name() override = default;                        \
+  auto GetTypename() const -> const char* override { \
+    return #Name;                                    \
+  }                                                  \
+  auto Equals(Type* rhs) const -> bool override;     \
+  auto ToString() const -> std::string override;     \
+  auto As##Name() -> Name* override {                \
+    return this;                                     \
   }
 
 class Datum : public Type {

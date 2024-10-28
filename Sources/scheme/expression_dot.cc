@@ -210,6 +210,22 @@ auto ExpressionToDot::VisitCond(CondExpr* expr) -> bool {
   return true;
 }
 
+auto ExpressionToDot::VisitModuleDef(ModuleDefExpr* expr) -> bool {
+  ASSERT(expr);
+  const auto node = NewNode();
+  ASSERT(node);
+  {
+    // create node labels
+    // label
+    std::stringstream label;
+    label << expr->GetName() << "Expr" << std::endl;
+    label << "Symbol := " << expr->GetSymbol()->Get();
+    SetNodeLabel(node, label);
+  }
+  CreateEdgeFromParent(node);
+  return true;
+}
+
 auto ExpressionToDot::Build() -> dot::Graph* {
   return dot::Graph::New(this);
 }

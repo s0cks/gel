@@ -23,9 +23,11 @@ namespace expr {
   V(Symbol)                         \
   V(CallProc)                       \
   V(Cond)                           \
-  V(Lambda)
+  V(Lambda)                         \
+  V(ModuleDef)
 
 class Expression;
+class Definition;
 #define FORWARD_DECLARE(Name) class Name##Expr;
 FOR_EACH_EXPRESSION_NODE(FORWARD_DECLARE)
 #undef FORWARD_DECLARE
@@ -72,6 +74,14 @@ class Expression {
 
   virtual auto EvalToConstant() const -> Type* {
     return nullptr;
+  }
+
+  virtual auto AsDefinition() -> Definition* {
+    return nullptr;
+  }
+
+  inline auto IsDefinition() -> bool {
+    return AsDefinition() != nullptr;
   }
 
   virtual auto VisitChildren(ExpressionVisitor* vis) -> bool {
@@ -122,7 +132,8 @@ using ExpressionList = std::vector<Expression*>;
 
 #define DECLARE_EXPRESSION(Name)                        \
   friend class ExpressionVisitor;                       \
-  DEFINE_NON_COPYABLE_TYPE(Name##Expr)                  \
+  DEFINE_NON_COPYABLE_TYPE(Name##Expr);                 \
+                                                        \
  public:                                                \
   auto Accept(ExpressionVisitor* vis) -> bool override; \
   auto ToString() const -> std::string override;        \
@@ -132,6 +143,53 @@ using ExpressionList = std::vector<Expression*>;
   auto As##Name() -> Name##Expr* override {             \
     return this;                                        \
   }
+
+class Definition : public Expression {
+  DEFINE_NON_COPYABLE_TYPE(Definition);
+
+ protected:
+  Definition() = default;
+
+ public:
+  ~Definition() override = default;
+
+  auto AsDefinition() -> Definition* override {
+    return this;
+  }
+};
+
+template <const uint64_t NumInputs>
+class TemplateDefinition : public Definition {
+  DEFINE_NON_COPYABLE_TYPE(TemplateDefinition<NumInputs>);
+
+ private:
+  std::array<Expression*, NumInputs> children_{};
+
+ protected:
+  TemplateDefinition() = default;
+
+  void SetChildAt(const uint64_t idx, Expression* value) {
+    ASSERT(idx >= 0 && idx <= NumInputs);
+    ASSERT(value);
+    children_.at(idx) = value;
+  }
+
+ public:
+  ~TemplateDefinition() override = default;
+
+  auto GetNumberOfChildren() const -> uint64_t override {
+    return NumInputs;
+  }
+
+  auto GetChildAt(const uint64_t idx) const -> Expression* override {
+    ASSERT(idx >= 0 && idx <= NumInputs);
+    return children_.at(idx);
+  }
+
+  inline auto HasChildAt(const uint64_t idx) const -> bool {
+    return GetChildAt(idx) != nullptr;
+  }
+};
 
 class LiteralExpr : public Expression {
  private:
@@ -546,9 +604,59 @@ class LambdaExpr : public Expression {
     return new LambdaExpr(args, body);
   }
 };
+
+class ModuleDefExpr : public TemplateDefinition<1> {
+ private:
+  Symbol* symbol_ = nullptr;
+
+ protected:
+  ModuleDefExpr(Symbol* symbol, Expression* body) :
+    TemplateDefinition<1>() {
+    SetSymbol(symbol);
+  }
+
+  inline void SetSymbol(Symbol* symbol) {
+    ASSERT(symbol);
+    symbol_ = symbol;
+  }
+
+  inline void SetBody(Expression* expr) {
+    ASSERT(expr);
+    SetChildAt(0, expr);
+  }
+
+ public:
+  ~ModuleDefExpr() override = default;
+
+  auto GetSymbol() const -> Symbol* {
+    return symbol_;
+  }
+
+  inline auto GetBody() const -> Expression* {
+    return GetChildAt(0);
+  }
+
+  inline auto HasBody() const -> bool {
+    return GetBody() != nullptr;
+  }
+
+  DECLARE_EXPRESSION(ModuleDef);
+
+ public:
+  static inline auto New(Symbol* symbol, Expression* body = nullptr) -> ModuleDefExpr* {
+    ASSERT(symbol);
+    return new ModuleDefExpr(symbol, body);
+  }
+};
 }  // namespace expr
 
-using namespace expr;  // TODO: remove
+using expr::BinaryOp;
+using expr::Expression;
+using expr::ExpressionList;
+using expr::ExpressionVisitor;
+#define DEFINE_USE(Name) using expr::Name##Expr;
+FOR_EACH_EXPRESSION_NODE(DEFINE_USE)
+#undef DEFINE_USE
 }  // namespace scm
 
 #undef DECLARE_EXPRESSION

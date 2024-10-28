@@ -25,6 +25,7 @@ auto Runtime::CreateInitScope() -> LocalScope* {
   const auto scope = LocalScope::New();
   ASSERT(scope);
   RegisterProc<proc::print>(scope);
+  RegisterProc<proc::type>(scope);
   return scope;
 }
 

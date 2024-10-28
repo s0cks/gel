@@ -159,4 +159,14 @@ auto LambdaExpr::ToString() const -> std::string {
   ss << ")";
   return ss.str();
 }
+
+auto ModuleDefExpr::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "ModuleDefExpr(";
+  ss << "symbol=" << GetSymbol() << ", ";
+  if (HasBody())
+    ss << "body=" << GetBody()->ToString();
+  ss << ")";
+  return ss.str();
+}
 }  // namespace scm::expr

@@ -78,6 +78,8 @@ class Parser {
   }
   ~Parser() = default;
 
+  auto ParseModuleDef() -> expr::ModuleDefExpr*;
+
   auto ParseModule() -> Module*;
   auto ParseProgram() -> Program*;
   auto Parse(const uint8_t* data, const uint64_t length) -> Program*;

@@ -3,16 +3,22 @@
 #include <iostream>
 
 #include "scheme/runtime.h"
+#include "scheme/type.h"
 
 namespace scm::proc {
-print::print() :
-  NativeProcedure(Symbol::New("print")) {}
-
-auto print::Apply(Runtime* state) const -> bool {
+NATIVE_PROCEDURE_F(print) {
   ASSERT(state);
   const auto value = state->Pop();
   ASSERT(value);
   PrintValue(std::cout, (*value)) << std::endl;
-  return Null::Get();
+  return true;
+}
+
+NATIVE_PROCEDURE_F(type) {
+  ASSERT(state);
+  const auto value = state->Pop();
+  ASSERT(value);
+  state->Push(String::New((*value)->GetTypename()));
+  return true;
 }
 }  // namespace scm::proc

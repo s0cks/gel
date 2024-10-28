@@ -81,7 +81,7 @@ class EffectVisitor : public ExpressionVisitor {
   EntryInstr* block_ = nullptr;
 
  protected:
-  virtual void Do(Definition* defn) {
+  virtual void Do(instr::Definition* defn) {
     ASSERT(defn);
     if (IsEmpty()) {
       SetEntryInstr(defn);
@@ -91,7 +91,7 @@ class EffectVisitor : public ExpressionVisitor {
     SetExitInstr(defn);
   }
 
-  virtual void ReturnDefinition(Definition* defn) {
+  virtual void ReturnDefinition(instr::Definition* defn) {
     ASSERT(defn);
     if (!defn->IsConstantInstr())
       Do(defn);
@@ -116,7 +116,7 @@ class EffectVisitor : public ExpressionVisitor {
     }
   }
 
-  inline void AddReturnExit(Definition* value) {
+  inline void AddReturnExit(instr::Definition* value) {
     ASSERT(value);
     Add(new ReturnInstr(value));
     exit_ = nullptr;
@@ -133,7 +133,7 @@ class EffectVisitor : public ExpressionVisitor {
     SetExitInstr(rhs.GetExitInstr());
   }
 
-  auto Bind(Definition* defn) -> Definition* {
+  auto Bind(instr::Definition* defn) -> instr::Definition* {
     if (IsEmpty()) {
       SetEntryInstr(defn);
     } else {
@@ -152,7 +152,7 @@ class EffectVisitor : public ExpressionVisitor {
     return block_;
   }
 
-  virtual void ReturnValue(Definition* defn) {}
+  virtual void ReturnValue(instr::Definition* defn) {}
 
  public:
   explicit EffectVisitor(FlowGraphBuilder* owner) :
@@ -189,15 +189,15 @@ class ValueVisitor : public EffectVisitor {
   DEFINE_NON_COPYABLE_TYPE(ValueVisitor);
 
  private:
-  Definition* value_ = nullptr;
+  instr::Definition* value_ = nullptr;
 
  protected:
-  void ReturnValue(Definition* value) override {
+  void ReturnValue(instr::Definition* value) override {
     ASSERT(value);
     value_ = value;
   }
 
-  void ReturnDefinition(Definition* defn) override {
+  void ReturnDefinition(instr::Definition* defn) override {
     value_ = Bind(defn);
   }
 
@@ -206,7 +206,7 @@ class ValueVisitor : public EffectVisitor {
     EffectVisitor(owner) {}
   ~ValueVisitor() override = default;
 
-  auto GetValue() const -> Definition* {
+  auto GetValue() const -> instr::Definition* {
     return value_;
   }
 };
