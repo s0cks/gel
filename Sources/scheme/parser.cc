@@ -215,6 +215,13 @@ auto Parser::ParseExpression() -> Expression* {
   return expr;
 }
 
+auto Parser::ParseImportDef() -> expr::ImportDef* {
+  ExpectNext(Token::kImportDef);
+  const auto symbol = ParseSymbol();
+  ASSERT(symbol);
+  return ImportDef::New(symbol);
+}
+
 auto Parser::ParseLocalDef() -> LocalDef* {
   ExpectNext(Token::kLocalDef);
   const auto symbol = ParseSymbol();
@@ -264,6 +271,9 @@ auto Parser::ParseDefinition() -> expr::Definition* {
   switch (next.kind) {
     case Token::kLocalDef:
       defn = ParseLocalDef();
+      break;
+    case Token::kImportDef:
+      defn = ParseImportDef();
       break;
     default:
       LOG(FATAL) << "unexpected: " << next << ", expected definition.";

@@ -24,7 +24,8 @@ namespace expr {
   V(CondExpr)                       \
   V(LambdaExpr)                     \
   V(LocalDef)                       \
-  V(ModuleDef)
+  V(ModuleDef)                      \
+  V(ImportDef)
 
 class Expression;
 class Definition;
@@ -619,11 +620,6 @@ class LocalDef : public TemplateDefinition<1> {
     return GetValue() != nullptr;
   }
 
-  auto VisitChildren(ExpressionVisitor* vis) -> bool override {
-    ASSERT(vis);
-    return GetValue()->Accept(vis);
-  }
-
   DECLARE_EXPRESSION(LocalDef);
 
  public:
@@ -631,6 +627,32 @@ class LocalDef : public TemplateDefinition<1> {
     ASSERT(symbol);
     ASSERT(value);
     return new LocalDef(symbol, value);
+  }
+};
+
+class ImportDef : public Definition {
+ private:
+  Symbol* symbol_;
+
+  explicit ImportDef(Symbol* symbol) :
+    Definition(),
+    symbol_(symbol) {
+    ASSERT(symbol_);
+  }
+
+ public:
+  ~ImportDef() override = default;
+
+  auto GetSymbol() const -> Symbol* {
+    return symbol_;
+  }
+
+  DECLARE_EXPRESSION(ImportDef);
+
+ public:
+  static inline auto New(Symbol* symbol) -> ImportDef* {
+    ASSERT(symbol);
+    return new ImportDef(symbol);
   }
 };
 
@@ -684,6 +706,7 @@ class ModuleDef : public Definition {
     return GetChildAt(idx)->AsDefinition();
   }
 
+  auto VisitAllImportDefs(ExpressionVisitor* vis) -> bool;
   auto VisitChildren(ExpressionVisitor* vis) -> bool override;
   DECLARE_EXPRESSION(ModuleDef);
 

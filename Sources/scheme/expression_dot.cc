@@ -234,6 +234,22 @@ auto ExpressionToDot::VisitModuleDef(ModuleDef* expr) -> bool {
   return true;
 }
 
+auto ExpressionToDot::VisitImportDef(ImportDef* expr) -> bool {
+  ASSERT(expr);
+  const auto node = NewNode();
+  ASSERT(node);
+  {
+    // create node labels
+    // label
+    std::stringstream label;
+    label << expr->GetName() << std::endl;
+    label << "Symbol := " << expr->GetSymbol()->Get();
+    SetNodeLabel(node, label);
+  }
+  CreateEdgeFromParent(node);
+  return true;
+}
+
 auto ExpressionToDot::Build() -> dot::Graph* {
   return dot::Graph::New(this);
 }

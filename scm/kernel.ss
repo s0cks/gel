@@ -1,5 +1,4 @@
 (defmodule kernel
-  (import "math")
   (define number? (lambda (x) (eq? (type? x) "Number")))
   (define string? (lambda (x) (eq? (type? x) "String")))
   (define symbol? (lambda (x) (eq? (type? x) "Symbol")))

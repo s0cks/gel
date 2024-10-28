@@ -162,11 +162,30 @@ auto LocalDef::ToString() const -> std::string {
   return ss.str();
 }
 
+auto ImportDef::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << GetName() << "(";
+  ss << "symbol=" << GetSymbol();
+  ss << ")";
+  return ss.str();
+}
+
 auto ModuleDef::VisitChildren(ExpressionVisitor* vis) -> bool {
   ASSERT(vis);
   for (const auto& defn : definitions_) {
     if (!defn->Accept(vis))
       return false;
+  }
+  return true;
+}
+
+auto ModuleDef::VisitAllImportDefs(ExpressionVisitor* vis) -> bool {
+  ASSERT(vis);
+  for (const auto& defn : definitions_) {
+    if (defn->IsImportDef()) {
+      if (!defn->Accept(vis))
+        return false;
+    }
   }
   return true;
 }

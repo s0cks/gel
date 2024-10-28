@@ -1,1 +1,0 @@
-(defmodule test (define test #t) (define test? (lambda () #t)))

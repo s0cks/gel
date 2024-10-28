@@ -74,6 +74,12 @@ auto EffectVisitor::VisitModuleDef(ModuleDef* expr) -> bool {
   return false;
 }
 
+auto EffectVisitor::VisitImportDef(expr::ImportDef* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
+
 auto EffectVisitor::VisitBeginExpr(BeginExpr* expr) -> bool {
   ASSERT(expr);
   uint64_t idx = 0;

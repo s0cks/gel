@@ -67,7 +67,8 @@ class Parser {
   }
 
   auto ParseDefinition() -> expr::Definition*;
-  auto ParseLocalDef() -> LocalDef*;
+  auto ParseLocalDef() -> expr::LocalDef*;
+  auto ParseImportDef() -> expr::ImportDef*;
 
   template <const google::LogSeverity Severity = google::ERROR>
   inline auto Unexpected(const Token::Kind expected, const Token& actual) -> bool {

@@ -59,6 +59,12 @@ auto DefinitionVisitor::VisitModuleDef(expr::ModuleDef* expr) -> bool {
   return true;
 }
 
+auto DefinitionVisitor::VisitImportDef(expr::ImportDef* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
+
 auto DefinitionVisitor::VisitLiteralExpr(expr::LiteralExpr* expr) -> bool {
   ASSERT(expr);
   ASSERT(expr->IsConstantExpr());

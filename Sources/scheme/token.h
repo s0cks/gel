@@ -34,6 +34,7 @@ struct Token {
     kRParen,
     kLocalDef,
     kModuleDef,
+    kImportDef,
     kLambdaExpr,
     kBeginExpr,
     kIdentifier,
@@ -79,6 +80,8 @@ struct Token {
         return stream << "LiteralString";
       case kLocalDef:
         return stream << "LocalDef";
+      case kImportDef:
+        return stream << "ImportDef";
       case kBeginExpr:
         return stream << "BeginExpr";
       default:
