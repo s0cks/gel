@@ -42,11 +42,6 @@ auto LocalScope::Add(LocalScope* scope) -> bool {
       LOG(ERROR) << "failed to add local " << local->GetName() << " to scope.";
       return false;
     }
-    if (local->HasValue()) {
-      DLOG(INFO) << "added " << local->GetName() << " := " << local->GetValue()->ToString() << " to scope.";
-    } else {
-      DLOG(INFO) << "added " << local->GetName() << " to scope.";
-    }
   }
   DLOG(INFO) << "added " << scope->GetNumberOfLocals() << " locals to scope.";
   return true;

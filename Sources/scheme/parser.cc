@@ -261,7 +261,6 @@ auto Parser::ParseDefinition() -> expr::Definition* {
   ExpectNext(Token::kLParen);
   expr::Definition* defn = nullptr;
   const auto& next = stream().Peek();
-  ASSERT(IsValidDefinition<false>(next));
   switch (next.kind) {
     case Token::kLocalDef:
       defn = ParseLocalDef();
