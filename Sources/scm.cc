@@ -16,13 +16,6 @@
 
 using namespace scm;
 
-static inline auto GetReportFilename(const std::string& filename) -> std::string {
-  const auto reports_dir_flag = GetReportsDirFlag();
-  const std::filesystem::path reports_dir =
-      reports_dir_flag ? std::filesystem::path(*reports_dir_flag) : std::filesystem::current_path();
-  return fmt::format("{0:s}/{1:s}", reports_dir.string(), filename);
-}
-
 auto main(int argc, char** argv) -> int {
   ::google::InitGoogleLogging(argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
   ::google::ParseCommandLineFlags(&argc, &argv, true);

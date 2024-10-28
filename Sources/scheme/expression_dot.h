@@ -114,7 +114,7 @@ class ExpressionToDot : public dot::GraphBuilder, public ExpressionVisitor {
   FOR_EACH_EXPRESSION_NODE(DEFINE_VISIT)
 #undef DEFINE_VISIT
  public:
-  static auto BuildGraph(const char* name, Expression* expr) -> dot::Graph* {
+  static inline auto BuildGraph(const char* name, Expression* expr) -> dot::Graph* {
     ASSERT(name);
     ASSERT(expr);
     ExpressionToDot builder(name);
@@ -123,6 +123,18 @@ class ExpressionToDot : public dot::GraphBuilder, public ExpressionVisitor {
       return nullptr;
     }
     return builder.Build();
+  }
+
+  static inline auto BuildGraph(const std::string& name, Expression* expr) -> dot::Graph* {
+    ASSERT(!name.empty());
+    ASSERT(expr);
+    return BuildGraph(name.c_str(), expr);
+  }
+
+  static inline auto BuildGraph(Symbol* symbol, Expression* expr) -> dot::Graph* {
+    ASSERT(symbol);
+    ASSERT(expr);
+    return BuildGraph(symbol->Get(), expr);
   }
 };
 }  // namespace expr

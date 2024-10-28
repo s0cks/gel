@@ -189,6 +189,15 @@ class TemplateDefinition : public Definition {
   inline auto HasChildAt(const uint64_t idx) const -> bool {
     return GetChildAt(idx) != nullptr;
   }
+
+  auto VisitChildren(ExpressionVisitor* vis) -> bool override {
+    ASSERT(vis);
+    for (const auto& child : children_) {
+      if (!child->Accept(vis))
+        return false;
+    }
+    return true;
+  }
 };
 
 class LiteralExpr : public Expression {

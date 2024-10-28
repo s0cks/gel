@@ -4,7 +4,10 @@
 
 #include "scheme/common.h"
 #include "scheme/expression.h"
+#include "scheme/expression_dot.h"
+#include "scheme/flags.h"
 #include "scheme/flow_graph_builder.h"
+#include "scheme/flow_graph_dot.h"
 #include "scheme/module.h"
 
 namespace scm {
@@ -113,6 +116,12 @@ auto ModuleCompiler::CompileModule(expr::ModuleDefExpr* expr) -> Module* {
     LOG(FATAL) << "failed to visit: " << body->ToString();
     return nullptr;
   }
+  if (FLAGS_dump_ast) {
+    const auto dot_graph = expr::ExpressionToDot::BuildGraph(symbol, expr);
+    ASSERT(dot_graph);
+    dot_graph->RenderPngToFilename(GetReportFilename(fmt::format("module_{0:s}_ast.png", symbol->Get())));
+  }
+  // TODO: dump flow graph?
   return Module::New(symbol, GetScope(), body);
 }
 }  // namespace scm

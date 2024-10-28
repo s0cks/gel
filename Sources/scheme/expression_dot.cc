@@ -223,6 +223,14 @@ auto ExpressionToDot::VisitModuleDef(ModuleDefExpr* expr) -> bool {
     SetNodeLabel(node, label);
   }
   CreateEdgeFromParent(node);
+  {
+    // process children
+    NodeScope scope(this, node);
+    if (!expr->VisitChildren(this)) {
+      LOG(ERROR) << "failed to visit children of: " << expr->ToString();
+      return false;
+    }
+  }
   return true;
 }
 
