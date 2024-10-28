@@ -26,6 +26,7 @@
       "options": [
         "Lexer",
         "Parser",
+        "LocalVariable",
         "LocalScope",
         "FlowGraph"
       ]
@@ -193,8 +194,7 @@
       "args": [
         "-logtostdout",
         "-colorlogtostdout",
-        "--module", "(defmodule test (begin (define even? (lambda (x) (eq? (% x 2) 0)))))",
-        "--expr", "(begin (define value ${input:even-value}) (print value) (cond (even? value) \"even\" \"odd\"))",
+        "--expr", "(begin (define value ${input:even-value}) (define even? (lambda (x) (eq? (% x 2) 0))) (print value) (cond (even? value) \"even\" \"odd\"))",
         "--reports-dir", "${workspaceFolder}/reports",
         "--dump-ast",
         "--dump-flow-graph",

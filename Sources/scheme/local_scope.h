@@ -7,39 +7,46 @@
 namespace scm {
 class Symbol;
 class LocalScope {
+  using LocalList = std::vector<LocalVariable*>;
   DEFINE_NON_COPYABLE_TYPE(LocalScope);
 
  private:
   LocalScope* parent_;
-  std::vector<LocalVariable*> locals_{};
+  std::vector<LocalVariable*> locals_;
 
-  explicit LocalScope(LocalScope* parent) :
-    parent_(parent) {}
+ protected:
+  explicit LocalScope(LocalScope* parent = nullptr, const LocalList& locals = {}) :
+    parent_(parent),
+    locals_(locals) {}
 
  public:
-  ~LocalScope() = default;
+  virtual ~LocalScope() = default;
 
-  auto GetParent() const -> LocalScope* {
+  virtual auto GetParent() const -> LocalScope* {
     return parent_;
   }
 
-  auto HasParent() const -> bool {
+  inline auto HasParent() const -> bool {
     return GetParent() != nullptr;
   }
 
-  auto Has(const std::string& name, const bool recursive = false) -> bool;
-  auto Has(const Symbol* symbol, const bool recursive = false) -> bool;
-  auto Add(LocalVariable* local) -> bool;
+  inline auto IsRoot() const -> bool {
+    return GetParent() == nullptr;
+  }
+
+  virtual auto Has(const std::string& name, const bool recursive = false) -> bool;
+  virtual auto Has(const Symbol* symbol, const bool recursive = false) -> bool;
+  virtual auto Add(LocalVariable* local) -> bool;
   auto Add(Symbol* symbol, Type* value = nullptr) -> bool;
-  auto Add(LocalScope* scope) -> bool;
-  auto Lookup(const std::string& name, LocalVariable** result, const bool recursive = true) -> bool;
+  virtual auto Add(LocalScope* scope) -> bool;
+  virtual auto Lookup(const std::string& name, LocalVariable** result, const bool recursive = true) -> bool;
   auto Lookup(const Symbol* symbol, LocalVariable** result, const bool recursive = true) -> bool;
 
-  auto IsEmpty() const -> bool {
+  virtual auto IsEmpty() const -> bool {
     return locals_.empty();
   }
 
-  auto GetNumberOfLocals() const -> uint64_t {
+  virtual auto GetNumberOfLocals() const -> uint64_t {
     return locals_.size();
   }
 
@@ -55,11 +62,19 @@ class LocalScope {
     return true;
   }
 
-  auto VisitAllLocals(LocalVariableVisitor* vis) -> bool;
+  virtual auto VisitAllLocals(LocalVariableVisitor* vis) -> bool;
 
  public:
   static inline auto New(LocalScope* parent = nullptr) -> LocalScope* {
     return new LocalScope(parent);
+  }
+
+  static inline auto Union(const std::vector<LocalScope*>& scopes, LocalScope* parent = nullptr) -> LocalScope* {
+    LocalList locals{};
+    std::ranges::for_each(std::begin(scopes), std::end(scopes), [&locals](LocalScope* scope) {
+      locals.insert(std::end(locals), std::begin(scope->locals_), std::end(scope->locals_));
+    });
+    return new LocalScope(parent, locals);
   }
 };
 

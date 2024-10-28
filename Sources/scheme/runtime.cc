@@ -4,37 +4,27 @@
 
 #include <iostream>
 
-#include "scheme/common.h"
 #include "scheme/expression.h"
 #include "scheme/instruction.h"
+#include "scheme/natives.h"
 #include "scheme/tracing.h"
 #include "scheme/type.h"
 
 namespace scm {
-class print : public Procedure {
-  DEFINE_NON_COPYABLE_TYPE(print);
-
- public:
-  print() = default;
-  ~print() override = default;
-
-  auto Apply(Runtime* state) const -> bool override {
-    ASSERT(state);
-    const auto value = state->Pop();
-    ASSERT(value);
-    PrintValue(std::cout, (*value)) << std::endl;
-    return Null::Get();
-  }
-
-  auto ToString() const -> std::string override {
-    return "print";
-  }
-};
+template <class Proc>
+static inline void RegisterProc(LocalScope* scope, Proc* proc = new Proc()) {
+  ASSERT(scope);
+  ASSERT(proc);
+  const auto symbol = proc->GetSymbol();
+  ASSERT(symbol);
+  LOG_IF(FATAL, !scope->Add(symbol, proc)) << "failed to register: " << proc->ToString();
+  DLOG(INFO) << proc->ToString() << " registered.";
+}
 
 auto Runtime::CreateInitScope() -> LocalScope* {
   const auto scope = LocalScope::New();
   ASSERT(scope);
-  LOG_IF(FATAL, !scope->Add("print", new print())) << "failed to register print procedure.";
+  RegisterProc<proc::print>(scope);
   return scope;
 }
 

@@ -11,7 +11,6 @@
 
 namespace scm {
 void Parser::PushScope() {
-  DLOG(INFO) << "pushing scope....";
   const auto old_scope = GetScope();
   ASSERT(old_scope);
   const auto new_scope = LocalScope::New(old_scope);
@@ -20,7 +19,6 @@ void Parser::PushScope() {
 }
 
 void Parser::PopScope() {
-  DLOG(INFO) << "popping scope...";
   const auto old_scope = GetScope();
   ASSERT(old_scope);
   const auto new_scope = old_scope->GetParent();

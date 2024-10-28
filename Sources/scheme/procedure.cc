@@ -11,4 +11,12 @@ auto Macro::ToString() const -> std::string {
   ss << ")";
   return ss.str();
 }
+
+auto NativeProcedure::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "NativeProcedure(";
+  ss << "symbol=" << GetSymbol();
+  ss << ")";
+  return ss.str();
+}
 }  // namespace scm
