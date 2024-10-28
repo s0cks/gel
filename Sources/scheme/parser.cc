@@ -250,29 +250,11 @@ auto Parser::ParseModuleDef() -> expr::ModuleDefExpr* {
   if (!PeekEq(Token::kRParen)) {
     body = ParseExpression();
     ASSERT(body);
+    DLOG(INFO) << "parsed module body: " << body->ToString();
   }
   ExpectNext(Token::kRParen);
   PopScope();
   return ModuleDefExpr::New(symbol, body);
-}
-
-auto Parser::ParseModule() -> Module* {
-  PushScope();
-  ExpectNext(Token::kLParen);
-  ExpectNext(Token::kModuleDef);
-  std::string name;
-  if (!ParseIdentifier(name)) {
-    LOG(ERROR) << "failed to parse module.";
-    return nullptr;
-  }
-  Expression* body = nullptr;
-  if (!PeekEq(Token::kRParen))
-    body = ParseExpression();
-  ExpectNext(Token::kRParen);
-  const auto module = Module::New(name, GetScope(), body);
-  ASSERT(module);
-  PopScope();
-  return module;
 }
 
 auto Parser::ParseProgram() -> Program* {

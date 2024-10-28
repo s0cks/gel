@@ -151,15 +151,34 @@
       ]
     },
     {
-      "name": "Eval Basic Test Module",
+      "name": "Eval Empty Module",
       "type": "lldb",
       "request": "launch",
       "program": "${workspaceFolder}/build/Sources/scm",
       "args": [
         "-logtostdout",
         "-colorlogtostdout",
-        "--module", "(defmodule test (define x 10))",
+        "--module", "(defmodule test)",
         "--reports-dir", "${workspaceFolder}/reports",
+        "--dump-ast",
+        "--dump-flow-graph",
+      ],
+      "cwd": "${workspaceFolder}",
+      "initCommands": [
+        "command source ${workspaceFolder}/.lldbinit"
+      ]
+    },
+    {
+      "name": "Eval Test Module",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/Sources/scm",
+      "args": [
+        "-logtostdout",
+        "-colorlogtostdout",
+        "--module", "(defmodule test (define test #t))",
+        "--reports-dir", "${workspaceFolder}/reports",
+        "--expr", "(print test)",
         "--dump-ast",
         "--dump-flow-graph",
       ],
@@ -176,10 +195,11 @@
       "args": [
         "-logtostdout",
         "-colorlogtostdout",
-        "--module", "(defmodule test (begin (define even? (lambda (x) (eq? (% x 2) 0)))))",
+        "--module", "(defmodule test (define even? (lambda (x) (eq? (% x 2) 0))))",
         "--reports-dir", "${workspaceFolder}/reports",
         "--dump-ast",
         "--dump-flow-graph",
+        "--expr", "(even? 10)"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [

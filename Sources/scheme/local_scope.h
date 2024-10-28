@@ -63,6 +63,7 @@ class LocalScope {
   }
 
   virtual auto VisitAllLocals(LocalVariableVisitor* vis) -> bool;
+  virtual auto ToString() const -> std::string;
 
  public:
   static inline auto New(LocalScope* parent = nullptr) -> LocalScope* {
@@ -98,6 +99,73 @@ class LocalScopeIterator {
     ASSERT(next);
     scope_ = next->GetParent();
     return next;
+  }
+};
+
+class LocalScopePrinter : public LocalVariableVisitor {
+  DEFINE_NON_COPYABLE_TYPE(LocalScopePrinter);
+
+ private:
+  std::string file_;
+  int line_;
+  google::LogSeverity severity_;
+  bool recursive_;
+  int indent_;
+
+  auto GetIndentString() const -> std::string {
+    return std::string(indent_ * 2, ' ');
+  }
+
+  inline void Indent(const int by = 1) {
+    ASSERT(by >= 1);
+    indent_ += by;
+  }
+
+  inline void Deindent(const int by = 1) {
+    ASSERT(by >= 1);
+    indent_ -= by;
+  }
+
+ public:
+  LocalScopePrinter(const char* file, const int line, const google::LogSeverity severity = google::INFO, const int indent = 0,
+                    const bool recursive = true) :
+    file_(file),
+    line_(line),
+    severity_(severity),
+    recursive_(recursive),
+    indent_(indent) {}
+  ~LocalScopePrinter() override = default;
+
+  auto GetFile() const -> const char* {
+    return file_.c_str();
+  }
+
+  auto GetLine() const -> int {
+    return line_;
+  }
+
+  auto GetSeverity() const -> google::LogSeverity {
+    return severity_;
+  }
+
+  auto GetIndent() const -> int {
+    return indent_;
+  }
+
+  auto IsRecursive() const -> bool {
+    return recursive_;
+  }
+
+  auto VisitLocal(LocalVariable* local) -> bool override;
+  auto PrintLocalScope(LocalScope* scope) -> bool;
+
+ public:
+  template <const google::LogSeverity Severity = google::INFO, const bool IsRecursive = true>
+  static inline auto Print(LocalScope* scope, const char* file, const int line, const int indent = 0) -> bool {
+    ASSERT(scope);
+    ASSERT(file);
+    LocalScopePrinter printer(file, line, Severity, indent, IsRecursive);
+    return printer.PrintLocalScope(scope);
   }
 };
 }  // namespace scm

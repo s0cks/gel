@@ -171,7 +171,7 @@ class TemplateDefinition : public Definition {
   void SetChildAt(const uint64_t idx, Expression* value) {
     ASSERT(idx >= 0 && idx <= NumInputs);
     ASSERT(value);
-    children_.at(idx) = value;
+    children_[idx] = value;  // NOLINT
   }
 
  public:
@@ -183,7 +183,7 @@ class TemplateDefinition : public Definition {
 
   auto GetChildAt(const uint64_t idx) const -> Expression* override {
     ASSERT(idx >= 0 && idx <= NumInputs);
-    return children_.at(idx);
+    return children_[idx];  // NOLINT
   }
 
   inline auto HasChildAt(const uint64_t idx) const -> bool {
@@ -613,6 +613,8 @@ class ModuleDefExpr : public TemplateDefinition<1> {
   ModuleDefExpr(Symbol* symbol, Expression* body) :
     TemplateDefinition<1>() {
     SetSymbol(symbol);
+    if (body)
+      SetBody(body);
   }
 
   inline void SetSymbol(Symbol* symbol) {

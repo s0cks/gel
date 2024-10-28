@@ -2,6 +2,7 @@
 
 #include <glog/logging.h>
 
+#include "scheme/common.h"
 #include "scheme/local.h"
 #include "scheme/type.h"
 
@@ -67,6 +68,24 @@ auto LocalScope::Lookup(const Symbol* symbol, LocalVariable** result, const bool
   return Lookup(symbol->Get(), result, recursive);
 }
 
+static inline auto operator<<(std::ostream& stream, const std::vector<LocalVariable*>& rhs) -> std::ostream& {
+  stream << "[";
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  stream << "]";
+  return stream;
+}
+
+auto LocalScope::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "LocalScope(";
+  ss << "locals=" << locals_;
+  if (HasParent()) {
+    ss << ", parent=" << GetParent();
+  }
+  ss << ")";
+  return ss.str();
+}
+
 auto LocalScope::VisitAllLocals(LocalVariableVisitor* vis) -> bool {
   ASSERT(vis);
   for (const auto& local : locals_) {
@@ -75,4 +94,25 @@ auto LocalScope::VisitAllLocals(LocalVariableVisitor* vis) -> bool {
   }
   return true;
 }
+
+#define __ (google::LogMessage(GetFile(), GetLine(), GetSeverity()).stream()) << GetIndentString()
+
+auto LocalScopePrinter::VisitLocal(LocalVariable* local) -> bool {
+  __ << "- " << (*local);
+  return true;
+}
+
+auto LocalScopePrinter::PrintLocalScope(LocalScope* scope) -> bool {
+  ASSERT(scope);
+  __ << "Local Scope (" << scope->GetNumberOfLocals() << " locals):";
+  Indent();
+  if (!scope->VisitAllLocals(this)) {
+    LOG(FATAL) << "failed to visit local scope: " << scope->ToString();
+    return false;
+  }
+  Deindent();
+  return true;
+}
+
+#undef __
 }  // namespace scm

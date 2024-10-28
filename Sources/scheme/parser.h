@@ -7,6 +7,7 @@
 #include <ostream>
 #include <utility>
 
+#include "scheme/common.h"
 #include "scheme/expression.h"
 #include "scheme/instruction.h"
 #include "scheme/lambda.h"
@@ -79,8 +80,6 @@ class Parser {
   ~Parser() = default;
 
   auto ParseModuleDef() -> expr::ModuleDefExpr*;
-
-  auto ParseModule() -> Module*;
   auto ParseProgram() -> Program*;
   auto Parse(const uint8_t* data, const uint64_t length) -> Program*;
 
@@ -95,14 +94,14 @@ class Parser {
     return Parse(stream);
   }
 
-  static inline auto ParseModule(TokenStream& stream) -> Module* {
+  static inline auto ParseModule(TokenStream& stream) -> expr::ModuleDefExpr* {
     Parser parser(stream);
-    return parser.ParseModule();
+    return parser.ParseModuleDef();
   }
 
-  static inline auto ParseModule(const std::string& source) -> Module* {
-    ASSERT(!source.empty());
-    ByteTokenStream stream(source);
+  static inline auto ParseModule(const std::string& expr) -> expr::ModuleDefExpr* {
+    ASSERT(!expr.empty());
+    ByteTokenStream stream(expr);
     return ParseModule(stream);
   }
 };

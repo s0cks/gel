@@ -20,16 +20,19 @@ class Module {
   DEFINE_NON_COPYABLE_TYPE(Module);
 
  private:
-  std::string name_;
-  LocalScope* scope_;
-  expr::Expression* body_;
+  Symbol* symbol_ = nullptr;
+  LocalScope* scope_ = nullptr;
+  expr::Expression* body_ = nullptr;
 
-  explicit Module(const std::string& name, LocalScope* scope, expr::Expression* body) :
-    name_(name),
-    scope_(scope),
-    body_(body) {
-    ASSERT(!name_.empty());
-    ASSERT(scope_);
+  explicit Module(Symbol* symbol, LocalScope* scope, expr::Expression* body) {
+    SetSymbol(symbol);
+    SetScope(scope);
+    SetBody(body);
+  }
+
+  inline void SetSymbol(Symbol* symbol) {
+    ASSERT(symbol);
+    symbol_ = symbol;
   }
 
   inline void SetScope(LocalScope* scope) {
@@ -38,39 +41,33 @@ class Module {
   }
 
   inline void SetBody(expr::Expression* body) {
-    ASSERT(body);
     body_ = body;
   }
 
  public:
-  ~Module() {
-    ASSERT(scope_);
-    delete scope_;
-  }
+  ~Module();
 
-  auto GetName() const -> const std::string& {
-    return name_;
+  auto GetSymbol() const -> Symbol* {
+    return symbol_;
   }
 
   auto GetScope() const -> LocalScope* {
     return scope_;
   }
 
-  inline auto HasScope() const -> bool {
-    return GetScope() != nullptr;
-  }
-
   auto GetBody() const -> expr::Expression* {
     return body_;
   }
 
+  inline auto HasBody() const -> bool {
+    return GetBody() != nullptr;
+  }
+
  public:
-  static inline auto New(const std::string& name, LocalScope* scope = LocalScope::New(), expr::Expression* body = nullptr)
-      -> Module* {
-    ASSERT(!name.empty());
+  static inline auto New(Symbol* symbol, LocalScope* scope = LocalScope::New(), expr::Expression* body = nullptr) -> Module* {
+    ASSERT(symbol);
     ASSERT(scope);
-    ASSERT(body);
-    return new Module(name, scope, body);
+    return new Module(symbol, scope, body);
   }
 };
 

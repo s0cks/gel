@@ -30,6 +30,6 @@ target_link_libraries(scheme
   PUBLIC ${SCM_LIBRARIES})
 
 add_executable(scm
-  main.cc)
+  scm.cc)
 target_link_libraries(scm
   PUBLIC scheme)

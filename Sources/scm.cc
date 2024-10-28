@@ -10,6 +10,7 @@
 #include "scheme/flow_graph_builder.h"
 #include "scheme/flow_graph_dot.h"
 #include "scheme/lexer.h"
+#include "scheme/module_compiler.h"
 #include "scheme/parser.h"
 #include "scheme/runtime.h"
 
@@ -31,20 +32,22 @@ auto main(int argc, char** argv) -> int {
   Module* m = nullptr;
   const auto module_flag = GetModuleFlag();
   if (module_flag) {
-    m = Parser::ParseModule((*module_flag));
-    ASSERT(m);
-    PRINT_MODULE(INFO, m);
+    const auto module_expr = Parser::ParseModule((*module_flag));
+    ASSERT(module_expr);
+    m = ModuleCompiler::Compile(module_expr);
   }
 
   const auto scope = Runtime::CreateInitScope();
   ASSERT(scope);
-  if (m && m->GetBody() != nullptr) {
+  if (m) {
+#ifdef SCM_DEBUG
+    LOG(INFO) << "Module Scope:";
+    LocalScopePrinter::Print<>(m->GetScope(), __FILE__, __LINE__);
+#endif  // SCM_DEBUG
     scope->Add(m->GetScope());
-    const auto flow_graph = FlowGraphBuilder::Build(m->GetBody());
-    ASSERT(flow_graph);
-    const auto result = Runtime::EvalWithScope(flow_graph, scope);
-    DLOG_IF(INFO, result) << "module result: " << result->ToString();
   }
+
+  LocalScopePrinter::Print<>(scope, __FILE__, __LINE__);
 
   const auto expr = GetExpressionFlag();
   if (expr) {
