@@ -94,12 +94,12 @@ TEST_F(LexerTest, Test_Next_RParen) {  // NOLINT
 
 TEST_F(LexerTest, Test_Next_Define) {  // NOLINT
   ByteTokenStream stream("define");
-  ASSERT_TRUE(IsNext(Token::kVariableDef, stream));
+  ASSERT_TRUE(IsNext(Token::kLocalDef, stream));
 }
 
 TEST_F(LexerTest, Test_Next_Begin) {  // NOLINT
   ByteTokenStream stream("begin");
-  ASSERT_TRUE(IsNext(Token::kBeginDef, stream));
+  ASSERT_TRUE(IsNext(Token::kBeginExpr, stream));
 }
 
 TEST_F(LexerTest, Test_Next_Plus_Shorthand) {  // NOLINT
@@ -174,6 +174,6 @@ TEST_F(LexerTest, Test_Literal_String) {  // NOLINT
 
 TEST_F(LexerTest, Test_Lambda) {  // NOLINT
   ByteTokenStream stream("lambda");
-  ASSERT_TRUE(IsNext(Token::kLambdaDef, stream));
+  ASSERT_TRUE(IsNext(Token::kLambdaExpr, stream));
 }
 }  // namespace scm

@@ -27,7 +27,7 @@ static inline auto ToString(Datum* datum) -> std::string {
   return ss.str();
 }
 
-auto ExpressionToDot::VisitDefine(DefineExpr* expr) -> bool {
+auto ExpressionToDot::VisitLocalDef(LocalDefExpr* expr) -> bool {
   ASSERT(expr);
   // create new node
   const auto node = NewNode();

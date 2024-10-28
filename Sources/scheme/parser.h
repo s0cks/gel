@@ -43,7 +43,6 @@ class Parser {
   auto ParseLiteralExpr() -> LiteralExpr*;
   auto ParseBeginExpr() -> BeginExpr*;
   auto ParseBinaryOpExpr() -> BinaryOpExpr*;
-  auto ParseDefineExpr() -> DefineExpr*;
   auto ParseExpression() -> Expression*;
   auto ParseCondExpr() -> CondExpr*;
   auto ParseLoadSymbol() -> LoadVariableInstr*;
@@ -53,6 +52,9 @@ class Parser {
   auto ParseLambdaExpr() -> LambdaExpr*;
   auto ParseSymbolList(SymbolList& symbols) -> bool;
   auto ParseIdentifier(std::string& result) -> bool;
+
+  // Definitions
+  auto ParseLocalDef() -> LocalDefExpr*;
 
   template <const google::LogSeverity Severity = google::ERROR>
   inline auto Unexpected(const Token::Kind expected, const Token& actual) -> bool {

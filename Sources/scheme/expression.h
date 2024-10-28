@@ -19,11 +19,11 @@ namespace expr {
   V(Literal)                        \
   V(Begin)                          \
   V(Eval)                           \
-  V(Define)                         \
   V(Symbol)                         \
   V(CallProc)                       \
   V(Cond)                           \
   V(Lambda)                         \
+  V(LocalDef)                       \
   V(ModuleDef)
 
 class Expression;
@@ -143,62 +143,6 @@ using ExpressionList = std::vector<Expression*>;
   auto As##Name() -> Name##Expr* override {             \
     return this;                                        \
   }
-
-class Definition : public Expression {
-  DEFINE_NON_COPYABLE_TYPE(Definition);
-
- protected:
-  Definition() = default;
-
- public:
-  ~Definition() override = default;
-
-  auto AsDefinition() -> Definition* override {
-    return this;
-  }
-};
-
-template <const uint64_t NumInputs>
-class TemplateDefinition : public Definition {
-  DEFINE_NON_COPYABLE_TYPE(TemplateDefinition<NumInputs>);
-
- private:
-  std::array<Expression*, NumInputs> children_{};
-
- protected:
-  TemplateDefinition() = default;
-
-  void SetChildAt(const uint64_t idx, Expression* value) {
-    ASSERT(idx >= 0 && idx <= NumInputs);
-    ASSERT(value);
-    children_[idx] = value;  // NOLINT
-  }
-
- public:
-  ~TemplateDefinition() override = default;
-
-  auto GetNumberOfChildren() const -> uint64_t override {
-    return NumInputs;
-  }
-
-  auto GetChildAt(const uint64_t idx) const -> Expression* override {
-    ASSERT(idx >= 0 && idx <= NumInputs);
-    return children_[idx];  // NOLINT
-  }
-
-  inline auto HasChildAt(const uint64_t idx) const -> bool {
-    return GetChildAt(idx) != nullptr;
-  }
-
-  auto VisitChildren(ExpressionVisitor* vis) -> bool override {
-    ASSERT(vis);
-    for (const auto& child : children_) {
-      if (!child->Accept(vis))
-        return false;
-    }
-    return true;
-  }
-};
 
 class LiteralExpr : public Expression {
  private:
@@ -323,52 +267,6 @@ class BinaryOpExpr : public TemplateExpression<2> {
     ASSERT(left);
     ASSERT(right);
     return new BinaryOpExpr(op, left, right);
-  }
-};
-
-class DefineExpr : public TemplateExpression<1> {
- private:
-  Symbol* symbol_ = nullptr;
-
-  inline void SetSymbol(Symbol* symbol) {
-    ASSERT(symbol);
-    symbol_ = symbol;
-  }
-
- protected:
-  DefineExpr(Symbol* symbol, Expression* value) :
-    TemplateExpression<1>() {
-    SetSymbol(symbol);
-    SetChildAt(0, value);
-  }
-
- public:
-  ~DefineExpr() override = default;
-
-  auto GetSymbol() const -> Symbol* {
-    return symbol_;
-  }
-
-  auto GetValue() const -> Expression* {
-    return GetChildAt(0);
-  }
-
-  auto HasValue() const -> bool {
-    return GetValue() != nullptr;
-  }
-
-  auto VisitChildren(ExpressionVisitor* vis) -> bool override {
-    ASSERT(vis);
-    return GetValue()->Accept(vis);
-  }
-
-  DECLARE_EXPRESSION(Define);
-
- public:
-  static inline auto New(Symbol* symbol, Expression* value) -> DefineExpr* {
-    ASSERT(symbol);
-    ASSERT(value);
-    return new DefineExpr(symbol, value);
   }
 };
 
@@ -611,6 +509,110 @@ class LambdaExpr : public Expression {
  public:
   static inline auto New(const ArgumentSet& args, Expression* body) -> LambdaExpr* {
     return new LambdaExpr(args, body);
+  }
+};
+
+// Definitions
+
+class Definition : public Expression {
+  DEFINE_NON_COPYABLE_TYPE(Definition);
+
+ protected:
+  Definition() = default;
+
+ public:
+  ~Definition() override = default;
+
+  auto AsDefinition() -> Definition* override {
+    return this;
+  }
+};
+
+template <const uint64_t NumInputs>
+class TemplateDefinition : public Definition {
+  DEFINE_NON_COPYABLE_TYPE(TemplateDefinition<NumInputs>);
+
+ private:
+  std::array<Expression*, NumInputs> children_{};
+
+ protected:
+  TemplateDefinition() = default;
+
+  void SetChildAt(const uint64_t idx, Expression* value) {
+    ASSERT(idx >= 0 && idx <= NumInputs);
+    ASSERT(value);
+    children_[idx] = value;  // NOLINT
+  }
+
+ public:
+  ~TemplateDefinition() override = default;
+
+  auto GetNumberOfChildren() const -> uint64_t override {
+    return NumInputs;
+  }
+
+  auto GetChildAt(const uint64_t idx) const -> Expression* override {
+    ASSERT(idx >= 0 && idx <= NumInputs);
+    return children_[idx];  // NOLINT
+  }
+
+  inline auto HasChildAt(const uint64_t idx) const -> bool {
+    return GetChildAt(idx) != nullptr;
+  }
+
+  auto VisitChildren(ExpressionVisitor* vis) -> bool override {
+    ASSERT(vis);
+    for (const auto& child : children_) {
+      if (!child->Accept(vis))
+        return false;
+    }
+    return true;
+  }
+};
+
+class LocalDefExpr : public TemplateDefinition<1> {
+ private:
+  Symbol* symbol_ = nullptr;
+
+  inline void SetSymbol(Symbol* symbol) {
+    ASSERT(symbol);
+    symbol_ = symbol;
+  }
+
+ protected:
+  LocalDefExpr(Symbol* symbol, Expression* value) :
+    TemplateDefinition<1>() {
+    SetSymbol(symbol);
+    SetChildAt(0, value);
+  }
+
+ public:
+  ~LocalDefExpr() override = default;
+
+  auto GetSymbol() const -> Symbol* {
+    return symbol_;
+  }
+
+  auto GetValue() const -> Expression* {
+    return GetChildAt(0);
+  }
+
+  auto HasValue() const -> bool {
+    return GetValue() != nullptr;
+  }
+
+  auto VisitChildren(ExpressionVisitor* vis) -> bool override {
+    ASSERT(vis);
+    return GetValue()->Accept(vis);
+  }
+
+  DECLARE_EXPRESSION(LocalDef);
+
+ public:
+  static inline auto New(Symbol* symbol, Expression* value) -> LocalDefExpr* {
+    ASSERT(symbol);
+    ASSERT(value);
+    return new LocalDefExpr(symbol, value);
   }
 };
 

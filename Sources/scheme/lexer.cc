@@ -132,9 +132,11 @@ auto TokenStream::Next() -> const Token& {
 
     const std::string ident((const char*)&buffer_[0], token_len);
     if (ident == "define")
-      return NextToken(Token::kVariableDef);
+      return NextToken(Token::kLocalDef);
+    else if (ident == "defmodule")
+      return NextToken(Token::kModuleDef);
     else if (ident == "begin")
-      return NextToken(Token::kBeginDef);
+      return NextToken(Token::kBeginExpr);
     else if (ident == "add")
       return NextToken(Token::kPlus);
     else if (ident == "subtract")
@@ -144,15 +146,13 @@ auto TokenStream::Next() -> const Token& {
     else if (ident == "divide")
       return NextToken(Token::kDivide);
     else if (ident == "lambda")
-      return NextToken(Token::kLambdaDef);
+      return NextToken(Token::kLambdaExpr);
     else if (ident == "quote")
       return NextToken(Token::kQuote);
     else if (ident == "eq?")
       return NextToken(Token::kEquals);
     else if (ident == "cond")
       return NextToken(Token::kCond);
-    else if (ident == "defmodule")
-      return NextToken(Token::kModuleDef);
     return NextToken(Token::kIdentifier, ident);
   }
 

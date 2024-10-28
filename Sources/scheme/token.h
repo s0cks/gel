@@ -32,10 +32,10 @@ struct Token {
     kComment,
     kLParen,
     kRParen,
-    kVariableDef,
+    kLocalDef,
     kModuleDef,
-    kBeginDef,
-    kLambdaDef,
+    kLambdaExpr,
+    kBeginExpr,
     kIdentifier,
     kPlus,
     kMinus,
@@ -77,10 +77,10 @@ struct Token {
         return stream << "LiteralFalse";
       case kLiteralString:
         return stream << "LiteralString";
-      case kVariableDef:
-        return stream << "VariableDef";
-      case kBeginDef:
-        return stream << "BeginDef";
+      case kLocalDef:
+        return stream << "LocalDef";
+      case kBeginExpr:
+        return stream << "BeginExpr";
       default:
         return stream << "Unknown Token::Kind: " << static_cast<uint16_t>(rhs);
     }

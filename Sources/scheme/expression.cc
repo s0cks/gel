@@ -104,15 +104,6 @@ auto BeginExpr::ToString() const -> std::string {
   return ss.str();
 }
 
-auto DefineExpr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "DefineExpr(";
-  ss << "symbol=" << GetSymbol() << ", ";
-  ss << "value=" << GetValue()->ToString();
-  ss << ")";
-  return ss.str();
-}
-
 auto CallProcExpr::ToString() const -> std::string {
   std::stringstream ss;
   ss << "CallProcExpr(";
@@ -156,6 +147,17 @@ auto LambdaExpr::ToString() const -> std::string {
   std::stringstream ss;
   ss << "LambdaExpr(";
   ss << "args=" << GetArgs();
+  ss << ")";
+  return ss.str();
+}
+
+// Definitions
+
+auto LocalDefExpr::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "DefineExpr(";
+  ss << "symbol=" << GetSymbol() << ", ";
+  ss << "value=" << GetValue()->ToString();
   ss << ")";
   return ss.str();
 }

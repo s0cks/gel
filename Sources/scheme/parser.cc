@@ -190,16 +190,16 @@ auto Parser::ParseExpression() -> Expression* {
   } else {
     const auto& next = stream().Next();
     switch (next.kind) {
-      case Token::kVariableDef:
-        expr = ParseDefineExpr();
+      case Token::kLocalDef:
+        expr = ParseLocalDef();
         break;
-      case Token::kBeginDef:
+      case Token::kBeginExpr:
         expr = ParseBeginExpr();
         break;
       case Token::kIdentifier:
         expr = ParseCallProcExpr(next.text);
         break;
-      case Token::kLambdaDef:
+      case Token::kLambdaExpr:
         expr = ParseLambdaExpr();
         break;
       case Token::kCond:
@@ -215,7 +215,7 @@ auto Parser::ParseExpression() -> Expression* {
   return expr;
 }
 
-auto Parser::ParseDefineExpr() -> DefineExpr* {
+auto Parser::ParseLocalDef() -> LocalDefExpr* {
   const auto symbol = ParseSymbol();
   ASSERT(symbol);
   if (GetScope()->Has(symbol)) {
@@ -227,7 +227,7 @@ auto Parser::ParseDefineExpr() -> DefineExpr* {
   const auto local = LocalVariable::New(GetScope(), symbol, value->IsConstantExpr() ? value->EvalToConstant() : nullptr);
   ASSERT(local);
   LOG_IF(FATAL, !GetScope()->Add(local)) << "failed to add local: " << local->GetName();
-  return DefineExpr::New(symbol, value);
+  return LocalDefExpr::New(symbol, value);
 }
 
 auto Parser::ParseIdentifier(std::string& result) -> bool {

@@ -143,7 +143,7 @@ auto EffectVisitor::VisitLambda(LambdaExpr* expr) -> bool {
   return true;
 }
 
-auto EffectVisitor::VisitDefine(DefineExpr* expr) -> bool {
+auto EffectVisitor::VisitLocalDef(LocalDefExpr* expr) -> bool {
   ASSERT(expr);
   // process value
   const auto value = expr->GetValue();

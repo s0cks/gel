@@ -70,7 +70,7 @@ class ModuleCompilerVisitor : public expr::ExpressionVisitor {
     return false;
   }
 
-  auto VisitDefine(expr::DefineExpr* expr) -> bool override {
+  auto VisitLocalDef(expr::LocalDefExpr* expr) -> bool override {
     ASSERT(expr);
     const auto symbol = expr->GetSymbol();
     ASSERT(symbol);
