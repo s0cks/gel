@@ -24,7 +24,8 @@ namespace instr {
   V(BinaryOpInstr)              \
   V(BranchInstr)                \
   V(GotoInstr)                  \
-  V(ConsInstr)
+  V(ConsInstr)                  \
+  V(UnaryOpInstr)
 
 class Instruction;
 #define FORWARD_DECLARE(Name) class Name;
@@ -423,6 +424,37 @@ class BinaryOpInstr : public Definition {
  public:
   static inline auto New(const expr::BinaryOp op) -> BinaryOpInstr* {
     return new BinaryOpInstr(op);
+  }
+};
+
+class UnaryOpInstr : public Definition {
+ private:
+  expr::UnaryOp op_;
+  Definition* value_;
+
+  explicit UnaryOpInstr(const expr::UnaryOp op, Definition* value) :
+    Definition(),
+    op_(op),
+    value_(value) {
+    ASSERT(value_);
+  }
+
+ public:
+  ~UnaryOpInstr() override = default;
+
+  auto GetOp() const -> expr::UnaryOp {
+    return op_;
+  }
+
+  auto GetValue() const -> Definition* {
+    return value_;
+  }
+
+  DECLARE_INSTRUCTION(UnaryOpInstr);
+
+ public:
+  static inline auto New(const expr::UnaryOp op, Definition* value) -> UnaryOpInstr* {
+    return new UnaryOpInstr(op, value);
   }
 };
 

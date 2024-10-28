@@ -38,6 +38,8 @@ struct Token {
     kLambdaExpr,
     kBeginExpr,
     kConsExpr,
+    kCarExpr,
+    kCdrExpr,
     kIdentifier,
     kPlus,
     kMinus,

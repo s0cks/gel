@@ -15,6 +15,7 @@ class Parser;
 
 namespace expr {
 #define FOR_EACH_EXPRESSION_NODE(V) \
+  V(UnaryExpr)                      \
   V(BinaryOpExpr)                   \
   V(LiteralExpr)                    \
   V(BeginExpr)                      \
@@ -338,6 +339,71 @@ class ConsExpr : public TemplateExpression<2> {
     ASSERT(car);
     ASSERT(cdr);
     return new ConsExpr(car, cdr);
+  }
+};
+
+enum UnaryOp : uint64_t {
+  kCar,
+  kCdr,
+};
+
+static inline auto operator<<(std::ostream& stream, const UnaryOp& rhs) -> std::ostream& {
+  switch (rhs) {
+    case kCar:
+      return stream << "car";
+    case kCdr:
+      return stream << "cdr";
+    default:
+      return stream << "Unknown UnaryOp: " << static_cast<uint64_t>(rhs);
+  }
+}
+
+class UnaryExpr : public TemplateExpression<1> {
+ private:
+  UnaryOp op_;
+
+ protected:
+  UnaryExpr(const UnaryOp op, Expression* value) :
+    op_(op) {
+    SetChildAt(0, value);
+  }
+
+  inline void SetValue(Expression* expr) {
+    ASSERT(expr);
+    SetChildAt(0, expr);
+  }
+
+ public:
+  ~UnaryExpr() override = default;
+
+  auto GetOp() const -> UnaryOp {
+    return op_;
+  }
+
+  inline auto GetValue() const -> Expression* {
+    return GetChildAt(0);
+  }
+
+  inline auto HasValue() const -> bool {
+    return GetValue() != nullptr;
+  }
+
+  DECLARE_EXPRESSION(UnaryExpr);
+
+ public:
+  static inline auto New(const UnaryOp op, Expression* value) -> UnaryExpr* {
+    ASSERT(value);
+    return new UnaryExpr(op, value);
+  }
+
+  static inline auto NewCar(Expression* value) -> UnaryExpr* {
+    ASSERT(value);
+    return New(kCar, value);
+  }
+
+  static inline auto NewCdr(Expression* value) -> UnaryExpr* {
+    ASSERT(value);
+    return New(kCdr, value);
   }
 };
 

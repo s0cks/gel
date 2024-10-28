@@ -220,4 +220,13 @@ auto ModuleDef::ToString() const -> std::string {
   ss << ")";
   return ss.str();
 }
+
+auto UnaryExpr::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << GetName() << "(";
+  ss << "op=" << GetOp() << ", ";
+  ss << "value=" << GetValue()->ToString();
+  ss << ")";
+  return ss.str();
+}
 }  // namespace scm::expr

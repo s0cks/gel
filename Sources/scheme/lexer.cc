@@ -142,6 +142,10 @@ auto TokenStream::Next() -> const Token& {
       return NextToken(Token::kImportDef);
     else if (ident == "cons")
       return NextToken(Token::kConsExpr);
+    else if (ident == "car")
+      return NextToken(Token::kCarExpr);
+    else if (ident == "cdr")
+      return NextToken(Token::kCdrExpr);
     else if (ident == "begin")
       return NextToken(Token::kBeginExpr);
     else if (ident == "add")

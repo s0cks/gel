@@ -289,6 +289,49 @@ auto Runtime::VisitReturnInstr(ReturnInstr* instr) -> bool {
   return true;
 }
 
+static inline auto Car(Type* rhs) -> Type* {
+  ASSERT(rhs);
+  if (rhs->IsPair())
+    return rhs->AsPair()->GetCar();
+  LOG(FATAL) << rhs << " is not a Pair or List.";
+  return nullptr;
+}
+
+static inline auto Cdr(Type* rhs) -> Type* {
+  ASSERT(rhs);
+  if (rhs->IsPair())
+    return rhs->AsPair()->GetCdr();
+  LOG(FATAL) << rhs << " is not a Pair or List.";
+  return nullptr;
+}
+
+static inline auto Unary(const expr::UnaryOp op, Type* rhs) -> Type* {
+  ASSERT(rhs);
+  switch (op) {
+    case expr::kCar:
+      return Car(rhs);
+    case expr::kCdr:
+      return Cdr(rhs);
+    default:
+      LOG(FATAL) << "invalid UnaryOp: " << op;
+      return nullptr;
+  }
+}
+
+auto Runtime::VisitUnaryOpInstr(UnaryOpInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto value = Pop();
+  if (!value) {
+    LOG(FATAL) << "invalid value.";
+    return false;
+  }
+
+  const auto result = Unary(instr->GetOp(), (*value));
+  ASSERT(result);
+  Push(result);
+  return true;
+}
+
 auto Runtime::VisitGotoInstr(GotoInstr* instr) -> bool {
   ASSERT(instr);
   ASSERT(instr->HasTarget());

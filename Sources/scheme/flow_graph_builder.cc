@@ -176,6 +176,18 @@ auto EffectVisitor::VisitLambdaExpr(LambdaExpr* expr) -> bool {
   return true;
 }
 
+auto EffectVisitor::VisitUnaryExpr(expr::UnaryExpr* expr) -> bool {
+  ASSERT(expr && expr->HasValue());
+  ValueVisitor for_value(GetOwner());
+  if (!expr->GetValue()->Accept(&for_value)) {
+    LOG(FATAL) << "failed to visit value for: " << expr->ToString();
+    return false;
+  }
+  Append(for_value);
+  ReturnDefinition(instr::UnaryOpInstr::New(expr->GetOp(), for_value.GetValue()));
+  return true;
+}
+
 auto EffectVisitor::VisitLocalDef(LocalDef* expr) -> bool {
   ASSERT(expr);
   // process value

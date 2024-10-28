@@ -94,6 +94,36 @@ static inline auto ToBinaryOp(const Token& rhs) -> BinaryOp {
   }
 }
 
+static inline auto ToUnaryOp(const Token& rhs) -> expr::UnaryOp {
+  switch (rhs.kind) {
+    case Token::kCarExpr:
+      return expr::UnaryOp::kCar;
+    case Token::kCdrExpr:
+      return expr::UnaryOp::kCdr;
+    default:
+      LOG(FATAL) << "invalid UnaryOp: " << rhs;
+  }
+}
+
+static inline auto IsValidUnaryOp(const Token& rhs) -> bool {
+  switch (rhs.kind) {
+    case Token::kCarExpr:
+    case Token::kCdrExpr:
+      return true;
+    default:
+      return false;
+  }
+}
+
+auto Parser::ParseUnaryExpr() -> expr::UnaryExpr* {
+  const auto next = stream().Next();
+  ASSERT(IsValidUnaryOp(next));
+  const auto op = ToUnaryOp(next);
+  const auto value = ParseExpression();
+  ASSERT(value);
+  return expr::UnaryExpr::New(op, value);
+}
+
 auto Parser::ParseBinaryOpExpr() -> BinaryOpExpr* {
   const auto& next = stream().Next();
   const auto op = ToBinaryOp(next);
@@ -195,6 +225,8 @@ auto Parser::ParseExpression() -> Expression* {
   ExpectNext(Token::kLParen);
   if (IsBinaryOp(stream().Peek())) {
     expr = ParseBinaryOpExpr();
+  } else if (IsValidUnaryOp(stream().Peek())) {
+    expr = ParseUnaryExpr();
   } else {
     const auto& next = stream().Next();
     switch (next.kind) {

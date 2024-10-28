@@ -42,6 +42,7 @@ class Parser {
   auto ParseSymbol() -> Symbol*;
   auto ParseLiteralExpr() -> LiteralExpr*;
   auto ParseBeginExpr() -> BeginExpr*;
+  auto ParseUnaryExpr() -> expr::UnaryExpr*;
   auto ParseBinaryOpExpr() -> BinaryOpExpr*;
   auto ParseCondExpr() -> CondExpr*;
   auto ParseConsExpr() -> ConsExpr*;

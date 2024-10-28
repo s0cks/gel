@@ -82,6 +82,11 @@ auto DefinitionVisitor::VisitBeginExpr(expr::BeginExpr* expr) -> bool {
   return false;
 }
 
+auto DefinitionVisitor::VisitUnaryExpr(expr::UnaryExpr* expr) -> bool {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
+
 auto DefinitionVisitor::VisitLambdaExpr(expr::LambdaExpr* expr) -> bool {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
   return false;
