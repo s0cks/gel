@@ -145,6 +145,7 @@ class Runtime : private InstructionVisitor {
   }
 
   static auto EvalWithScope(FlowGraph* flow_graph, LocalScope* scope) -> Type*;
+  static auto EvalWithScope(const std::string& expr, LocalScope* scope) -> Type*;
 };
 
 class RuntimeScopeScope {

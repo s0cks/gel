@@ -43,7 +43,6 @@ class Parser {
   auto ParseLiteralExpr() -> LiteralExpr*;
   auto ParseBeginExpr() -> BeginExpr*;
   auto ParseBinaryOpExpr() -> BinaryOpExpr*;
-  auto ParseExpression() -> Expression*;
   auto ParseCondExpr() -> CondExpr*;
   auto ParseLoadSymbol() -> LoadVariableInstr*;
   auto ParseSymbolExpr() -> SymbolExpr*;
@@ -96,6 +95,8 @@ class Parser {
   ~Parser() = default;
 
   auto ParseModuleDef() -> expr::ModuleDef*;
+  auto ParseExpression() -> Expression*;
+
   auto ParseProgram() -> Program*;
   auto Parse(const uint8_t* data, const uint64_t length) -> Program*;
 

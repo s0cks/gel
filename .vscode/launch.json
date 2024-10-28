@@ -81,7 +81,7 @@
       ]
     },
     {
-      "name": "Eval Expr (Debug)",
+      "name": "Eval Expr",
       "type": "lldb",
       "request": "launch",
       "program": "${workspaceFolder}/build/Sources/scm",
@@ -92,8 +92,7 @@
         "--reports-dir", "${workspaceFolder}/reports",
         "--dump-ast",
         "--dump-flow-graph",
-        "--module-dir", "${workspaceFolder}/scm",
-        "-v=10"
+        "--module-dir", "${workspaceFolder}/scm"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [

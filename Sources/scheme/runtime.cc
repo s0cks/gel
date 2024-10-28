@@ -7,6 +7,7 @@
 
 #include "scheme/common.h"
 #include "scheme/expression.h"
+#include "scheme/expression_compiler.h"
 #include "scheme/instruction.h"
 #include "scheme/local_scope.h"
 #include "scheme/module_compiler.h"
@@ -36,7 +37,7 @@ Runtime::~Runtime() {
 
 void Runtime::LoadKernelModule() {
   ASSERT(FLAGS_kernel);
-  DLOG(INFO) << "loading kernel module....";
+  DVLOG(10) << "loading kernel module....";
   LOG_IF(FATAL, !ImportModule("kernel")) << "failed to import kernel module.";
 }
 
@@ -62,21 +63,18 @@ class RuntimeModuleResolver : public ModuleResolver {
       LOG(FATAL) << "cannot load module " << symbol << " from: " << module_filename;
       return nullptr;
     }
-    DLOG(INFO) << "importing module " << symbol << " from: " << module_filename;
+    DVLOG(10) << "importing module " << symbol << " from: " << module_filename;
 
     std::ifstream file(module_filename, std::ios::in | std::ios::binary);
     ASSERT(file.good());
     std::stringstream contents;
     contents << file.rdbuf();
-
     const auto code = contents.str();
-    DLOG(INFO) << "code:" << std::endl << code;
 
     const auto module_expr = Parser::ParseModule(code);
     ASSERT(module_expr);
     const auto module = ModuleCompiler::Compile(module_expr);
     ASSERT(module);
-    DLOG(INFO) << symbol << " := " << module;
     return module;
   }
 
@@ -374,5 +372,19 @@ auto Runtime::EvalWithScope(FlowGraph* flow_graph, LocalScope* scope) -> Type* {
   ASSERT(scope);
   Runtime runtime(scope);
   return runtime.Execute(flow_graph->GetEntry());
+}
+
+auto Runtime::EvalWithScope(const std::string& expr, LocalScope* scope) -> Type* {
+  ASSERT(!expr.empty());
+  ASSERT(scope);
+
+#ifdef SCM_DEBUG
+  LOG(INFO) << "evaluating expression:" << std::endl << expr;
+#endif  // SCM_DEBUG
+
+  Runtime runtime(scope);
+  const auto e = ExpressionCompiler::Compile(expr);
+  ASSERT(e && e->HasEntry());
+  return runtime.Execute(e->GetEntry());
 }
 }  // namespace scm

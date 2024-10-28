@@ -43,7 +43,7 @@ auto LocalScope::Add(LocalScope* scope) -> bool {
       return false;
     }
   }
-  DLOG(INFO) << "added " << scope->GetNumberOfLocals() << " locals to scope.";
+  DVLOG(10) << "added " << scope->GetNumberOfLocals() << " locals to scope.";
   return true;
 }
 

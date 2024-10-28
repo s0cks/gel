@@ -35,7 +35,7 @@ auto DefinitionVisitor::VisitLocalDef(expr::LocalDef* expr) -> bool {
     return false;
   }
 
-  DLOG(INFO) << "defined module constant: " << (*local);
+  DVLOG(10) << "defined module constant: " << (*local);
   return true;
 }
 
@@ -104,7 +104,7 @@ auto DefinitionVisitor::VisitSymbolExpr(expr::SymbolExpr* expr) -> bool {
 
 auto ModuleCompiler::CompileModule(expr::ModuleDef* expr) -> Module* {
   ASSERT(expr);
-  DLOG(INFO) << "compiling " << expr->ToString() << "....";
+  DVLOG(10) << "compiling " << expr->ToString() << "....";
   const auto symbol = expr->GetSymbol();
   DefinitionVisitor vis(this);
   if (!expr->Accept(&vis)) {
