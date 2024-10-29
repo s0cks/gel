@@ -79,7 +79,6 @@ class Parser {
   auto ParseIdentifier(std::string& result) -> bool;
 
   // Expressions
-  auto ParseSymbolExpr() -> SymbolExpr*;
   auto ParseSetExpr() -> SetExpr*;
   auto ParseCallProcExpr() -> CallProcExpr*;
   auto ParseLiteralExpr() -> LiteralExpr*;

@@ -73,6 +73,7 @@ auto ExpressionToDot::VisitBeginExpr(BeginExpr* expr) -> bool {
     xlabel << expr->GetNumberOfChildren() << " expressions";
     SetNodeXLabel(node, xlabel);
   }
+  CreateEdgeFromParent(node);
   {
     // process children
     NodeScope scope(this, node);
@@ -81,7 +82,6 @@ auto ExpressionToDot::VisitBeginExpr(BeginExpr* expr) -> bool {
       return false;
     }
   }
-  CreateEdgeFromParent(node);
   return true;
 }
 
@@ -96,6 +96,7 @@ auto ExpressionToDot::VisitBinaryOpExpr(BinaryOpExpr* expr) -> bool {
     label << "Op: " << expr->GetOp();
     SetNodeLabel(node, label);
   }
+  CreateEdgeFromParent(node);
   {
     // process children
     NodeScope scope(this, node);
@@ -104,7 +105,6 @@ auto ExpressionToDot::VisitBinaryOpExpr(BinaryOpExpr* expr) -> bool {
       return false;
     }
   }
-  CreateEdgeFromParent(node);
   return true;
 }
 
@@ -154,22 +154,6 @@ auto ExpressionToDot::VisitCallProcExpr(CallProcExpr* expr) -> bool {
       LOG(ERROR) << "failed to visit children of: " << expr->ToString();
       return false;
     }
-  }
-  CreateEdgeFromParent(node);
-  return true;
-}
-
-auto ExpressionToDot::VisitSymbolExpr(SymbolExpr* expr) -> bool {
-  ASSERT(expr);
-  const auto node = NewNode();
-  ASSERT(node);
-  {
-    // create node labels
-    // label
-    std::stringstream label;
-    label << expr->GetName() << std::endl;
-    label << "Symbol := " << expr->GetSymbol()->Get();
-    SetNodeLabel(node, label);
   }
   CreateEdgeFromParent(node);
   return true;
@@ -229,6 +213,14 @@ auto ExpressionToDot::VisitLambdaExpr(LambdaExpr* expr) -> bool {
     SetNodeLabel(node, label);
   }
   CreateEdgeFromParent(node);
+  {
+    // process children
+    NodeScope scope(this, node);
+    if (!expr->VisitChildren(this)) {
+      LOG(ERROR) << "failed to visit children of: " << expr->ToString();
+      return false;
+    }
+  }
   return true;
 }
 

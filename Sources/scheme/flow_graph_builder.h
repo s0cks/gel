@@ -215,6 +215,10 @@ class ValueVisitor : public EffectVisitor {
   auto GetValue() const -> instr::Definition* {
     return value_;
   }
+
+  inline auto HasValue() const -> bool {
+    return GetValue() != nullptr;
+  }
 };
 }  // namespace scm
 

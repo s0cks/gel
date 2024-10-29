@@ -62,6 +62,8 @@ auto Parser::ParseLiteralExpr() -> LiteralExpr* {
       return LiteralExpr::New(Double::New(next.AsDouble()));
     case Token::kLiteralString:
       return LiteralExpr::New(String::New(next.text));
+    case Token::kIdentifier:
+      return LiteralExpr::New(Symbol::New(next.text));
     default:
       LOG(FATAL) << "unexpected: " << stream().Next();
       return nullptr;
@@ -188,12 +190,6 @@ auto Parser::ParseCondExpr() -> CondExpr* {
   return CondExpr::New(test, consequent, alternate);
 }
 
-auto Parser::ParseSymbolExpr() -> SymbolExpr* {
-  const auto symbol = ParseSymbol();
-  ASSERT(symbol);
-  return SymbolExpr::New(symbol);
-}
-
 auto Parser::ParseArguments(ArgumentSet& args) -> bool {
   uint64_t num_args = 0;
   while (PeekEq(Token::kIdentifier)) {
@@ -242,10 +238,8 @@ auto Parser::ParseSetExpr() -> SetExpr* {
 }
 
 auto Parser::ParseExpression() -> Expression* {
-  if (stream().Peek().IsLiteral())
+  if (stream().Peek().IsLiteral() || stream().Peek().kind == Token::kIdentifier)
     return ParseLiteralExpr();
-  else if (stream().Peek().kind == Token::kIdentifier)
-    return ParseSymbolExpr();
 
   Expression* expr = nullptr;
   ExpectNext(Token::kLParen);

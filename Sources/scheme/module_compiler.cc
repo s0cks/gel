@@ -119,11 +119,6 @@ auto DefinitionVisitor::VisitCallProcExpr(expr::CallProcExpr* expr) -> bool {
   return false;
 }
 
-auto DefinitionVisitor::VisitSymbolExpr(expr::SymbolExpr* expr) -> bool {
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return false;
-}
-
 auto DefinitionVisitor::VisitConsExpr(expr::ConsExpr* expr) -> bool {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
   return false;

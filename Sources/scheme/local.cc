@@ -1,7 +1,6 @@
 #include "scheme/local.h"
 
 #include "scheme/local_scope.h"
-#include "scheme/type.h"
 
 namespace scm {
 auto LocalVariable::IsGlobal() const -> bool {

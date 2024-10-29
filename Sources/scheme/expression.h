@@ -23,7 +23,6 @@
   V(ImportDef)                      \
   V(MacroDef)                       \
   V(EvalExpr)                       \
-  V(SymbolExpr)                     \
   V(CallProcExpr)                   \
   V(SetExpr)                        \
   V(ThrowExpr)
@@ -64,6 +63,10 @@ class Expression {
     // do nothing
   }
 
+  virtual void RemoveChildAt(const uint64_t idx) {
+    // do nothing
+  }
+
  public:
   virtual ~Expression() = default;
   virtual auto GetName() const -> const char* = 0;
@@ -96,6 +99,10 @@ class Expression {
 
   inline auto IsDefinition() -> bool {
     return AsDefinition() != nullptr;
+  }
+
+  virtual auto VisitAllDefinitions(ExpressionVisitor* vis) -> bool {
+    return true;
   }
 
   virtual auto VisitChildren(ExpressionVisitor* vis) -> bool {
@@ -243,16 +250,6 @@ class BinaryOpExpr : public TemplateExpression<2> {
     SetRight(right);
   }
 
-  inline void SetLeft(Expression* value) {
-    ASSERT(value);
-    SetChildAt(kLeftInput, value);
-  }
-
-  inline void SetRight(Expression* value) {
-    ASSERT(value);
-    SetChildAt(kRightInput, value);
-  }
-
  public:
   ~BinaryOpExpr() override = default;
 
@@ -268,12 +265,22 @@ class BinaryOpExpr : public TemplateExpression<2> {
     return GetLeft() != nullptr;
   }
 
+  inline void SetLeft(Expression* value) {
+    ASSERT(value);
+    SetChildAt(kLeftInput, value);
+  }
+
   auto GetRight() const -> Expression* {
     return GetChildAt(kRightInput);
   }
 
   inline auto HasRight() const -> bool {
     return GetRight() != nullptr;
+  }
+
+  inline void SetRight(Expression* value) {
+    ASSERT(value);
+    SetChildAt(kRightInput, value);
   }
 
 #define DEFINE_OP_CHECK(Name)                \
@@ -316,16 +323,6 @@ class ConsExpr : public TemplateExpression<2> {
     SetCdr(right);
   }
 
-  inline void SetCar(Expression* value) {
-    ASSERT(value);
-    SetChildAt(kLeftInput, value);
-  }
-
-  inline void SetCdr(Expression* value) {
-    ASSERT(value);
-    SetChildAt(kRightInput, value);
-  }
-
  public:
   ~ConsExpr() override = default;
 
@@ -337,12 +334,22 @@ class ConsExpr : public TemplateExpression<2> {
     return GetCar() != nullptr;
   }
 
+  inline void SetCar(Expression* value) {
+    ASSERT(value);
+    SetChildAt(kLeftInput, value);
+  }
+
   auto GetCdr() const -> Expression* {
     return GetChildAt(kRightInput);
   }
 
   inline auto HasCdr() const -> bool {
     return GetCdr() != nullptr;
+  }
+
+  inline void SetCdr(Expression* value) {
+    ASSERT(value);
+    SetChildAt(kRightInput, value);
   }
 
   auto IsConstantExpr() const -> bool override;
@@ -384,11 +391,6 @@ class UnaryExpr : public TemplateExpression<1> {
     SetChildAt(0, value);
   }
 
-  inline void SetValue(Expression* expr) {
-    ASSERT(expr);
-    SetChildAt(0, expr);
-  }
-
  public:
   ~UnaryExpr() override = default;
 
@@ -402,6 +404,11 @@ class UnaryExpr : public TemplateExpression<1> {
 
   inline auto HasValue() const -> bool {
     return GetValue() != nullptr;
+  }
+
+  inline void SetValue(Expression* expr) {
+    ASSERT(expr);
+    SetChildAt(0, expr);
   }
 
   DECLARE_EXPRESSION(UnaryExpr);
@@ -466,17 +473,6 @@ class SequenceExpr : public Expression {
     children_.insert(std::end(children_), std::begin(children), std::end(children));
   }
 
-  inline void Append(Expression* expr) {
-    ASSERT(expr);
-    children_.push_back(expr);
-  }
-
-  void SetChildAt(const uint64_t idx, Expression* value) override {
-    ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
-    ASSERT(value);
-    children_[idx] = value;
-  }
-
  public:
   ~SequenceExpr() override = default;
 
@@ -489,8 +485,25 @@ class SequenceExpr : public Expression {
     return children_[idx];
   }
 
+  void SetChildAt(const uint64_t idx, Expression* value) override {
+    ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
+    ASSERT(value);
+    children_[idx] = value;
+  }
+
+  inline void Append(Expression* expr) {
+    ASSERT(expr);
+    children_.push_back(expr);
+  }
+
+  void RemoveChildAt(const uint64_t idx) override {
+    ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
+    children_.erase(children_.begin() + idx);
+  }
+
   auto IsConstantExpr() const -> bool override;
   auto VisitChildren(ExpressionVisitor* vis) -> bool override;
+  auto VisitAllDefinitions(ExpressionVisitor* vis) -> bool override;
 };
 
 class BeginExpr : public SequenceExpr {
@@ -597,41 +610,6 @@ class CallProcExpr : public Expression {
  public:
   static inline auto New(Expression* target, const ExpressionList& args = {}) -> CallProcExpr* {
     return new CallProcExpr(target, args);
-  }
-};
-
-class SymbolExpr : public TemplateExpression<0> {
- private:
-  Symbol* symbol_ = nullptr;
-
- protected:
-  explicit SymbolExpr(Symbol* symbol) :
-    TemplateExpression<0>() {
-    SetSymbol(symbol);
-  }
-
-  inline void SetSymbol(Symbol* symbol) {
-    ASSERT(symbol);
-    symbol_ = symbol;
-  }
-
- public:
-  ~SymbolExpr() override = default;
-
-  auto GetSymbol() const -> Symbol* {
-    return symbol_;
-  }
-
-  inline auto HasSymbol() const -> bool {
-    return GetSymbol() != nullptr;
-  }
-
-  DECLARE_EXPRESSION(SymbolExpr);
-
- public:
-  static inline auto New(Symbol* symbol) -> SymbolExpr* {
-    ASSERT(symbol);
-    return new SymbolExpr(symbol);
   }
 };
 
@@ -761,6 +739,11 @@ class LambdaExpr : public Expression {
     return body_;
   }
 
+  inline auto HasBody() const -> bool {
+    return GetBody() != nullptr;
+  }
+
+  auto VisitChildren(ExpressionVisitor* vis) -> bool override;
   DECLARE_EXPRESSION(LambdaExpr);
 
  public:
@@ -991,6 +974,10 @@ class MacroDef : public TemplateDefinition<1> {
 
   inline auto GetBody() const -> Expression* {
     return GetChildAt(0);
+  }
+
+  inline auto HasBody() const -> bool {
+    return GetBody() != nullptr;
   }
 
   DECLARE_EXPRESSION(MacroDef);

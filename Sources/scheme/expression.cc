@@ -33,6 +33,17 @@ auto SequenceExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
   return true;
 }
 
+auto SequenceExpr::VisitAllDefinitions(ExpressionVisitor* vis) -> bool {
+  ASSERT(vis);
+  for (const auto& expr : children_) {
+    if (expr->IsDefinition()) {
+      if (!expr->Accept(vis))
+        return false;
+    }
+  }
+  return true;
+}
+
 auto LiteralExpr::ToString() const -> std::string {
   std::stringstream ss;
   ss << GetName() << "(";
@@ -135,14 +146,6 @@ auto CallProcExpr::ToString() const -> std::string {
   return ss.str();
 }
 
-auto SymbolExpr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << GetName() << "(";
-  ss << "symbol=" << GetSymbol();
-  ss << ")";
-  return ss.str();
-}
-
 auto SetExpr::ToString() const -> std::string {
   std::stringstream ss;
   ss << GetName() << "(";
@@ -175,10 +178,21 @@ auto CondExpr::ToString() const -> std::string {
   return ss.str();
 }
 
+auto LambdaExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
+  ASSERT(vis);
+  if (!HasBody())
+    return true;
+  if (!GetBody()->Accept(vis))
+    return false;
+  return true;
+}
+
 auto LambdaExpr::ToString() const -> std::string {
   std::stringstream ss;
   ss << GetName() << "(";
   ss << "args=" << GetArgs();
+  if (HasBody())
+    ss << ", body=" << GetBody()->ToString();
   ss << ")";
   return ss.str();
 }

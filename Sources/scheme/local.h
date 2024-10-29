@@ -5,7 +5,7 @@
 #include <string>
 #include <utility>
 
-#include "scheme/common.h"
+#include "scheme/type.h"
 
 namespace scm {
 class LocalVariable;
@@ -20,8 +20,6 @@ class LocalVariableVisitor {
   virtual auto VisitLocal(LocalVariable* local) -> bool = 0;
 };
 
-class Type;
-class Symbol;
 class LocalScope;
 class LocalVariable {
   friend class LocalScope;
@@ -93,7 +91,7 @@ class LocalVariable {
     stream << "index=" << rhs.GetIndex() << ", ";
     stream << "name=" << rhs.GetName() << ", ";
     if (rhs.HasValue())
-      stream << "value=" << rhs.GetValue();
+      stream << "value=" << rhs.GetValue()->ToString();
     stream << ")";
     return stream;
   }

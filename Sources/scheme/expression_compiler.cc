@@ -4,15 +4,35 @@
 
 #include <chrono>
 
+#include "scheme/common.h"
+#include "scheme/expression.h"
 #include "scheme/expression_dot.h"
 #include "scheme/flags.h"
 #include "scheme/flow_graph_builder.h"
 #include "scheme/flow_graph_dot.h"
 #include "scheme/instruction.h"
+#include "scheme/macro.h"
 #include "scheme/parser.h"
 #include "scheme/runtime.h"
 
 namespace scm {
+class ExpressionLogger : public ExpressionVisitor {
+  DEFINE_NON_COPYABLE_TYPE(ExpressionLogger);
+
+ public:
+  ExpressionLogger() = default;
+  ~ExpressionLogger() override = default;
+
+#define DEFINE_VISIT(Name)                        \
+  auto Visit##Name(Name* expr) -> bool override { \
+    ASSERT(expr);                                 \
+    LOG(INFO) << expr->ToString();                \
+    return true;                                  \
+  }
+  FOR_EACH_EXPRESSION_NODE(DEFINE_VISIT)
+#undef DEFINE_VISIT
+};
+
 auto ExpressionCompiler::CompileExpression(Expression* expr) -> CompiledExpression* {
   ASSERT(expr);
 #ifdef SCM_DEBUG
@@ -21,7 +41,25 @@ auto ExpressionCompiler::CompileExpression(Expression* expr) -> CompiledExpressi
     ASSERT(dotgraph);
     dotgraph->RenderPngToFilename(GetReportFilename("exec_expr_ast.png"));
   }
+
+  ExpressionLogger logger;
+  LOG(INFO) << "definitions:";
+  LOG_IF(FATAL, !expr->VisitAllDefinitions(&logger)) << "failed to visit definitions for: " << expr->ToString();
 #endif  // SCM_DEBUG
+
+  {
+    MacroExpander expander;
+    if (expander.Expand(&expr)) {
+#ifdef SCM_DEBUG
+      if (FLAGS_dump_ast) {
+        const auto dotgraph = expr::ExpressionToDot::BuildGraph("expr", expr);
+        ASSERT(dotgraph);
+        dotgraph->RenderPngToFilename(GetReportFilename("exec_expr_ast_expanded.png"));
+      }
+#endif  // SCM_DEBUG
+    }
+  }
+
   const auto flow_graph = FlowGraphBuilder::Build(expr);
   ASSERT(flow_graph);
   ASSERT(flow_graph->HasEntry());

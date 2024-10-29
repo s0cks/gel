@@ -24,79 +24,61 @@ struct Position {
   }
 };
 
+#define FOR_EACH_TOKEN(V) \
+  V(Comment)              \
+  V(LocalDef)             \
+  V(ModuleDef)            \
+  V(ImportDef)            \
+  V(MacroDef)             \
+  V(LambdaExpr)           \
+  V(BeginExpr)            \
+  V(SetExpr)              \
+  V(ConsExpr)             \
+  V(CarExpr)              \
+  V(CdrExpr)              \
+  V(ThrowExpr)            \
+  V(Plus)                 \
+  V(Minus)                \
+  V(Multiply)             \
+  V(Divide)               \
+  V(Modulus)              \
+  V(Hash)                 \
+  V(Quote)                \
+  V(Equals)               \
+  V(DoubleQuote)          \
+  V(Cond)                 \
+  V(Not)                  \
+  V(And)                  \
+  V(Or)                   \
+  V(LParen)               \
+  V(RParen)               \
+  V(Identifier)           \
+  V(LiteralNumber)        \
+  V(LiteralDouble)        \
+  V(LiteralLong)          \
+  V(LiteralTrue)          \
+  V(LiteralFalse)         \
+  V(LiteralString)
+
 struct Token {
  public:
   enum Kind : int16_t {
     kEndOfStream = -1,
     kInvalid = 0,
-    kComment,
-    // Definitions
-    kLocalDef,
-    kModuleDef,
-    kImportDef,
-    kMacroDef,
-    // Expressions
-    kLambdaExpr,
-    kBeginExpr,
-    kSetExpr,
-    kConsExpr,
-    kCarExpr,
-    kCdrExpr,
-    kThrowExpr,
-    kPlus,
-    kMinus,
-    kMultiply,
-    kDivide,
-    kModulus,
-    kHash,
-    kQuote,
-    kEquals,
-    kDoubleQuote,
-    kCond,
-    kNot,
-    kAnd,
-    kOr,
-    // Symbols
-    kLParen,
-    kRParen,
-    kIdentifier,
-    // Literals
-    kLiteralNumber,
-    kLiteralDouble,
-    kLiteralLong,
-    kLiteralTrue,
-    kLiteralFalse,
-    kLiteralString,
+#define DEFINE_TOKEN(Name) k##Name,
+    FOR_EACH_TOKEN(DEFINE_TOKEN)
+#undef DEFINE_TOKEN
   };
 
   friend auto operator<<(std::ostream& stream, const Kind& rhs) -> std::ostream& {
     switch (rhs) {
       case kEndOfStream:
         return stream << "EndOfStream";
-      case kLParen:
-        return stream << "LParen";
-      case kRParen:
-        return stream << "RParen";
-      case kIdentifier:
-        return stream << "Identifier";
-      case kLiteralNumber:
-        return stream << "LiteralNumber";
-      case kLiteralLong:
-        return stream << "LiteralLong";
-      case kLiteralDouble:
-        return stream << "LiteralDouble";
-      case kLiteralTrue:
-        return stream << "LiteralTrue";
-      case kLiteralFalse:
-        return stream << "LiteralFalse";
-      case kLiteralString:
-        return stream << "LiteralString";
-      case kLocalDef:
-        return stream << "LocalDef";
-      case kImportDef:
-        return stream << "ImportDef";
-      case kBeginExpr:
-        return stream << "BeginExpr";
+#define DEFINE_TO_STRING(Name) \
+  case Kind::k##Name:          \
+    return stream << #Name;
+        FOR_EACH_TOKEN(DEFINE_TO_STRING)
+#undef DEFINE_TO_STRING
       default:
         return stream << "Unknown Token::Kind: " << static_cast<uint16_t>(rhs);
     }

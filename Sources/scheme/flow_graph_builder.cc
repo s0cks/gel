@@ -29,12 +29,8 @@ auto FlowGraphBuilder::BuildGraph() -> FlowGraph* {
     return nullptr;  // TODO: free entry
   }
   AppendFragment(target_entry, for_effect);
-
-  const auto last = target_entry->GetLastInstruction();
-  ASSERT(last);
-  if (!last->IsReturnInstr() && last->IsDefinition())
-    last->Append(new ReturnInstr(dynamic_cast<instr::Definition*>(last)));  // NOLINT
-
+  if (for_effect.HasValue())
+    target_entry->Append(new ReturnInstr(for_effect.GetValue()));  // NOLINT
   SetGraphEntry(graph_entry);
   graph_entry->Append(target_entry);
   graph_entry->AddDominated(target_entry);
@@ -66,14 +62,6 @@ auto EffectVisitor::VisitCallProcExpr(CallProcExpr* expr) -> bool {
   return true;
 }
 
-auto EffectVisitor::VisitSymbolExpr(SymbolExpr* expr) -> bool {
-  ASSERT(expr);
-  const auto symbol = expr->GetSymbol();
-  ASSERT(symbol);
-  ReturnDefinition(LoadVariableInstr::New(symbol));
-  return true;
-}
-
 auto EffectVisitor::VisitModuleDef(ModuleDef* expr) -> bool {
   ASSERT(expr);
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
@@ -98,7 +86,7 @@ auto EffectVisitor::VisitBeginExpr(BeginExpr* expr) -> bool {
   while (IsOpen() && (idx < expr->GetNumberOfChildren())) {
     const auto child = expr->GetChildAt(idx++);
     ASSERT(child);
-    EffectVisitor vis(GetOwner());
+    ValueVisitor vis(GetOwner());
     if (!child->Accept(&vis))
       break;
     Append(vis);
@@ -219,7 +207,13 @@ auto EffectVisitor::VisitLocalDef(LocalDef* expr) -> bool {
 
 auto EffectVisitor::VisitLiteralExpr(LiteralExpr* p) -> bool {
   ASSERT(p);
-  ReturnDefinition(ConstantInstr::New(p->GetValue()));
+  const auto value = p->GetValue();
+  ASSERT(value);
+  if (value->IsSymbol()) {
+    ReturnDefinition(instr::LoadVariableInstr::New(value->AsSymbol()));
+  } else {
+    ReturnDefinition(ConstantInstr::New(p->GetValue()));
+  }
   return true;
 }
 
