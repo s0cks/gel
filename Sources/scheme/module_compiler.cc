@@ -65,6 +65,12 @@ auto DefinitionVisitor::VisitImportDef(expr::ImportDef* expr) -> bool {
   return false;
 }
 
+auto DefinitionVisitor::VisitThrowExpr(expr::ThrowExpr* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
+
 auto DefinitionVisitor::VisitLiteralExpr(expr::LiteralExpr* expr) -> bool {
   ASSERT(expr);
   ASSERT(expr->IsConstantExpr());

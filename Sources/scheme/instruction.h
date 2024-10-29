@@ -25,7 +25,8 @@ namespace instr {
   V(CallProcInstr)              \
   V(ReturnInstr)                \
   V(BranchInstr)                \
-  V(GotoInstr)
+  V(GotoInstr)                  \
+  V(ThrowInstr)
 
 class Instruction;
 #define FORWARD_DECLARE(Name) class Name;
@@ -354,6 +355,31 @@ class StoreVariableInstr : public Instruction {
     ASSERT(symbol);
     ASSERT(value);
     return new StoreVariableInstr(symbol, value);
+  }
+};
+
+class ThrowInstr : public Instruction {
+ private:
+  Definition* value_;
+
+ protected:
+  explicit ThrowInstr(Definition* value) :
+    Instruction(),
+    value_(value) {}
+
+ public:
+  ~ThrowInstr() override = default;
+
+  auto GetValue() const -> Definition* {
+    return value_;
+  }
+
+  DECLARE_INSTRUCTION(ThrowInstr);
+
+ public:
+  static inline auto New(Definition* defn) -> ThrowInstr* {
+    ASSERT(defn);
+    return new ThrowInstr(defn);
   }
 };
 

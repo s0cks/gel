@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include "scheme/common.h"
+#include "scheme/error.h"
 #include "scheme/expression.h"
 #include "scheme/expression_compiler.h"
 #include "scheme/instruction.h"
@@ -28,7 +29,8 @@ static inline auto Truth(scm::Type* rhs) -> bool {
 DEFINE_bool(kernel, true, "Load the kernel at boot.");
 DEFINE_string(module_dir, "", "The directories to load modules from.");
 
-Runtime::Runtime(LocalScope* scope) {
+Runtime::Runtime(LocalScope* scope) :
+  ExecutionStack() {
   ASSERT(scope);
   SetScope(scope);
   if (FLAGS_kernel)
@@ -286,7 +288,7 @@ auto Runtime::VisitStoreVariableInstr(StoreVariableInstr* instr) -> bool {
   ASSERT(value);
   const auto symbol = instr->GetSymbol();
   ASSERT(symbol);
-  StoreSymbol(symbol, *value);
+  StoreSymbol(symbol, value);
   return true;
 }
 
@@ -300,7 +302,7 @@ auto Runtime::VisitConsInstr(ConsInstr* instr) -> bool {
   ASSERT(cdr);
   const auto car = Pop();
   ASSERT(car);
-  Push(Pair::New((*car), (*cdr)));
+  Push(Pair::New(car, cdr));
   return true;
 }
 
@@ -352,7 +354,7 @@ auto Runtime::VisitUnaryOpInstr(UnaryOpInstr* instr) -> bool {
     return false;
   }
 
-  const auto result = Unary(instr->GetOp(), (*value));
+  const auto result = Unary(instr->GetOp(), value);
   ASSERT(result);
   Push(result);
   return true;
@@ -365,6 +367,13 @@ auto Runtime::VisitGotoInstr(GotoInstr* instr) -> bool {
   return true;
 }
 
+auto Runtime::VisitThrowInstr(ThrowInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto error = Error::New(Pop());
+  throw error;
+  return true;
+}
+
 auto Runtime::VisitBranchInstr(BranchInstr* instr) -> bool {
   ASSERT(instr);
   const auto test = Pop();
@@ -372,7 +381,7 @@ auto Runtime::VisitBranchInstr(BranchInstr* instr) -> bool {
     DLOG(ERROR) << "no test value to pop from stack.";
     return false;
   }
-  const auto target = Truth(*test) ? instr->GetTrueTarget() : instr->GetFalseTarget();
+  const auto target = Truth(test) ? instr->GetTrueTarget() : instr->GetFalseTarget();
   ASSERT(target);
   SetCurrentInstr(target);
   return true;
@@ -386,28 +395,28 @@ auto Runtime::VisitBinaryOpInstr(BinaryOpInstr* instr) -> bool {
   ASSERT(left);
   switch (op) {
     case expr::kAdd:
-      Push(Add(*left, *right));
+      Push(Add(left, right));
       return true;
     case expr::kSubtract:
-      Push(Subtract(*left, *right));
+      Push(Subtract(left, right));
       return true;
     case expr::kMultiply:
-      Push(Multiply(*left, *right));
+      Push(Multiply(left, right));
       return true;
     case expr::kDivide:
-      Push(Divide(*left, *right));
+      Push(Divide(left, right));
       return true;
     case expr::kEquals:
-      Push(Equals(*left, *right));
+      Push(Equals(left, right));
       return true;
     case expr::kModulus:
-      Push(Modulus(*left, *right));
+      Push(Modulus(left, right));
       return true;
     case expr::kBinaryAnd:
-      Push(BinaryAnd(*left, *right));
+      Push(BinaryAnd(left, right));
       return true;
     case expr::kBinaryOr:
-      Push(BinaryOr(*left, *right));
+      Push(BinaryOr(left, right));
       return true;
     default:
       LOG(ERROR) << "invalid BinaryOp: " << op;
@@ -442,27 +451,22 @@ auto Runtime::Execute(EntryInstr* entry) -> Type* {
   }
 
   const auto result = Pop();
-  return result.value_or(Null::Get());
+  return result ? result : Null::Get();
 }
 
-auto Runtime::EvalWithScope(FlowGraph* flow_graph, LocalScope* scope) -> Type* {
-  ASSERT(flow_graph);
-  ASSERT(scope);
-  Runtime runtime(scope);
-  return runtime.Execute(flow_graph->GetEntry());
+auto Runtime::Eval(EntryInstr* graph_entry) -> Type* {
+  ASSERT(graph_entry);
+  Runtime runtime;
+  return runtime.Execute(graph_entry);
 }
 
-auto Runtime::EvalWithScope(const std::string& expr, LocalScope* scope) -> Type* {
+auto Runtime::Eval(const std::string& expr) -> Type* {
   ASSERT(!expr.empty());
-  ASSERT(scope);
-
 #ifdef SCM_DEBUG
   LOG(INFO) << "evaluating expression:" << std::endl << expr;
 #endif  // SCM_DEBUG
-
-  Runtime runtime(scope);
   const auto e = ExpressionCompiler::Compile(expr);
   ASSERT(e && e->HasEntry());
-  return runtime.Execute(e->GetEntry());
+  return Eval(e->GetEntry());
 }
 }  // namespace scm

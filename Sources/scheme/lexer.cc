@@ -175,6 +175,8 @@ auto TokenStream::Next() -> const Token& {
       return NextToken(Token::kAnd);
     else if (ident == "or")
       return NextToken(Token::kOr);
+    else if (ident == "throw")
+      return NextToken(Token::kThrowExpr);
     else if (ident == "eq?")
       return NextToken(Token::kEquals);
     else if (ident == "set!")

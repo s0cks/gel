@@ -20,7 +20,8 @@ namespace scm {
   V(String)              \
   V(Symbol)              \
   V(Macro)               \
-  V(CompiledExpression)
+  V(CompiledExpression)  \
+  V(Error)
 
 #define FORWARD_DECLARE(Name) class Name;
 FOR_EACH_TYPE(FORWARD_DECLARE)

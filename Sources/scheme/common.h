@@ -29,6 +29,43 @@
 
 #define NOT_IMPLEMENTED(Level) LOG(Level) << __FUNCTION__ << " is not implemented.";
 
-namespace scm {}  // namespace scm
+namespace scm {
+
+class Exception : public std::exception {
+  DEFINE_DEFAULT_COPYABLE_TYPE(Exception);
+
+ private:
+  std::string message_;
+
+ public:
+  explicit Exception(std::string message = "") :
+    std::exception(),
+    message_(std::move(message)) {}
+  ~Exception() override = default;
+
+  auto GetMessage() const -> const std::string& {
+    return message_;
+  }
+
+  auto what() const noexcept -> const char* override {
+    return message_.c_str();
+  }
+
+  auto operator==(const Exception& rhs) const -> bool {
+    return GetMessage() == rhs.GetMessage();
+  }
+
+  auto operator!=(const Exception& rhs) const -> bool {
+    return GetMessage() != rhs.GetMessage();
+  }
+
+  friend auto operator<<(std::ostream& stream, const Exception& rhs) -> std::ostream& {
+    stream << "RuntimeException(";
+    stream << "message=" << rhs.GetMessage();
+    stream << ")";
+    return stream;
+  }
+};
+}  // namespace scm
 
 #endif  // SCM_COMMON_H

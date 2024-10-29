@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 
 #include "gtest/gtest.h"
+#include "scheme/error.h"
 #include "scheme/expression_compiled.h"
 #include "scheme/lambda.h"
 #include "scheme/type.h"

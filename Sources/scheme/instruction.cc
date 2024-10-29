@@ -141,4 +141,12 @@ auto UnaryOpInstr::ToString() const -> std::string {
   ss << ")";
   return ss.str();
 }
+
+auto ThrowInstr::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "ThrowInstr(";
+  ss << "value=" << GetValue()->ToString();
+  ss << ")";
+  return ss.str();
+}
 }  // namespace scm::instr

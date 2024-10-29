@@ -41,6 +41,7 @@ struct Token {
     kConsExpr,
     kCarExpr,
     kCdrExpr,
+    kThrowExpr,
     kIdentifier,
     kPlus,
     kMinus,

@@ -52,6 +52,7 @@ class Parser {
   auto ParseCallProcExpr(std::string symbol) -> CallProcExpr*;
   auto ParseArguments(ArgumentSet& args) -> bool;
   auto ParseLambdaExpr() -> LambdaExpr*;
+  auto ParseThrowExpr() -> ThrowExpr*;
   auto ParseSymbolList(SymbolList& symbols) -> bool;
   auto ParseIdentifier(std::string& result) -> bool;
 

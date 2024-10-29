@@ -5,6 +5,8 @@
 #include <filesystem>
 #include <iostream>
 
+#include "scheme/common.h"
+#include "scheme/error.h"
 #include "scheme/expression_dot.h"
 #include "scheme/flags.h"
 #include "scheme/flow_graph_builder.h"
@@ -21,32 +23,23 @@ auto main(int argc, char** argv) -> int {
   ::google::ParseCommandLineFlags(&argc, &argv, true);
 
   Type::Init();
-
-  Module* m = nullptr;
-  const auto module_flag = GetModuleFlag();
-  if (module_flag) {
-    const auto module_expr = Parser::ParseModule((*module_flag));
-    ASSERT(module_expr);
-    m = ModuleCompiler::Compile(module_expr);
-  }
-
-  const auto scope = Runtime::CreateInitScope();
-  ASSERT(scope);
-  if (m) {
-#ifdef SCM_DEBUG
-    LOG(INFO) << "Module Scope:";
-    LocalScopePrinter::Print<>(m->GetScope(), __FILE__, __LINE__);
-#endif  // SCM_DEBUG
-    scope->Add(m->GetScope());
-  }
-
-  LocalScopePrinter::Print<>(scope, __FILE__, __LINE__);
-
   const auto expr = GetExpressionFlag();
   if (expr) {
-    const auto result = Runtime::EvalWithScope((*expr), scope);
-    ASSERT(result);
-    PrintValue(std::cout, result) << std::endl;
+    try {
+      const auto result = Runtime::Eval((*expr));
+      ASSERT(result);
+      PrintValue(std::cout, result) << std::endl;
+    } catch (const scm::Exception& exc) {
+      LOG(ERROR) << "failed to execute expression.";
+      std::cerr << " * expression: " << (*expr);
+      std::cerr << " * message: " << exc.GetMessage();
+      return EXIT_FAILURE;
+    } catch (const scm::Error* err) {
+      LOG(ERROR) << "failed to execute expression.";
+      std::cerr << " * expression: " << std::endl << "   " << (*expr) << std::endl;
+      std::cerr << " * message: " << err->GetMessage()->AsString()->Get() << std::endl;
+      return EXIT_FAILURE;
+    }
   }
 
   return EXIT_SUCCESS;

@@ -210,6 +210,12 @@ auto Parser::ParseSymbolList(SymbolList& symbols) -> bool {
   return true;
 }
 
+auto Parser::ParseThrowExpr() -> ThrowExpr* {
+  const auto value = ParseLiteralExpr();
+  ASSERT(value);
+  return ThrowExpr::New(value);
+}
+
 auto Parser::ParseLambdaExpr() -> LambdaExpr* {
   ExpectNext(Token::kLParen);
   ArgumentSet args;
@@ -264,6 +270,9 @@ auto Parser::ParseExpression() -> Expression* {
         break;
       case Token::kConsExpr:
         expr = ParseConsExpr();
+        break;
+      case Token::kThrowExpr:
+        expr = ParseThrowExpr();
         break;
       default:
         LOG(FATAL) << "unexpected: " << next;

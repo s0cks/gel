@@ -182,6 +182,14 @@ auto LambdaExpr::ToString() const -> std::string {
   return ss.str();
 }
 
+auto ThrowExpr::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << GetName() << "(";
+  ss << "value=" << GetValue()->ToString();
+  ss << ")";
+  return ss.str();
+}
+
 // Definitions
 
 auto LocalDef::ToString() const -> std::string {

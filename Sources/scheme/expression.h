@@ -24,7 +24,8 @@
   V(EvalExpr)                       \
   V(SymbolExpr)                     \
   V(CallProcExpr)                   \
-  V(SetExpr)
+  V(SetExpr)                        \
+  V(ThrowExpr)
 
 namespace scm {
 class Parser;
@@ -418,6 +419,37 @@ class UnaryExpr : public TemplateExpression<1> {
   static inline auto NewCdr(Expression* value) -> UnaryExpr* {
     ASSERT(value);
     return New(kCdr, value);
+  }
+};
+
+class ThrowExpr : public TemplateExpression<1> {
+ protected:
+  explicit ThrowExpr(LiteralExpr* value) {
+    SetValue(value);
+  }
+
+  inline void SetValue(LiteralExpr* expr) {
+    ASSERT(expr);
+    SetChildAt(0, expr);
+  }
+
+ public:
+  ~ThrowExpr() override = default;
+
+  inline auto GetValue() const -> LiteralExpr* {
+    return GetChildAt(0)->AsLiteralExpr();
+  }
+
+  inline auto HasValue() const -> bool {
+    return GetValue() != nullptr;
+  }
+
+  DECLARE_EXPRESSION(ThrowExpr);
+
+ public:
+  static inline auto New(LiteralExpr* value) -> ThrowExpr* {
+    ASSERT(value);
+    return new ThrowExpr(value);
   }
 };
 

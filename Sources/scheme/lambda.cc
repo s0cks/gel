@@ -27,7 +27,7 @@ auto Lambda::Apply(Runtime* runtime) const -> bool {
   for (const auto& arg : std::ranges::reverse_view(GetArgs())) {
     const auto value = runtime->Pop();
     ASSERT(value);
-    if (!scope->Add(Symbol::New(arg.GetName()), *value)) {
+    if (!scope->Add(Symbol::New(arg.GetName()), value)) {
       LOG(ERROR) << "failed to define argument value.";
       return false;
     }

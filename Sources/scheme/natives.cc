@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+#include "scheme/error.h"
 #include "scheme/local_scope.h"
 #include "scheme/procedure.h"
 #include "scheme/runtime.h"
@@ -22,9 +23,9 @@ NATIVE_PROCEDURE_F(import) {
   ASSERT(state);
   const auto arg = state->Pop();
   ASSERT(arg);
-  const auto symbol = ToSymbol(arg.value());
+  const auto symbol = ToSymbol(arg);
   if (!symbol) {
-    LOG(FATAL) << (*arg) << " is not a valid Symbol.";
+    LOG(FATAL) << arg << " is not a valid Symbol.";
     return false;
   }
 
@@ -42,7 +43,15 @@ NATIVE_PROCEDURE_F(print) {
   ASSERT(state);
   const auto value = state->Pop();
   ASSERT(value);
-  PrintValue(std::cout, (*value)) << std::endl;
+  PrintValue(std::cout, value) << std::endl;
+  return true;
+}
+
+NATIVE_PROCEDURE_F(throw_exc) {
+  ASSERT(state);
+  const auto message = state->Pop();
+  ASSERT(message && message->IsString());
+  state->Push(Error::New(message));
   return true;
 }
 
@@ -50,7 +59,7 @@ NATIVE_PROCEDURE_F(type) {
   ASSERT(state);
   const auto value = state->Pop();
   ASSERT(value);
-  state->Push(String::New((*value)->GetTypename()));
+  state->Push(String::New(value->GetTypename()));
   return true;
 }
 }  // namespace scm::proc

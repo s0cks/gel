@@ -230,6 +230,18 @@ auto EffectVisitor::VisitBinaryOpExpr(BinaryOpExpr* expr) -> bool {
   return true;
 }
 
+auto EffectVisitor::VisitThrowExpr(expr::ThrowExpr* expr) -> bool {
+  ASSERT(expr && expr->HasValue());
+  ValueVisitor for_value(GetOwner());
+  if (!expr->GetValue()->Accept(&for_value)) {
+    LOG(FATAL) << "failed to visit value: " << expr->GetValue()->ToString();
+    return false;
+  }
+  Append(for_value);
+  Add(ThrowInstr::New(for_value.GetValue()));
+  return true;
+}
+
 auto EffectVisitor::VisitSetExpr(expr::SetExpr* expr) -> bool {
   ASSERT(expr && expr->HasValue());
   ValueVisitor for_value(GetOwner());
