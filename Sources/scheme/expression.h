@@ -535,37 +535,67 @@ class EvalExpr : public TemplateExpression<1> {
   }
 };
 
-class CallProcExpr : public SequenceExpr {
+class CallProcExpr : public Expression {
  private:
-  Symbol* symbol_ = nullptr;
+  Expression* target_ = nullptr;
+  ExpressionList args_{};
 
  protected:
-  explicit CallProcExpr(Symbol* symbol, const ExpressionList& args) :
-    SequenceExpr(args) {
-    SetSymbol(symbol);
+  explicit CallProcExpr(Expression* target, const ExpressionList& args) :
+    Expression(),
+    args_(args) {
+    SetTarget(target);
   }
 
-  inline void SetSymbol(Symbol* symbol) {
-    ASSERT(symbol);
-    symbol_ = symbol;
+  inline void SetTarget(Expression* target) {
+    ASSERT(target);
+    target_ = target;
   }
 
  public:
   ~CallProcExpr() override = default;
 
-  auto GetSymbol() const -> Symbol* {
-    return symbol_;
+  auto GetTarget() const -> Expression* {
+    return target_;
   }
 
-  inline auto HasSymbol() const -> bool {
-    return GetSymbol() != nullptr;
+  inline auto HasTarget() const -> bool {
+    return GetTarget() != nullptr;
+  }
+
+  inline auto GetNumberOfArgs() const -> uint64_t {
+    return args_.size();
+  }
+
+  auto GetNumberOfChildren() const -> uint64_t override {
+    return GetNumberOfArgs() + 1;
+  }
+
+  auto GetArgAt(const uint64_t idx) const -> Expression* {
+    return GetChildAt(idx + 1);
+  }
+
+  auto GetChildAt(const uint64_t idx) const -> Expression* override {
+    ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
+    return idx == 0 ? GetTarget() : args_[idx - 1];
+  }
+
+  auto VisitChildren(ExpressionVisitor* vis) -> bool override {
+    ASSERT(vis);
+    if (!GetTarget()->Accept(vis))
+      return false;
+    for (const auto& arg : args_) {
+      if (!arg->Accept(vis))
+        return false;
+    }
+    return true;
   }
 
   DECLARE_EXPRESSION(CallProcExpr);
 
  public:
-  static inline auto New(Symbol* symbol, const ExpressionList& args = {}) -> CallProcExpr* {
-    return new CallProcExpr(symbol, args);
+  static inline auto New(Expression* target, const ExpressionList& args = {}) -> CallProcExpr* {
+    return new CallProcExpr(target, args);
   }
 };
 

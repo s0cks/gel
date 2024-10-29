@@ -65,11 +65,12 @@ find_package(Threads REQUIRED)
 find_package(glog CONFIG REQUIRED)
 find_package(gflags CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
+find_package(units CONFIG REQUIRED)
 
 if(APPLE)
   link_directories(/opt/homebrew/lib/)
 endif()
-link_libraries(Threads::Threads glog::glog gflags::gflags fmt::fmt)
+link_libraries(Threads::Threads glog::glog gflags::gflags fmt::fmt units::units)
 
 if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
   add_compile_definitions(SCM_DEBUG)

@@ -129,7 +129,8 @@ auto BeginExpr::ToString() const -> std::string {
 auto CallProcExpr::ToString() const -> std::string {
   std::stringstream ss;
   ss << GetName() << "(";
-  ss << "symbol=" << GetSymbol();
+  ss << "target=" << GetTarget()->ToString() << ", ";
+  ss << "num_args=" << GetNumberOfArgs();
   ss << ")";
   return ss.str();
 }

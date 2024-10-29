@@ -47,7 +47,8 @@ auto EffectVisitor::VisitEvalExpr(EvalExpr* expr) -> bool {
 }
 
 auto EffectVisitor::VisitCallProcExpr(CallProcExpr* expr) -> bool {
-  for (auto idx = 0; idx < expr->GetNumberOfChildren(); idx++) {
+  ASSERT(expr);
+  for (auto idx = 1; idx < expr->GetNumberOfChildren(); idx++) {
     const auto arg = expr->GetChildAt(idx);
     ASSERT(arg);
     ValueVisitor for_value(GetOwner());
@@ -55,9 +56,13 @@ auto EffectVisitor::VisitCallProcExpr(CallProcExpr* expr) -> bool {
     Append(for_value);
   }
 
-  const auto load_target = LoadVariableInstr::New(expr->GetSymbol());
-  Add(load_target);
-  ReturnDefinition(InvokeInstr::New(load_target));
+  ValueVisitor for_target(GetOwner());
+  if (!expr->GetTarget()->Accept(&for_target)) {
+    LOG(ERROR) << "failed to visit target: " << expr->GetTarget()->ToString();
+    return false;
+  }
+  Append(for_target);
+  ReturnDefinition(InvokeInstr::New(for_target.GetValue()));
   return true;
 }
 

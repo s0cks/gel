@@ -173,25 +173,6 @@
       ]
     },
     {
-      "name": "Eval Complex Module",
-      "type": "lldb",
-      "request": "launch",
-      "program": "${workspaceFolder}/build/Sources/scm",
-      "args": [
-        "-logtostdout",
-        "-colorlogtostdout",
-        "--module", "(defmodule test (define even? (lambda (x) (eq? (% x 2) 0))))",
-        "--reports-dir", "${workspaceFolder}/reports",
-        "--dump-ast",
-        "--dump-flow-graph",
-        "--expr", "(even? 10)"
-      ],
-      "cwd": "${workspaceFolder}",
-      "initCommands": [
-        "command source ${workspaceFolder}/.lldbinit"
-      ]
-    },
-    {
       "name": "Eval even? Expr (Debug)",
       "type": "lldb",
       "request": "launch",
@@ -203,7 +184,7 @@
         "--dump-ast",
         "--dump-flow-graph",
         "--module-dir", "${workspaceFolder}/scm",
-        "--expr", "(begin (define value ${input:even-value}) (print value) (cond (even? value) \"even\" \"odd\"))",
+        "--expr", "(begin (define value ${input:even-value}) (print (cond (even? value) \"even\" \"odd\")))",
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [

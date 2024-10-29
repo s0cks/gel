@@ -5,6 +5,7 @@
     "gflags",
     "glog",
     "gtest",
-    "tracy"
+    "tracy",
+    "units"
   ]
 }

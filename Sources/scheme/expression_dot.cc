@@ -141,11 +141,8 @@ auto ExpressionToDot::VisitCallProcExpr(CallProcExpr* expr) -> bool {
   {
     // create node labels
     // label
-    const auto symbol = expr->GetSymbol();
-    ASSERT(symbol);
     std::stringstream label;
     label << expr->GetName() << std::endl;
-    label << "Symbol := " << symbol->Get();
     SetNodeLabel(node, label);
   }
   {

@@ -1,5 +1,9 @@
 #include "scheme/expression_compiler.h"
 
+#include <units.h>
+
+#include <chrono>
+
 #include "scheme/expression_dot.h"
 #include "scheme/flags.h"
 #include "scheme/flow_graph_builder.h"
@@ -33,8 +37,19 @@ auto ExpressionCompiler::CompileExpression(Expression* expr) -> CompiledExpressi
 
 auto ExpressionCompiler::Compile(const std::string& expr) -> CompiledExpression* {
   ASSERT(!expr.empty());
+#ifdef SCM_DEBUG
+  LOG(INFO) << "compiling expression: " << std::endl << expr;
+  using Clock = std::chrono::high_resolution_clock;
+  const auto start = Clock::now();
+#endif  // SCM_DEBUG
   ByteTokenStream stream(expr);
   Parser parser(stream);
-  return Compile(parser.ParseExpression());
+  const auto result = Compile(parser.ParseExpression());
+#ifdef SCM_DEBUG
+  const auto stop = Clock::now();
+  const auto total_ns = std::chrono::duration_cast<std::chrono::milliseconds>((stop - start)).count();
+  DLOG(INFO) << "expression compiled in " << units::time::millisecond_t(total_ns);  // NOLINT
+#endif                                                                              // SCM_DEBUG
+  return result;
 }
 }  // namespace scm
