@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "scheme/common.h"
+#include "scheme/expression.h"
 
 namespace scm {
 void Type::Init() {
@@ -72,58 +73,76 @@ auto Bool::False() -> Bool* {
   return kFalse;
 }
 
-auto Number::Equals(Type* rhs) const -> bool {
-  if (!rhs->IsNumber())
-    return false;
-  const auto other = rhs->AsNumber();
-  return GetValue() == other->GetValue();
+auto Number::New(const uint64_t rhs) -> Number* {
+  return Long::New(rhs);
 }
 
-auto Number::ToString() const -> std::string {
+auto Number::New(const double rhs) -> Number* {
+  return Double::New(rhs);
+}
+
+#define FOR_EACH_NUMBER_BINARY_OP(V) \
+  V(Add, +)                          \
+  V(Sub, -)                          \
+  V(Mul, *)                          \
+  V(Div, /)
+
+#define DEFINE_BINARY_OP(Name, Op)                                                                                 \
+  auto Long::Name(Datum* rhs) const -> Datum* {                                                                    \
+    if (!rhs || !rhs->IsNumber()) {                                                                                \
+      LOG(ERROR) << rhs << " is not a Number.";                                                                    \
+      return Null::Get();                                                                                          \
+    }                                                                                                              \
+    const auto left_num = rhs->AsNumber();                                                                         \
+    ASSERT(left_num);                                                                                              \
+    const auto left_val = left_num->IsLong() ? left_num->GetLong() : static_cast<uint64_t>(left_num->GetDouble()); \
+    return Long::New(Get() Op left_val);                                                                           \
+  }
+FOR_EACH_NUMBER_BINARY_OP(DEFINE_BINARY_OP);
+DEFINE_BINARY_OP(Mod, %);
+#undef DEFINE_BINARY_OP
+
+auto Long::Equals(Type* rhs) const -> bool {
+  if (!rhs || !rhs->IsLong())
+    return false;
+  const auto other = rhs->AsLong();
+  return Get() == other->Get();
+}
+
+auto Long::ToString() const -> std::string {
   std::stringstream ss;
   ss << "Number(";
-  ss << "value=" << GetValue();
+  ss << "value=" << Get();
   ss << ")";
   return ss.str();
 }
 
-auto Number::Add(Datum* rhs) const -> Datum* {
-  if (rhs->IsNumber()) {
-    return Number::New(GetValue() + rhs->AsNumber()->GetValue());
+#define DEFINE_BINARY_OP(Name, Op)                                                          \
+  auto Double::Name(Datum* rhs) const -> Datum* {                                           \
+    if (!rhs || !rhs->IsNumber()) {                                                         \
+      LOG(ERROR) << rhs << " is not a Number.";                                             \
+      return Null::Get();                                                                   \
+    }                                                                                       \
+    const auto left_num = rhs->AsNumber();                                                  \
+    ASSERT(left_num);                                                                       \
+    const auto left_val = left_num->IsLong() ? left_num->GetLong() : left_num->GetDouble(); \
+    return Double::New(Get() Op left_val);                                                  \
   }
-  LOG(ERROR) << this << " + " << rhs << " is invalid!";
-  return Null::Get();
+FOR_EACH_NUMBER_BINARY_OP(DEFINE_BINARY_OP);
+#undef DEFINE_BINARY_OP
+
+auto Double::Equals(Type* rhs) const -> bool {
+  if (!rhs || !rhs->IsDouble())
+    return false;
+  return Get() == rhs->AsDouble()->Get();
 }
 
-auto Number::Sub(Datum* rhs) const -> Datum* {
-  if (rhs->IsNumber()) {
-    return Number::New(GetValue() - rhs->AsNumber()->GetValue());
-  }
-  LOG(ERROR) << this << " - " << rhs << " is invalid!";
-  return Null::Get();
-}
-
-auto Number::Mul(Datum* rhs) const -> Datum* {
-  if (rhs->IsNumber()) {
-    return Number::New(GetValue() * rhs->AsNumber()->GetValue());
-  }
-  LOG(ERROR) << this << " * " << rhs << " is invalid!";
-  return Null::Get();
-}
-
-auto Number::Div(Datum* rhs) const -> Datum* {
-  if (rhs->IsNumber()) {
-    return Number::New(GetValue() / rhs->AsNumber()->GetValue());
-  }
-  LOG(ERROR) << this << " / " << rhs << " is invalid!";
-  return Null::Get();
-}
-
-auto Number::Mod(Datum* rhs) const -> Datum* {
-  if (rhs->IsNumber())
-    return Number::New(GetValue() % rhs->AsNumber()->GetValue());
-  LOG(ERROR) << this << " % " << rhs << " is invalid!";
-  return Null::Get();
+auto Double::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "Double(";
+  ss << "value=" << Get();
+  ss << ")";
+  return ss.str();
 }
 
 auto Pair::Equals(Type* rhs) const -> bool {

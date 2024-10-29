@@ -17,8 +17,10 @@ ExpressionToDot::ExpressionToDot(const char* graph_name) :
 static inline auto ToString(Datum* datum) -> std::string {
   ASSERT(datum);
   std::stringstream ss;
-  if (datum->IsNumber()) {
-    ss << datum->AsNumber()->GetValue();
+  if (datum->IsLong()) {
+    ss << datum->AsLong()->Get();
+  } else if (datum->IsDouble()) {
+    ss << datum->AsDouble()->Get();
   } else if (datum->IsSymbol()) {
     ss << datum->AsSymbol()->Get();
   } else {

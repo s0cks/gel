@@ -48,6 +48,10 @@ static inline auto IsValidStringCharacter(const char c) -> bool {
   return c != EOF && !IsDoubleQuote(c);
 }
 
+static inline auto IsValidNumberChar(const char c, const bool whole = true) -> bool {
+  return isdigit(c) || (c == '.' && whole);
+}
+
 auto TokenStream::Next() -> const Token& {
   if (!peek_.IsInvalid()) {
     next_ = peek_;
@@ -129,8 +133,9 @@ auto TokenStream::Next() -> const Token& {
   } else if (isdigit(next)) {
     bool whole = true;
     uint64_t token_len = 0;
-    while (isdigit(PeekChar()) || (next == '.' && whole)) {
-      buffer_[token_len++] = NextChar();
+    while (IsValidNumberChar(PeekChar())) {
+      const auto next = NextChar();
+      buffer_[token_len++] = next;
       if (next == '.')
         whole = false;
     }

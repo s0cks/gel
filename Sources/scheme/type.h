@@ -17,6 +17,8 @@ namespace scm {
   V(Pair)                \
   V(List)                \
   V(Number)              \
+  V(Double)              \
+  V(Long)                \
   V(String)              \
   V(Symbol)              \
   V(Macro)               \
@@ -193,16 +195,52 @@ class Bool : public Datum {
 };
 
 class Number : public Datum {
- private:
-  uintptr_t value_;
+  friend class Long;
+  friend class Double;
+  DEFINE_NON_COPYABLE_TYPE(Number);
 
-  explicit Number(const uintptr_t value) :
+ private:
+  union {
+    uint64_t long_;
+    double double_;
+  };
+
+ protected:
+  explicit Number(const uint64_t value) :
     Datum(),
-    value_(value) {}
+    long_(value) {}
+  explicit Number(const double value) :
+    Datum(),
+    double_(value) {}
 
  public:
-  auto GetValue() const -> uintptr_t {
-    return value_;
+  ~Number() override = default;
+
+  auto GetLong() const -> uint64_t {
+    return long_;
+  }
+
+  auto GetDouble() const -> double {
+    return double_;
+  }
+
+  auto AsNumber() -> Number* override {
+    return this;
+  }
+
+ public:
+  static auto New(const uint64_t rhs) -> Number*;
+  static auto New(const double rhs) -> Number*;
+};
+
+class Long : public Number {
+ protected:
+  explicit Long(const uint64_t value) :
+    Number(value) {}
+
+ public:
+  inline auto Get() const -> uint64_t {
+    return GetLong();
   }
 
   auto Add(Datum* rhs) const -> Datum* override;
@@ -210,11 +248,33 @@ class Number : public Datum {
   auto Mul(Datum* rhs) const -> Datum* override;
   auto Div(Datum* rhs) const -> Datum* override;
   auto Mod(Datum* rhs) const -> Datum* override;
-  DECLARE_TYPE(Number);
+  DECLARE_TYPE(Long);
 
  public:
-  static inline auto New(const uintptr_t value) -> Number* {
-    return new Number(value);
+  static inline auto New(const uintptr_t value) -> Long* {
+    return new Long(value);
+  }
+};
+
+class Double : public Number {
+ protected:
+  Double(const double value) :
+    Number(value) {}
+
+ public:
+  inline auto Get() const -> double {
+    return GetDouble();
+  }
+
+  auto Add(Datum* rhs) const -> Datum* override;
+  auto Sub(Datum* rhs) const -> Datum* override;
+  auto Mul(Datum* rhs) const -> Datum* override;
+  auto Div(Datum* rhs) const -> Datum* override;
+  DECLARE_TYPE(Double);
+
+ public:
+  static inline auto New(const double value) -> Double* {
+    return new Double(value);
   }
 };
 
@@ -363,8 +423,10 @@ static inline auto PrintValue(std::ostream& stream, Type* value) -> std::ostream
     return stream << "`()";
   } else if (value->IsBool()) {
     return stream << (value->AsBool()->Get() ? "#t" : "#f");
-  } else if (value->IsNumber()) {
-    return stream << value->AsNumber()->GetValue();
+  } else if (value->IsDouble()) {
+    return stream << (value->AsDouble()->Get());
+  } else if (value->IsLong()) {
+    return stream << (value->AsLong())->Get();
   } else if (value->IsString()) {
     return stream << '"' << value->AsString()->Get() << '"';
   } else if (value->IsPair()) {

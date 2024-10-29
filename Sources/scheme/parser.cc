@@ -57,11 +57,11 @@ auto Parser::ParseLiteralExpr() -> LiteralExpr* {
     case Token::kLiteralFalse:
       return LiteralExpr::New(Bool::False());
     case Token::kLiteralLong:
-    case Token::kLiteralNumber:
-      return LiteralExpr::New(Number::New(next.AsLong()));
+      return LiteralExpr::New(Long::New(next.AsLong()));
+    case Token::kLiteralDouble:
+      return LiteralExpr::New(Double::New(next.AsDouble()));
     case Token::kLiteralString:
       return LiteralExpr::New(String::New(next.text));
-    case Token::kLiteralDouble:
     default:
       LOG(FATAL) << "unexpected: " << stream().Next();
       return nullptr;

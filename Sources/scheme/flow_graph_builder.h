@@ -13,9 +13,15 @@ class FlowGraphBuilder {
 
  private:
   Expression* expr_;
+  LocalScope* scope_ = nullptr;
   GraphEntryInstr* entry_ = nullptr;
   EntryInstr* block_ = nullptr;
   uint64_t num_blocks_ = 0;
+
+  inline void SetScope(LocalScope* scope) {
+    ASSERT(scope);
+    scope_ = scope;
+  }
 
   inline void SetCurrentBlock(EntryInstr* instr) {
     ASSERT(instr);

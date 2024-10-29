@@ -1,4 +1,7 @@
 (defmodule kernel
+  (define sq (lambda (x) (* x x)))
+  (define PI 3.14159)
+  (define TAU (* 2 PI))
   (define even? (lambda (x) (eq? (% x 2) 0)))
   (define number? (lambda (x) (eq? (type? x) "Number")))
   (define string? (lambda (x) (eq? (type? x) "String")))
