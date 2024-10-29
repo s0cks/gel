@@ -81,6 +81,15 @@ auto TokenStream::Next() -> const Token& {
     case '=':
       Advance();
       return NextToken(Token::kEquals);
+    case '&':
+      Advance();
+      return NextToken(Token::kAnd);
+    case '|':
+      Advance();
+      return NextToken(Token::kOr);
+    case '!':
+      Advance();
+      return NextToken(Token::kNot);
     case '#': {
       switch (tolower(PeekChar(1))) {
         case 'f':
@@ -160,8 +169,16 @@ auto TokenStream::Next() -> const Token& {
       return NextToken(Token::kLambdaExpr);
     else if (ident == "quote")
       return NextToken(Token::kQuote);
+    else if (ident == "not")
+      return NextToken(Token::kNot);
+    else if (ident == "and")
+      return NextToken(Token::kAnd);
+    else if (ident == "or")
+      return NextToken(Token::kOr);
     else if (ident == "eq?")
       return NextToken(Token::kEquals);
+    else if (ident == "set!")
+      return NextToken(Token::kSetExpr);
     else if (ident == "cond")
       return NextToken(Token::kCond);
     return NextToken(Token::kIdentifier, ident);

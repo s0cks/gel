@@ -14,6 +14,9 @@ class FlowGraphBuilder;
 namespace instr {
 #define FOR_EACH_INSTRUCTION(V) \
   V(ConstantInstr)              \
+  V(UnaryOpInstr)               \
+  V(BinaryOpInstr)              \
+  V(ConsInstr)                  \
   V(StoreVariableInstr)         \
   V(LoadVariableInstr)          \
   V(GraphEntryInstr)            \
@@ -21,11 +24,8 @@ namespace instr {
   V(JoinEntryInstr)             \
   V(CallProcInstr)              \
   V(ReturnInstr)                \
-  V(BinaryOpInstr)              \
   V(BranchInstr)                \
-  V(GotoInstr)                  \
-  V(ConsInstr)                  \
-  V(UnaryOpInstr)
+  V(GotoInstr)
 
 class Instruction;
 #define FORWARD_DECLARE(Name) class Name;

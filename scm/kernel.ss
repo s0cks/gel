@@ -4,4 +4,6 @@
   (define string? (lambda (x) (eq? (type? x) "String")))
   (define symbol? (lambda (x) (eq? (type? x) "Symbol")))
   (define lambda? (lambda (x) (eq? (type? x) "Lambda")))
+  (define pair? (lambda (x) (eq? (type? x) "Pair")))
+  (define module? (lambda (x) (eq? (type? x) "Module")))
   (define procedure? (lambda (x) (eq? (type? x) "Procedure"))))

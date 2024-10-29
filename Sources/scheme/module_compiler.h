@@ -59,19 +59,9 @@ class DefinitionVisitor : public expr::ExpressionVisitor {
     return owner_;
   }
 
-  auto VisitModuleDef(expr::ModuleDef* expr) -> bool override;
-  auto VisitLiteralExpr(expr::LiteralExpr* expr) -> bool override;
-  auto VisitEvalExpr(expr::EvalExpr* expr) -> bool override;
-  auto VisitBeginExpr(expr::BeginExpr* expr) -> bool override;
-  auto VisitLambdaExpr(expr::LambdaExpr* expr) -> bool override;
-  auto VisitCondExpr(expr::CondExpr* expr) -> bool override;
-  auto VisitCallProcExpr(expr::CallProcExpr* expr) -> bool override;
-  auto VisitSymbolExpr(expr::SymbolExpr* expr) -> bool override;
-  auto VisitLocalDef(expr::LocalDef* expr) -> bool override;
-  auto VisitBinaryOpExpr(expr::BinaryOpExpr* expr) -> bool override;
-  auto VisitImportDef(expr::ImportDef* expr) -> bool override;
-  auto VisitConsExpr(expr::ConsExpr* expr) -> bool override;
-  auto VisitUnaryExpr(expr::UnaryExpr* expr) -> bool override;
+#define DEFINE_VISIT(Name) auto Visit##Name(Name* expr) -> bool override;
+  FOR_EACH_EXPRESSION_NODE(DEFINE_VISIT)
+#undef DEFINE_VISIT
 };
 
 class DefinitionValueVisitor : public DefinitionVisitor {

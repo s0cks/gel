@@ -233,6 +233,30 @@ auto ExpressionToDot::VisitLambdaExpr(LambdaExpr* expr) -> bool {
   return true;
 }
 
+auto ExpressionToDot::VisitSetExpr(SetExpr* expr) -> bool {
+  ASSERT(expr);
+  const auto node = NewNode();
+  ASSERT(node);
+  {
+    // create node labels
+    // label
+    std::stringstream label;
+    label << expr->GetName() << std::endl;
+    label << "Symbol := " << expr->GetSymbol();
+    SetNodeLabel(node, label);
+  }
+  CreateEdgeFromParent(node);
+  {
+    // process children
+    NodeScope scope(this, node);
+    if (!expr->VisitChildren(this)) {
+      LOG(ERROR) << "failed to visit children of: " << expr->ToString();
+      return false;
+    }
+  }
+  return true;
+}
+
 auto ExpressionToDot::VisitCondExpr(CondExpr* expr) -> bool {
   ASSERT(expr);
   const auto node = NewNode();

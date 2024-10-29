@@ -10,6 +10,22 @@
 #include "scheme/token.h"
 
 namespace scm {
+static inline auto IsValidBinaryOp(const Token& rhs) -> bool {
+  switch (rhs.kind) {
+    case Token::kPlus:
+    case Token::kMinus:
+    case Token::kMultiply:
+    case Token::kDivide:
+    case Token::kModulus:
+    case Token::kAnd:
+    case Token::kOr:
+    case Token::kEquals:
+      return true;
+    default:
+      return false;
+  }
+}
+
 void Parser::PushScope() {
   const auto old_scope = GetScope();
   ASSERT(old_scope);
@@ -76,6 +92,7 @@ auto Parser::ParseCallProcExpr(std::string name) -> CallProcExpr* {
 }
 
 static inline auto ToBinaryOp(const Token& rhs) -> BinaryOp {
+  ASSERT(IsValidBinaryOp(rhs));
   switch (rhs.kind) {
     case Token::kPlus:
       return BinaryOp::kAdd;
@@ -89,6 +106,10 @@ static inline auto ToBinaryOp(const Token& rhs) -> BinaryOp {
       return BinaryOp::kModulus;
     case Token::kEquals:
       return BinaryOp::kEquals;
+    case Token::kAnd:
+      return BinaryOp::kBinaryAnd;
+    case Token::kOr:
+      return BinaryOp::kBinaryOr;
     default:
       LOG(FATAL) << "unexpected: " << rhs;
   }
@@ -96,6 +117,8 @@ static inline auto ToBinaryOp(const Token& rhs) -> BinaryOp {
 
 static inline auto ToUnaryOp(const Token& rhs) -> expr::UnaryOp {
   switch (rhs.kind) {
+    case Token::kNot:
+      return expr::UnaryOp::kNot;
     case Token::kCarExpr:
       return expr::UnaryOp::kCar;
     case Token::kCdrExpr:
@@ -107,6 +130,7 @@ static inline auto ToUnaryOp(const Token& rhs) -> expr::UnaryOp {
 
 static inline auto IsValidUnaryOp(const Token& rhs) -> bool {
   switch (rhs.kind) {
+    case Token::kNot:
     case Token::kCarExpr:
     case Token::kCdrExpr:
       return true;
@@ -116,18 +140,14 @@ static inline auto IsValidUnaryOp(const Token& rhs) -> bool {
 }
 
 auto Parser::ParseUnaryExpr() -> expr::UnaryExpr* {
-  const auto next = stream().Next();
-  ASSERT(IsValidUnaryOp(next));
-  const auto op = ToUnaryOp(next);
+  const auto op = ToUnaryOp(stream().Next());
   const auto value = ParseExpression();
   ASSERT(value);
   return expr::UnaryExpr::New(op, value);
 }
 
 auto Parser::ParseBinaryOpExpr() -> BinaryOpExpr* {
-  const auto& next = stream().Next();
-  const auto op = ToBinaryOp(next);
-
+  const auto op = ToBinaryOp(stream().Next());
   auto left_expr = ParseExpression();
   auto right_expr = ParseExpression();
   do {
@@ -163,20 +183,6 @@ auto Parser::ParseCondExpr() -> CondExpr* {
     return nullptr;
   }
   return CondExpr::New(test, consequent, alternate);
-}
-
-static inline auto IsBinaryOp(const Token& rhs) -> bool {
-  switch (rhs.kind) {
-    case Token::kModulus:
-    case Token::kPlus:
-    case Token::kMinus:
-    case Token::kMultiply:
-    case Token::kDivide:
-    case Token::kEquals:
-      return true;
-    default:
-      return false;
-  }
 }
 
 auto Parser::ParseSymbolExpr() -> SymbolExpr* {
@@ -215,6 +221,14 @@ auto Parser::ParseLambdaExpr() -> LambdaExpr* {
   return LambdaExpr::New(args, ParseExpression());
 }
 
+auto Parser::ParseSetExpr() -> SetExpr* {
+  const auto symbol = ParseSymbol();
+  ASSERT(symbol);
+  const auto value = ParseExpression();
+  ASSERT(value);
+  return SetExpr::New(symbol, value);
+}
+
 auto Parser::ParseExpression() -> Expression* {
   if (stream().Peek().IsLiteral())
     return ParseLiteralExpr();
@@ -223,10 +237,10 @@ auto Parser::ParseExpression() -> Expression* {
 
   Expression* expr = nullptr;
   ExpectNext(Token::kLParen);
-  if (IsBinaryOp(stream().Peek())) {
-    expr = ParseBinaryOpExpr();
-  } else if (IsValidUnaryOp(stream().Peek())) {
+  if (IsValidUnaryOp(stream().Peek())) {
     expr = ParseUnaryExpr();
+  } else if (IsValidBinaryOp(stream().Peek())) {
+    expr = ParseBinaryOpExpr();
   } else {
     const auto& next = stream().Next();
     switch (next.kind) {
@@ -241,6 +255,9 @@ auto Parser::ParseExpression() -> Expression* {
         break;
       case Token::kLambdaExpr:
         expr = ParseLambdaExpr();
+        break;
+      case Token::kSetExpr:
+        expr = ParseSetExpr();
         break;
       case Token::kCond:
         expr = ParseCondExpr();

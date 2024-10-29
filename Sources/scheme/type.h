@@ -102,6 +102,8 @@ class Datum : public Type {
   virtual auto Mul(Datum* rhs) const -> Datum*;
   virtual auto Div(Datum* rhs) const -> Datum*;
   virtual auto Mod(Datum* rhs) const -> Datum*;
+  virtual auto And(Datum* rhs) const -> Datum*;
+  virtual auto Or(Datum* rhs) const -> Datum*;
 };
 
 class Null : public Datum {
@@ -157,6 +159,18 @@ class Bool : public Datum {
  public:
   auto Get() const -> bool {
     return value_;
+  }
+
+  auto And(Datum* rhs) const -> Datum* override {
+    if (rhs->IsAtom())
+      return rhs;
+    return Get() && rhs->AsBool()->Get() ? Bool::True() : Bool::False();
+  }
+
+  auto Or(Datum* rhs) const -> Datum* override {
+    if (rhs->IsAtom())
+      return rhs;
+    return Get() || rhs->AsBool()->Get() ? Bool::True() : Bool::False();
   }
 
   DECLARE_TYPE(Bool);

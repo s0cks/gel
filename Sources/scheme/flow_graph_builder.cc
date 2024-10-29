@@ -229,4 +229,16 @@ auto EffectVisitor::VisitBinaryOpExpr(BinaryOpExpr* expr) -> bool {
   ReturnDefinition(BinaryOpInstr::New(expr->GetOp()));
   return true;
 }
+
+auto EffectVisitor::VisitSetExpr(expr::SetExpr* expr) -> bool {
+  ASSERT(expr && expr->HasValue());
+  ValueVisitor for_value(GetOwner());
+  if (!expr->GetValue()->Accept(&for_value)) {
+    LOG(FATAL) << "failed to visit SetExpr value: " << expr->GetValue()->ToString();
+    return false;
+  }
+  Append(for_value);
+  Add(StoreVariableInstr::New(expr->GetSymbol(), for_value.GetValue()));
+  return true;
+}
 }  // namespace scm

@@ -77,6 +77,11 @@ auto DefinitionVisitor::VisitEvalExpr(expr::EvalExpr* expr) -> bool {
   return false;
 }
 
+auto DefinitionVisitor::VisitSetExpr(expr::SetExpr* expr) -> bool {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
+
 auto DefinitionVisitor::VisitBeginExpr(expr::BeginExpr* expr) -> bool {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
   return false;

@@ -199,10 +199,11 @@
       "args": [
         "-logtostdout",
         "-colorlogtostdout",
-        "--expr", "(begin (define value ${input:even-value}) (define even? (lambda (x) (eq? (% x 2) 0))) (print value) (cond (even? value) \"even\" \"odd\"))",
         "--reports-dir", "${workspaceFolder}/reports",
         "--dump-ast",
         "--dump-flow-graph",
+        "--module-dir", "${workspaceFolder}/scm",
+        "--expr", "(begin (define value ${input:even-value}) (print value) (cond (even? value) \"even\" \"odd\"))",
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [

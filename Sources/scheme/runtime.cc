@@ -18,6 +18,13 @@
 #include "scheme/type.h"
 
 namespace scm {
+static inline auto Truth(scm::Type* rhs) -> bool {
+  ASSERT(rhs);
+  if (rhs->IsBool())
+    return rhs->AsBool()->Get();
+  return !rhs->IsNull();  // TODO: better truth?
+}
+
 DEFINE_bool(kernel, true, "Load the kernel at boot.");
 DEFINE_string(module_dir, "", "The directories to load modules from.");
 
@@ -202,6 +209,18 @@ static inline auto Modulus(Type* lhs, Type* rhs) -> Datum* {
   return lhs->AsDatum()->Mod(rhs->AsDatum());
 }
 
+static inline auto BinaryOr(Type* lhs, Type* rhs) -> Datum* {
+  ASSERT(lhs && lhs->IsDatum());
+  ASSERT(rhs && rhs->IsDatum());
+  return lhs->AsDatum()->Or(rhs->AsDatum());
+}
+
+static inline auto BinaryAnd(Type* lhs, Type* rhs) -> Datum* {
+  ASSERT(lhs && lhs->IsDatum());
+  ASSERT(rhs && rhs->IsDatum());
+  return lhs->AsDatum()->And(rhs->AsDatum());
+}
+
 static inline auto LookupProcedure(LocalScope* scope, Symbol* name, Procedure** result) -> bool {
   ASSERT(scope);
   ASSERT(name);
@@ -305,9 +324,16 @@ static inline auto Cdr(Type* rhs) -> Type* {
   return nullptr;
 }
 
+static inline auto Not(Type* rhs) -> Type* {
+  ASSERT(rhs);
+  return Truth(rhs) ? Bool::False() : Bool::True();
+}
+
 static inline auto Unary(const expr::UnaryOp op, Type* rhs) -> Type* {
   ASSERT(rhs);
   switch (op) {
+    case expr::kNot:
+      return Not(rhs);
     case expr::kCar:
       return Car(rhs);
     case expr::kCdr:
@@ -337,13 +363,6 @@ auto Runtime::VisitGotoInstr(GotoInstr* instr) -> bool {
   ASSERT(instr->HasTarget());
   SetCurrentInstr(instr->GetTarget());
   return true;
-}
-
-static inline auto Truth(scm::Type* rhs) -> bool {
-  ASSERT(rhs);
-  if (rhs->IsBool())
-    return rhs->AsBool()->Get();
-  return !rhs->IsNull();  // TODO: better truth?
 }
 
 auto Runtime::VisitBranchInstr(BranchInstr* instr) -> bool {
@@ -383,6 +402,12 @@ auto Runtime::VisitBinaryOpInstr(BinaryOpInstr* instr) -> bool {
       return true;
     case expr::kModulus:
       Push(Modulus(*left, *right));
+      return true;
+    case expr::kBinaryAnd:
+      Push(BinaryAnd(*left, *right));
+      return true;
+    case expr::kBinaryOr:
+      Push(BinaryOr(*left, *right));
       return true;
     default:
       LOG(ERROR) << "invalid BinaryOp: " << op;

@@ -32,6 +32,14 @@ auto Datum::Mod(Datum* rhs) const -> Datum* {
   return Null::Get();
 }
 
+auto Datum::And(Datum* rhs) const -> Datum* {
+  return Null::Get();
+}
+
+auto Datum::Or(Datum* rhs) const -> Datum* {
+  return Null::Get();
+}
+
 static Bool* kTrue = nullptr;   // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 static Bool* kFalse = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 

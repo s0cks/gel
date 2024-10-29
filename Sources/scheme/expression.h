@@ -10,25 +10,26 @@
 #include "scheme/type.h"
 #include "scheme/variable.h"
 
-namespace scm {
-class Parser;
-
-namespace expr {
 #define FOR_EACH_EXPRESSION_NODE(V) \
+  V(LiteralExpr)                    \
   V(UnaryExpr)                      \
   V(BinaryOpExpr)                   \
-  V(LiteralExpr)                    \
   V(BeginExpr)                      \
-  V(EvalExpr)                       \
-  V(SymbolExpr)                     \
-  V(CallProcExpr)                   \
   V(CondExpr)                       \
   V(ConsExpr)                       \
   V(LambdaExpr)                     \
   V(LocalDef)                       \
   V(ModuleDef)                      \
-  V(ImportDef)
+  V(ImportDef)                      \
+  V(EvalExpr)                       \
+  V(SymbolExpr)                     \
+  V(CallProcExpr)                   \
+  V(SetExpr)
 
+namespace scm {
+class Parser;
+
+namespace expr {
 class Expression;
 class Definition;
 #define FORWARD_DECLARE(Name) class Name;
@@ -197,33 +198,29 @@ class LiteralExpr : public Expression {
   }
 };
 
+#define FOR_EACH_BINARY_OP(V) \
+  V(Add)                      \
+  V(Subtract)                 \
+  V(Multiply)                 \
+  V(Divide)                   \
+  V(Modulus)                  \
+  V(Equals)                   \
+  V(BinaryAnd)                \
+  V(BinaryOr)
+
 enum BinaryOp : uint64_t {
-  kAdd,
-  kSubtract,
-  kMultiply,
-  kDivide,
-  kModulus,
-  kBinaryAnd,
-  kBinaryOr,
-  kEquals,
+#define DEFINE_BINARY_OP(Name) k##Name,
+  FOR_EACH_BINARY_OP(DEFINE_BINARY_OP)
+#undef DEFINE_BINARY_OP
 };
 
 static inline auto operator<<(std::ostream& stream, const BinaryOp& rhs) -> std::ostream& {
   switch (rhs) {
-    case kAdd:
-      return stream << "+";
-    case kSubtract:
-      return stream << "-";
-    case kMultiply:
-      return stream << "*";
-    case kDivide:
-      return stream << "/";
-    case kModulus:
-      return stream << "%";
-    case kBinaryAnd:
-      return stream << "&";
-    case kBinaryOr:
-      return stream << "|";
+#define DEFINE_TO_STRING(Name) \
+  case BinaryOp::k##Name:      \
+    return stream << #Name;
+    FOR_EACH_BINARY_OP(DEFINE_TO_STRING)
+#undef DEFINE_TO_STRING
     default:
       return stream << "Unknown BinaryOp: " << static_cast<int64_t>(rhs);
   }
@@ -277,6 +274,13 @@ class BinaryOpExpr : public TemplateExpression<2> {
     return GetRight() != nullptr;
   }
 
+#define DEFINE_OP_CHECK(Name)                \
+  inline auto Is##Name##Op() const -> bool { \
+    return GetOp() == BinaryOp::k##Name;     \
+  }
+  FOR_EACH_BINARY_OP(DEFINE_OP_CHECK)
+#undef DEFINE_OP_CHECK
+
   auto IsConstantExpr() const -> bool override;
   auto EvalToConstant() const -> Type* override;
   auto VisitChildren(ExpressionVisitor* vis) -> bool override;
@@ -288,6 +292,15 @@ class BinaryOpExpr : public TemplateExpression<2> {
     ASSERT(right);
     return new BinaryOpExpr(op, left, right);
   }
+
+#define DEFINE_NEW_OP(Name)                                                         \
+  static inline auto New##Name(Expression* lhs, Expression* rhs) -> BinaryOpExpr* { \
+    ASSERT(lhs);                                                                    \
+    ASSERT(rhs);                                                                    \
+    return New(BinaryOp::k##Name, lhs, rhs);                                        \
+  }
+  FOR_EACH_BINARY_OP(DEFINE_NEW_OP)
+#undef DEFINE_NEW_OP
 };
 
 class ConsExpr : public TemplateExpression<2> {
@@ -343,6 +356,7 @@ class ConsExpr : public TemplateExpression<2> {
 };
 
 enum UnaryOp : uint64_t {
+  kNot,
   kCar,
   kCdr,
 };
@@ -615,6 +629,49 @@ class CondExpr : public Expression {
     ASSERT(test);
     ASSERT(conseq);
     return new CondExpr(test, conseq, alt);
+  }
+};
+
+class SetExpr : public Expression {
+ private:
+  Symbol* symbol_;
+  Expression* value_;
+
+ protected:
+  SetExpr(Symbol* symbol, Expression* value) :
+    Expression(),
+    symbol_(symbol),
+    value_(value) {}
+
+ public:
+  ~SetExpr() override = default;
+
+  auto GetSymbol() const -> Symbol* {
+    return symbol_;
+  }
+
+  auto GetValue() const -> Expression* {
+    return value_;
+  }
+
+  inline auto HasValue() const -> bool {
+    return GetValue() != nullptr;
+  }
+
+  auto VisitChildren(ExpressionVisitor* vis) -> bool override {
+    ASSERT(vis);
+    if (!HasValue())
+      return false;
+    return GetValue()->Accept(vis);
+  }
+
+  DECLARE_EXPRESSION(SetExpr);
+
+ public:
+  static inline auto New(Symbol* symbol, Expression* value) -> SetExpr* {
+    ASSERT(symbol);
+    ASSERT(value);
+    return new SetExpr(symbol, value);
   }
 };
 

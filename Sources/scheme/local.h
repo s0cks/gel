@@ -85,6 +85,8 @@ class LocalVariable {
     return GetValue() != nullptr;
   }
 
+  auto IsGlobal() const -> bool;
+
   friend auto operator<<(std::ostream& stream, const LocalVariable& rhs) -> std::ostream& {
     stream << "LocalVariable(";
     stream << "owner=" << rhs.GetOwner() << ", ";

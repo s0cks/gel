@@ -142,6 +142,15 @@ auto SymbolExpr::ToString() const -> std::string {
   return ss.str();
 }
 
+auto SetExpr::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << GetName() << "(";
+  ss << "symbol=" << GetSymbol() << ", ";
+  ss << "value=" << GetValue();
+  ss << ")";
+  return ss.str();
+}
+
 auto CondExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
   ASSERT(vis);
   if (!GetTest()->Accept(vis))
