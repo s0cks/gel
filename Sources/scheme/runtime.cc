@@ -10,6 +10,7 @@
 #include "scheme/expression.h"
 #include "scheme/expression_compiler.h"
 #include "scheme/instruction.h"
+#include "scheme/interpreter.h"
 #include "scheme/local_scope.h"
 #include "scheme/module_compiler.h"
 #include "scheme/module_resolver.h"
@@ -20,13 +21,6 @@
 #include "scheme/type.h"
 
 namespace scm {
-static inline auto Truth(scm::Type* rhs) -> bool {
-  ASSERT(rhs);
-  if (rhs->IsBool())
-    return rhs->AsBool()->Get();
-  return !rhs->IsNull();  // TODO: better truth?
-}
-
 DEFINE_bool(kernel, true, "Load the kernel at boot.");
 DEFINE_string(module_dir, "", "The directories to load modules from.");
 
@@ -167,280 +161,21 @@ auto Runtime::LoadSymbol(Symbol* symbol) -> bool {
   return true;
 }
 
-void Runtime::StoreSymbol(Symbol* symbol, Type* value) {
+auto Runtime::StoreSymbol(Symbol* symbol, Type* value) -> bool {
   ASSERT(symbol);
   ASSERT(value);
-  if (!DefineSymbol(symbol, value)) {
-    LOG(ERROR) << "failed to set " << symbol << " to: " << value;
-    return;
-  }
+  return DefineSymbol(symbol, value);
 }
 
-static inline auto Add(Type* lhs, Type* rhs) -> Type* {
-  ASSERT(lhs && lhs->IsDatum());
-  ASSERT(rhs && rhs->IsDatum());
-  return lhs->AsDatum()->Add(rhs->AsDatum());
-}
-
-static inline auto Subtract(Type* lhs, Type* rhs) -> Type* {
-  ASSERT(lhs && lhs->IsDatum());
-  ASSERT(rhs && rhs->IsDatum());
-  return lhs->AsDatum()->Sub(rhs->AsDatum());
-}
-
-static inline auto Multiply(Type* lhs, Type* rhs) -> Type* {
-  ASSERT(lhs && lhs->IsDatum());
-  ASSERT(rhs && rhs->IsDatum());
-  return lhs->AsDatum()->Mul(rhs->AsDatum());
-}
-
-static inline auto Divide(Type* lhs, Type* rhs) -> Type* {
-  ASSERT(lhs && lhs->IsDatum());
-  ASSERT(rhs && rhs->IsDatum());
-  return lhs->AsDatum()->Div(rhs->AsDatum());
-}
-
-static inline auto Equals(Type* lhs, Type* rhs) -> Datum* {
-  ASSERT(lhs);
-  ASSERT(rhs);
-  return lhs->Equals(rhs) ? Bool::True() : Bool::False();
-}
-
-static inline auto Modulus(Type* lhs, Type* rhs) -> Datum* {
-  ASSERT(lhs && lhs->IsDatum());
-  ASSERT(rhs && rhs->IsDatum());
-  return lhs->AsDatum()->Mod(rhs->AsDatum());
-}
-
-static inline auto BinaryOr(Type* lhs, Type* rhs) -> Datum* {
-  ASSERT(lhs && lhs->IsDatum());
-  ASSERT(rhs && rhs->IsDatum());
-  return lhs->AsDatum()->Or(rhs->AsDatum());
-}
-
-static inline auto BinaryAnd(Type* lhs, Type* rhs) -> Datum* {
-  ASSERT(lhs && lhs->IsDatum());
-  ASSERT(rhs && rhs->IsDatum());
-  return lhs->AsDatum()->And(rhs->AsDatum());
-}
-
-auto Runtime::VisitGraphEntryInstr(GraphEntryInstr* instr) -> bool {
-  return true;
-}
-
-auto Runtime::VisitTargetEntryInstr(TargetEntryInstr* instr) -> bool {
-  return true;
-}
-
-auto Runtime::VisitJoinEntryInstr(JoinEntryInstr* instr) -> bool {
-  return true;
-}
-
-auto Runtime::VisitConstantInstr(ConstantInstr* instr) -> bool {
-  const auto value = instr->GetValue();
-  ASSERT(value);
-  Push(value);
-  return true;
-}
-
-auto Runtime::VisitStoreVariableInstr(StoreVariableInstr* instr) -> bool {
-  const auto value = Pop();
-  ASSERT(value);
-  const auto symbol = instr->GetSymbol();
-  ASSERT(symbol);
-  StoreSymbol(symbol, value);
-  return true;
-}
-
-auto Runtime::VisitLoadVariableInstr(LoadVariableInstr* instr) -> bool {
-  return LoadSymbol(instr->GetSymbol());
-}
-
-auto Runtime::VisitConsInstr(ConsInstr* instr) -> bool {
-  ASSERT(instr);
-  const auto cdr = Pop();
-  ASSERT(cdr);
-  const auto car = Pop();
-  ASSERT(car);
-  Push(Pair::New(car, cdr));
-  return true;
-}
-
-auto Runtime::VisitReturnInstr(ReturnInstr* instr) -> bool {
-  return true;
-}
-
-static inline auto Car(Type* rhs) -> Type* {
-  ASSERT(rhs);
-  if (rhs->IsPair())
-    return rhs->AsPair()->GetCar();
-  LOG(FATAL) << rhs << " is not a Pair or List.";
-  return nullptr;
-}
-
-static inline auto Cdr(Type* rhs) -> Type* {
-  ASSERT(rhs);
-  if (rhs->IsPair())
-    return rhs->AsPair()->GetCdr();
-  LOG(FATAL) << rhs << " is not a Pair or List.";
-  return nullptr;
-}
-
-static inline auto Not(Type* rhs) -> Type* {
-  ASSERT(rhs);
-  return Truth(rhs) ? Bool::False() : Bool::True();
-}
-
-static inline auto Unary(const expr::UnaryOp op, Type* rhs) -> Type* {
-  ASSERT(rhs);
-  switch (op) {
-    case expr::kNot:
-      return Not(rhs);
-    case expr::kCar:
-      return Car(rhs);
-    case expr::kCdr:
-      return Cdr(rhs);
-    default:
-      LOG(FATAL) << "invalid UnaryOp: " << op;
-      return nullptr;
-  }
-}
-
-auto Runtime::VisitUnaryOpInstr(UnaryOpInstr* instr) -> bool {
-  ASSERT(instr);
-  const auto value = Pop();
-  if (!value) {
-    LOG(FATAL) << "invalid value.";
-    return false;
-  }
-
-  const auto result = Unary(instr->GetOp(), value);
-  ASSERT(result);
-  Push(result);
-  return true;
-}
-
-auto Runtime::VisitGotoInstr(GotoInstr* instr) -> bool {
-  ASSERT(instr);
-  ASSERT(instr->HasTarget());
-  SetCurrentInstr(instr->GetTarget());
-  return true;
-}
-
-auto Runtime::VisitThrowInstr(ThrowInstr* instr) -> bool {
-  ASSERT(instr);
-  const auto error = Error::New(Pop());
-  throw error;
-  return true;
-}
-
-auto Runtime::VisitInvokeInstr(InvokeInstr* instr) -> bool {
-  ASSERT(instr);
-  const auto target = Pop();
-  if (!IsProcedure(target))
-    throw Exception(fmt::format("expected {0:s} to be a Procedure.", target ? target->ToString() : "null"));
-  const auto procedure = target->AsProcedure();
-  ASSERT(procedure);
-  return procedure->Apply(this);
-}
-
-auto Runtime::VisitCallProcInstr(CallProcInstr* instr) -> bool {
-  ASSERT(instr);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return false;
-}
-
-auto Runtime::VisitInvokeNativeInstr(InvokeNativeInstr* instr) -> bool {
-  ASSERT(instr);
-  const auto target = Pop();
-  if (!IsNativeProcedure(target))
-    throw Exception(fmt::format("expected {0:s} to be a NativeProcedure.", target ? target->ToString() : "null"));
-  const auto procedure = target->AsProcedure();
-  ASSERT(procedure);
-  return procedure->Apply(this);
-}
-
-auto Runtime::VisitBranchInstr(BranchInstr* instr) -> bool {
-  ASSERT(instr);
-  const auto test = Pop();
-  if (!test) {
-    DLOG(ERROR) << "no test value to pop from stack.";
-    return false;
-  }
-  const auto target = Truth(test) ? instr->GetTrueTarget() : instr->GetFalseTarget();
-  ASSERT(target);
-  SetCurrentInstr(target);
-  return true;
-}
-
-auto Runtime::VisitBinaryOpInstr(BinaryOpInstr* instr) -> bool {
-  const auto op = instr->GetOp();
-  const auto right = Pop();
-  ASSERT(right);
-  const auto left = Pop();
-  ASSERT(left);
-  switch (op) {
-    case expr::kAdd:
-      Push(Add(left, right));
-      return true;
-    case expr::kSubtract:
-      Push(Subtract(left, right));
-      return true;
-    case expr::kMultiply:
-      Push(Multiply(left, right));
-      return true;
-    case expr::kDivide:
-      Push(Divide(left, right));
-      return true;
-    case expr::kEquals:
-      Push(Equals(left, right));
-      return true;
-    case expr::kModulus:
-      Push(Modulus(left, right));
-      return true;
-    case expr::kBinaryAnd:
-      Push(BinaryAnd(left, right));
-      return true;
-    case expr::kBinaryOr:
-      Push(BinaryOr(left, right));
-      return true;
-    default:
-      LOG(ERROR) << "invalid BinaryOp: " << op;
-      return false;
-  }
-}
-
-void Runtime::ExecuteInstr(Instruction* instr) {
-  ASSERT(instr);
-  TRACE_SECTION(ExecuteInstr);
-  TRACE_TAG(instr->GetName());
-  DVLOG(10) << "executing: " << instr->GetName();
-  if (!instr->Accept(this))
-    LOG(FATAL) << "failed to execute: " << instr->ToString();
-}
-
-auto Runtime::Execute(EntryInstr* entry) -> Type* {
-  ASSERT(entry);
-  ASSERT(HasScope());
-
-  TRACE_BEGIN;
-  SetCurrentInstr(entry->GetFirstInstruction());
-  while (HasCurrentInstr()) {
-    const auto next = GetCurrentInstr();
-    ASSERT(next);
-    ExecuteInstr(next);
-    if (next->IsEntryInstr()) {
-      current_ = (dynamic_cast<EntryInstr*>(next))->GetFirstInstruction();
-    } else if (!next->IsBranchInstr() && !next->IsGotoInstr()) {
-      current_ = next->GetNext();
-    }
-  }
-
+auto Runtime::Execute(GraphEntryInstr* entry) -> Type* {
+  ASSERT(entry && entry->IsGraphEntryInstr());
+  Interpreter interpreter(this);
+  interpreter.Run(entry);
   const auto result = Pop();
   return result ? result : Null::Get();
 }
 
-auto Runtime::Eval(EntryInstr* graph_entry) -> Type* {
+auto Runtime::Eval(GraphEntryInstr* graph_entry) -> Type* {
   ASSERT(graph_entry);
   Runtime runtime;
   return runtime.Execute(graph_entry);

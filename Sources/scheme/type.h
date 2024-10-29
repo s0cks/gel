@@ -376,6 +376,82 @@ static inline auto PrintValue(std::ostream& stream, Type* value) -> std::ostream
   }
   return stream << value->ToString();
 }
+
+static inline auto Add(Type* lhs, Type* rhs) -> Type* {
+  ASSERT(lhs && lhs->IsDatum());
+  ASSERT(rhs && rhs->IsDatum());
+  return lhs->AsDatum()->Add(rhs->AsDatum());
+}
+
+static inline auto Subtract(Type* lhs, Type* rhs) -> Type* {
+  ASSERT(lhs && lhs->IsDatum());
+  ASSERT(rhs && rhs->IsDatum());
+  return lhs->AsDatum()->Sub(rhs->AsDatum());
+}
+
+static inline auto Multiply(Type* lhs, Type* rhs) -> Type* {
+  ASSERT(lhs && lhs->IsDatum());
+  ASSERT(rhs && rhs->IsDatum());
+  return lhs->AsDatum()->Mul(rhs->AsDatum());
+}
+
+static inline auto Divide(Type* lhs, Type* rhs) -> Type* {
+  ASSERT(lhs && lhs->IsDatum());
+  ASSERT(rhs && rhs->IsDatum());
+  return lhs->AsDatum()->Div(rhs->AsDatum());
+}
+
+static inline auto Equals(Type* lhs, Type* rhs) -> Datum* {
+  ASSERT(lhs);
+  ASSERT(rhs);
+  return lhs->Equals(rhs) ? Bool::True() : Bool::False();
+}
+
+static inline auto Modulus(Type* lhs, Type* rhs) -> Datum* {
+  ASSERT(lhs && lhs->IsDatum());
+  ASSERT(rhs && rhs->IsDatum());
+  return lhs->AsDatum()->Mod(rhs->AsDatum());
+}
+
+static inline auto BinaryOr(Type* lhs, Type* rhs) -> Datum* {
+  ASSERT(lhs && lhs->IsDatum());
+  ASSERT(rhs && rhs->IsDatum());
+  return lhs->AsDatum()->Or(rhs->AsDatum());
+}
+
+static inline auto BinaryAnd(Type* lhs, Type* rhs) -> Datum* {
+  ASSERT(lhs && lhs->IsDatum());
+  ASSERT(rhs && rhs->IsDatum());
+  return lhs->AsDatum()->And(rhs->AsDatum());
+}
+
+static inline auto Car(Type* rhs) -> Type* {
+  ASSERT(rhs);
+  if (rhs->IsPair())
+    return rhs->AsPair()->GetCar();
+  LOG(FATAL) << rhs << " is not a Pair or List.";
+  return nullptr;
+}
+
+static inline auto Cdr(Type* rhs) -> Type* {
+  ASSERT(rhs);
+  if (rhs->IsPair())
+    return rhs->AsPair()->GetCdr();
+  LOG(FATAL) << rhs << " is not a Pair or List.";
+  return nullptr;
+}
+
+static inline auto Truth(scm::Type* rhs) -> bool {
+  ASSERT(rhs);
+  if (rhs->IsBool())
+    return rhs->AsBool()->Get();
+  return !rhs->IsNull();  // TODO: better truth?
+}
+
+static inline auto Not(Type* rhs) -> Type* {
+  ASSERT(rhs);
+  return Truth(rhs) ? Bool::False() : Bool::True();
+}
 }  // namespace scm
 
 #endif  // SCM_TYPE_H

@@ -59,8 +59,9 @@ class ExecutionStack {
 };
 
 class Module;
-class Runtime : private InstructionVisitor, public ExecutionStack {
+class Runtime : public ExecutionStack {
   friend class proc::import;
+  friend class Interpreter;
   friend class RuntimeScopeScope;
 
   using ModuleList = std::vector<Module*>;
@@ -111,9 +112,9 @@ class Runtime : private InstructionVisitor, public ExecutionStack {
   static auto CreateInitScope() -> LocalScope*;
 
  protected:
-  void ExecuteInstr(Instruction* instr);
-  void StoreSymbol(Symbol* symbol, Type* value);
   auto LoadSymbol(Symbol* symbol) -> bool;
+  auto StoreSymbol(Symbol* symbol, Type* value) -> bool;
+
   auto DefineSymbol(Symbol* symbol, Type* value) -> bool;
   auto LookupSymbol(Symbol* symbol, Type** result) -> bool;
   auto CallProcedure(Procedure* procedure) -> bool;
@@ -124,10 +125,6 @@ class Runtime : private InstructionVisitor, public ExecutionStack {
   inline auto ImportModule(const std::string& name) -> bool {
     return ImportModule(Symbol::New(name));
   }
-
-#define DECLARE_VISIT(Name) auto Visit##Name(Name* instr) -> bool override;
-  FOR_EACH_INSTRUCTION(DECLARE_VISIT)
-#undef DECLARE_VISIT
 
  public:
   Runtime(LocalScope* init_scope = CreateInitScope());
@@ -141,10 +138,10 @@ class Runtime : private InstructionVisitor, public ExecutionStack {
     return GetScope() != nullptr;
   }
 
-  auto Execute(EntryInstr* entry) -> Type*;
+  auto Execute(GraphEntryInstr* entry) -> Type*;
 
  private:
-  static auto Eval(EntryInstr* graph_entry) -> Type*;
+  static auto Eval(GraphEntryInstr* graph_entry) -> Type*;
   static inline auto Eval(FlowGraph* flow_graph) -> Type* {
     ASSERT(flow_graph);
     return Eval(flow_graph->GetEntry());

@@ -34,8 +34,10 @@ auto Lambda::Apply(Runtime* runtime) const -> bool {
   }
 
   const auto result = runtime->Execute(flow_graph->GetEntry());
-  if (!result)
+  if (!result) {
+    DLOG(WARNING) << "no result from lambda.";
     return true;
+  }
   runtime->Push(result);
   return true;
 }
