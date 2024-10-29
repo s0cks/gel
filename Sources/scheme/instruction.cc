@@ -1,6 +1,7 @@
 #include "scheme/instruction.h"
 
 #include <sstream>
+#include <string>
 
 namespace scm::instr {
 void Instruction::Append(Instruction* instr) {
@@ -146,6 +147,22 @@ auto ThrowInstr::ToString() const -> std::string {
   std::stringstream ss;
   ss << "ThrowInstr(";
   ss << "value=" << GetValue()->ToString();
+  ss << ")";
+  return ss.str();
+}
+
+auto InvokeInstr::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "InvokeInstr(";
+  ss << "target=" << GetTarget()->ToString();
+  ss << ")";
+  return ss.str();
+}
+
+auto InvokeNativeInstr::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "InvokeNativeInstr(";
+  ss << "target=" << GetTarget()->ToString();
   ss << ")";
   return ss.str();
 }

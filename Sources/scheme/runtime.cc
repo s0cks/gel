@@ -15,6 +15,7 @@
 #include "scheme/module_resolver.h"
 #include "scheme/natives.h"
 #include "scheme/parser.h"
+#include "scheme/procedure.h"
 #include "scheme/tracing.h"
 #include "scheme/type.h"
 
@@ -223,31 +224,6 @@ static inline auto BinaryAnd(Type* lhs, Type* rhs) -> Datum* {
   return lhs->AsDatum()->And(rhs->AsDatum());
 }
 
-static inline auto LookupProcedure(LocalScope* scope, Symbol* name, Procedure** result) -> bool {
-  ASSERT(scope);
-  ASSERT(name);
-  LocalVariable* local = nullptr;
-  if (!scope->Lookup(name, &local)) {
-    (*result) = nullptr;
-    LOG(ERROR) << "failed to resolve procedure named: " << name->Get();
-    return false;
-  }
-  ASSERT(local);
-  if (!local->HasValue()) {
-    LOG(ERROR) << "failed to get value for: " << (*local);
-    (*result) = nullptr;
-    return false;
-  }
-  const auto value = local->GetValue();
-  if (!value->IsProcedure()) {
-    (*result) = nullptr;
-    LOG(ERROR) << "'" << name->Get() << "' (" << value->ToString() << ") is not a procedure.";
-    return false;
-  }
-  (*result) = value->AsProcedure();
-  return true;
-}
-
 auto Runtime::VisitGraphEntryInstr(GraphEntryInstr* instr) -> bool {
   return true;
 }
@@ -258,22 +234,6 @@ auto Runtime::VisitTargetEntryInstr(TargetEntryInstr* instr) -> bool {
 
 auto Runtime::VisitJoinEntryInstr(JoinEntryInstr* instr) -> bool {
   return true;
-}
-
-auto Runtime::CallProcedure(Procedure* procedure) -> bool {
-  ASSERT(procedure);
-  return procedure->Apply(this);
-}
-
-auto Runtime::VisitCallProcInstr(CallProcInstr* instr) -> bool {
-  ASSERT(instr);
-  const auto symbol = instr->GetSymbol();
-  ASSERT(symbol);
-  Procedure* proc = nullptr;
-  if (!LookupProcedure(GetScope(), symbol, &proc))
-    return false;
-  ASSERT(proc);
-  return CallProcedure(proc);
 }
 
 auto Runtime::VisitConstantInstr(ConstantInstr* instr) -> bool {
@@ -372,6 +332,32 @@ auto Runtime::VisitThrowInstr(ThrowInstr* instr) -> bool {
   const auto error = Error::New(Pop());
   throw error;
   return true;
+}
+
+auto Runtime::VisitInvokeInstr(InvokeInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto target = Pop();
+  if (!IsProcedure(target))
+    throw Exception(fmt::format("expected {0:s} to be a Procedure.", target ? target->ToString() : "null"));
+  const auto procedure = target->AsProcedure();
+  ASSERT(procedure);
+  return procedure->Apply(this);
+}
+
+auto Runtime::VisitCallProcInstr(CallProcInstr* instr) -> bool {
+  ASSERT(instr);
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
+
+auto Runtime::VisitInvokeNativeInstr(InvokeNativeInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto target = Pop();
+  if (!IsNativeProcedure(target))
+    throw Exception(fmt::format("expected {0:s} to be a NativeProcedure.", target ? target->ToString() : "null"));
+  const auto procedure = target->AsProcedure();
+  ASSERT(procedure);
+  return procedure->Apply(this);
 }
 
 auto Runtime::VisitBranchInstr(BranchInstr* instr) -> bool {

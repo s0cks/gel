@@ -31,8 +31,8 @@ auto main(int argc, char** argv) -> int {
       PrintValue(std::cout, result) << std::endl;
     } catch (const scm::Exception& exc) {
       LOG(ERROR) << "failed to execute expression.";
-      std::cerr << " * expression: " << (*expr);
-      std::cerr << " * message: " << exc.GetMessage();
+      std::cerr << " * expression: " << (*expr) << std::endl;
+      std::cerr << " * message: " << exc.GetMessage() << std::endl;
       return EXIT_FAILURE;
     } catch (const scm::Error* err) {
       LOG(ERROR) << "failed to execute expression.";

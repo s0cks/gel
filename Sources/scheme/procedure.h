@@ -32,6 +32,10 @@ class Procedure : public Type {
   virtual auto Apply(Runtime* state) const -> bool = 0;
 };
 
+static inline auto IsProcedure(Type* rhs) -> bool {
+  return rhs && rhs->IsProcedure();
+}
+
 class NativeProcedure : public Procedure {
   DEFINE_NON_COPYABLE_TYPE(NativeProcedure);
 
@@ -62,6 +66,10 @@ class NativeProcedure : public Procedure {
     return "NativeProcedure";
   }
 };
+
+static inline auto IsNativeProcedure(Type* rhs) -> bool {
+  return rhs && rhs->IsProcedure() && rhs->AsProcedure()->IsNative();
+}
 
 #define _DEFINE_NATIVE_PROCEDURE_TYPE(Name, Sym) \
   DEFINE_NON_COPYABLE_TYPE(Name);                \

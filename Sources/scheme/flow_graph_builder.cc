@@ -54,9 +54,10 @@ auto EffectVisitor::VisitCallProcExpr(CallProcExpr* expr) -> bool {
     LOG_IF(ERROR, !arg->Accept(&for_value)) << "failed to determine value for: " << expr->ToString();
     Append(for_value);
   }
-  const auto symbol = expr->GetSymbol();
-  ASSERT(symbol);
-  ReturnDefinition(CallProcInstr::New(symbol));
+
+  const auto load_target = LoadVariableInstr::New(expr->GetSymbol());
+  Add(load_target);
+  ReturnDefinition(InvokeInstr::New(load_target));
   return true;
 }
 

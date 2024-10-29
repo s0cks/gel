@@ -23,6 +23,8 @@ namespace instr {
   V(TargetEntryInstr)           \
   V(JoinEntryInstr)             \
   V(CallProcInstr)              \
+  V(InvokeInstr)                \
+  V(InvokeNativeInstr)          \
   V(ReturnInstr)                \
   V(BranchInstr)                \
   V(GotoInstr)                  \
@@ -410,6 +412,60 @@ class CallProcInstr : public Definition {
   static inline auto New(Symbol* symbol) -> CallProcInstr* {
     ASSERT(symbol);
     return new CallProcInstr(symbol);
+  }
+};
+
+class InvokeInstr : public Definition {
+ private:
+  Definition* target_;
+
+ protected:
+  explicit InvokeInstr(Definition* target) :
+    Definition(),
+    target_(target) {
+    ASSERT(target_);
+  }
+
+ public:
+  ~InvokeInstr() override = default;
+
+  auto GetTarget() const -> Definition* {
+    return target_;
+  }
+
+  DECLARE_INSTRUCTION(InvokeInstr);
+
+ public:
+  static inline auto New(Definition* target) -> InvokeInstr* {
+    ASSERT(target);
+    return new InvokeInstr(target);
+  }
+};
+
+class InvokeNativeInstr : public Definition {
+ private:
+  Definition* target_;
+
+ protected:
+  explicit InvokeNativeInstr(Definition* target) :
+    Definition(),
+    target_(target) {
+    ASSERT(target_);
+  }
+
+ public:
+  ~InvokeNativeInstr() override = default;
+
+  auto GetTarget() const -> Definition* {
+    return target_;
+  }
+
+  DECLARE_INSTRUCTION(InvokeNativeInstr);
+
+ public:
+  static inline auto New(Definition* target) -> InvokeNativeInstr* {
+    ASSERT(target);
+    return new InvokeNativeInstr(target);
   }
 };
 
