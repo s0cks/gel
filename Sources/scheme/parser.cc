@@ -256,9 +256,14 @@ auto Parser::ParseExpression() -> Expression* {
   } else {
     const auto& next = stream().Peek();
     switch (next.kind) {
+      // Definitions
       case Token::kLocalDef:
         expr = ParseLocalDef();
         break;
+      case Token::kMacroDef:
+        expr = ParseMacroDef();
+        break;
+      // Expressions
       case Token::kBeginExpr:
         expr = ParseBeginExpr();
         break;
@@ -296,6 +301,17 @@ auto Parser::ParseImportDef() -> expr::ImportDef* {
   const auto symbol = ParseSymbol();
   ASSERT(symbol);
   return ImportDef::New(symbol);
+}
+
+auto Parser::ParseMacroDef() -> expr::MacroDef* {
+  ExpectNext(Token::kMacroDef);
+  const auto symbol = ParseSymbol();
+  ASSERT(symbol);
+
+  Expression* body = nullptr;
+  if (!PeekEq(Token::kRParen))
+    body = ParseExpression();
+  return MacroDef::New(symbol, body);
 }
 
 auto Parser::ParseLocalDef() -> LocalDef* {
@@ -350,6 +366,9 @@ auto Parser::ParseDefinition() -> expr::Definition* {
       break;
     case Token::kImportDef:
       defn = ParseImportDef();
+      break;
+    case Token::kMacroDef:
+      defn = ParseMacroDef();
       break;
     default:
       LOG(FATAL) << "unexpected: " << next << ", expected definition.";

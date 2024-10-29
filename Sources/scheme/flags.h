@@ -9,6 +9,7 @@
 #include <string>
 
 namespace scm {
+DECLARE_bool(eval);
 DECLARE_bool(dump_ast);
 DECLARE_bool(dump_flow_graph);
 DECLARE_string(reports_dir);

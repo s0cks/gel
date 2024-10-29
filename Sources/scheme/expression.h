@@ -830,7 +830,7 @@ class TemplateDefinition : public Definition {
   auto VisitChildren(ExpressionVisitor* vis) -> bool override {
     ASSERT(vis);
     for (const auto& child : children_) {
-      if (!child->Accept(vis))
+      if (child && !child->Accept(vis))
         return false;
     }
     return true;

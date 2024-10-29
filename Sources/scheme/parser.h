@@ -37,25 +37,6 @@ class Parser {
     return scope_;
   }
 
-  void PushScope();
-  void PopScope();
-  auto ParseSymbol() -> Symbol*;
-  auto ParseLiteralExpr() -> LiteralExpr*;
-  auto ParseBeginExpr() -> BeginExpr*;
-  auto ParseUnaryExpr() -> expr::UnaryExpr*;
-  auto ParseBinaryOpExpr() -> BinaryOpExpr*;
-  auto ParseCondExpr() -> CondExpr*;
-  auto ParseConsExpr() -> ConsExpr*;
-  auto ParseLoadSymbol() -> LoadVariableInstr*;
-  auto ParseSymbolExpr() -> SymbolExpr*;
-  auto ParseSetExpr() -> SetExpr*;
-  auto ParseCallProcExpr() -> CallProcExpr*;
-  auto ParseArguments(ArgumentSet& args) -> bool;
-  auto ParseLambdaExpr() -> LambdaExpr*;
-  auto ParseThrowExpr() -> ThrowExpr*;
-  auto ParseSymbolList(SymbolList& symbols) -> bool;
-  auto ParseIdentifier(std::string& result) -> bool;
-
   // Definitions
   template <const bool IsTopLevel = false>
   static inline auto IsValidDefinition(const Token& rhs) -> bool {
@@ -68,10 +49,6 @@ class Parser {
         return false;
     }
   }
-
-  auto ParseDefinition() -> expr::Definition*;
-  auto ParseLocalDef() -> expr::LocalDef*;
-  auto ParseImportDef() -> expr::ImportDef*;
 
   template <const google::LogSeverity Severity = google::ERROR>
   inline auto Unexpected(const Token::Kind expected, const Token& actual) -> bool {
@@ -89,6 +66,34 @@ class Parser {
     const auto& next = stream().Next();
     LOG_IF(FATAL, next.kind != rhs) << "unexpected: " << next << ", expected: " << rhs;
   }
+
+  // Misc
+  void PushScope();
+  void PopScope();
+  auto ParseSymbol() -> Symbol*;
+  auto ParseCondExpr() -> CondExpr*;
+  auto ParseConsExpr() -> ConsExpr*;
+  auto ParseLoadSymbol() -> LoadVariableInstr*;
+  auto ParseArguments(ArgumentSet& args) -> bool;
+  auto ParseSymbolList(SymbolList& symbols) -> bool;
+  auto ParseIdentifier(std::string& result) -> bool;
+
+  // Expressions
+  auto ParseSymbolExpr() -> SymbolExpr*;
+  auto ParseSetExpr() -> SetExpr*;
+  auto ParseCallProcExpr() -> CallProcExpr*;
+  auto ParseLiteralExpr() -> LiteralExpr*;
+  auto ParseBeginExpr() -> BeginExpr*;
+  auto ParseUnaryExpr() -> expr::UnaryExpr*;
+  auto ParseBinaryOpExpr() -> BinaryOpExpr*;
+  auto ParseLambdaExpr() -> LambdaExpr*;
+  auto ParseThrowExpr() -> ThrowExpr*;
+
+  // Definitions
+  auto ParseDefinition() -> expr::Definition*;
+  auto ParseLocalDef() -> expr::LocalDef*;
+  auto ParseImportDef() -> expr::ImportDef*;
+  auto ParseMacroDef() -> expr::MacroDef*;
 
  public:
   explicit Parser(TokenStream& stream, LocalScope* scope = LocalScope::New()) :

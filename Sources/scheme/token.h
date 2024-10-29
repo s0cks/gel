@@ -30,11 +30,12 @@ struct Token {
     kEndOfStream = -1,
     kInvalid = 0,
     kComment,
-    kLParen,
-    kRParen,
+    // Definitions
     kLocalDef,
     kModuleDef,
     kImportDef,
+    kMacroDef,
+    // Expressions
     kLambdaExpr,
     kBeginExpr,
     kSetExpr,
@@ -42,7 +43,6 @@ struct Token {
     kCarExpr,
     kCdrExpr,
     kThrowExpr,
-    kIdentifier,
     kPlus,
     kMinus,
     kMultiply,
@@ -56,6 +56,11 @@ struct Token {
     kNot,
     kAnd,
     kOr,
+    // Symbols
+    kLParen,
+    kRParen,
+    kIdentifier,
+    // Literals
     kLiteralNumber,
     kLiteralDouble,
     kLiteralLong,

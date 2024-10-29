@@ -152,6 +152,8 @@ auto TokenStream::Next() -> const Token& {
       return NextToken(Token::kLocalDef);
     else if (ident == "defmodule")
       return NextToken(Token::kModuleDef);
+    else if (ident == "defmacro")
+      return NextToken(Token::kMacroDef);
     else if (ident == "import")
       return NextToken(Token::kImportDef);
     else if (ident == "cons")
