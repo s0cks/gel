@@ -326,6 +326,30 @@ auto ExpressionToDot::VisitModuleDef(ModuleDef* expr) -> bool {
   return true;
 }
 
+auto ExpressionToDot::VisitMacroDef(MacroDef* expr) -> bool {
+  ASSERT(expr);
+  const auto node = NewNode();
+  ASSERT(node);
+  {
+    // create node labels
+    // label
+    std::stringstream label;
+    label << expr->GetName() << std::endl;
+    label << "Symbol := " << expr->GetSymbol()->Get();
+    SetNodeLabel(node, label);
+  }
+  CreateEdgeFromParent(node);
+  {
+    // process children
+    NodeScope scope(this, node);
+    if (!expr->VisitChildren(this)) {
+      LOG(ERROR) << "failed to visit children of: " << expr->ToString();
+      return false;
+    }
+  }
+  return true;
+}
+
 auto ExpressionToDot::VisitImportDef(ImportDef* expr) -> bool {
   ASSERT(expr);
   const auto node = NewNode();

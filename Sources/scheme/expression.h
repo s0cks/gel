@@ -21,6 +21,7 @@
   V(LocalDef)                       \
   V(ModuleDef)                      \
   V(ImportDef)                      \
+  V(MacroDef)                       \
   V(EvalExpr)                       \
   V(SymbolExpr)                     \
   V(CallProcExpr)                   \
@@ -961,6 +962,43 @@ class ModuleDef : public Definition {
   static inline auto New(Symbol* symbol) -> ModuleDef* {
     ASSERT(symbol);
     return new ModuleDef(symbol);
+  }
+};
+
+class MacroDef : public TemplateDefinition<1> {
+ private:
+  Symbol* symbol_;
+
+ protected:
+  explicit MacroDef(Symbol* symbol, Expression* body) :
+    TemplateDefinition<1>(),
+    symbol_(symbol) {
+    if (body)
+      SetBody(body);
+  }
+
+  inline void SetBody(Expression* expr) {
+    ASSERT(expr);
+    SetChildAt(0, expr);
+  }
+
+ public:
+  ~MacroDef() override = default;
+
+  auto GetSymbol() const -> Symbol* {
+    return symbol_;
+  }
+
+  inline auto GetBody() const -> Expression* {
+    return GetChildAt(0);
+  }
+
+  DECLARE_EXPRESSION(MacroDef);
+
+ public:
+  static inline auto New(Symbol* symbol, Expression* body = nullptr) -> MacroDef* {
+    ASSERT(symbol);
+    return new MacroDef(symbol, body);
   }
 };
 }  // namespace expr

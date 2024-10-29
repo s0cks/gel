@@ -239,6 +239,14 @@ auto ModuleDef::ToString() const -> std::string {
   return ss.str();
 }
 
+auto MacroDef::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << GetName() << "(";
+  ss << "symbol=" << GetSymbol() << ", ";
+  ss << ")";
+  return ss.str();
+}
+
 auto UnaryExpr::ToString() const -> std::string {
   std::stringstream ss;
   ss << GetName() << "(";

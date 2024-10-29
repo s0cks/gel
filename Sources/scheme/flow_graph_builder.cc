@@ -80,6 +80,12 @@ auto EffectVisitor::VisitModuleDef(ModuleDef* expr) -> bool {
   return false;
 }
 
+auto EffectVisitor::VisitMacroDef(MacroDef* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
+
 auto EffectVisitor::VisitImportDef(expr::ImportDef* expr) -> bool {
   ASSERT(expr);
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
