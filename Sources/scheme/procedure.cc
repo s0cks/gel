@@ -5,13 +5,6 @@
 #include "scheme/common.h"
 
 namespace scm {
-auto Macro::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "Macro(";
-  ss << ")";
-  return ss.str();
-}
-
 auto NativeProcedure::ToString() const -> std::string {
   std::stringstream ss;
   ss << "NativeProcedure(";
