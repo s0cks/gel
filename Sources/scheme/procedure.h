@@ -93,11 +93,6 @@ static inline auto IsNativeProcedure(Type* rhs) -> bool {
   };
 
 #define NATIVE_PROCEDURE_F(Name) auto Name::Apply(Runtime* state) const -> bool
-
-class Macro : public Procedure {
- public:
-  DECLARE_TYPE(Macro);
-};
 }  // namespace scm
 
 #endif  // SCM_PROCEDURE_H
