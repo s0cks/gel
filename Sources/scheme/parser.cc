@@ -239,26 +239,15 @@ auto Parser::ParseExpression() -> Expression* {
 
 auto Parser::ParseQuotedExpr() -> expr::QuotedExpr* {
   const auto depth = GetDepth();
-  DLOG(INFO) << "quote depth (start): " << depth;
+  DLOG(INFO) << "depth: " << depth;
   ExpectNext(Token::kQuote);
-  if (PeekToken().IsLiteral()) {
-    const auto value = ParseLiteralValue();
-    ASSERT(value);
-    return QuotedExpr::New(value->ToString());
-  } else if (PeekToken().kind == Token::kIdentifier) {
-    const auto value = ParseLiteralValue();
-    ASSERT(value);
-    return QuotedExpr::New(value->ToString());
-  }
-
+  SkipWhitespace();
   token_len_ = 0;
-  ExpectNext(Token::kLParen);
-  buffer_[token_len_++] = '(';
-  while (depth < GetDepth()) {
+  do {
     buffer_[token_len_++] = NextChar();
-  }
-  ASSERT(depth == GetDepth());
+  } while (GetDepth() > depth);
   DLOG(INFO) << "quoted: " << GetBufferedText();
+  ASSERT(depth == GetDepth());
   return QuotedExpr::New(GetBufferedText());
 }
 

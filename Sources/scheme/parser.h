@@ -114,6 +114,14 @@ class Parser {
     return static_cast<char>(chunk_[idx]);
   }
 
+  inline auto IsWhitespaceChar(const char c) -> bool {
+    return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+  }
+
+  inline void SkipWhitespace() {
+    while (IsWhitespaceChar(PeekChar())) NextChar();
+  }
+
   inline auto NextChar() -> char {
     if ((rpos_ + 1) > wpos_) {
       if (!ReadNextChunk())

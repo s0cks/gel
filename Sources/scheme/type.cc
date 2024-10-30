@@ -239,4 +239,28 @@ auto String::ToString() const -> std::string {
   ss << ")";
   return ss.str();
 }
+
+auto PrintValue(std::ostream& stream, Type* value) -> std::ostream& {
+  ASSERT(value);
+  if (value->IsNull()) {
+    return stream << "`()";
+  } else if (value->IsBool()) {
+    return stream << (value->AsBool()->Get() ? "#t" : "#f");
+  } else if (value->IsDouble()) {
+    return stream << (value->AsDouble()->Get());
+  } else if (value->IsLong()) {
+    return stream << (value->AsLong())->Get();
+  } else if (value->IsString()) {
+    return stream << '"' << value->AsString()->Get() << '"';
+  } else if (value->IsSymbol()) {
+    return stream << value->AsString()->Get();
+  } else if (value->IsPair()) {
+    stream << "(";
+    PrintValue(stream, value->AsPair()->GetCar()) << ", ";
+    PrintValue(stream, value->AsPair()->GetCdr());
+    stream << ")";
+    return stream;
+  }
+  return stream << value->ToString();
+}
 }  // namespace scm
