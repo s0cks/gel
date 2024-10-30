@@ -3,6 +3,7 @@
 
 #include <iostream>
 
+#include "scheme/error.h"
 #include "scheme/local_scope.h"
 
 namespace scm {
@@ -17,8 +18,20 @@ class Repl {
 
   auto Prompt() -> bool;
 
+  inline void Respond(Error* rhs) {
+    out() << std::endl;
+    out() << "Error: " << rhs->AsError()->GetMessage()->Get() << std::endl;
+  }
+
+  inline void Respond(const Exception& rhs) {
+    out() << std::endl;
+    out() << "Error: " << rhs.what() << std::endl;
+  }
+
   inline void Respond(Type* rhs) {
     ASSERT(rhs);
+    if (rhs->IsError())
+      return Respond(rhs->AsError());
     out() << std::endl;
     PrintValue(out(), rhs) << std::endl;
   }

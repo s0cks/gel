@@ -7,7 +7,19 @@
 
 namespace scm {
 auto Interpreter::VisitLoadVariableInstr(LoadVariableInstr* instr) -> bool {
-  return GetRuntime()->LoadSymbol(instr->GetSymbol());
+  ASSERT(instr);
+  const auto symbol = instr->GetSymbol();
+  ASSERT(symbol);
+  Type* result = nullptr;
+  if (!GetRuntime()->LookupSymbol(symbol, &result)) {
+    LOG(ERROR) << "failed to find symbol: " << symbol;
+    GetRuntime()->Push(Error::New(fmt::format("failed to find Symbol: `{0:s}`", symbol->Get())));
+    return true;
+  }
+
+  ASSERT(result);
+  GetRuntime()->Push(result);
+  return true;
 }
 
 auto Interpreter::VisitConsInstr(ConsInstr* instr) -> bool {
@@ -62,8 +74,7 @@ auto Interpreter::VisitGotoInstr(GotoInstr* instr) -> bool {
 
 auto Interpreter::VisitThrowInstr(ThrowInstr* instr) -> bool {
   ASSERT(instr);
-  const auto error = Error::New(GetRuntime()->Pop());
-  throw error;
+  GetRuntime()->Push(Error::New(GetRuntime()->Pop()));
   return true;
 }
 
@@ -188,7 +199,7 @@ void Interpreter::ExecuteInstr(Instruction* instr) {
 void Interpreter::Run(GraphEntryInstr* entry) {
   ASSERT(entry && entry->HasNext());
   SetCurrentInstr(entry->GetFirstInstruction());
-  while (HasCurrentInstr()) {
+  while (HasCurrentInstr() && !GetRuntime()->HasError()) {
     const auto next = GetCurrentInstr();
     ASSERT(next);
     ExecuteInstr(next);

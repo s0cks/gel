@@ -55,9 +55,13 @@ auto Repl::RunRepl() -> int {
       continue;
     }
 
-    const auto result = Runtime::Eval(expression_);
-    ASSERT(result);
-    Respond(result);
+    try {
+      const auto result = Runtime::Eval(expression_);
+      if (result)
+        Respond(result);
+    } catch (const scm::Exception& exc) {
+      Respond(exc);
+    }
   }
   return EXIT_SUCCESS;
 }

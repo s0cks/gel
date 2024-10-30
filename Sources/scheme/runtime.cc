@@ -149,25 +149,11 @@ auto Runtime::DefineSymbol(Symbol* symbol, Type* value) -> bool {
 auto Runtime::LookupSymbol(Symbol* symbol, Type** result) -> bool {
   ASSERT(symbol);
   LocalVariable* local = nullptr;
-  if (!GetScope()->Lookup(symbol, &local)) {
-    LOG(ERROR) << "failed to find local: " << symbol;
+  if (!GetScope()->Lookup(symbol, &local))
     return false;
-  }
   ASSERT(local);
   (*result) = local->GetValue();
   return local->HasValue();
-}
-
-auto Runtime::LoadSymbol(Symbol* symbol) -> bool {
-  ASSERT(symbol);
-  Type* result = nullptr;
-  if (!LookupSymbol(symbol, &result)) {
-    LOG(FATAL) << "failed to find symbol: " << symbol;
-    return false;
-  }
-  ASSERT(result);
-  Push(result);
-  return true;
 }
 
 auto Runtime::StoreSymbol(Symbol* symbol, Type* value) -> bool {

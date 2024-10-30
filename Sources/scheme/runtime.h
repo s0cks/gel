@@ -40,8 +40,9 @@ class ExecutionStack {
   virtual ~ExecutionStack() = default;
 
   inline auto HasError() const -> bool {
-    const auto& top = stack_.top();
-    return top && top->IsError();
+    if (stack_.empty())
+      return false;
+    return stack_.top()->IsError();
   }
 
   auto Pop() -> Stack::value_type {
@@ -125,7 +126,6 @@ class Runtime : public ExecutionStack {
 
  protected:
   explicit Runtime(LocalScope* init_scope = CreateInitScope());
-  auto LoadSymbol(Symbol* symbol) -> bool;
   auto StoreSymbol(Symbol* symbol, Type* value) -> bool;
 
   auto DefineSymbol(Symbol* symbol, Type* value) -> bool;
