@@ -51,7 +51,7 @@ Runtime::~Runtime() {
 void Runtime::LoadKernelModule() {
   ASSERT(FLAGS_kernel);
   DVLOG(10) << "loading kernel module....";
-  LOG_IF(FATAL, !ImportModule("kernel")) << "failed to import kernel module.";
+  LOG_IF(FATAL, !ImportModule("_kernel")) << "failed to import kernel module.";
 }
 
 static inline auto FileExists(const std::string& filename) -> bool {
@@ -116,7 +116,6 @@ auto Runtime::ImportModule(Symbol* symbol) -> bool {
   }
   const auto module = RuntimeModuleResolver::Resolve(symbol);
   ASSERT(module);
-  ASSERT(module->IsNamed(symbol));
   return ImportModule(module);
 }
 
@@ -182,7 +181,7 @@ auto Runtime::Execute(GraphEntryInstr* entry) -> Type* {
   Interpreter interpreter(this);
   interpreter.Run(entry);
   const auto result = Pop();
-  return result ? result : Null::Get();
+  return result;
 }
 
 auto Runtime::Eval(GraphEntryInstr* graph_entry) -> Type* {
