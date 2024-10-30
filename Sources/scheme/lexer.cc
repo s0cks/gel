@@ -52,6 +52,38 @@ static inline auto IsValidNumberChar(const char c, const bool whole = true) -> b
   return isdigit(c) || (c == '.' && whole);
 }
 
+static inline auto IsValidQuotedChar(const char c) -> bool {
+  switch (c) {
+    case EOF:
+    case ')':
+      return false;
+    default:
+      return true;
+  }
+}
+
+auto TokenStream::NextQuote() -> const Token& {
+  peek_ = Token{};
+  if (PeekChar() != '(') {
+    const auto next = NextChar();
+    LOG(ERROR) << "unexpected token: " << next;
+    return NextToken(Token::kInvalid, next);
+  }
+  NextChar();
+
+  while (IsValidQuotedChar(PeekChar())) {
+    buffer_[token_len_++] = NextChar();
+  }
+
+  if (PeekChar() != ')') {
+    const auto next = NextChar();
+    LOG(ERROR) << "unexpected token: " << next;
+    return NextToken(Token::kInvalid, next);
+  }
+  NextChar();
+  return NextToken(Token::kQuotedExpr, GetBufferedText());
+}
+
 auto TokenStream::Next() -> const Token& {
   if (!peek_.IsInvalid()) {
     next_ = peek_;
@@ -62,9 +94,11 @@ auto TokenStream::Next() -> const Token& {
   const auto next = PeekChar();
   switch (next) {
     case '(':
+      depth_ += 1;
       Advance();
       return NextToken(Token::kLParen);
     case ')':
+      depth_ -= 1;
       Advance();
       return NextToken(Token::kRParen);
     case '+':
@@ -113,41 +147,55 @@ auto TokenStream::Next() -> const Token& {
       return Next();
     case '\'':
       Advance();
-      return NextToken(Token::kQuote, '\'');
+      return NextToken(Token::kQuote);
     case ';':
       AdvanceUntil('\n');
       return Next();
+    case '<': {
+      Advance();
+      if (PeekChar() == '=') {
+        Advance();
+        return NextToken(Token::kLessThanEqual);
+      }
+      return NextToken(Token::kLessThan);
+    }
+    case '>': {
+      Advance();
+      if (PeekChar() == '=') {
+        Advance();
+        return NextToken(Token::kGreaterThanEqual);
+      }
+      return NextToken(Token::kGreaterThan);
+    }
     case EOF:
       return NextToken(Token::kEndOfStream);
   }
 
   if (IsDoubleQuote(next)) {
     Advance();
-    uint64_t token_len = 0;
+    token_len_ = 0;
     while (IsValidStringCharacter(PeekChar())) {
-      buffer_[token_len++] = NextChar();
+      buffer_[token_len_++] = NextChar();
     }
     ASSERT(IsDoubleQuote(PeekChar()));
     Advance();
-    return NextToken(Token::kLiteralString, std::string((const char*)&buffer_[0], token_len));
+    return NextToken(Token::kLiteralString, GetBufferedText());
   } else if (isdigit(next)) {
+    token_len_ = 0;
     bool whole = true;
-    uint64_t token_len = 0;
     while (IsValidNumberChar(PeekChar())) {
       const auto next = NextChar();
-      buffer_[token_len++] = next;
+      buffer_[token_len_++] = next;
       if (next == '.')
         whole = false;
     }
-    const auto value = std::string((const char*)&buffer_[0], token_len);
-    return whole ? NextToken(Token::kLiteralLong, value) : NextToken(Token::kLiteralDouble, value);
+    return whole ? NextToken(Token::kLiteralLong, GetBufferedText()) : NextToken(Token::kLiteralDouble, GetBufferedText());
   } else if (IsValidIdentifierChar(next, true)) {
-    uint64_t token_len = 0;
-    while (IsValidIdentifierChar(PeekChar(), token_len == 0)) {
-      buffer_[token_len++] = NextChar();
+    token_len_ = 0;
+    while (IsValidIdentifierChar(PeekChar(), token_len_ == 0)) {
+      buffer_[token_len_++] = NextChar();
     }
-
-    const std::string ident((const char*)&buffer_[0], token_len);
+    const auto ident = GetBufferedText();
     if (ident == "define")
       return NextToken(Token::kLocalDef);
     else if (ident == "defmodule")

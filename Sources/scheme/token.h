@@ -5,6 +5,7 @@
 #include <ostream>
 
 #include "scheme/common.h"
+#include "scheme/expression.h"
 
 namespace scm {
 struct Position {
@@ -50,8 +51,13 @@ struct Position {
   V(Not)                  \
   V(And)                  \
   V(Or)                   \
+  V(LessThan)             \
+  V(GreaterThan)          \
+  V(LessThanEqual)        \
+  V(GreaterThanEqual)     \
   V(LParen)               \
   V(RParen)               \
+  V(QuotedExpr)           \
   V(Identifier)           \
   V(LiteralNumber)        \
   V(LiteralDouble)        \
@@ -108,6 +114,83 @@ struct Token {
         return true;
       default:
         return false;
+    }
+  }
+
+  auto IsBinaryOp() const -> bool {
+    switch (kind) {
+      case Kind::kPlus:
+      case Kind::kMinus:
+      case Kind::kMultiply:
+      case Kind::kDivide:
+      case Kind::kModulus:
+      case Kind::kAnd:
+      case Kind::kOr:
+      case Kind::kEquals:
+      case Kind::kLessThan:
+      case Kind::kLessThanEqual:
+      case Kind::kGreaterThan:
+      case Kind::kGreaterThanEqual:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  auto ToBinaryOp() const -> std::optional<expr::BinaryOp> {
+    ASSERT(IsBinaryOp());
+    switch (kind) {
+      case Token::kPlus:
+        return {BinaryOp::kAdd};
+      case Token::kMinus:
+        return {BinaryOp::kSubtract};
+      case Token::kMultiply:
+        return {BinaryOp::kMultiply};
+      case Token::kDivide:
+        return {BinaryOp::kDivide};
+      case Token::kModulus:
+        return {BinaryOp::kModulus};
+      case Token::kEquals:
+        return {BinaryOp::kEquals};
+      case Token::kAnd:
+        return {BinaryOp::kBinaryAnd};
+      case Token::kOr:
+        return {BinaryOp::kBinaryOr};
+      case Token::kGreaterThan:
+        return {BinaryOp::kGreaterThan};
+      case Token::kGreaterThanEqual:
+        return {BinaryOp::kGreaterThanEqual};
+      case Token::kLessThan:
+        return {BinaryOp::kLessThan};
+      case Token::kLessThanEqual:
+        return {BinaryOp::kLessThanEqual};
+      default:
+        return std::nullopt;
+    }
+  }
+
+  auto IsUnaryOp() const -> bool {
+    switch (kind) {
+      case Kind::kNot:
+      case Kind::kCarExpr:
+      case Kind::kCdrExpr:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  auto ToUnaryOp() const -> std::optional<expr::UnaryOp> {
+    ASSERT(IsUnaryOp());
+    switch (kind) {
+      case Token::kNot:
+        return {expr::UnaryOp::kNot};
+      case Token::kCarExpr:
+        return {expr::UnaryOp::kCar};
+      case Token::kCdrExpr:
+        return {expr::UnaryOp::kCdr};
+      default:
+        return std::nullopt;
     }
   }
 

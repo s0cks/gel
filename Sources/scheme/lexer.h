@@ -16,6 +16,8 @@ class TokenStream {
   Chunk chunk_{};
   uint64_t wpos_ = 0;
   uint64_t rpos_ = 0;
+  uint64_t token_len_ = 0;
+  uint64_t depth_ = 0;
   std::vector<char> buffer_;
   Token next_;
   Token peek_;
@@ -29,6 +31,10 @@ class TokenStream {
     ASSERT(length >= 0 && length <= kChunkSize);
     memcpy(&chunk_[0], &data[0], length);  // NOLINT
     buffer_.reserve(1024);
+  }
+
+  inline auto GetBufferedText() const -> std::string {
+    return std::string((const char*)&buffer_[0], token_len_);
   }
 
   inline auto GetRemaining() const -> std::string {
@@ -95,10 +101,30 @@ class TokenStream {
     return static_cast<char>(next);
   }
 
+  inline void SetDepth(int depth) {
+    ASSERT(depth >= 0);
+    depth_ = depth;
+  }
+
+  inline void IncrementDepth() {
+    ASSERT((depth_ + 1) >= 0);
+    depth_ += 1;
+  }
+
+  inline void DecrementDepth() {
+    ASSERT((depth_ - 1) >= 0);
+    depth_ -= 1;
+  }
+
  public:
   virtual ~TokenStream() = default;
   virtual auto Peek() -> const Token&;
   virtual auto Next() -> const Token&;
+  virtual auto NextQuote() -> const Token&;
+
+  inline auto GetDepth() const -> uint64_t {
+    return depth_;
+  }
 };
 
 class ByteTokenStream : public TokenStream {

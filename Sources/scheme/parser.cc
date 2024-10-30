@@ -10,22 +10,6 @@
 #include "scheme/token.h"
 
 namespace scm {
-static inline auto IsValidBinaryOp(const Token& rhs) -> bool {
-  switch (rhs.kind) {
-    case Token::kPlus:
-    case Token::kMinus:
-    case Token::kMultiply:
-    case Token::kDivide:
-    case Token::kModulus:
-    case Token::kAnd:
-    case Token::kOr:
-    case Token::kEquals:
-      return true;
-    default:
-      return false;
-  }
-}
-
 void Parser::PushScope() {
   const auto old_scope = GetScope();
   ASSERT(old_scope);
@@ -94,67 +78,21 @@ auto Parser::ParseCallProcExpr() -> CallProcExpr* {
   return CallProcExpr::New(target, args);
 }
 
-static inline auto ToBinaryOp(const Token& rhs) -> BinaryOp {
-  ASSERT(IsValidBinaryOp(rhs));
-  switch (rhs.kind) {
-    case Token::kPlus:
-      return BinaryOp::kAdd;
-    case Token::kMinus:
-      return BinaryOp::kSubtract;
-    case Token::kMultiply:
-      return BinaryOp::kMultiply;
-    case Token::kDivide:
-      return BinaryOp::kDivide;
-    case Token::kModulus:
-      return BinaryOp::kModulus;
-    case Token::kEquals:
-      return BinaryOp::kEquals;
-    case Token::kAnd:
-      return BinaryOp::kBinaryAnd;
-    case Token::kOr:
-      return BinaryOp::kBinaryOr;
-    default:
-      LOG(FATAL) << "unexpected: " << rhs;
-  }
-}
-
-static inline auto ToUnaryOp(const Token& rhs) -> expr::UnaryOp {
-  switch (rhs.kind) {
-    case Token::kNot:
-      return expr::UnaryOp::kNot;
-    case Token::kCarExpr:
-      return expr::UnaryOp::kCar;
-    case Token::kCdrExpr:
-      return expr::UnaryOp::kCdr;
-    default:
-      LOG(FATAL) << "invalid UnaryOp: " << rhs;
-  }
-}
-
-static inline auto IsValidUnaryOp(const Token& rhs) -> bool {
-  switch (rhs.kind) {
-    case Token::kNot:
-    case Token::kCarExpr:
-    case Token::kCdrExpr:
-      return true;
-    default:
-      return false;
-  }
-}
-
 auto Parser::ParseUnaryExpr() -> expr::UnaryExpr* {
-  const auto op = ToUnaryOp(stream().Next());
+  const auto op = stream().Next().ToUnaryOp();
+  ASSERT(op);
   const auto value = ParseExpression();
   ASSERT(value);
-  return expr::UnaryExpr::New(op, value);
+  return expr::UnaryExpr::New((*op), value);
 }
 
 auto Parser::ParseBinaryOpExpr() -> BinaryOpExpr* {
-  const auto op = ToBinaryOp(stream().Next());
+  const auto op = stream().Next().ToBinaryOp();
+  ASSERT(op);
   auto left_expr = ParseExpression();
   auto right_expr = ParseExpression();
   do {
-    left_expr = BinaryOpExpr::New(op, left_expr, right_expr);
+    left_expr = BinaryOpExpr::New((*op), left_expr, right_expr);
     if (stream().Peek().kind == Token::kRParen)
       break;
     right_expr = ParseExpression();
@@ -238,17 +176,20 @@ auto Parser::ParseSetExpr() -> SetExpr* {
 }
 
 auto Parser::ParseExpression() -> Expression* {
-  if (stream().Peek().IsLiteral() || stream().Peek().kind == Token::kIdentifier)
-    return ParseLiteralExpr();
+  {
+    const auto next = stream().Peek();
+    if (next.IsLiteral() || next.kind == Token::kIdentifier)
+      return ParseLiteralExpr();
+  }
 
   Expression* expr = nullptr;
   ExpectNext(Token::kLParen);
-  if (IsValidUnaryOp(stream().Peek())) {
+  const auto next = stream().Peek();
+  if (next.IsUnaryOp()) {
     expr = ParseUnaryExpr();
-  } else if (IsValidBinaryOp(stream().Peek())) {
+  } else if (next.IsBinaryOp()) {
     expr = ParseBinaryOpExpr();
   } else {
-    const auto& next = stream().Peek();
     switch (next.kind) {
       // Definitions
       case Token::kLocalDef:
@@ -280,6 +221,9 @@ auto Parser::ParseExpression() -> Expression* {
       case Token::kIdentifier:
         expr = ParseCallProcExpr();
         break;
+      case Token::kQuote:
+        expr = ParseQuoteExpr();
+        break;
       default:
         LOG(FATAL) << "unexpected: " << next;
         return nullptr;
@@ -288,6 +232,14 @@ auto Parser::ParseExpression() -> Expression* {
   ASSERT(expr);
   ExpectNext(Token::kRParen);
   return expr;
+}
+
+auto Parser::ParseQuoteExpr() -> expr::LiteralExpr* {
+  ExpectNext(Token::kQuote);
+  const auto depth = stream().GetDepth();
+  DLOG(INFO) << "depth: " << depth;
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return nullptr;
 }
 
 auto Parser::ParseImportDef() -> expr::ImportDef* {
