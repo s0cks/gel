@@ -18,7 +18,8 @@ DECLARE_string(module_dir);
 
 namespace proc {
 class import;
-}
+class exit;
+}  // namespace proc
 
 class ExecutionStack {
   using Stack = std::stack<Type*>;
@@ -60,7 +61,9 @@ class ExecutionStack {
 
 class Module;
 class Runtime : public ExecutionStack {
+  friend class Repl;
   friend class proc::import;
+  friend class proc::exit;
   friend class Interpreter;
   friend class RuntimeScopeScope;
 
@@ -71,6 +74,7 @@ class Runtime : public ExecutionStack {
   LocalScope* scope_ = nullptr;
   Instruction* current_ = nullptr;
   ModuleList modules_{};
+  bool running_ = false;
 
   inline void SetCurrentInstr(Instruction* instr) {
     ASSERT(instr);
@@ -106,12 +110,21 @@ class Runtime : public ExecutionStack {
     ASSERT(HasScope());
   }
 
+  inline void SetRunning(const bool rhs = true) {
+    running_ = rhs;
+  }
+
+  inline void StopRunning() {
+    return SetRunning(false);
+  }
+
   void LoadKernelModule();
 
  public:
   static auto CreateInitScope() -> LocalScope*;
 
  protected:
+  explicit Runtime(LocalScope* init_scope = CreateInitScope());
   auto LoadSymbol(Symbol* symbol) -> bool;
   auto StoreSymbol(Symbol* symbol, Type* value) -> bool;
 
@@ -127,7 +140,6 @@ class Runtime : public ExecutionStack {
   }
 
  public:
-  Runtime(LocalScope* init_scope = CreateInitScope());
   ~Runtime();
 
   auto GetScope() const -> LocalScope* {
@@ -136,6 +148,10 @@ class Runtime : public ExecutionStack {
 
   inline auto HasScope() const -> bool {
     return GetScope() != nullptr;
+  }
+
+  auto IsRunning() const -> bool {
+    return running_;
   }
 
   auto Execute(GraphEntryInstr* entry) -> Type*;

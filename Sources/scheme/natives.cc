@@ -62,4 +62,10 @@ NATIVE_PROCEDURE_F(type) {
   state->Push(String::New(value->GetTypename()));
   return true;
 }
+
+NATIVE_PROCEDURE_F(exit) {
+  ASSERT(state);
+  state->StopRunning();
+  return true;
+}
 }  // namespace scm::proc
