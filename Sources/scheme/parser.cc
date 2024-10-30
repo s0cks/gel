@@ -33,25 +33,31 @@ auto Parser::ParseSymbol() -> Symbol* {
   return Symbol::New(next.text);
 }
 
-auto Parser::ParseLiteralExpr() -> LiteralExpr* {
+auto Parser::ParseLiteralValue() -> Datum* {
   const auto& next = NextToken();
   switch (next.kind) {
     case Token::kLiteralTrue:
-      return LiteralExpr::New(Bool::True());
+      return Bool::True();
     case Token::kLiteralFalse:
-      return LiteralExpr::New(Bool::False());
+      return Bool::False();
     case Token::kLiteralLong:
-      return LiteralExpr::New(Long::New(next.AsLong()));
+      return Long::New(next.AsLong());
     case Token::kLiteralDouble:
-      return LiteralExpr::New(Double::New(next.AsDouble()));
+      return Double::New(next.AsDouble());
     case Token::kLiteralString:
-      return LiteralExpr::New(String::New(next.text));
+      return String::New(next.text);
     case Token::kIdentifier:
-      return LiteralExpr::New(Symbol::New(next.text));
+      return Symbol::New(next.text);
     default:
       LOG(FATAL) << "unexpected: " << NextToken();
       return nullptr;
   }
+}
+
+auto Parser::ParseLiteralExpr() -> LiteralExpr* {
+  const auto value = ParseLiteralValue();
+  ASSERT(value);
+  return LiteralExpr::New(value);
 }
 
 auto Parser::ParseBeginExpr() -> BeginExpr* {
@@ -175,6 +181,8 @@ auto Parser::ParseExpression() -> Expression* {
     const auto next = PeekToken();
     if (next.IsLiteral() || next.kind == Token::kIdentifier)
       return ParseLiteralExpr();
+    else if (next.kind == Token::kQuote)
+      return ParseQuotedExpr();
   }
 
   Expression* expr = nullptr;
@@ -217,7 +225,7 @@ auto Parser::ParseExpression() -> Expression* {
         expr = ParseCallProcExpr();
         break;
       case Token::kQuote:
-        expr = ParseQuoteExpr();
+        expr = ParseQuotedExpr();
         break;
       default:
         LOG(FATAL) << "unexpected: " << next;
@@ -229,12 +237,29 @@ auto Parser::ParseExpression() -> Expression* {
   return expr;
 }
 
-auto Parser::ParseQuoteExpr() -> expr::LiteralExpr* {
-  ExpectNext(Token::kQuote);
+auto Parser::ParseQuotedExpr() -> expr::QuotedExpr* {
   const auto depth = GetDepth();
-  DLOG(INFO) << "depth: " << depth;
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return nullptr;
+  DLOG(INFO) << "quote depth (start): " << depth;
+  ExpectNext(Token::kQuote);
+  if (PeekToken().IsLiteral()) {
+    const auto value = ParseLiteralValue();
+    ASSERT(value);
+    return QuotedExpr::New(value->ToString());
+  } else if (PeekToken().kind == Token::kIdentifier) {
+    const auto value = ParseLiteralValue();
+    ASSERT(value);
+    return QuotedExpr::New(value->ToString());
+  }
+
+  token_len_ = 0;
+  ExpectNext(Token::kLParen);
+  buffer_[token_len_++] = '(';
+  while (depth < GetDepth()) {
+    buffer_[token_len_++] = NextChar();
+  }
+  ASSERT(depth == GetDepth());
+  DLOG(INFO) << "quoted: " << GetBufferedText();
+  return QuotedExpr::New(GetBufferedText());
 }
 
 auto Parser::ParseImportDef() -> expr::ImportDef* {
@@ -424,11 +449,9 @@ auto Parser::NextToken() -> const Token& {
   const auto next = PeekChar();
   switch (next) {
     case '(':
-      depth_ += 1;
       Advance();
       return NextToken(Token::kLParen);
     case ')':
-      depth_ -= 1;
       Advance();
       return NextToken(Token::kRParen);
     case '+':

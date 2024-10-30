@@ -25,7 +25,8 @@
   V(EvalExpr)                       \
   V(CallProcExpr)                   \
   V(SetExpr)                        \
-  V(ThrowExpr)
+  V(ThrowExpr)                      \
+  V(QuotedExpr)
 
 namespace scm {
 class Parser;
@@ -462,6 +463,30 @@ class ThrowExpr : public TemplateExpression<1> {
   static inline auto New(LiteralExpr* value) -> ThrowExpr* {
     ASSERT(value);
     return new ThrowExpr(value);
+  }
+};
+
+class QuotedExpr : public Expression {
+ private:
+  std::string value_;
+
+ protected:
+  explicit QuotedExpr(const std::string& value) :
+    Expression(),
+    value_(value) {}
+
+ public:
+  ~QuotedExpr() override = default;
+
+  auto Get() const -> const std::string& {
+    return value_;
+  }
+
+  DECLARE_EXPRESSION(QuotedExpr);
+
+ public:
+  static inline auto New(const std::string& expr) -> QuotedExpr* {
+    return new QuotedExpr(expr);
   }
 };
 

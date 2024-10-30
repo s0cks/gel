@@ -11,6 +11,12 @@
 #include "scheme/module.h"
 
 namespace scm {
+auto DefinitionVisitor::VisitQuotedExpr(expr::QuotedExpr* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return true;
+}
+
 auto DefinitionVisitor::VisitLocalDef(expr::LocalDef* expr) -> bool {
   ASSERT(expr);
   const auto symbol = expr->GetSymbol();

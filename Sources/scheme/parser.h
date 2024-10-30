@@ -88,16 +88,18 @@ class Parser {
   auto ParseSymbolList(SymbolList& symbols) -> bool;
   auto ParseIdentifier(std::string& result) -> bool;
 
+  auto ParseLiteralValue() -> Datum*;
+
   // Expressions
-  auto ParseSetExpr() -> SetExpr*;
-  auto ParseCallProcExpr() -> CallProcExpr*;
-  auto ParseLiteralExpr() -> LiteralExpr*;
-  auto ParseQuoteExpr() -> LiteralExpr*;
-  auto ParseBeginExpr() -> BeginExpr*;
+  auto ParseSetExpr() -> expr::SetExpr*;
+  auto ParseCallProcExpr() -> expr::CallProcExpr*;
+  auto ParseLiteralExpr() -> expr::LiteralExpr*;
+  auto ParseBeginExpr() -> expr::BeginExpr*;
   auto ParseUnaryExpr() -> expr::UnaryExpr*;
-  auto ParseBinaryOpExpr() -> BinaryOpExpr*;
-  auto ParseLambdaExpr() -> LambdaExpr*;
-  auto ParseThrowExpr() -> ThrowExpr*;
+  auto ParseBinaryOpExpr() -> expr::BinaryOpExpr*;
+  auto ParseLambdaExpr() -> expr::LambdaExpr*;
+  auto ParseThrowExpr() -> expr::ThrowExpr*;
+  auto ParseQuotedExpr() -> expr::QuotedExpr*;
 
   // Definitions
   auto ParseDefinition() -> expr::Definition*;
@@ -124,6 +126,14 @@ class Parser {
       case '\n':
         pos_.row += 1;
         pos_.column = 1;
+        break;
+      case '(':
+        IncrementDepth();
+        pos_.column += 1;
+        break;
+      case ')':
+        DecrementDepth();
+        pos_.column += 1;
         break;
       default:
         pos_.column += 1;

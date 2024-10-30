@@ -173,6 +173,12 @@ class MacroEvaluator : public expr::ExpressionVisitor {
     return true;
   }
 
+  auto VisitQuotedExpr(expr::QuotedExpr* expr) -> bool override {
+    ASSERT(expr);
+    NOT_IMPLEMENTED(ERROR);  // TODO: implement
+    return true;
+  }
+
   auto VisitLocalDef(expr::LocalDef* expr) -> bool override {
     ASSERT(expr);
     NOT_IMPLEMENTED(ERROR);  // TODO: implement

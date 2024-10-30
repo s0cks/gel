@@ -80,6 +80,14 @@ auto EffectVisitor::VisitImportDef(expr::ImportDef* expr) -> bool {
   return false;
 }
 
+auto EffectVisitor::VisitQuotedExpr(expr::QuotedExpr* expr) -> bool {
+  ASSERT(expr);
+  const auto value = Symbol::New(expr->Get());
+  ASSERT(value);
+  ReturnDefinition(ConstantInstr::New(value));
+  return true;
+}
+
 auto EffectVisitor::VisitBeginExpr(BeginExpr* expr) -> bool {
   ASSERT(expr);
   uint64_t idx = 0;

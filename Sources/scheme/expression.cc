@@ -269,4 +269,12 @@ auto UnaryExpr::ToString() const -> std::string {
   ss << ")";
   return ss.str();
 }
+
+auto QuotedExpr::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "QuotedExpr(";
+  ss << "value=" << Get();
+  ss << ")";
+  return ss.str();
+}
 }  // namespace scm::expr

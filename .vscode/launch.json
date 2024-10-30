@@ -100,6 +100,26 @@
       }
     },
     {
+      "name": "REPL (No Kernel)",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/Sources/scm",
+      "args": [
+        "-logtostdout",
+        "-colorlogtostdout",
+        "--reports-dir", "${workspaceFolder}/reports",
+        "--module-dir", "${workspaceFolder}/scm",
+        "--nokernel"
+      ],
+      "cwd": "${workspaceFolder}",
+      "initCommands": [
+        "command source ${workspaceFolder}/.lldbinit"
+      ],
+      "env": {
+        "TERM": "xterm-256color"
+      }
+    },
+    {
       "name": "Eval Expr",
       "type": "lldb",
       "request": "launch",

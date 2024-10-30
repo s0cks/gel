@@ -224,6 +224,21 @@ auto ExpressionToDot::VisitLambdaExpr(LambdaExpr* expr) -> bool {
   return true;
 }
 
+auto ExpressionToDot::VisitQuotedExpr(QuotedExpr* expr) -> bool {
+  ASSERT(expr);
+  const auto node = NewNode();
+  ASSERT(node);
+  {
+    // create node labels
+    // label
+    std::stringstream label;
+    label << expr->GetName() << std::endl;
+    SetNodeLabel(node, label);
+  }
+  CreateEdgeFromParent(node);
+  return true;
+}
+
 auto ExpressionToDot::VisitSetExpr(SetExpr* expr) -> bool {
   ASSERT(expr);
   const auto node = NewNode();
