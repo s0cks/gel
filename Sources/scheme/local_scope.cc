@@ -22,11 +22,14 @@ auto LocalScope::Has(const Symbol* symbol, const bool recursive) -> bool {
 
 auto LocalScope::Add(LocalVariable* local) -> bool {
   ASSERT(local);
-  if (Has(local->GetName()))
+  if (Has(local->GetName())) {
+    DLOG(ERROR) << "cannot add duplicate local: " << (*local);
     return false;
+  }
   locals_.push_back(local);
   if (!local->HasOwner())
     local->SetOwner(this);
+  DLOG(INFO) << "added: " << (*local);
   return true;
 }
 

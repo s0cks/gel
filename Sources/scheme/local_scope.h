@@ -56,8 +56,10 @@ class LocalScope {
     LocalVariable* local = nullptr;
     if (!Lookup(name, &local, false))
       return Add(local = new LocalVariable(this, GetNumberOfLocals(), name, value));
-    if (local->HasValue())
+    if (local->HasValue()) {
+      DLOG(ERROR) << "cannot overwrite local: " << (*local);
       return false;
+    }
     local->SetConstantValue(value);
     return true;
   }

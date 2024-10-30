@@ -6,6 +6,7 @@
 #include "scheme/expression.h"
 #include "scheme/instruction.h"
 #include "scheme/lambda.h"
+#include "scheme/local.h"
 #include "scheme/procedure.h"
 
 namespace scm {
@@ -30,7 +31,7 @@ auto FlowGraphBuilder::BuildGraph() -> FlowGraph* {
   }
   AppendFragment(target_entry, for_effect);
   if (for_effect.HasValue())
-    target_entry->Append(new ReturnInstr(for_effect.GetValue()));  // NOLINT
+    target_entry->Append(ReturnInstr::New(for_effect.GetValue()));  // NOLINT
   SetGraphEntry(graph_entry);
   graph_entry->Append(target_entry);
   graph_entry->AddDominated(target_entry);
@@ -87,11 +88,16 @@ auto EffectVisitor::VisitQuotedExpr(expr::QuotedExpr* expr) -> bool {
 }
 
 auto EffectVisitor::VisitBeginExpr(BeginExpr* expr) -> bool {
+  const auto target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
+  ASSERT(target);
+  Add(target);
+
   ASSERT(expr);
   uint64_t idx = 0;
   while (IsOpen() && (idx < expr->GetNumberOfChildren())) {
     const auto child = expr->GetChildAt(idx++);
     ASSERT(child);
+
     ValueVisitor vis(GetOwner());
     if (!child->Accept(&vis))
       break;
@@ -99,6 +105,8 @@ auto EffectVisitor::VisitBeginExpr(BeginExpr* expr) -> bool {
     if (!IsOpen())
       break;
   }
+
+  AddImplicitReturn();
   return true;
 }
 
@@ -196,6 +204,8 @@ auto EffectVisitor::VisitUnaryExpr(expr::UnaryExpr* expr) -> bool {
 
 auto EffectVisitor::VisitLocalDef(LocalDef* expr) -> bool {
   ASSERT(expr);
+  const auto symbol = expr->GetSymbol();
+  ASSERT(symbol);
   // process value
   const auto value = expr->GetValue();
   ASSERT(value);
@@ -205,8 +215,6 @@ auto EffectVisitor::VisitLocalDef(LocalDef* expr) -> bool {
     return false;
   }
   Append(for_value);
-  const auto symbol = expr->GetSymbol();
-  ASSERT(symbol);
   Add(StoreVariableInstr::New(symbol, for_value.GetValue()));
   return true;
 }

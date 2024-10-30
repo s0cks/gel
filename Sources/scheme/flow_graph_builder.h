@@ -124,7 +124,7 @@ class EffectVisitor : public ExpressionVisitor {
 
   inline void AddReturnExit(instr::Definition* value) {
     ASSERT(value);
-    Add(new ReturnInstr(value));
+    Add(ReturnInstr::New(value));
     exit_ = nullptr;
   }
 
@@ -156,6 +156,16 @@ class EffectVisitor : public ExpressionVisitor {
 
   inline auto GetCurrentBlock() const -> EntryInstr* {
     return block_;
+  }
+
+  inline auto CreateReturnForExit(instr::Instruction* exit_instr) -> instr::ReturnInstr* {
+    return exit_instr->IsDefinition() ? ReturnInstr::New((instr::Definition*)exit_instr) : ReturnInstr::New();
+  }
+
+  inline void AddImplicitReturn() {
+    const auto exit = GetExitInstr();
+    if (!exit->IsReturnInstr())
+      Add(CreateReturnForExit(exit));
   }
 
   virtual void ReturnValue(instr::Definition* defn) {}

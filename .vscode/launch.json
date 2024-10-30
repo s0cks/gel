@@ -109,7 +109,10 @@
         "-colorlogtostdout",
         "--reports-dir", "${workspaceFolder}/reports",
         "--module-dir", "${workspaceFolder}/scm",
-        "--nokernel"
+        "--dump-ast",
+        "--dump-flow-graph",
+        "--nokernel",
+        "-v=1000"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [

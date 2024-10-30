@@ -28,7 +28,8 @@ namespace instr {
   V(ReturnInstr)                \
   V(BranchInstr)                \
   V(GotoInstr)                  \
-  V(ThrowInstr)
+  V(ThrowInstr)                 \
+  V(TypecheckInstr)
 
 class Instruction;
 #define FORWARD_DECLARE(Name) class Name;
@@ -473,17 +474,28 @@ class ReturnInstr : public Definition {
  private:
   Definition* value_;
 
- public:
+ protected:
   explicit ReturnInstr(Definition* value) :
     Definition(),
     value_(value) {}
+
+ public:
   ~ReturnInstr() override = default;
 
   auto GetValue() const -> Definition* {
     return value_;
   }
 
+  inline auto HasValue() const -> bool {
+    return GetValue() != nullptr;
+  }
+
   DECLARE_INSTRUCTION(ReturnInstr);
+
+ public:
+  static inline auto New(Definition* value = nullptr) -> ReturnInstr* {
+    return new ReturnInstr(value);
+  }
 };
 
 class BinaryOpInstr : public Definition {
@@ -679,6 +691,31 @@ class ConsInstr : public Definition {
     ASSERT(car);
     ASSERT(cdr);
     return new ConsInstr(car, cdr);
+  }
+};
+
+class TypecheckInstr : public Instruction {
+ private:
+  Definition* value_;
+
+ public:
+  explicit TypecheckInstr(Definition* value) :
+    Instruction(),
+    value_(value) {
+    ASSERT(value_);
+  }
+  ~TypecheckInstr() override = default;
+
+  auto GetValue() const -> Definition* {
+    return value_;
+  }
+
+  DECLARE_INSTRUCTION(TypecheckInstr);
+
+ public:
+  static inline auto New(Definition* value) -> TypecheckInstr* {
+    ASSERT(value);
+    return new TypecheckInstr(value);
   }
 };
 }  // namespace instr

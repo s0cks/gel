@@ -36,6 +36,12 @@ class ExecutionStack {
     stack_ = rhs;
   }
 
+  inline auto StackTop() const -> std::optional<Stack::value_type> {
+    if (stack_.empty())
+      return std::nullopt;
+    return {stack_.top()};
+  }
+
  public:
   virtual ~ExecutionStack() = default;
 
@@ -96,6 +102,7 @@ class Runtime : public ExecutionStack {
   }
 
   inline void PushScope() {
+    DLOG(INFO) << "pushing scope....";
     ASSERT(HasScope());
     const auto new_scope = LocalScope::New(GetScope());
     ASSERT(new_scope);
@@ -103,6 +110,7 @@ class Runtime : public ExecutionStack {
   }
 
   inline void PopScope() {
+    DLOG(INFO) << "popping scope....";
     ASSERT(HasScope());
     const auto curr_scope = GetScope();
     ASSERT(curr_scope);

@@ -4,6 +4,7 @@
 #include "scheme/expression.h"
 #include "scheme/instruction.h"
 #include "scheme/runtime.h"
+#include "scheme/type.h"
 
 namespace scm {
 auto Interpreter::VisitLoadVariableInstr(LoadVariableInstr* instr) -> bool {
@@ -33,6 +34,7 @@ auto Interpreter::VisitConsInstr(ConsInstr* instr) -> bool {
 }
 
 auto Interpreter::VisitReturnInstr(ReturnInstr* instr) -> bool {
+  GetRuntime()->PopScope();
   return true;
 }
 
@@ -68,6 +70,7 @@ auto Interpreter::VisitUnaryOpInstr(UnaryOpInstr* instr) -> bool {
 auto Interpreter::VisitGotoInstr(GotoInstr* instr) -> bool {
   ASSERT(instr);
   ASSERT(instr->HasTarget());
+  GetRuntime()->PopScope();
   SetCurrentInstr(instr->GetTarget());
   return true;
 }
@@ -117,6 +120,14 @@ auto Interpreter::VisitBranchInstr(BranchInstr* instr) -> bool {
   return true;
 }
 
+auto Interpreter::VisitTypecheckInstr(TypecheckInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto stack_top = GetRuntime()->StackTop().value_or(Null::Get());
+  ASSERT(stack_top);
+  DLOG(INFO) << "typechecking: " << stack_top;
+  return true;
+}
+
 static inline auto ApplyBinaryOp(BinaryOp op, Datum* lhs, Datum* rhs) -> Datum* {
   switch (op) {
     case expr::kAdd:
@@ -161,10 +172,12 @@ auto Interpreter::VisitBinaryOpInstr(BinaryOpInstr* instr) -> bool {
 }
 
 auto Interpreter::VisitTargetEntryInstr(TargetEntryInstr* instr) -> bool {
+  GetRuntime()->PushScope();
   return true;
 }
 
 auto Interpreter::VisitJoinEntryInstr(JoinEntryInstr* instr) -> bool {
+  GetRuntime()->PushScope();
   return true;
 }
 
@@ -180,7 +193,11 @@ auto Interpreter::VisitStoreVariableInstr(StoreVariableInstr* instr) -> bool {
   ASSERT(value);
   const auto symbol = instr->GetSymbol();
   ASSERT(symbol);
-  return GetRuntime()->StoreSymbol(symbol, value);
+  if (!GetRuntime()->StoreSymbol(symbol, value)) {
+    LOG(ERROR) << "failed to store symbol " << symbol << " to value: " << value;
+    return false;
+  }
+  return true;
 }
 
 auto Interpreter::VisitGraphEntryInstr(GraphEntryInstr* instr) -> bool {

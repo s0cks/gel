@@ -164,9 +164,11 @@ auto Runtime::StoreSymbol(Symbol* symbol, Type* value) -> bool {
 
 auto Runtime::Execute(GraphEntryInstr* entry) -> Type* {
   ASSERT(entry && entry->IsGraphEntryInstr());
+  PushScope();
   Interpreter interpreter(this);
   interpreter.Run(entry);
   const auto result = Pop();
+  PopScope();
   return result;
 }
 

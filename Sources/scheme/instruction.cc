@@ -98,7 +98,8 @@ auto CallProcInstr::ToString() const -> std::string {
 auto ReturnInstr::ToString() const -> std::string {
   std::stringstream ss;
   ss << "ReturnInstr(";
-  ss << "value=" << GetValue()->ToString();
+  if (HasValue())
+    ss << "value=" << GetValue()->ToString();
   ss << ")";
   return ss.str();
 }
@@ -163,6 +164,14 @@ auto InvokeNativeInstr::ToString() const -> std::string {
   std::stringstream ss;
   ss << "InvokeNativeInstr(";
   ss << "target=" << GetTarget()->ToString();
+  ss << ")";
+  return ss.str();
+}
+
+auto TypecheckInstr::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "TypecheckInstr(";
+  ss << "value=" << GetValue()->ToString();
   ss << ")";
   return ss.str();
 }
