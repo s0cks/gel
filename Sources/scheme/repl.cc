@@ -30,6 +30,10 @@ static inline auto IsHelpCommand(const std::string& cmd) -> bool {
   return cmd == "help" || cmd == "h";
 }
 
+static inline auto IsClearCommand(const std::string& cmd) -> bool {
+  return cmd == "clear" || cmd == "cls";
+}
+
 auto Repl::RunRepl() -> int {
   const auto runtime = GetRuntime();
   ASSERT(runtime);
@@ -40,6 +44,9 @@ auto Repl::RunRepl() -> int {
     } else if (IsHelpCommand(expression_)) {
       // TODO: print help
       Respond("No help available.");
+      continue;
+    } else if (IsClearCommand(expression_)) {
+      ClearOut();
       continue;
     }
 

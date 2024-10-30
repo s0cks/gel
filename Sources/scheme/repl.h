@@ -28,6 +28,16 @@ class Repl {
     out() << std::endl << rhs << std::endl;
   }
 
+  inline void ClearOut() {
+#if defined(OS_IS_OSX) || defined(OS_IS_LINUX)
+    system("clear");
+#elif defined(OS_IS_WINDOWS)
+    system("cls");
+#else
+#error "Unsupported Operating System"
+#endif
+  }
+
   inline auto in() const -> std::istream& {
     return in_;
   }

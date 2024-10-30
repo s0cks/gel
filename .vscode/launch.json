@@ -94,7 +94,10 @@
       "cwd": "${workspaceFolder}",
       "initCommands": [
         "command source ${workspaceFolder}/.lldbinit"
-      ]
+      ],
+      "env": {
+        "TERM": "xterm-256color"
+      }
     },
     {
       "name": "Eval Expr",
