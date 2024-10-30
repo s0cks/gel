@@ -245,9 +245,18 @@ auto Parser::ParseQuotedExpr() -> expr::QuotedExpr* {
   token_len_ = 0;
   do {
     buffer_[token_len_++] = NextChar();
-  } while (GetDepth() > depth);
+    if (PeekChar() == ')') {
+      if (GetDepth() > depth)
+        continue;
+      break;
+    } else if (IsWhitespaceChar(PeekChar())) {
+      if (GetDepth() <= depth)
+        break;
+    }
+  } while (true);
   DLOG(INFO) << "quoted: " << GetBufferedText();
   ASSERT(depth == GetDepth());
+  DLOG(INFO) << "remaining: " << GetRemaining();
   return QuotedExpr::New(GetBufferedText());
 }
 
@@ -335,17 +344,6 @@ auto Parser::ParseDefinition() -> expr::Definition* {
   ExpectNext(Token::kRParen);
   ASSERT(defn);
   return defn;
-}
-
-auto Parser::ParseProgram() -> Program* {
-  const auto program = Program::New();
-  do {
-    const auto& next = PeekToken();
-    if (next.IsEndOfStream())
-      break;
-    program->Append(ParseExpression());
-  } while (true);
-  return program;
 }
 
 auto Parser::PeekToken() -> const Token& {

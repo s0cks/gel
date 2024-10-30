@@ -253,7 +253,7 @@ auto PrintValue(std::ostream& stream, Type* value) -> std::ostream& {
   } else if (value->IsString()) {
     return stream << '"' << value->AsString()->Get() << '"';
   } else if (value->IsSymbol()) {
-    return stream << value->AsString()->Get();
+    return stream << value->AsSymbol()->Get();
   } else if (value->IsPair()) {
     stream << "(";
     PrintValue(stream, value->AsPair()->GetCar()) << ", ";

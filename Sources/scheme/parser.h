@@ -115,7 +115,7 @@ class Parser {
   }
 
   inline auto IsWhitespaceChar(const char c) -> bool {
-    return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+    return c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == EOF;
   }
 
   inline void SkipWhitespace() {
@@ -240,9 +240,6 @@ class Parser {
 
   auto ParseModuleDef() -> expr::ModuleDef*;
   auto ParseExpression() -> Expression*;
-
-  auto ParseProgram() -> Program*;
-  auto Parse(const uint8_t* data, const uint64_t length) -> Program*;
 
  public:
   static inline auto ParseExpr(std::istream& stream, LocalScope* scope = LocalScope::New()) -> expr::Expression* {
