@@ -153,7 +153,16 @@ class Runtime : public ExecutionStack {
   }
 
   static auto Eval(const std::string& expr) -> Type*;
+
+ public:
+  static void Init();
 };
+
+auto GetRuntime() -> Runtime*;
+
+inline auto HasRuntime() -> bool {
+  return GetRuntime() != nullptr;
+}
 
 class RuntimeScopeScope {
   DEFINE_NON_COPYABLE_TYPE(RuntimeScopeScope);

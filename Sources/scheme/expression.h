@@ -215,7 +215,11 @@ class LiteralExpr : public Expression {
   V(Modulus)                  \
   V(Equals)                   \
   V(BinaryAnd)                \
-  V(BinaryOr)
+  V(BinaryOr)                 \
+  V(GreaterThan)              \
+  V(GreaterThanEqual)         \
+  V(LessThan)                 \
+  V(LessThanEqual)
 
 enum BinaryOp : uint64_t {
 #define DEFINE_BINARY_OP(Name) k##Name,

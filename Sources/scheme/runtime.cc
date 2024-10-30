@@ -1,6 +1,7 @@
 #include "scheme/runtime.h"
 
 #include <glog/logging.h>
+#include <units.h>
 
 #include <fstream>
 #include <iostream>
@@ -15,6 +16,7 @@
 #include "scheme/module_compiler.h"
 #include "scheme/module_resolver.h"
 #include "scheme/natives.h"
+#include "scheme/os_thread.h"
 #include "scheme/parser.h"
 #include "scheme/procedure.h"
 #include "scheme/tracing.h"
@@ -23,6 +25,13 @@
 namespace scm {
 DEFINE_bool(kernel, true, "Load the kernel at boot.");
 DEFINE_string(module_dir, "", "The directories to load modules from.");
+
+static ThreadLocal<Runtime> runtime_;
+
+auto GetRuntime() -> Runtime* {
+  ASSERT(runtime_);
+  return runtime_.Get();
+}
 
 Runtime::Runtime(LocalScope* scope) :
   ExecutionStack() {
@@ -62,7 +71,7 @@ class RuntimeModuleResolver : public ModuleResolver {
   auto ResolveModule(Symbol* symbol) -> Module* override {
     ASSERT(symbol);
     ASSERT(!FLAGS_module_dir.empty());
-    const auto module_filename = fmt::format("{0:s}/{1:s}.ss", FLAGS_module_dir, symbol->Get());
+    const auto module_filename = fmt::format("{0:s}/{1:s}.cl", FLAGS_module_dir, symbol->Get());
     if (!FileExists(module_filename)) {
       LOG(FATAL) << "cannot load module " << symbol << " from: " << module_filename;
       return nullptr;
@@ -176,9 +185,9 @@ auto Runtime::Execute(GraphEntryInstr* entry) -> Type* {
 }
 
 auto Runtime::Eval(GraphEntryInstr* graph_entry) -> Type* {
+  ASSERT(HasRuntime());
   ASSERT(graph_entry);
-  Runtime runtime;
-  return runtime.Execute(graph_entry);
+  return GetRuntime()->Execute(graph_entry);
 }
 
 auto Runtime::Eval(const std::string& expr) -> Type* {
@@ -189,5 +198,21 @@ auto Runtime::Eval(const std::string& expr) -> Type* {
   const auto e = ExpressionCompiler::Compile(expr);
   ASSERT(e && e->HasEntry());
   return Eval(e->GetEntry());
+}
+
+void Runtime::Init() {
+#ifdef SCM_DEBUG
+  const auto start_ts = Clock::now();
+#endif  // SCM_DEBUG
+
+  DVLOG(10) << "initializing runtime....";
+  Type::Init();
+  runtime_.Set(new Runtime());
+
+#ifdef SCM_DEBUG
+  const auto stop_ts = Clock::now();
+  const auto total_ms = std::chrono::duration_cast<std::chrono::milliseconds>((stop_ts - start_ts)).count();
+  LOG(INFO) << "runtime initialized in " << units::time::millisecond_t(static_cast<double>(total_ms));
+#endif  // SCM_DEBUG
 }
 }  // namespace scm

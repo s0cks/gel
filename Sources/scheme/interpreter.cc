@@ -1,6 +1,7 @@
 #include "scheme/interpreter.h"
 
 #include "scheme/error.h"
+#include "scheme/expression.h"
 #include "scheme/instruction.h"
 #include "scheme/runtime.h"
 
@@ -105,24 +106,32 @@ auto Interpreter::VisitBranchInstr(BranchInstr* instr) -> bool {
   return true;
 }
 
-static inline auto ApplyBinaryOp(BinaryOp op, Type* lhs, Type* rhs) -> Type* {
+static inline auto ApplyBinaryOp(BinaryOp op, Datum* lhs, Datum* rhs) -> Datum* {
   switch (op) {
     case expr::kAdd:
-      return Add(lhs, rhs);
+      return lhs->Add(rhs);
     case expr::kSubtract:
-      return Subtract(lhs, rhs);
+      return lhs->Sub(rhs);
     case expr::kMultiply:
-      return Multiply(lhs, rhs);
+      return lhs->Mul(rhs);
     case expr::kDivide:
-      return Divide(lhs, rhs);
+      return lhs->Div(rhs);
     case expr::kEquals:
-      return Equals(lhs, rhs);
+      return Bool::Box(lhs->Equals(rhs));
     case expr::kModulus:
-      return Modulus(lhs, rhs);
+      return lhs->Mod(rhs);
     case expr::kBinaryAnd:
-      return BinaryAnd(lhs, rhs);
+      return lhs->And(rhs);
     case expr::kBinaryOr:
-      return BinaryOr(lhs, rhs);
+      return lhs->Or(rhs);
+    case expr::kGreaterThan:
+      return Bool::Box(lhs->Compare(rhs) > 0);
+    case expr::kGreaterThanEqual:
+      return Bool::Box(lhs->Compare(rhs) >= 0);
+    case expr::kLessThan:
+      return Bool::Box(lhs->Compare(rhs) < 0);
+    case expr::kLessThanEqual:
+      return Bool::Box(lhs->Compare(rhs) <= 0);
     default:
       LOG(FATAL) << "invalid BinaryOp: " << op;
       return nullptr;
@@ -131,10 +140,10 @@ static inline auto ApplyBinaryOp(BinaryOp op, Type* lhs, Type* rhs) -> Type* {
 
 auto Interpreter::VisitBinaryOpInstr(BinaryOpInstr* instr) -> bool {
   const auto right = GetRuntime()->Pop();
-  ASSERT(right);
+  ASSERT(right && right->IsDatum());
   const auto left = GetRuntime()->Pop();
-  ASSERT(left);
-  const auto result = ApplyBinaryOp(instr->GetOp(), left, right);
+  ASSERT(left && left->IsDatum());
+  const auto result = ApplyBinaryOp(instr->GetOp(), left->AsDatum(), right->AsDatum());
   ASSERT(result);
   GetRuntime()->Push(result);
   return true;

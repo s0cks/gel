@@ -10,6 +10,7 @@
 
 namespace scm {
 void Type::Init() {
+  DVLOG(10) << "initializing type system....";
   Bool::Init();
 }
 
@@ -39,6 +40,11 @@ auto Datum::And(Datum* rhs) const -> Datum* {
 
 auto Datum::Or(Datum* rhs) const -> Datum* {
   return Null::Get();
+}
+
+auto Datum::Compare(Datum* rhs) const -> int {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return 0;
 }
 
 static Bool* kTrue = nullptr;   // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
@@ -101,6 +107,16 @@ auto Number::New(const double rhs) -> Number* {
 FOR_EACH_NUMBER_BINARY_OP(DEFINE_BINARY_OP);
 DEFINE_BINARY_OP(Mod, %);
 #undef DEFINE_BINARY_OP
+
+auto Long::Compare(Datum* rhs) const -> int {
+  ASSERT(rhs && rhs->IsLong());
+  if (Get() < rhs->AsLong()->Get())
+    return -1;
+  else if (Get() > rhs->AsLong()->Get())
+    return +1;
+  ASSERT(Get() == rhs->AsLong()->Get());
+  return 0;
+}
 
 auto Long::Equals(Type* rhs) const -> bool {
   if (!rhs || !rhs->IsLong())

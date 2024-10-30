@@ -1,0 +1,4 @@
+#ifndef SCM_OS_THREAD_LINUX_H
+#define SCM_OS_THREAD_LINUX_H
+
+#endif  // SCM_OS_THREAD_LINUX_H

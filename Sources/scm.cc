@@ -12,7 +12,6 @@
 #include "scheme/flags.h"
 #include "scheme/flow_graph_builder.h"
 #include "scheme/flow_graph_dot.h"
-#include "scheme/lexer.h"
 #include "scheme/module_compiler.h"
 #include "scheme/parser.h"
 #include "scheme/runtime.h"
@@ -23,7 +22,7 @@ auto main(int argc, char** argv) -> int {
   ::google::InitGoogleLogging(argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
   ::google::ParseCommandLineFlags(&argc, &argv, true);
 
-  Type::Init();
+  Runtime::Init();
   const auto expr = GetExpressionFlag();
   if (expr && FLAGS_eval) {
     try {

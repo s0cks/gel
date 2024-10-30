@@ -107,6 +107,7 @@ class Datum : public Type {
   virtual auto Mod(Datum* rhs) const -> Datum*;
   virtual auto And(Datum* rhs) const -> Datum*;
   virtual auto Or(Datum* rhs) const -> Datum*;
+  virtual auto Compare(Datum* rhs) const -> int;
 };
 
 class Null : public Datum {
@@ -192,6 +193,15 @@ class Bool : public Datum {
 
   static auto True() -> Bool*;
   static auto False() -> Bool*;
+
+  static inline auto Box(const bool rhs) -> Bool* {
+    return rhs ? True() : False();
+  }
+
+  static inline auto Unbox(Bool* rhs) -> bool {
+    ASSERT(rhs);
+    return rhs->Get();
+  }
 };
 
 class Number : public Datum {
@@ -248,6 +258,7 @@ class Long : public Number {
   auto Mul(Datum* rhs) const -> Datum* override;
   auto Div(Datum* rhs) const -> Datum* override;
   auto Mod(Datum* rhs) const -> Datum* override;
+  auto Compare(Datum* rhs) const -> int override;
   DECLARE_TYPE(Long);
 
  public:
@@ -437,48 +448,6 @@ static inline auto PrintValue(std::ostream& stream, Type* value) -> std::ostream
     return stream;
   }
   return stream << value->ToString();
-}
-
-static inline auto Add(Type* lhs, Type* rhs) -> Type* {
-  ASSERT(lhs && lhs->IsDatum());
-  ASSERT(rhs && rhs->IsDatum());
-  return lhs->AsDatum()->Add(rhs->AsDatum());
-}
-
-static inline auto Subtract(Type* lhs, Type* rhs) -> Type* {
-  ASSERT(lhs && lhs->IsDatum());
-  ASSERT(rhs && rhs->IsDatum());
-  return lhs->AsDatum()->Sub(rhs->AsDatum());
-}
-
-static inline auto Multiply(Type* lhs, Type* rhs) -> Type* {
-  ASSERT(lhs && lhs->IsDatum());
-  ASSERT(rhs && rhs->IsDatum());
-  return lhs->AsDatum()->Mul(rhs->AsDatum());
-}
-
-static inline auto Divide(Type* lhs, Type* rhs) -> Type* {
-  ASSERT(lhs && lhs->IsDatum());
-  ASSERT(rhs && rhs->IsDatum());
-  return lhs->AsDatum()->Div(rhs->AsDatum());
-}
-
-static inline auto Equals(Type* lhs, Type* rhs) -> Datum* {
-  ASSERT(lhs);
-  ASSERT(rhs);
-  return lhs->Equals(rhs) ? Bool::True() : Bool::False();
-}
-
-static inline auto Modulus(Type* lhs, Type* rhs) -> Datum* {
-  ASSERT(lhs && lhs->IsDatum());
-  ASSERT(rhs && rhs->IsDatum());
-  return lhs->AsDatum()->Mod(rhs->AsDatum());
-}
-
-static inline auto BinaryOr(Type* lhs, Type* rhs) -> Datum* {
-  ASSERT(lhs && lhs->IsDatum());
-  ASSERT(rhs && rhs->IsDatum());
-  return lhs->AsDatum()->Or(rhs->AsDatum());
 }
 
 static inline auto BinaryAnd(Type* lhs, Type* rhs) -> Datum* {

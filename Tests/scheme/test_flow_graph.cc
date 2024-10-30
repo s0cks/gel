@@ -12,11 +12,8 @@ using namespace ::testing;
 class FlowGraphTest : public Test {};
 
 TEST_F(FlowGraphTest, Test_Builder) {  // NOLINT
-  ByteTokenStream stream("(begin (define test #t) (+ 99 1))");
-  Parser parser(stream);
-  const auto program = parser.ParseProgram();
-  ASSERT_TRUE(program);
-  FlowGraphBuilder builder(program->GetExpressionAt(0));
+  const auto expr = Parser::ParseExpr("(begin (define test #t) (+ 99 1))");
+  FlowGraphBuilder builder(expr);
   const auto flow_graph = builder.BuildGraph();
   ASSERT_TRUE(flow_graph);
   ASSERT_TRUE(flow_graph->GetEntry());

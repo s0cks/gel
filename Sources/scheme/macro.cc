@@ -169,8 +169,8 @@ class MacroEvaluator : public expr::ExpressionVisitor {
 
   auto VisitCondExpr(expr::CondExpr* expr) -> bool override {
     ASSERT(expr);
-    NOT_IMPLEMENTED(FATAL);  // TODO: implement
-    return false;
+    NOT_IMPLEMENTED(ERROR);  // TODO: implement
+    return true;
   }
 
   auto VisitLocalDef(expr::LocalDef* expr) -> bool override {
