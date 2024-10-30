@@ -10,6 +10,7 @@
 
 namespace scm {
 void Type::Init() {
+  DVLOG(10) << "initializing type system....";
   Bool::Init();
 }
 

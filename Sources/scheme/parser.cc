@@ -119,12 +119,7 @@ auto Parser::ParseCondExpr() -> CondExpr* {
   if (PeekEq(Token::kRParen))
     return CondExpr::New(test, consequent);
   const auto alternate = ParseExpression();
-  ExpectNext(Token::kRParen);
-  const auto& next = PeekToken();
-  if (next.kind != Token::kRParen) {
-    LOG(FATAL) << "unexpected: " << next << "expected: " << Token::kRParen;
-    return nullptr;
-  }
+  LOG_IF(FATAL, !PeekEq(Token::kRParen)) << "unexpected: " << NextToken() << ", expected: " << Token::kRParen;
   return CondExpr::New(test, consequent, alternate);
 }
 
@@ -273,6 +268,7 @@ auto Parser::ParseLocalDef() -> LocalDef* {
   const auto local = LocalVariable::New(GetScope(), symbol, value->IsConstantExpr() ? value->EvalToConstant() : nullptr);
   ASSERT(local);
   LOG_IF(FATAL, !GetScope()->Add(local)) << "failed to add local: " << local->GetName();
+  LOG_IF(FATAL, !PeekEq(Token::kRParen)) << "unexpected: " << NextToken() << ", expected: " << Token::kRParen;
   return LocalDef::New(symbol, value);
 }
 
@@ -292,14 +288,16 @@ auto Parser::ParseModuleDef() -> expr::ModuleDef* {
   ExpectNext(Token::kModuleDef);
   const auto symbol = ParseSymbol();
   ASSERT(symbol);
-  const auto module = ModuleDef::New(symbol);
-  ASSERT(module);
-  while (PeekEq(Token::kLParen)) {
-    module->Append(ParseDefinition());
+  const auto m = ModuleDef::New(symbol);
+  ASSERT(m);
+  while (!PeekEq(Token::kRParen)) {
+    const auto defn = ParseDefinition();
+    ASSERT(defn);
+    m->Append(defn);
   }
   ExpectNext(Token::kRParen);
   PopScope();
-  return module;
+  return m;
 }
 
 auto Parser::ParseDefinition() -> expr::Definition* {
@@ -469,6 +467,7 @@ auto Parser::NextToken() -> const Token& {
           Advance(2);
           return NextToken(Token::kLiteralTrue);
       }
+      Advance();
       return NextToken(Token::kHash, '#');
     }
     case '\n':
@@ -484,19 +483,19 @@ auto Parser::NextToken() -> const Token& {
       AdvanceUntil('\n');
       return NextToken();
     case '<': {
-      Advance();
-      if (PeekChar() == '=') {
-        Advance();
+      if (PeekChar(1) == '=') {
+        Advance(2);
         return NextToken(Token::kLessThanEqual);
       }
+      Advance();
       return NextToken(Token::kLessThan);
     }
     case '>': {
-      Advance();
-      if (PeekChar() == '=') {
-        Advance();
+      if (PeekChar(1) == '=') {
+        Advance(2);
         return NextToken(Token::kGreaterThanEqual);
       }
+      Advance();
       return NextToken(Token::kGreaterThan);
     }
     case EOF:

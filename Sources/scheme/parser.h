@@ -74,7 +74,7 @@ class Parser {
 
   inline void ExpectNext(const Token::Kind rhs) {
     const auto& next = NextToken();
-    LOG_IF(FATAL, next.kind != rhs) << "unexpected: " << next << ", expected: " << rhs;
+    LOG_IF(FATAL, next.kind != rhs) << "unexpected: " << next << ", expected: " << rhs << " at: " << GetRemaining();
   }
 
   // Misc
@@ -158,7 +158,8 @@ class Parser {
   }
 
   inline auto GetRemaining() const -> std::string {
-    return {(const char*)&chunk_.at(rpos_), wpos_ - rpos_};  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+    const auto remaining_len = std::max((uint64_t)0, wpos_ - rpos_);
+    return {(const char*)&chunk_[rpos_], remaining_len};  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   }
 
   inline auto NextToken(const Token::Kind kind) -> const Token& {
@@ -205,7 +206,6 @@ class Parser {
     ASSERT(stream_.good());
     stream_.read(chunk_.data(), kDefaultChunkSize);
     const auto num_read = stream_.gcount();
-    DLOG(INFO) << "read chunk: " << std::string(chunk_.data(), num_read);
     return (wpos_ = num_read) >= 1;
   }
 

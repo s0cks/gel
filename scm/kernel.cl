@@ -10,5 +10,5 @@
   (define pair? (lambda (x) (eq? (type? x) "Pair")))
   (define module? (lambda (x) (eq? (type? x) "Module")))
   (define procedure? (lambda (x) (eq? (type? x) "Procedure")))
-  (define max (lambda (a b) (cond (a > b) a b)))
-  (define min (lambda (a b) (cond (a < b) a b))))
+  (define max (lambda (a b) (cond (> a b) a b)))
+  (define min (lambda (a b) (cond (< a b) a b))))

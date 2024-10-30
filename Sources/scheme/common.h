@@ -2,6 +2,9 @@
 #define SCM_COMMON_H
 
 #include <glog/logging.h>
+#include "scheme/platform.h"
+
+#include <chrono>
 #ifdef SCM_DEBUG
 
 #include <cassert>
@@ -66,6 +69,8 @@ class Exception : public std::exception {
     return stream;
   }
 };
+
+using Clock = std::chrono::high_resolution_clock;
 }  // namespace scm
 
 #endif  // SCM_COMMON_H
