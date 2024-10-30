@@ -11,23 +11,33 @@
 #include "scheme/expression.h"
 #include "scheme/instruction.h"
 #include "scheme/lambda.h"
-#include "scheme/lexer.h"
 #include "scheme/module.h"
 #include "scheme/program.h"
+#include "scheme/token.h"
 
 namespace scm {
 class Parser {
   DEFINE_NON_COPYABLE_TYPE(Parser);
 
+ public:
+  static constexpr const auto kDefaultChunkSize = 4096;
+  static constexpr const auto kDefaultBufferSize = 1024;
+  using Chunk = std::array<char, kDefaultChunkSize>;
+
  private:
-  TokenStream& stream_;
+  std::istream& stream_;
   LocalScope* scope_;
+  Chunk chunk_{};
+  std::string buffer_{};
+  Position pos_{};
+  uint64_t wpos_ = 0;
+  uint64_t rpos_ = 0;
+  uint64_t token_len_ = 0;
+  uint64_t depth_ = 0;
+  Token next_{};
+  Token peek_{};
 
  protected:
-  inline auto stream() const -> TokenStream& {
-    return stream_;
-  }
-
   inline void SetScope(LocalScope* scope) {
     ASSERT(scope);
     scope_ = scope;
@@ -57,13 +67,13 @@ class Parser {
     return false;
   }
 
-  inline auto PeekEq(const Token::Kind rhs) const -> bool {
-    const auto& peek = stream().Peek();
+  inline auto PeekEq(const Token::Kind rhs) -> bool {
+    const auto& peek = PeekToken();
     return peek.kind == rhs;
   }
 
   inline void ExpectNext(const Token::Kind rhs) {
-    const auto& next = stream().Next();
+    const auto& next = NextToken();
     LOG_IF(FATAL, next.kind != rhs) << "unexpected: " << next << ", expected: " << rhs;
   }
 
@@ -95,11 +105,118 @@ class Parser {
   auto ParseImportDef() -> expr::ImportDef*;
   auto ParseMacroDef() -> expr::MacroDef*;
 
+  inline auto PeekChar(const uint64_t offset = 0) const -> char {
+    const auto idx = (rpos_ + offset);
+    if (idx >= wpos_)
+      return EOF;
+    return static_cast<char>(chunk_[idx]);
+  }
+
+  inline auto NextChar() -> char {
+    if ((rpos_ + 1) > wpos_) {
+      if (!ReadNextChunk())
+        return EOF;
+      return NextChar();
+    }
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    const auto next = chunk_[rpos_++];
+    switch (next) {
+      case '\n':
+        pos_.row += 1;
+        pos_.column = 1;
+        break;
+      default:
+        pos_.column += 1;
+    }
+    return static_cast<char>(next);
+  }
+
+  inline void SetDepth(uint64_t depth) {
+    ASSERT(depth >= 0);
+    depth_ = depth;
+  }
+
+  inline auto GetDepth() const -> uint64_t {
+    return depth_;
+  }
+
+  inline void IncrementDepth() {
+    ASSERT((depth_ + 1) >= 0);
+    depth_ += 1;
+  }
+
+  inline void DecrementDepth() {
+    ASSERT((depth_ - 1) >= 0);
+    depth_ -= 1;
+  }
+
+  auto PeekToken() -> const Token&;
+  auto NextToken() -> const Token&;
+
+  inline auto GetBufferedText() const -> std::string {
+    return std::string((const char*)&buffer_[0], token_len_);
+  }
+
+  inline auto GetRemaining() const -> std::string {
+    return {(const char*)&chunk_.at(rpos_), wpos_ - rpos_};  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  }
+
+  inline auto NextToken(const Token::Kind kind) -> const Token& {
+    return next_ = Token{
+               .kind = kind,
+               .pos = pos_,
+           };
+  }
+
+  inline auto NextToken(const Token::Kind kind, const std::string& text) -> const Token& {
+    return next_ = Token{
+               .kind = kind,
+               .pos = pos_,
+               .text = text,
+           };
+  }
+
+  inline auto NextToken(const Token::Kind kind, const char c) -> const Token& {
+    return NextToken(kind, std::string(1, c));
+  }
+
+  inline void Advance(uint64_t n = 1) {
+    while (n-- > 0) NextChar();
+  }
+
+  inline auto AdvanceUntil(const char expected) -> uint64_t {
+    uint64_t advanced = 0;
+    while (PeekChar() != expected) {
+      NextChar();
+      advanced++;
+    }
+    return advanced;
+  }
+
+  inline auto GetStreamSize() const -> uint64_t {
+    const auto pos = stream_.tellg();
+    stream_.seekg(0, std::ios::end);
+    const auto length = stream_.tellg();
+    stream_.seekg(pos, std::ios::beg);
+    return length;
+  }
+
+  inline auto ReadNextChunk() -> bool {
+    ASSERT(stream_.good());
+    stream_.read(chunk_.data(), kDefaultChunkSize);
+    const auto num_read = stream_.gcount();
+    DLOG(INFO) << "read chunk: " << std::string(chunk_.data(), num_read);
+    return (wpos_ = num_read) >= 1;
+  }
+
  public:
-  explicit Parser(TokenStream& stream, LocalScope* scope = LocalScope::New()) :
+  explicit Parser(std::istream& stream, LocalScope* scope = LocalScope::New()) :
     stream_(stream),
     scope_(scope) {
+    ASSERT(stream.good());
     ASSERT(scope_);
+    buffer_.reserve(kDefaultBufferSize);
+    LOG_IF(ERROR, !ReadNextChunk()) << "failed to read chunk from stream.";
   }
   ~Parser() = default;
 
@@ -110,25 +227,31 @@ class Parser {
   auto Parse(const uint8_t* data, const uint64_t length) -> Program*;
 
  public:
-  static inline auto Parse(TokenStream& stream) -> Program* {
-    Parser parser(stream);
-    return parser.ParseProgram();
+  static inline auto ParseExpr(std::istream& stream, LocalScope* scope = LocalScope::New()) -> expr::Expression* {
+    ASSERT(stream.good());
+    ASSERT(scope);
+    Parser parser(stream, scope);
+    return parser.ParseExpression();
   }
 
-  static inline auto Parse(const std::string& expr) -> Program* {
-    ByteTokenStream stream(expr);
-    return Parse(stream);
+  static inline auto ParseExpr(const std::string& expr, LocalScope* scope = LocalScope::New()) -> expr::Expression* {
+    ASSERT(!expr.empty());
+    ASSERT(scope);
+    std::istringstream ss(expr);
+    return ParseExpr(ss, scope);
   }
 
-  static inline auto ParseModule(TokenStream& stream) -> expr::ModuleDef* {
-    Parser parser(stream);
+  static inline auto ParseModule(std::istream& stream, LocalScope* scope = LocalScope::New()) -> expr::ModuleDef* {
+    ASSERT(stream.good());
+    ASSERT(scope);
+    Parser parser(stream, scope);
     return parser.ParseModuleDef();
   }
 
-  static inline auto ParseModule(const std::string& expr) -> expr::ModuleDef* {
+  static inline auto ParseModule(const std::string& expr, LocalScope* scope = LocalScope::New()) -> expr::ModuleDef* {
     ASSERT(!expr.empty());
-    ByteTokenStream stream(expr);
-    return ParseModule(stream);
+    std::istringstream ss(expr);
+    return ParseModule(ss, scope);
   }
 };
 }  // namespace scm

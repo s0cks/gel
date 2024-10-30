@@ -80,9 +80,7 @@ auto ExpressionCompiler::Compile(const std::string& expr) -> CompiledExpression*
   using Clock = std::chrono::high_resolution_clock;
   const auto start = Clock::now();
 #endif  // SCM_DEBUG
-  ByteTokenStream stream(expr);
-  Parser parser(stream);
-  const auto result = Compile(parser.ParseExpression());
+  const auto result = Compile(Parser::ParseExpr(expr));
 #ifdef SCM_DEBUG
   const auto stop = Clock::now();
   const auto total_ns = std::chrono::duration_cast<std::chrono::milliseconds>((stop - start)).count();

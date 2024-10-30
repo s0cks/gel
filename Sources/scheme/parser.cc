@@ -27,14 +27,14 @@ void Parser::PopScope() {
 }
 
 auto Parser::ParseSymbol() -> Symbol* {
-  const auto& next = stream().Next();
+  const auto& next = NextToken();
   LOG_IF(FATAL, next.kind != Token::kIdentifier) << "unexpected: " << next << ", expected: " << Token::kIdentifier;
   ASSERT(next.kind == Token::kIdentifier);
   return Symbol::New(next.text);
 }
 
 auto Parser::ParseLiteralExpr() -> LiteralExpr* {
-  const auto& next = stream().Next();
+  const auto& next = NextToken();
   switch (next.kind) {
     case Token::kLiteralTrue:
       return LiteralExpr::New(Bool::True());
@@ -49,7 +49,7 @@ auto Parser::ParseLiteralExpr() -> LiteralExpr* {
     case Token::kIdentifier:
       return LiteralExpr::New(Symbol::New(next.text));
     default:
-      LOG(FATAL) << "unexpected: " << stream().Next();
+      LOG(FATAL) << "unexpected: " << NextToken();
       return nullptr;
   }
 }
@@ -58,10 +58,10 @@ auto Parser::ParseBeginExpr() -> BeginExpr* {
   ExpectNext(Token::kBeginExpr);
   PushScope();
   const auto begin = BeginExpr::New();
-  while (stream().Peek().kind != Token::kRParen) {
+  while (!PeekEq(Token::kRParen)) {
     begin->Append(ParseExpression());
   }
-  ASSERT(stream().Peek().kind == Token::kRParen);
+  ASSERT(PeekEq(Token::kRParen));
   PopScope();
   return begin;
 }
@@ -70,7 +70,7 @@ auto Parser::ParseCallProcExpr() -> CallProcExpr* {
   const auto target = ParseExpression();
   ASSERT(target);
   ExpressionList args;
-  while (stream().Peek().kind != Token::kRParen) {
+  while (!PeekEq(Token::kRParen)) {
     const auto arg = ParseExpression();
     ASSERT(arg);
     args.push_back(arg);
@@ -79,7 +79,7 @@ auto Parser::ParseCallProcExpr() -> CallProcExpr* {
 }
 
 auto Parser::ParseUnaryExpr() -> expr::UnaryExpr* {
-  const auto op = stream().Next().ToUnaryOp();
+  const auto op = NextToken().ToUnaryOp();
   ASSERT(op);
   const auto value = ParseExpression();
   ASSERT(value);
@@ -87,13 +87,13 @@ auto Parser::ParseUnaryExpr() -> expr::UnaryExpr* {
 }
 
 auto Parser::ParseBinaryOpExpr() -> BinaryOpExpr* {
-  const auto op = stream().Next().ToBinaryOp();
+  const auto op = NextToken().ToBinaryOp();
   ASSERT(op);
   auto left_expr = ParseExpression();
   auto right_expr = ParseExpression();
   do {
     left_expr = BinaryOpExpr::New((*op), left_expr, right_expr);
-    if (stream().Peek().kind == Token::kRParen)
+    if (PeekEq(Token::kRParen))
       break;
     right_expr = ParseExpression();
   } while (true);
@@ -119,8 +119,8 @@ auto Parser::ParseCondExpr() -> CondExpr* {
   if (PeekEq(Token::kRParen))
     return CondExpr::New(test, consequent);
   const auto alternate = ParseExpression();
-
-  const auto& next = stream().Peek();
+  ExpectNext(Token::kRParen);
+  const auto& next = PeekToken();
   if (next.kind != Token::kRParen) {
     LOG(FATAL) << "unexpected: " << next << "expected: " << Token::kRParen;
     return nullptr;
@@ -131,7 +131,7 @@ auto Parser::ParseCondExpr() -> CondExpr* {
 auto Parser::ParseArguments(ArgumentSet& args) -> bool {
   uint64_t num_args = 0;
   while (PeekEq(Token::kIdentifier)) {
-    const auto& next = stream().Next();
+    const auto& next = NextToken();
     ASSERT(next.kind == Token::kIdentifier);
     args.insert(Argument(num_args++, next.text));
   }
@@ -177,14 +177,14 @@ auto Parser::ParseSetExpr() -> SetExpr* {
 
 auto Parser::ParseExpression() -> Expression* {
   {
-    const auto next = stream().Peek();
+    const auto next = PeekToken();
     if (next.IsLiteral() || next.kind == Token::kIdentifier)
       return ParseLiteralExpr();
   }
 
   Expression* expr = nullptr;
   ExpectNext(Token::kLParen);
-  const auto next = stream().Peek();
+  const auto next = PeekToken();
   if (next.IsUnaryOp()) {
     expr = ParseUnaryExpr();
   } else if (next.IsBinaryOp()) {
@@ -236,7 +236,7 @@ auto Parser::ParseExpression() -> Expression* {
 
 auto Parser::ParseQuoteExpr() -> expr::LiteralExpr* {
   ExpectNext(Token::kQuote);
-  const auto depth = stream().GetDepth();
+  const auto depth = GetDepth();
   DLOG(INFO) << "depth: " << depth;
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
   return nullptr;
@@ -277,7 +277,7 @@ auto Parser::ParseLocalDef() -> LocalDef* {
 }
 
 auto Parser::ParseIdentifier(std::string& result) -> bool {
-  const auto& next = stream().Next();
+  const auto& next = NextToken();
   if (next.kind != Token::kIdentifier) {
     result.clear();
     return Unexpected(Token::kIdentifier, next);
@@ -305,7 +305,7 @@ auto Parser::ParseModuleDef() -> expr::ModuleDef* {
 auto Parser::ParseDefinition() -> expr::Definition* {
   ExpectNext(Token::kLParen);
   expr::Definition* defn = nullptr;
-  const auto& next = stream().Peek();
+  const auto& next = PeekToken();
   switch (next.kind) {
     case Token::kLocalDef:
       defn = ParseLocalDef();
@@ -328,7 +328,7 @@ auto Parser::ParseDefinition() -> expr::Definition* {
 auto Parser::ParseProgram() -> Program* {
   const auto program = Program::New();
   do {
-    const auto& next = stream().Peek();
+    const auto& next = PeekToken();
     if (next.IsEndOfStream())
       break;
     program->Append(ParseExpression());
@@ -336,13 +336,243 @@ auto Parser::ParseProgram() -> Program* {
   return program;
 }
 
-auto Parse(const uint8_t* data, const uint64_t length) -> Program* {
-  ASSERT(data);
-  ASSERT(length >= 1);
-  ByteTokenStream stream(data, length);
-  Parser parser(stream);
-  const auto program = parser.ParseProgram();
-  ASSERT(program);
-  return program;
+auto Parser::PeekToken() -> const Token& {
+  if (!peek_.IsInvalid())
+    return peek_;
+  ASSERT(peek_.IsInvalid());
+  return peek_ = NextToken();
+}
+
+static inline auto IsValidIdentifierChar(const char c, const bool initial = false) -> bool {
+  if (isalpha(c))
+    return true;
+  else if (isdigit(c) && !initial)
+    return true;
+  switch (c) {
+    case '!':
+    case '$':
+    case '%':
+    case '&':
+    case '*':
+    case '/':
+    case ':':
+    case '<':
+    case '=':
+    case '>':
+    case '?':
+    case '~':
+    case '_':
+    case '^':
+    case '+':
+    case '-':
+      return true;
+    case '.':
+      return !initial;
+  }
+  return false;
+}
+
+static inline auto IsDoubleQuote(const char c) -> bool {
+  return c == '\"';
+}
+
+static inline auto IsValidStringCharacter(const char c) -> bool {
+  return c != EOF && !IsDoubleQuote(c);
+}
+
+static inline auto IsValidNumberChar(const char c, const bool whole = true) -> bool {
+  return isdigit(c) || (c == '.' && whole);
+}
+
+// static inline auto IsValidQuotedChar(const char c) -> bool {
+//   switch (c) {
+//     case EOF:
+//     case ')':
+//       return false;
+//     default:
+//       return true;
+//   }
+// }
+
+// auto TokenStream::NextQuote() -> const Token& {
+//   peek_ = Token{};
+//   if (PeekChar() != '(') {
+//     const auto next = NextChar();
+//     LOG(ERROR) << "unexpected token: " << next;
+//     return NextToken(Token::kInvalid, next);
+//   }
+//   NextChar();
+
+//   while (IsValidQuotedChar(PeekChar())) {
+//     buffer_[token_len_++] = NextChar();
+//   }
+
+//   if (PeekChar() != ')') {
+//     const auto next = NextChar();
+//     LOG(ERROR) << "unexpected token: " << next;
+//     return NextToken(Token::kInvalid, next);
+//   }
+//   NextChar();
+//   return NextToken(Token::kQuotedExpr, GetBufferedText());
+// }
+
+auto Parser::NextToken() -> const Token& {
+  if (!peek_.IsInvalid()) {
+    next_ = peek_;
+    peek_ = Token{};
+    return next_;
+  }
+
+  const auto next = PeekChar();
+  switch (next) {
+    case '(':
+      depth_ += 1;
+      Advance();
+      return NextToken(Token::kLParen);
+    case ')':
+      depth_ -= 1;
+      Advance();
+      return NextToken(Token::kRParen);
+    case '+':
+      Advance();
+      return NextToken(Token::kPlus);
+    case '-':
+      Advance();
+      return NextToken(Token::kMinus);
+    case '*':
+      Advance();
+      return NextToken(Token::kMultiply);
+    case '/':
+      Advance();
+      return NextToken(Token::kDivide);
+    case '%':
+      Advance();
+      return NextToken(Token::kModulus);
+    case '=':
+      Advance();
+      return NextToken(Token::kEquals);
+    case '&':
+      Advance();
+      return NextToken(Token::kAnd);
+    case '|':
+      Advance();
+      return NextToken(Token::kOr);
+    case '!':
+      Advance();
+      return NextToken(Token::kNot);
+    case '#': {
+      switch (tolower(PeekChar(1))) {
+        case 'f':
+          Advance(2);
+          return NextToken(Token::kLiteralFalse);
+        case 't':
+          Advance(2);
+          return NextToken(Token::kLiteralTrue);
+      }
+      return NextToken(Token::kHash, '#');
+    }
+    case '\n':
+    case '\t':
+    case '\r':
+    case ' ':
+      Advance();
+      return NextToken();
+    case '\'':
+      Advance();
+      return NextToken(Token::kQuote);
+    case ';':
+      AdvanceUntil('\n');
+      return NextToken();
+    case '<': {
+      Advance();
+      if (PeekChar() == '=') {
+        Advance();
+        return NextToken(Token::kLessThanEqual);
+      }
+      return NextToken(Token::kLessThan);
+    }
+    case '>': {
+      Advance();
+      if (PeekChar() == '=') {
+        Advance();
+        return NextToken(Token::kGreaterThanEqual);
+      }
+      return NextToken(Token::kGreaterThan);
+    }
+    case EOF:
+      return NextToken(Token::kEndOfStream);
+  }
+
+  if (IsDoubleQuote(next)) {
+    Advance();
+    token_len_ = 0;
+    while (IsValidStringCharacter(PeekChar())) {
+      buffer_[token_len_++] = NextChar();
+    }
+    ASSERT(IsDoubleQuote(PeekChar()));
+    Advance();
+    return NextToken(Token::kLiteralString, GetBufferedText());
+  } else if (isdigit(next)) {
+    token_len_ = 0;
+    bool whole = true;
+    while (IsValidNumberChar(PeekChar())) {
+      const auto next = NextChar();
+      buffer_[token_len_++] = next;
+      if (next == '.')
+        whole = false;
+    }
+    return whole ? NextToken(Token::kLiteralLong, GetBufferedText()) : NextToken(Token::kLiteralDouble, GetBufferedText());
+  } else if (IsValidIdentifierChar(next, true)) {
+    token_len_ = 0;
+    while (IsValidIdentifierChar(PeekChar(), token_len_ == 0)) {
+      buffer_[token_len_++] = NextChar();
+    }
+    const auto ident = GetBufferedText();
+    if (ident == "define")
+      return NextToken(Token::kLocalDef);
+    else if (ident == "defmodule")
+      return NextToken(Token::kModuleDef);
+    else if (ident == "defmacro")
+      return NextToken(Token::kMacroDef);
+    else if (ident == "import")
+      return NextToken(Token::kImportDef);
+    else if (ident == "cons")
+      return NextToken(Token::kConsExpr);
+    else if (ident == "car")
+      return NextToken(Token::kCarExpr);
+    else if (ident == "cdr")
+      return NextToken(Token::kCdrExpr);
+    else if (ident == "begin")
+      return NextToken(Token::kBeginExpr);
+    else if (ident == "add")
+      return NextToken(Token::kPlus);
+    else if (ident == "subtract")
+      return NextToken(Token::kMinus);
+    else if (ident == "multiply")
+      return NextToken(Token::kMultiply);
+    else if (ident == "divide")
+      return NextToken(Token::kDivide);
+    else if (ident == "lambda")
+      return NextToken(Token::kLambdaExpr);
+    else if (ident == "quote")
+      return NextToken(Token::kQuote);
+    else if (ident == "not")
+      return NextToken(Token::kNot);
+    else if (ident == "and")
+      return NextToken(Token::kAnd);
+    else if (ident == "or")
+      return NextToken(Token::kOr);
+    else if (ident == "throw")
+      return NextToken(Token::kThrowExpr);
+    else if (ident == "eq?")
+      return NextToken(Token::kEquals);
+    else if (ident == "set!")
+      return NextToken(Token::kSetExpr);
+    else if (ident == "cond")
+      return NextToken(Token::kCond);
+    return NextToken(Token::kIdentifier, ident);
+  }
+
+  return NextToken(Token::kInvalid, GetRemaining());
 }
 }  // namespace scm
