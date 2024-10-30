@@ -82,9 +82,7 @@ auto EffectVisitor::VisitImportDef(expr::ImportDef* expr) -> bool {
 
 auto EffectVisitor::VisitQuotedExpr(expr::QuotedExpr* expr) -> bool {
   ASSERT(expr);
-  const auto value = Symbol::New(expr->Get());
-  ASSERT(value);
-  ReturnDefinition(ConstantInstr::New(value));
+  ReturnDefinition(ConstantInstr::New(expr->Get()));
   return true;
 }
 

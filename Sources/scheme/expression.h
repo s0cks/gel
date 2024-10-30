@@ -468,25 +468,33 @@ class ThrowExpr : public TemplateExpression<1> {
 
 class QuotedExpr : public Expression {
  private:
-  std::string value_;
+  Symbol* value_;
 
  protected:
-  explicit QuotedExpr(const std::string& value) :
+  explicit QuotedExpr(Symbol* value) :
     Expression(),
-    value_(value) {}
+    value_(value) {
+    ASSERT(value_);
+  }
 
  public:
   ~QuotedExpr() override = default;
 
-  auto Get() const -> const std::string& {
+  auto Get() const -> Symbol* {
     return value_;
   }
 
   DECLARE_EXPRESSION(QuotedExpr);
 
  public:
-  static inline auto New(const std::string& expr) -> QuotedExpr* {
-    return new QuotedExpr(expr);
+  static inline auto New(Symbol* symbol) -> QuotedExpr* {
+    ASSERT(symbol);
+    return new QuotedExpr(symbol);
+  }
+
+  static inline auto New(const std::string& value) -> QuotedExpr* {
+    ASSERT(!value.empty());
+    return New(Symbol::New(value));
   }
 };
 
