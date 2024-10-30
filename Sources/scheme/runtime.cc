@@ -26,7 +26,7 @@ namespace scm {
 DEFINE_bool(kernel, true, "Load the kernel at boot.");
 DEFINE_string(module_dir, "", "The directories to load modules from.");
 
-static ThreadLocal<Runtime> runtime_;
+static const ThreadLocal<Runtime> runtime_;
 
 auto GetRuntime() -> Runtime* {
   ASSERT(runtime_);
@@ -136,6 +136,7 @@ auto Runtime::CreateInitScope() -> LocalScope* {
   RegisterProc<proc::print>(scope);
   RegisterProc<proc::type>(scope);
   RegisterProc<proc::import>(scope);
+  RegisterProc<proc::exit>(scope);
   return scope;
 }
 

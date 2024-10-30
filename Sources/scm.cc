@@ -14,6 +14,7 @@
 #include "scheme/flow_graph_dot.h"
 #include "scheme/module_compiler.h"
 #include "scheme/parser.h"
+#include "scheme/repl.h"
 #include "scheme/runtime.h"
 
 using namespace scm;
@@ -24,7 +25,10 @@ auto main(int argc, char** argv) -> int {
 
   Runtime::Init();
   const auto expr = GetExpressionFlag();
-  if (expr && FLAGS_eval) {
+  if (!expr)
+    return Repl::Run();
+
+  if (FLAGS_eval) {
     try {
       const auto result = Runtime::Eval((*expr));
       ASSERT(result);
@@ -35,7 +39,7 @@ auto main(int argc, char** argv) -> int {
       std::cerr << " * message: " << exc.GetMessage() << std::endl;
       return EXIT_FAILURE;
     }
-  } else if (expr && (FLAGS_dump_ast || FLAGS_dump_flow_graph)) {
+  } else if (FLAGS_dump_ast || FLAGS_dump_flow_graph) {
     try {
       const auto expression = ExpressionCompiler::Compile((*expr));
       ASSERT(expression);
