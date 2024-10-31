@@ -98,7 +98,11 @@ auto Interpreter::VisitInvokeInstr(InvokeInstr* instr) -> bool {
 
 auto Interpreter::VisitEvalInstr(EvalInstr* instr) -> bool {
   ASSERT(instr);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  const auto value = GetRuntime()->Pop();
+  ASSERT(value && value->IsString());
+  const auto result = GetRuntime()->Eval(String::Unbox(value));
+  ASSERT(result);
+  GetRuntime()->Push(result);
   return true;
 }
 
