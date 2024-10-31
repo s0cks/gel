@@ -75,16 +75,19 @@ auto ExpressionCompiler::CompileExpression(Expression* expr) -> CompiledExpressi
 auto ExpressionCompiler::Compile(const std::string& expr) -> CompiledExpression* {
   ASSERT(!expr.empty());
 #ifdef SCM_DEBUG
-  LOG(INFO) << "compiling expression: " << std::endl << expr;
+  DVLOG(SCM_VLEVEL_1) << "compiling expression: " << std::endl << expr;
   using Clock = std::chrono::high_resolution_clock;
   const auto start = Clock::now();
 #endif  // SCM_DEBUG
+
   const auto result = Compile(Parser::ParseExpr(expr));
+  ASSERT(result);
+
 #ifdef SCM_DEBUG
   const auto stop = Clock::now();
   const auto total_ns = std::chrono::duration_cast<std::chrono::milliseconds>((stop - start)).count();
-  DLOG(INFO) << "expression compiled in " << units::time::millisecond_t(total_ns);  // NOLINT
-#endif                                                                              // SCM_DEBUG
+  DVLOG(SCM_VLEVEL_1) << "expression compiled in " << units::time::millisecond_t(total_ns);  // NOLINT
+#endif                                                                                       // SCM_DEBUG
   return result;
 }
 }  // namespace scm

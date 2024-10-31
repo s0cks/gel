@@ -2,9 +2,10 @@
 #define SCM_COMMON_H
 
 #include <glog/logging.h>
-#include "scheme/platform.h"
 
 #include <chrono>
+
+#include "scheme/platform.h"
 #ifdef SCM_DEBUG
 
 #include <cassert>
@@ -32,8 +33,11 @@
 
 #define NOT_IMPLEMENTED(Level) LOG(Level) << __FUNCTION__ << " is not implemented.";
 
-namespace scm {
+#define SCM_VLEVEL_1 1
+#define SCM_VLEVEL_2 2
+#define SCM_VLEVEL_3 3
 
+namespace scm {
 class Exception : public std::exception {
   DEFINE_DEFAULT_COPYABLE_TYPE(Exception);
 

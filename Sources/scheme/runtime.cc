@@ -180,9 +180,7 @@ auto Runtime::Eval(GraphEntryInstr* graph_entry) -> Type* {
 
 auto Runtime::Eval(const std::string& expr) -> Type* {
   ASSERT(!expr.empty());
-#ifdef SCM_DEBUG
-  LOG(INFO) << "evaluating expression:" << std::endl << expr;
-#endif  // SCM_DEBUG
+  DVLOG(10) << "evaluating expression:" << std::endl << expr;
   const auto e = ExpressionCompiler::Compile(expr);
   ASSERT(e && e->HasEntry());
   return Eval(e->GetEntry());
