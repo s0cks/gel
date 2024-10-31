@@ -176,6 +176,13 @@ auto Parser::ParseSetExpr() -> SetExpr* {
   return SetExpr::New(symbol, value);
 }
 
+auto Parser::ParseEvalExpr() -> expr::EvalExpr* {
+  ExpectNext(Token::kEvalExpr);
+  const auto value = ParseExpression();
+  ASSERT(value);
+  return EvalExpr::New(value);
+}
+
 auto Parser::ParseExpression() -> Expression* {
   {
     const auto next = PeekToken();
@@ -226,6 +233,9 @@ auto Parser::ParseExpression() -> Expression* {
         break;
       case Token::kQuote:
         expr = ParseQuotedExpr();
+        break;
+      case Token::kEvalExpr:
+        expr = ParseEvalExpr();
         break;
       default:
         Unexpected(next);
@@ -579,6 +589,8 @@ auto Parser::NextToken() -> const Token& {
       return NextToken(Token::kSetExpr);
     else if (ident == "cond")
       return NextToken(Token::kCond);
+    else if (ident == "eval")
+      return NextToken(Token::kEvalExpr);
     return NextToken(Token::kIdentifier, ident);
   }
 

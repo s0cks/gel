@@ -38,6 +38,7 @@ struct Position {
   V(CarExpr)              \
   V(CdrExpr)              \
   V(ThrowExpr)            \
+  V(EvalExpr)             \
   V(Plus)                 \
   V(Minus)                \
   V(Multiply)             \
