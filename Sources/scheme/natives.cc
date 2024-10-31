@@ -51,15 +51,6 @@ NATIVE_PROCEDURE_F(print) {
   return true;
 }
 
-NATIVE_PROCEDURE_F(throw_exc) {
-  ASSERT(state);
-  ASSERT(!args.empty());
-  const auto message = args[0];
-  ASSERT(message && message->IsString());
-  state->PushError(String::Unbox(message));
-  return true;
-}
-
 NATIVE_PROCEDURE_F(type) {
   ASSERT(state);
   ASSERT(!args.empty());
