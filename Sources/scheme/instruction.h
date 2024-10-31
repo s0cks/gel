@@ -702,13 +702,18 @@ class ConsInstr : public Definition {
 };
 
 class InstanceOfInstr : public Instruction {
+ public:
+  using Predicate = std::function<bool(Type*)>;
+
  private:
   Definition* value_;
+  Predicate predicate_;
 
  public:
-  explicit InstanceOfInstr(Definition* value) :
+  explicit InstanceOfInstr(Definition* value, Predicate predicate) :
     Instruction(),
-    value_(value) {
+    value_(value),
+    predicate_(predicate) {
     ASSERT(value_);
   }
   ~InstanceOfInstr() override = default;
@@ -717,12 +722,16 @@ class InstanceOfInstr : public Instruction {
     return value_;
   }
 
+  auto GetPredicate() const -> Predicate {
+    return predicate_;
+  }
+
   DECLARE_INSTRUCTION(InstanceOfInstr);
 
  public:
-  static inline auto New(Definition* value) -> InstanceOfInstr* {
+  static inline auto New(Definition* value, Predicate predicate) -> InstanceOfInstr* {
     ASSERT(value);
-    return new InstanceOfInstr(value);
+    return new InstanceOfInstr(value, predicate);
   }
 };
 }  // namespace instr

@@ -7,6 +7,7 @@
 #include "scheme/instruction.h"
 #include "scheme/lambda.h"
 #include "scheme/local.h"
+#include "scheme/native_procedure.h"
 #include "scheme/procedure.h"
 
 namespace scm {
@@ -76,11 +77,13 @@ auto EffectVisitor::VisitCallProcExpr(CallProcExpr* expr) -> bool {
   if (target->IsConstantInstr()) {
     const auto target_proc = target->AsConstantInstr()->GetValue();
     if (target_proc->IsNativeProcedure()) {
+      Add(InstanceOfInstr::New(target, IsNativeProcedure));
       ReturnDefinition(InvokeNativeInstr::New(for_target.GetValue(), expr->GetNumberOfArgs()));
       return true;
     }
   }
 
+  Add(InstanceOfInstr::New(target, IsProcedure));
   ReturnDefinition(InvokeInstr::New(target));
   return true;
 }

@@ -138,7 +138,11 @@ auto Interpreter::VisitInstanceOfInstr(InstanceOfInstr* instr) -> bool {
   ASSERT(instr);
   const auto stack_top = GetRuntime()->StackTop().value_or(Null::Get());
   ASSERT(stack_top);
-  DLOG(INFO) << "typechecking: " << stack_top;
+  const auto predicate = instr->GetPredicate();
+  if (!predicate(stack_top)) {
+    GetRuntime()->PushError(fmt::format("unexpected: {}", stack_top->ToString()));
+    return true;
+  }
   return true;
 }
 
