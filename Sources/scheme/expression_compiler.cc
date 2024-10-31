@@ -43,7 +43,6 @@ auto ExpressionCompiler::CompileExpression(Expression* expr) -> CompiledExpressi
   }
 
   ExpressionLogger logger;
-  LOG(INFO) << "definitions:";
   LOG_IF(FATAL, !expr->VisitAllDefinitions(&logger)) << "failed to visit definitions for: " << expr->ToString();
 #endif  // SCM_DEBUG
 

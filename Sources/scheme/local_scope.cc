@@ -29,7 +29,6 @@ auto LocalScope::Add(LocalVariable* local) -> bool {
   locals_.push_back(local);
   if (!local->HasOwner())
     local->SetOwner(this);
-  DLOG(INFO) << "added: " << (*local);
   return true;
 }
 

@@ -30,6 +30,18 @@
         "LocalScope",
         "FlowGraph"
       ]
+    },
+    {
+      "id": "verbose-level",
+      "type": "pickString",
+      "description": "The verbose level to use",
+      "default": "0",
+      "options": [
+        "0",
+        "10",
+        "100",
+        "1000",
+      ]
     }
   ],
   "configurations": [
@@ -89,7 +101,8 @@
         "-logtostdout",
         "-colorlogtostdout",
         "--reports-dir", "${workspaceFolder}/reports",
-        "--module-dir", "${workspaceFolder}/scm"
+        "--module-dir", "${workspaceFolder}/scm",
+        "-v=${input:verbose-level}"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [
@@ -112,7 +125,7 @@
         "--dump-ast",
         "--dump-flow-graph",
         "--nokernel",
-        "-v=1000"
+        "-v=${input:verbose-level}"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [
