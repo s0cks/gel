@@ -39,8 +39,15 @@ auto FlowGraphBuilder::BuildGraph() -> FlowGraph* {
 }
 
 auto EffectVisitor::VisitEvalExpr(EvalExpr* expr) -> bool {
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return false;
+  ASSERT(expr && expr->HasExpression());
+  ValueVisitor for_value(GetOwner());
+  if (!expr->GetExpression()->Accept(&for_value)) {
+    LOG(ERROR) << "failed to visit EvalExpr expr: " << expr->GetExpression()->ToString();
+    return false;
+  }
+  Append(for_value);
+  ReturnDefinition(EvalInstr::New(for_value.GetValue()));
+  return true;
 }
 
 auto EffectVisitor::VisitCallProcExpr(CallProcExpr* expr) -> bool {

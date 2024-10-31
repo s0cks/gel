@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <ranges>
 
+#include "scheme/common.h"
 #include "scheme/error.h"
 #include "scheme/expression.h"
 #include "scheme/instruction.h"
@@ -93,6 +94,12 @@ auto Interpreter::VisitInvokeInstr(InvokeInstr* instr) -> bool {
   const auto procedure = target->AsProcedure();
   ASSERT(procedure);
   return procedure->Apply(GetRuntime());
+}
+
+auto Interpreter::VisitEvalInstr(EvalInstr* instr) -> bool {
+  ASSERT(instr);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return true;
 }
 
 auto Interpreter::VisitInvokeNativeInstr(InvokeNativeInstr* instr) -> bool {

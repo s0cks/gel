@@ -28,6 +28,14 @@ auto LoadVariableInstr::ToString() const -> std::string {
   return ss.str();
 }
 
+auto EvalInstr::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "EvalInstr(";
+  ss << "value=" << GetValue()->ToString();
+  ss << ")";
+  return ss.str();
+}
+
 auto StoreVariableInstr::ToString() const -> std::string {
   std::stringstream ss;
   ss << "StoreVariableInstr(";

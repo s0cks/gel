@@ -244,6 +244,12 @@ class DotVisitor : public InstructionVisitor, dot::GraphDecorator {
     return true;
   }
 
+  auto VisitEvalInstr(EvalInstr* instr) -> bool override {
+    ASSERT(instr);
+    Append(instr);
+    return true;
+  }
+
   auto VisitThrowInstr(ThrowInstr* instr) -> bool override {
     ASSERT(instr);
     Append(instr);
