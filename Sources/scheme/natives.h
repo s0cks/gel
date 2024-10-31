@@ -1,8 +1,7 @@
 #ifndef SCM_NATIVES_H
 #define SCM_NATIVES_H
 
-#include "scheme/common.h"
-#include "scheme/procedure.h"
+#include "scheme/native_procedure.h"
 
 namespace scm::proc {
 DECLARE_NATIVE_PROCEDURE(print);

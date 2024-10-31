@@ -6,6 +6,7 @@
 #include "scheme/error.h"
 #include "scheme/expression.h"
 #include "scheme/instruction.h"
+#include "scheme/native_procedure.h"
 #include "scheme/runtime.h"
 #include "scheme/type.h"
 
@@ -97,7 +98,7 @@ auto Interpreter::VisitInvokeInstr(InvokeInstr* instr) -> bool {
 auto Interpreter::VisitInvokeNativeInstr(InvokeNativeInstr* instr) -> bool {
   ASSERT(instr);
   const auto target = GetRuntime()->Pop();
-  if (!IsNativeProcedure(target))
+  if (!target || !target->IsNativeProcedure())
     throw Exception(fmt::format("expected {0:s} to be a NativeProcedure.", target ? target->ToString() : "null"));
   const auto procedure = target->AsProcedure();
   ASSERT(procedure && procedure->IsNative());
@@ -106,7 +107,7 @@ auto Interpreter::VisitInvokeNativeInstr(InvokeNativeInstr* instr) -> bool {
     args.push_back(GetRuntime()->Pop());
   }
   std::ranges::reverse(std::begin(args), std::end(args));
-  return ((NativeProcedure*)procedure)->ApplyProcedure(GetRuntime(), args);
+  return procedure->AsNativeProcedure()->ApplyProcedure(GetRuntime(), args);
 }
 
 auto Interpreter::VisitBranchInstr(BranchInstr* instr) -> bool {

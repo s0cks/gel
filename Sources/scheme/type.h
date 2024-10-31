@@ -15,6 +15,7 @@ namespace scm {
   V(Bool)                \
   V(Lambda)              \
   V(Procedure)           \
+  V(NativeProcedure)     \
   V(Null)                \
   V(Pair)                \
   V(List)                \

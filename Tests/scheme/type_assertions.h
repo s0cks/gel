@@ -8,6 +8,7 @@
 #include "scheme/expression_compiled.h"
 #include "scheme/lambda.h"
 #include "scheme/macro.h"
+#include "scheme/native_procedure.h"
 #include "scheme/type.h"
 
 namespace scm {
