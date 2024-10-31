@@ -1,5 +1,9 @@
 #include "scheme/natives.h"
 
+#include <fmt/args.h>
+#include <fmt/base.h>
+#include <fmt/format.h>
+
 #include <iostream>
 
 #include "scheme/error.h"
@@ -21,7 +25,8 @@ static inline auto ToSymbol(Type* rhs) -> std::optional<Symbol*> {
 
 NATIVE_PROCEDURE_F(import) {
   ASSERT(state);
-  const auto arg = state->Pop();
+  ASSERT(!args.empty());
+  const auto arg = args[0];
   ASSERT(arg);
   const auto symbol = ToSymbol(arg);
   if (!symbol) {
@@ -41,15 +46,15 @@ NATIVE_PROCEDURE_F(import) {
 
 NATIVE_PROCEDURE_F(print) {
   ASSERT(state);
-  const auto value = state->Pop();
-  ASSERT(value);
-  PrintValue(std::cout, value) << std::endl;
+  ASSERT(!args.empty());
+  PrintValue(std::cout, args[0]) << std::endl;
   return true;
 }
 
 NATIVE_PROCEDURE_F(throw_exc) {
   ASSERT(state);
-  const auto message = state->Pop();
+  ASSERT(!args.empty());
+  const auto message = args[0];
   ASSERT(message && message->IsString());
   state->PushError(String::Unbox(message));
   return true;
@@ -57,7 +62,8 @@ NATIVE_PROCEDURE_F(throw_exc) {
 
 NATIVE_PROCEDURE_F(type) {
   ASSERT(state);
-  const auto value = state->Pop();
+  ASSERT(!args.empty());
+  const auto value = args[0];
   ASSERT(value);
   state->Push(String::New(value->GetTypename()));
   return true;
@@ -71,7 +77,23 @@ NATIVE_PROCEDURE_F(exit) {
 
 NATIVE_PROCEDURE_F(format) {
   ASSERT(state);
-  state->PushError("Hello World");
+  ASSERT(args.size() >= 1);
+  const auto format = args[0];
+  ASSERT(format);
+  if (!format->IsString()) {
+    state->PushError(fmt::format("expected {} to be a String.", *format));
+    return true;
+  }
+
+  const auto& fmt_val = format->AsString()->Get();
+  ASSERT(!fmt_val.empty());
+  fmt::dynamic_format_arg_store<fmt::format_context> fmt_args{};
+  std::for_each(std::begin(args) + 1, std::end(args), [&fmt_args](Type* arg) {
+    fmt_args.push_back(arg->ToString());
+  });
+  const auto result = fmt::vformat(fmt_val, fmt_args);
+  ASSERT(!result.empty());
+  state->Push(String::New(result));
   return true;
 }
 }  // namespace scm::proc

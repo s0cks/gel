@@ -1,6 +1,8 @@
 #ifndef SCM_TYPE_H
 #define SCM_TYPE_H
 
+#include <fmt/format.h>
+
 #include <functional>
 #include <ostream>
 #include <string>
@@ -469,5 +471,13 @@ static inline auto Not(Type* rhs) -> Type* {
   return Truth(rhs) ? Bool::False() : Bool::True();
 }
 }  // namespace scm
+
+template <>
+struct fmt::formatter<scm::Type> : public fmt::formatter<std::string> {
+  template <typename FormatContext>
+  constexpr auto format(const scm::Type& value, FormatContext& ctx) const -> decltype(ctx.out()) {
+    return fmt::format_to(ctx.out(), "{}", value.ToString());
+  }
+};
 
 #endif  // SCM_TYPE_H

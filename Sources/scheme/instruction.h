@@ -5,6 +5,7 @@
 
 #include "scheme/common.h"
 #include "scheme/expression.h"
+#include "scheme/lambda.h"
 #include "scheme/procedure.h"
 #include "scheme/variable.h"
 
@@ -415,12 +416,15 @@ class InvokeInstr : public Definition {
 class InvokeNativeInstr : public Definition {
  private:
   Definition* target_;
+  uint64_t num_args_;
 
  protected:
-  explicit InvokeNativeInstr(Definition* target) :
+  explicit InvokeNativeInstr(Definition* target, const uint64_t num_args) :
     Definition(),
-    target_(target) {
+    target_(target),
+    num_args_(num_args) {
     ASSERT(target_);
+    ASSERT(num_args_ >= 0);
   }
 
  public:
@@ -430,12 +434,17 @@ class InvokeNativeInstr : public Definition {
     return target_;
   }
 
+  auto GetNumberOfArgs() const -> uint64_t {
+    return num_args_;
+  }
+
   DECLARE_INSTRUCTION(InvokeNativeInstr);
 
  public:
-  static inline auto New(Definition* target) -> InvokeNativeInstr* {
+  static inline auto New(Definition* target, const uint64_t num_args = 0) -> InvokeNativeInstr* {
     ASSERT(target);
-    return new InvokeNativeInstr(target);
+    ASSERT(num_args >= 0);
+    return new InvokeNativeInstr(target, num_args);
   }
 };
 

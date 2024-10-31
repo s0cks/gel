@@ -37,6 +37,7 @@ static inline auto IsProcedure(Type* rhs) -> bool {
 }
 
 class NativeProcedure : public Procedure {
+  friend class Interpreter;
   DEFINE_NON_COPYABLE_TYPE(NativeProcedure);
 
  private:
@@ -48,6 +49,8 @@ class NativeProcedure : public Procedure {
     symbol_(symbol) {
     ASSERT(symbol_);
   }
+
+  virtual auto ApplyProcedure(Runtime* runtime, const std::vector<Type*>& args) const -> bool = 0;
 
  public:
   ~NativeProcedure() override = default;
@@ -65,20 +68,24 @@ class NativeProcedure : public Procedure {
   auto GetTypename() const -> const char* override {
     return "NativeProcedure";
   }
+
+  auto Apply(Runtime* runtime) const -> bool override;
 };
 
 static inline auto IsNativeProcedure(Type* rhs) -> bool {
   return rhs && rhs->IsProcedure() && rhs->AsProcedure()->IsNative();
 }
 
-#define _DEFINE_NATIVE_PROCEDURE_TYPE(Name, Sym) \
-  DEFINE_NON_COPYABLE_TYPE(Name);                \
-                                                 \
- public:                                         \
-  Name() :                                       \
-    NativeProcedure(Symbol::New(Sym)) {}         \
-  ~Name() override = default;                    \
-  auto Apply(Runtime* state) const -> bool override;
+#define _DEFINE_NATIVE_PROCEDURE_TYPE(Name, Sym)                                              \
+  DEFINE_NON_COPYABLE_TYPE(Name);                                                             \
+                                                                                              \
+ protected:                                                                                   \
+  auto ApplyProcedure(Runtime* state, const std::vector<Type*>& args) const -> bool override; \
+                                                                                              \
+ public:                                                                                      \
+  Name() :                                                                                    \
+    NativeProcedure(Symbol::New(Sym)) {}                                                      \
+  ~Name() override = default;
 
 #define DEFINE_NATIVE_PROCEDURE_TYPE(Name) _DEFINE_NATIVE_PROCEDURE_TYPE(Name, #Name)
 
@@ -92,7 +99,7 @@ static inline auto IsNativeProcedure(Type* rhs) -> bool {
     DEFINE_NATIVE_PROCEDURE_TYPE(Name); \
   };
 
-#define NATIVE_PROCEDURE_F(Name) auto Name::Apply(Runtime* state) const -> bool
+#define NATIVE_PROCEDURE_F(Name) auto Name::ApplyProcedure(Runtime* state, const std::vector<Type*>& args) const -> bool
 }  // namespace scm
 
 #endif  // SCM_PROCEDURE_H

@@ -54,11 +54,27 @@ auto EffectVisitor::VisitCallProcExpr(CallProcExpr* expr) -> bool {
   }
 
   ValueVisitor for_target(GetOwner());
-  if (!expr->GetTarget()->Accept(&for_target)) {
-    LOG(ERROR) << "failed to visit target: " << expr->GetTarget()->ToString();
-    return false;
+  {
+    const auto target = expr->GetTarget();
+    ASSERT(target);
+    if (!target->Accept(&for_target)) {
+      LOG(ERROR) << "failed to visit target: " << expr->GetTarget()->ToString();
+      return false;
+    }
   }
   Append(for_target);
+
+  const auto target = for_target.GetValue();
+  ASSERT(target);
+  if (target->IsConstantInstr()) {
+    const auto target_proc = target->AsConstantInstr()->GetValue();
+    ASSERT(target_proc && target_proc->IsProcedure());
+    if (target_proc->AsProcedure()->IsNative()) {
+      ReturnDefinition(InvokeNativeInstr::New(for_target.GetValue(), expr->GetNumberOfArgs()));
+      return true;
+    }
+  }
+
   ReturnDefinition(InvokeInstr::New(for_target.GetValue()));
   return true;
 }
@@ -224,7 +240,13 @@ auto EffectVisitor::VisitLiteralExpr(LiteralExpr* p) -> bool {
   const auto value = p->GetValue();
   ASSERT(value);
   if (value->IsSymbol()) {
-    ReturnDefinition(instr::LoadVariableInstr::New(value->AsSymbol()));
+    LocalVariable* local = nullptr;
+    if (!GetOwner()->GetScope()->Lookup(value->AsSymbol(), &local) || !local->HasValue()) {
+      ReturnDefinition(instr::LoadVariableInstr::New(value->AsSymbol()));
+      return true;
+    }
+
+    ReturnDefinition(ConstantInstr::New(local->GetValue()));
   } else {
     ReturnDefinition(ConstantInstr::New(p->GetValue()));
   }

@@ -44,12 +44,20 @@ class FlowGraphBuilder {
   }
 
  public:
-  explicit FlowGraphBuilder(Expression* expr) :
-    expr_(expr) {}
+  explicit FlowGraphBuilder(Expression* expr, LocalScope* scope = LocalScope::New()) :
+    expr_(expr),
+    scope_(scope) {
+    ASSERT(expr_);
+    ASSERT(scope_);
+  }
   ~FlowGraphBuilder() = default;
 
   auto GetExpr() const -> Expression* {
     return expr_;
+  }
+
+  auto GetScope() const -> LocalScope* {
+    return scope_;
   }
 
   auto GetGraphEntry() const -> GraphEntryInstr* {
@@ -63,17 +71,17 @@ class FlowGraphBuilder {
   auto BuildGraph() -> FlowGraph*;
 
  public:
-  static inline auto Build(Expression* expr) -> FlowGraph* {
+  static inline auto Build(Expression* expr, LocalScope* scope = LocalScope::New()) -> FlowGraph* {
     ASSERT(expr);
-    FlowGraphBuilder builder(expr);
+    ASSERT(scope);
+    FlowGraphBuilder builder(expr, scope);
     return builder.BuildGraph();
   }
 
   static inline auto Build(Program* program) -> FlowGraph* {
     ASSERT(program);
     ASSERT(program->GetNumberOfExpressions() >= 1);
-    FlowGraphBuilder builder(program->GetExpressionAt(0));
-    return builder.BuildGraph();
+    return Build(program->GetExpressionAt(0));
   }
 };
 

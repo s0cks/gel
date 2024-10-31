@@ -97,8 +97,18 @@ auto Interpreter::VisitInvokeNativeInstr(InvokeNativeInstr* instr) -> bool {
   if (!IsNativeProcedure(target))
     throw Exception(fmt::format("expected {0:s} to be a NativeProcedure.", target ? target->ToString() : "null"));
   const auto procedure = target->AsProcedure();
-  ASSERT(procedure);
-  return procedure->Apply(GetRuntime());
+  ASSERT(procedure && procedure->IsNative());
+  DLOG(INFO) << "num args: " << instr->GetNumberOfArgs();
+  std::vector<Type*> args{};
+  for (auto idx = 0; idx < instr->GetNumberOfArgs(); idx++) {
+    args.push_back(GetRuntime()->Pop());
+  }
+  std::ranges::reverse(std::begin(args), std::end(args));
+  DLOG(INFO) << "args: ";
+  std::ranges::for_each(std::begin(args), std::end(args), [](Type* arg) {
+    DLOG(INFO) << "- " << arg;
+  });
+  return ((NativeProcedure*)procedure)->ApplyProcedure(GetRuntime(), args);
 }
 
 auto Interpreter::VisitBranchInstr(BranchInstr* instr) -> bool {
@@ -209,7 +219,7 @@ void Interpreter::ExecuteInstr(Instruction* instr) {
 
 void Interpreter::Run(GraphEntryInstr* entry) {
   ASSERT(entry && entry->HasNext());
-  SetCurrentInstr(entry->GetFirstInstruction());
+  SetCurrentInstr(entry);
   while (HasCurrentInstr() && !GetRuntime()->HasError()) {
     const auto next = GetCurrentInstr();
     ASSERT(next);

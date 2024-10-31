@@ -59,7 +59,7 @@ auto ExpressionCompiler::CompileExpression(Expression* expr) -> CompiledExpressi
     }
   }
 
-  const auto flow_graph = FlowGraphBuilder::Build(expr);
+  const auto flow_graph = FlowGraphBuilder::Build(expr, GetRuntime()->GetScope());
   ASSERT(flow_graph);
   ASSERT(flow_graph->HasEntry());
 #ifdef SCM_DEBUG
