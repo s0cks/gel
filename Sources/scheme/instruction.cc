@@ -168,7 +168,7 @@ auto InvokeNativeInstr::ToString() const -> std::string {
   return ss.str();
 }
 
-auto TypecheckInstr::ToString() const -> std::string {
+auto InstanceOfInstr::ToString() const -> std::string {
   std::stringstream ss;
   ss << "TypecheckInstr(";
   ss << "value=" << GetValue()->ToString();

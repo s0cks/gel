@@ -134,7 +134,7 @@ auto Interpreter::VisitBranchInstr(BranchInstr* instr) -> bool {
   return true;
 }
 
-auto Interpreter::VisitTypecheckInstr(TypecheckInstr* instr) -> bool {
+auto Interpreter::VisitInstanceOfInstr(InstanceOfInstr* instr) -> bool {
   ASSERT(instr);
   const auto stack_top = GetRuntime()->StackTop().value_or(Null::Get());
   ASSERT(stack_top);

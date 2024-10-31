@@ -30,7 +30,7 @@ namespace instr {
   V(BranchInstr)                \
   V(GotoInstr)                  \
   V(ThrowInstr)                 \
-  V(TypecheckInstr)
+  V(InstanceOfInstr)
 
 class Instruction;
 #define FORWARD_DECLARE(Name) class Name;
@@ -701,28 +701,28 @@ class ConsInstr : public Definition {
   }
 };
 
-class TypecheckInstr : public Instruction {
+class InstanceOfInstr : public Instruction {
  private:
   Definition* value_;
 
  public:
-  explicit TypecheckInstr(Definition* value) :
+  explicit InstanceOfInstr(Definition* value) :
     Instruction(),
     value_(value) {
     ASSERT(value_);
   }
-  ~TypecheckInstr() override = default;
+  ~InstanceOfInstr() override = default;
 
   auto GetValue() const -> Definition* {
     return value_;
   }
 
-  DECLARE_INSTRUCTION(TypecheckInstr);
+  DECLARE_INSTRUCTION(InstanceOfInstr);
 
  public:
-  static inline auto New(Definition* value) -> TypecheckInstr* {
+  static inline auto New(Definition* value) -> InstanceOfInstr* {
     ASSERT(value);
-    return new TypecheckInstr(value);
+    return new InstanceOfInstr(value);
   }
 };
 }  // namespace instr
