@@ -1,5 +1,8 @@
 #include "scheme/interpreter.h"
 
+#include <algorithm>
+#include <ranges>
+
 #include "scheme/error.h"
 #include "scheme/expression.h"
 #include "scheme/instruction.h"
@@ -98,16 +101,11 @@ auto Interpreter::VisitInvokeNativeInstr(InvokeNativeInstr* instr) -> bool {
     throw Exception(fmt::format("expected {0:s} to be a NativeProcedure.", target ? target->ToString() : "null"));
   const auto procedure = target->AsProcedure();
   ASSERT(procedure && procedure->IsNative());
-  DLOG(INFO) << "num args: " << instr->GetNumberOfArgs();
   std::vector<Type*> args{};
   for (auto idx = 0; idx < instr->GetNumberOfArgs(); idx++) {
     args.push_back(GetRuntime()->Pop());
   }
   std::ranges::reverse(std::begin(args), std::end(args));
-  DLOG(INFO) << "args: ";
-  std::ranges::for_each(std::begin(args), std::end(args), [](Type* arg) {
-    DLOG(INFO) << "- " << arg;
-  });
   return ((NativeProcedure*)procedure)->ApplyProcedure(GetRuntime(), args);
 }
 
