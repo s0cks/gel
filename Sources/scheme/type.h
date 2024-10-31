@@ -381,6 +381,11 @@ class String : public Datum {
   static inline auto New(const std::string& value) -> String* {
     return new String(value);
   }
+
+  static inline auto Unbox(Type* rhs) -> const std::string& {
+    ASSERT(rhs && rhs->IsString());
+    return rhs->AsString()->Get();
+  }
 };
 
 using SymbolList = std::vector<Symbol*>;

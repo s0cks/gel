@@ -51,7 +51,7 @@ NATIVE_PROCEDURE_F(throw_exc) {
   ASSERT(state);
   const auto message = state->Pop();
   ASSERT(message && message->IsString());
-  state->Push(Error::New(message));
+  state->PushError(String::Unbox(message));
   return true;
 }
 
@@ -66,6 +66,12 @@ NATIVE_PROCEDURE_F(type) {
 NATIVE_PROCEDURE_F(exit) {
   ASSERT(state);
   state->StopRunning();
+  return true;
+}
+
+NATIVE_PROCEDURE_F(format) {
+  ASSERT(state);
+  state->PushError("Hello World");
   return true;
 }
 }  // namespace scm::proc

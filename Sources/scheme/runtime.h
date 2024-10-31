@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "scheme/common.h"
+#include "scheme/error.h"
 #include "scheme/flags.h"
 #include "scheme/flow_graph.h"
 #include "scheme/instruction.h"
@@ -19,6 +20,8 @@ DECLARE_string(module_dir);
 namespace proc {
 class import;
 class exit;
+class format;
+class throw_exc;
 }  // namespace proc
 
 class ExecutionStack {
@@ -71,6 +74,7 @@ class Runtime : public ExecutionStack {
   friend class Repl;
   friend class proc::import;
   friend class proc::exit;
+  friend class proc::format;  // TODO: remove
   friend class Interpreter;
   friend class RuntimeScopeScope;
 
@@ -161,6 +165,16 @@ class Runtime : public ExecutionStack {
   }
 
   auto Execute(GraphEntryInstr* entry) -> Type*;
+
+  inline void PushError(Error* error) {
+    ASSERT(error);
+    return Push(error);
+  }
+
+  inline void PushError(const std::string& message) {
+    ASSERT(!message.empty());
+    return PushError(Error::New(message));
+  }
 
  private:
   static auto Eval(GraphEntryInstr* graph_entry) -> Type*;
