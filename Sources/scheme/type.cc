@@ -248,6 +248,24 @@ auto String::ToString() const -> std::string {
   return ss.str();
 }
 
+auto String::ValueOf(Type* rhs) -> String* {
+  std::stringstream ss;
+  if (rhs->IsBool()) {
+    ss << (Bool::Unbox(rhs->AsBool()) ? "#t" : "#f");
+  } else if (rhs->IsLong()) {
+    ss << rhs->AsLong()->Get();
+  } else if (rhs->IsDouble()) {
+    ss << rhs->AsDouble()->Get();
+  } else if (rhs->IsSymbol()) {
+    ss << rhs->AsSymbol()->Get();
+  } else if (rhs->IsNull()) {
+    ss << "'()";
+  } else {
+    ss << rhs->ToString();
+  }
+  return String::New(ss.str());
+}
+
 auto PrintValue(std::ostream& stream, Type* value) -> std::ostream& {
   ASSERT(value);
   if (value->IsNull()) {

@@ -328,6 +328,34 @@ class Pair : public Datum {
   }
 };
 
+class String : public Datum {
+ private:
+  std::string value_;
+
+  explicit String(const std::string& value) :
+    Datum(),
+    value_(value) {}
+
+ public:
+  auto Get() const -> const std::string& {
+    return value_;
+  }
+
+  DECLARE_TYPE(String);
+
+ public:
+  static inline auto New(const std::string& value) -> String* {
+    return new String(value);
+  }
+
+  static inline auto Unbox(Type* rhs) -> const std::string& {
+    ASSERT(rhs && rhs->IsString());
+    return rhs->AsString()->Get();
+  }
+
+  static inline auto ValueOf(Type* rhs) -> String*;
+};
+
 class Symbol : public Datum {
  public:
   struct Comparator {
@@ -354,32 +382,6 @@ class Symbol : public Datum {
 
  public:
   static auto New(const std::string& rhs) -> Symbol*;
-};
-
-class String : public Datum {
- private:
-  std::string value_;
-
-  explicit String(const std::string& value) :
-    Datum(),
-    value_(value) {}
-
- public:
-  auto Get() const -> const std::string& {
-    return value_;
-  }
-
-  DECLARE_TYPE(String);
-
- public:
-  static inline auto New(const std::string& value) -> String* {
-    return new String(value);
-  }
-
-  static inline auto Unbox(Type* rhs) -> const std::string& {
-    ASSERT(rhs && rhs->IsString());
-    return rhs->AsString()->Get();
-  }
 };
 
 using SymbolList = std::vector<Symbol*>;
