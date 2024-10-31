@@ -3,6 +3,12 @@
 #include "scheme/runtime.h"
 
 namespace scm {
+auto NativeProcedure::Equals(Type* rhs) const -> bool {
+  if (!rhs || !rhs->IsNativeProcedure())
+    return false;
+  return GetSymbol()->Equals(rhs->AsNativeProcedure()->GetSymbol());
+}
+
 auto NativeProcedure::ToString() const -> std::string {
   std::stringstream ss;
   ss << "NativeProcedure(";

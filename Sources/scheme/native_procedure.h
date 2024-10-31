@@ -6,7 +6,6 @@
 namespace scm {
 class NativeProcedure : public Procedure {
   friend class Interpreter;
-  DEFINE_NON_COPYABLE_TYPE(NativeProcedure);
 
  private:
   Symbol* symbol_;
@@ -21,8 +20,6 @@ class NativeProcedure : public Procedure {
   virtual auto ApplyProcedure(Runtime* runtime, const std::vector<Type*>& args) const -> bool = 0;
 
  public:
-  ~NativeProcedure() override = default;
-
   auto GetSymbol() const -> Symbol* {
     return symbol_;
   }
@@ -31,13 +28,8 @@ class NativeProcedure : public Procedure {
     return true;
   }
 
-  auto ToString() const -> std::string override;
-
-  auto GetTypename() const -> const char* override {
-    return "NativeProcedure";
-  }
-
   auto Apply(Runtime* runtime) const -> bool override;
+  DECLARE_TYPE(NativeProcedure);
 };
 
 static inline auto IsNativeProcedure(Type* rhs) -> bool {
@@ -45,8 +37,6 @@ static inline auto IsNativeProcedure(Type* rhs) -> bool {
 }
 
 #define _DEFINE_NATIVE_PROCEDURE_TYPE(Name, Sym)                                              \
-  DEFINE_NON_COPYABLE_TYPE(Name);                                                             \
-                                                                                              \
  protected:                                                                                   \
   auto ApplyProcedure(Runtime* state, const std::vector<Type*>& args) const -> bool override; \
                                                                                               \
