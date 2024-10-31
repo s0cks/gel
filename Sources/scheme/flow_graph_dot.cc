@@ -212,19 +212,6 @@ class DotVisitor : public InstructionVisitor, dot::GraphDecorator {
     return true;
   }
 
-  auto VisitCallProcInstr(CallProcInstr* instr) -> bool override {
-    ASSERT(instr);
-    const auto node = Append(instr);
-    ASSERT(node);
-    const auto symbol = instr->GetSymbol();
-    ASSERT(symbol);
-    std::stringstream label;
-    label << instr->GetName() << std::endl;
-    label << "Symbol := " << symbol->Get();
-    SetNodeLabel(node, label);
-    return true;
-  }
-
   auto VisitLoadVariableInstr(LoadVariableInstr* instr) -> bool override {
     ASSERT(instr);
     const auto node = Append(instr);

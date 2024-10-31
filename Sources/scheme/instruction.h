@@ -22,7 +22,6 @@ namespace instr {
   V(GraphEntryInstr)            \
   V(TargetEntryInstr)           \
   V(JoinEntryInstr)             \
-  V(CallProcInstr)              \
   V(InvokeInstr)                \
   V(InvokeNativeInstr)          \
   V(ReturnInstr)                \
@@ -383,36 +382,6 @@ class ThrowInstr : public Instruction {
   static inline auto New(Definition* defn) -> ThrowInstr* {
     ASSERT(defn);
     return new ThrowInstr(defn);
-  }
-};
-
-class CallProcInstr : public Definition {
- private:
-  Symbol* symbol_ = nullptr;
-
- protected:
-  void SetSymbol(Symbol* symbol) {
-    ASSERT(symbol);
-    symbol_ = symbol;
-  }
-
- public:
-  explicit CallProcInstr(Symbol* symbol) :
-    Definition() {
-    SetSymbol(symbol);
-  }
-  ~CallProcInstr() override = default;
-
-  auto GetSymbol() const -> Symbol* {
-    return symbol_;
-  }
-
-  DECLARE_INSTRUCTION(CallProcInstr);
-
- public:
-  static inline auto New(Symbol* symbol) -> CallProcInstr* {
-    ASSERT(symbol);
-    return new CallProcInstr(symbol);
   }
 };
 

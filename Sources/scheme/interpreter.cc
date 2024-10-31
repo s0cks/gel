@@ -91,12 +91,6 @@ auto Interpreter::VisitInvokeInstr(InvokeInstr* instr) -> bool {
   return procedure->Apply(GetRuntime());
 }
 
-auto Interpreter::VisitCallProcInstr(CallProcInstr* instr) -> bool {
-  ASSERT(instr);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return false;
-}
-
 auto Interpreter::VisitInvokeNativeInstr(InvokeNativeInstr* instr) -> bool {
   ASSERT(instr);
   const auto target = GetRuntime()->Pop();

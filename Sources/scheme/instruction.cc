@@ -87,14 +87,6 @@ auto JoinEntryInstr::ToString() const -> std::string {
   return ss.str();
 }
 
-auto CallProcInstr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "CallProcInstr(";
-  ss << "symbol=" << GetSymbol()->ToString();
-  ss << ")";
-  return ss.str();
-}
-
 auto ReturnInstr::ToString() const -> std::string {
   std::stringstream ss;
   ss << "ReturnInstr(";
