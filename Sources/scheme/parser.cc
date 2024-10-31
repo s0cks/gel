@@ -228,7 +228,7 @@ auto Parser::ParseExpression() -> Expression* {
         expr = ParseQuotedExpr();
         break;
       default:
-        LOG(FATAL) << "unexpected: " << next;
+        Unexpected(next);
         return nullptr;
     }
   }

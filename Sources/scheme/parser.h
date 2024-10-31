@@ -67,6 +67,12 @@ class Parser {
     return false;
   }
 
+  template <const google::LogSeverity Severity = google::ERROR>
+  inline auto Unexpected(const Token& actual) -> bool {
+    LOG_AT_LEVEL(Severity) << "unexpected: " << actual;
+    return false;
+  }
+
   inline auto PeekEq(const Token::Kind rhs) -> bool {
     const auto& peek = PeekToken();
     return peek.kind == rhs;
@@ -74,7 +80,8 @@ class Parser {
 
   inline void ExpectNext(const Token::Kind rhs) {
     const auto& next = NextToken();
-    LOG_IF(FATAL, next.kind != rhs) << "unexpected: " << next << ", expected: " << rhs << " at: " << GetRemaining();
+    if (next.kind != rhs)
+      Unexpected(rhs, next);
   }
 
   // Misc

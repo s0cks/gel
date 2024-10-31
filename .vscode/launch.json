@@ -147,7 +147,8 @@
         "--reports-dir", "${workspaceFolder}/reports",
         "--dump-ast",
         "--dump-flow-graph",
-        "--module-dir", "${workspaceFolder}/scm"
+        "--module-dir", "${workspaceFolder}/scm",
+         "-v=${input:verbose-level}"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [

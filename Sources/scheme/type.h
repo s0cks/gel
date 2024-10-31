@@ -168,17 +168,8 @@ class Bool : public Datum {
     return value_;
   }
 
-  auto And(Datum* rhs) const -> Datum* override {
-    if (rhs->IsAtom())
-      return rhs;
-    return Get() && rhs->AsBool()->Get() ? Bool::True() : Bool::False();
-  }
-
-  auto Or(Datum* rhs) const -> Datum* override {
-    if (rhs->IsAtom())
-      return rhs;
-    return Get() || rhs->AsBool()->Get() ? Bool::True() : Bool::False();
-  }
+  auto And(Datum* rhs) const -> Datum* override;
+  auto Or(Datum* rhs) const -> Datum* override;
 
   DECLARE_TYPE(Bool);
 

@@ -7,6 +7,7 @@
 
 #include "scheme/common.h"
 #include "scheme/expression.h"
+#include "scheme/expression_compiler.h"
 #include "scheme/flow_graph_builder.h"
 #include "scheme/runtime.h"
 
@@ -19,9 +20,8 @@ auto Lambda::Equals(Type* rhs) const -> bool {
 }
 
 auto Lambda::Apply(Runtime* runtime) const -> bool {
-  const auto flow_graph = FlowGraphBuilder::Build(GetBody());
-  ASSERT(flow_graph);
-  ASSERT(flow_graph->HasEntry());
+  const auto expr = ExpressionCompiler::Compile(GetBody());
+  ASSERT(expr);
 
   RuntimeScopeScope scope(runtime);
   for (const auto& arg : std::ranges::reverse_view(GetArgs())) {
@@ -33,7 +33,7 @@ auto Lambda::Apply(Runtime* runtime) const -> bool {
     }
   }
 
-  const auto result = runtime->Execute(flow_graph->GetEntry());
+  const auto result = runtime->Execute(expr->GetEntry());
   if (!result) {
     DLOG(WARNING) << "no result from lambda.";
     return true;

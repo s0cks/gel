@@ -68,14 +68,13 @@ auto EffectVisitor::VisitCallProcExpr(CallProcExpr* expr) -> bool {
   ASSERT(target);
   if (target->IsConstantInstr()) {
     const auto target_proc = target->AsConstantInstr()->GetValue();
-    ASSERT(target_proc && target_proc->IsProcedure());
-    if (target_proc->AsProcedure()->IsNative()) {
+    if (target_proc->IsNativeProcedure()) {
       ReturnDefinition(InvokeNativeInstr::New(for_target.GetValue(), expr->GetNumberOfArgs()));
       return true;
     }
   }
 
-  ReturnDefinition(InvokeInstr::New(for_target.GetValue()));
+  ReturnDefinition(InvokeInstr::New(target));
   return true;
 }
 

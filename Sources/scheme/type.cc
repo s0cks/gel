@@ -60,6 +60,14 @@ auto Bool::ToString() const -> std::string {
   return Get() ? "#T" : "#F";
 }
 
+auto Bool::And(Datum* rhs) const -> Datum* {
+  return Box(Get() && Truth(rhs));
+}
+
+auto Bool::Or(Datum* rhs) const -> Datum* {
+  return Box(Get() || Truth(rhs));
+}
+
 void Bool::Init() {
   kTrue = NewTrue();
   kFalse = NewFalse();
