@@ -353,8 +353,12 @@ class String : public Datum {
     return rhs->AsString()->Get();
   }
 
-  static inline auto ValueOf(Type* rhs) -> String*;
+  static auto ValueOf(Type* rhs) -> String*;
 };
+
+static inline auto IsString(Type* rhs) -> bool {
+  return rhs && rhs->IsString();
+}
 
 class Symbol : public Datum {
  public:
@@ -383,6 +387,10 @@ class Symbol : public Datum {
  public:
   static auto New(const std::string& rhs) -> Symbol*;
 };
+
+static inline auto IsSymbol(Type* rhs) -> bool {
+  return rhs && rhs->IsSymbol();
+}
 
 using SymbolList = std::vector<Symbol*>;
 using SymbolSet = std::unordered_set<Symbol*, Symbol::Comparator>;

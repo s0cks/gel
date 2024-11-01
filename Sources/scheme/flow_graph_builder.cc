@@ -289,6 +289,7 @@ auto EffectVisitor::VisitThrowExpr(expr::ThrowExpr* expr) -> bool {
     return false;
   }
   Append(for_value);
+  Add(InstanceOfInstr::New(for_value.GetValue(), IsString));
   Add(ThrowInstr::New(for_value.GetValue()));
   return true;
 }

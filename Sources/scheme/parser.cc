@@ -150,7 +150,7 @@ auto Parser::ParseSymbolList(SymbolList& symbols) -> bool {
 
 auto Parser::ParseThrowExpr() -> ThrowExpr* {
   ExpectNext(Token::kThrowExpr);
-  const auto value = ParseLiteralExpr();
+  const auto value = ParseExpression();
   ASSERT(value);
   return ThrowExpr::New(value);
 }

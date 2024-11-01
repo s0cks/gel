@@ -300,7 +300,8 @@
         "--dump-ast",
         "--dump-flow-graph",
         "--module-dir", "${workspaceFolder}/scm",
-        "--expr", "(begin (define value ${input:even-value}) (print (cond (even? value) \"even\" \"odd\")))",
+        "-v=${input:verbose-level}",
+        "--expr", "(begin (define x ${input:even-value}) (cond (even? x) (format \"{} is even\" x) (throw (format \"{} is not even\" x))))",
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [

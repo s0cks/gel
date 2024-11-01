@@ -437,11 +437,11 @@ class UnaryExpr : public TemplateExpression<1> {
 
 class ThrowExpr : public TemplateExpression<1> {
  protected:
-  explicit ThrowExpr(LiteralExpr* value) {
+  explicit ThrowExpr(Expression* value) {
     SetValue(value);
   }
 
-  inline void SetValue(LiteralExpr* expr) {
+  inline void SetValue(Expression* expr) {
     ASSERT(expr);
     SetChildAt(0, expr);
   }
@@ -449,8 +449,8 @@ class ThrowExpr : public TemplateExpression<1> {
  public:
   ~ThrowExpr() override = default;
 
-  inline auto GetValue() const -> LiteralExpr* {
-    return GetChildAt(0)->AsLiteralExpr();
+  inline auto GetValue() const -> Expression* {
+    return GetChildAt(0);
   }
 
   inline auto HasValue() const -> bool {
@@ -460,7 +460,7 @@ class ThrowExpr : public TemplateExpression<1> {
   DECLARE_EXPRESSION(ThrowExpr);
 
  public:
-  static inline auto New(LiteralExpr* value) -> ThrowExpr* {
+  static inline auto New(Expression* value) -> ThrowExpr* {
     ASSERT(value);
     return new ThrowExpr(value);
   }

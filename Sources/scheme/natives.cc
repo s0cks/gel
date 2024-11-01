@@ -80,7 +80,7 @@ NATIVE_PROCEDURE_F(format) {
   ASSERT(!fmt_val.empty());
   fmt::dynamic_format_arg_store<fmt::format_context> fmt_args{};
   std::for_each(std::begin(args) + 1, std::end(args), [&fmt_args](Type* arg) {
-    fmt_args.push_back(arg->ToString());
+    fmt_args.push_back(String::ValueOf(arg)->Get());
   });
   const auto result = fmt::vformat(fmt_val, fmt_args);
   ASSERT(!result.empty());
