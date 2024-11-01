@@ -118,7 +118,12 @@ auto Interpreter::VisitInvokeNativeInstr(InvokeNativeInstr* instr) -> bool {
     args.push_back(GetRuntime()->Pop());
   }
   std::ranges::reverse(std::begin(args), std::end(args));
-  return procedure->AsNativeProcedure()->ApplyProcedure(GetRuntime(), args);
+
+  const auto native = procedure->AsNativeProcedure();
+  ASSERT(native);
+  if (!native->ApplyProcedure(args))
+    throw Exception(fmt::format("failed to apply procedure: {}", native->ToString()));
+  return true;
 }
 
 auto Interpreter::VisitBranchInstr(BranchInstr* instr) -> bool {

@@ -3,6 +3,12 @@
 #include "scheme/runtime.h"
 
 namespace scm {
+auto NativeProcedure::ReturnValue(Type* rhs) const -> bool {
+  ASSERT(rhs);
+  GetRuntime()->Push(rhs);
+  return true;
+}
+
 auto NativeProcedure::Equals(Type* rhs) const -> bool {
   if (!rhs || !rhs->IsNativeProcedure())
     return false;
@@ -17,9 +23,4 @@ auto NativeProcedure::ToString() const -> std::string {
   return ss.str();
 }
 
-auto NativeProcedure::Apply(Runtime* runtime) const -> bool {
-  ASSERT(runtime);
-  runtime->PushError("Invalid");
-  return true;
-}
 }  // namespace scm

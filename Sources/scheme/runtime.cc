@@ -136,6 +136,7 @@ auto Runtime::CreateInitScope() -> LocalScope* {
   RegisterProc<proc::import>(scope);
   RegisterProc<proc::exit>(scope);
   RegisterProc<proc::format>(scope);
+  RegisterProc<proc::list>(scope);
   return scope;
 }
 

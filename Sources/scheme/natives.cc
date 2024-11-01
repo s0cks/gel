@@ -24,7 +24,6 @@ static inline auto ToSymbol(Type* rhs) -> std::optional<Symbol*> {
 }
 
 NATIVE_PROCEDURE_F(import) {
-  ASSERT(state);
   ASSERT(!args.empty());
   const auto arg = args[0];
   ASSERT(arg);
@@ -33,49 +32,51 @@ NATIVE_PROCEDURE_F(import) {
     LOG(FATAL) << arg << " is not a valid Symbol.";
     return false;
   }
-
-  if (!state->ImportModule((*symbol))) {
+  if (!GetRuntime()->ImportModule((*symbol))) {
     LOG(FATAL) << "failed to import module: " << (*symbol);
     return false;
   }
   DLOG(INFO) << (*symbol) << " imported!";
   LOG(INFO) << "new scope:";
-  LocalScopePrinter::Print<google::INFO, true>(state->GetScope(), __FILE__, __LINE__);
+  LocalScopePrinter::Print<google::INFO, true>(GetRuntime()->GetScope(), __FILE__, __LINE__);
   return true;
 }
 
 NATIVE_PROCEDURE_F(print) {
-  ASSERT(state);
   ASSERT(!args.empty());
   PrintValue(std::cout, args[0]) << std::endl;
   return true;
 }
 
 NATIVE_PROCEDURE_F(type) {
-  ASSERT(state);
   ASSERT(!args.empty());
   const auto value = args[0];
   ASSERT(value);
-  state->Push(String::New(value->GetTypename()));
-  return true;
+  return ReturnValue(String::New(value->GetTypename()));
 }
 
 NATIVE_PROCEDURE_F(exit) {
-  ASSERT(state);
-  state->StopRunning();
+  GetRuntime()->StopRunning();
   return true;
 }
 
+NATIVE_PROCEDURE_F(list) {
+  if (args.empty())
+    return Null::Get();
+  Type* result = Null::Get();
+  for (const auto& arg : args) {
+    result = Pair::New(arg, result);
+  }
+  return ReturnValue(result);
+}
+
 NATIVE_PROCEDURE_F(format) {
-  ASSERT(state);
+  ASSERT(GetRuntime());
   ASSERT(args.size() >= 1);
   const auto format = args[0];
   ASSERT(format);
-  if (!format->IsString()) {
-    state->PushError(fmt::format("expected {} to be a String.", *format));
-    return true;
-  }
-
+  if (!format->IsString())
+    return ThrowError(fmt::format("expected {} to be a String.", *format));
   const auto& fmt_val = format->AsString()->Get();
   ASSERT(!fmt_val.empty());
   fmt::dynamic_format_arg_store<fmt::format_context> fmt_args{};
@@ -84,7 +85,6 @@ NATIVE_PROCEDURE_F(format) {
   });
   const auto result = fmt::vformat(fmt_val, fmt_args);
   ASSERT(!result.empty());
-  state->Push(String::New(result));
-  return true;
+  return ReturnValue(String::New(result));
 }
 }  // namespace scm::proc

@@ -238,16 +238,13 @@ class MacroEvaluator : public expr::ExpressionVisitor {
 
     LocalVariable* local = nullptr;
     if (!GetScope()->Lookup(target_value->AsSymbol(), &local)) {
-      LOG(WARNING) << "cannot find macro: " << target_value;
       return true;
     }
     ASSERT(local);
     if (!local->HasValue()) {
-      LOG(WARNING) << "cannot find macro: " << target_value;
       return true;
     }
     if (!local->GetValue()->IsMacro()) {
-      LOG(WARNING) << target_value << " is not a macro.";
       return true;
     }
 
