@@ -160,6 +160,12 @@ auto EffectVisitor::VisitCaseExpr(expr::CaseExpr* expr) -> bool {
   return true;
 }
 
+auto EffectVisitor::VisitClauseExpr(expr::ClauseExpr* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return true;
+}
+
 auto EffectVisitor::VisitWhenExpr(expr::WhenExpr* expr) -> bool {
   ASSERT(expr);
   const auto join = JoinEntryInstr::New(GetOwner()->GetNextBlockId());

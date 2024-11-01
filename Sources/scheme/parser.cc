@@ -324,7 +324,7 @@ auto Parser::ParseWhenExpr() -> expr::WhenExpr* {
   return WhenExpr::New(test, actions);
 }
 
-auto Parser::ParseClauseList(expr::CaseExpr::ClauseList& clauses) -> bool {
+auto Parser::ParseClauseList(expr::ClauseList& clauses) -> bool {
   auto peek = PeekToken();
   while (peek.kind != Token::kRParen && peek.kind != Token::kEndOfStream) {
     ExpectNext(Token::kLParen);
@@ -335,7 +335,7 @@ auto Parser::ParseClauseList(expr::CaseExpr::ClauseList& clauses) -> bool {
     if (!ParseExpressionList(actions))
       throw Exception("failed to parse actions.");
 
-    clauses.emplace_back(key, actions);
+    clauses.push_back(ClauseExpr::New(key, actions));
     ExpectNext(Token::kRParen);
     peek = PeekToken();
   }
@@ -346,7 +346,7 @@ auto Parser::ParseCaseExpr() -> expr::CaseExpr* {
   ExpectNext(Token::kCaseExpr);
   const auto key = ParseExpression();
   ASSERT(key);
-  CaseExpr::ClauseList clauses;
+  expr::ClauseList clauses;
   if (!ParseClauseList(clauses))
     throw Exception("failed to parse case clauses.");
   return CaseExpr::New(key, clauses);

@@ -107,6 +107,28 @@ auto ExpressionToDot::VisitCaseExpr(expr::CaseExpr* expr) -> bool {
   return true;
 }
 
+auto ExpressionToDot::VisitClauseExpr(expr::ClauseExpr* expr) -> bool {
+  ASSERT(expr);
+  const auto node = NewNode();
+  ASSERT(node);
+  {
+    // create node labels
+    std::stringstream label;
+    label << expr->GetName() << std::endl;
+    SetNodeLabel(node, label);
+  }
+  CreateEdgeFromParent(node);
+  {
+    // process children
+    NodeScope scope(this, node);
+    if (!expr->VisitChildren(this)) {
+      LOG(ERROR) << "failed to visit children of: " << expr->ToString();
+      return false;
+    }
+  }
+  return true;
+}
+
 auto ExpressionToDot::VisitWhenExpr(expr::WhenExpr* expr) -> bool {
   ASSERT(expr);
   const auto node = NewNode();

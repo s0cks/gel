@@ -16,6 +16,7 @@
   V(BinaryOpExpr)                   \
   V(BeginExpr)                      \
   V(CondExpr)                       \
+  V(ClauseExpr)                     \
   V(WhenExpr)                       \
   V(CaseExpr)                       \
   V(ConsExpr)                       \
@@ -794,11 +795,63 @@ class WhenExpr : public Expression {
   }
 };
 
-class CaseExpr : public Expression {
- public:
-  using Clause = std::pair<Expression*, ExpressionList>;
-  using ClauseList = std::vector<Clause>;
+class ClauseExpr : public Expression {
+ private:
+  Expression* key_;
+  ExpressionList actions_;
 
+  ClauseExpr(Expression* key, const ExpressionList& actions) :
+    Expression(),
+    key_(key),
+    actions_(actions) {
+    ASSERT(key_);
+    ASSERT(!actions_.empty());
+  }
+
+ public:
+  ~ClauseExpr() override = default;
+
+  auto GetKey() const -> Expression* {
+    return key_;
+  }
+
+  auto GetActions() const -> const ExpressionList& {
+    return actions_;
+  }
+
+  auto GetNumberOfActions() const -> uint64_t {
+    return actions_.size();
+  }
+
+  auto GetActionAt(const uint64_t idx) const -> Expression* {
+    ASSERT(idx >= 0 && idx <= GetNumberOfActions());
+    return actions_[idx];
+  }
+
+  auto GetNumberOfChildren() const -> uint64_t override {
+    return 1 + GetNumberOfActions();
+  }
+
+  auto GetChildAt(const uint64_t idx) const -> Expression* override {
+    ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
+    return idx == 0 ? GetKey() : GetActionAt(idx - 1);
+  }
+
+  auto VisitAllActions(ExpressionVisitor* vis) -> bool;
+  auto VisitChildren(ExpressionVisitor* vis) -> bool override;
+  DECLARE_EXPRESSION(ClauseExpr);
+
+ public:
+  static inline auto New(Expression* key, const ExpressionList& actions = {}) -> ClauseExpr* {
+    ASSERT(key);
+    ASSERT(!actions.empty());
+    return new ClauseExpr(key, actions);
+  }
+};
+
+using ClauseList = std::vector<ClauseExpr*>;
+
+class CaseExpr : public Expression {
  private:
   Expression* key_;
   ClauseList clauses_;
@@ -828,11 +881,12 @@ class CaseExpr : public Expression {
     return clauses_.size();
   }
 
-  auto GetClauseAt(const uint64_t idx) const -> const Clause& {
+  auto GetClauseAt(const uint64_t idx) const -> ClauseExpr* {
     ASSERT(idx >= 0 && idx <= GetNumberOfClauses());
     return clauses_[idx];
   }
 
+  auto VisitAllClauses(ExpressionVisitor* vis) -> bool;
   auto VisitChildren(ExpressionVisitor* vis) -> bool override;
   DECLARE_EXPRESSION(CaseExpr);
 

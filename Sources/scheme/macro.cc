@@ -72,6 +72,12 @@ class MacroReplacer : public expr::ExpressionVisitor {
     return true;
   }
 
+  auto VisitClauseExpr(expr::ClauseExpr* expr) -> bool override {
+    ASSERT(expr);
+    NOT_IMPLEMENTED(ERROR);  // TODO: implement
+    return true;
+  }
+
   auto VisitConsExpr(expr::ConsExpr* expr) -> bool override {
     ASSERT(expr);
     NOT_IMPLEMENTED(ERROR);  // TODO: implement
@@ -294,6 +300,12 @@ class MacroEvaluator : public expr::ExpressionVisitor {
   }
 
   auto VisitCaseExpr(expr::CaseExpr* expr) -> bool override {
+    ASSERT(expr);
+    NOT_IMPLEMENTED(ERROR);  // TODO: implement
+    return true;
+  }
+
+  auto VisitClauseExpr(expr::ClauseExpr* expr) -> bool override {
     ASSERT(expr);
     NOT_IMPLEMENTED(ERROR);  // TODO: implement
     return true;

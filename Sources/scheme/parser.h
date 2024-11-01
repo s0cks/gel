@@ -111,7 +111,7 @@ class Parser {
   auto ParseQuotedExpr() -> expr::QuotedExpr*;
   auto ParseWhenExpr() -> expr::WhenExpr*;
 
-  auto ParseClauseList(expr::CaseExpr::ClauseList& clauses) -> bool;
+  auto ParseClauseList(expr::ClauseList& clauses) -> bool;
   auto ParseCaseExpr() -> expr::CaseExpr*;
 
   // Definitions

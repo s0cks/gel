@@ -23,6 +23,12 @@ auto DefinitionVisitor::VisitCaseExpr(expr::CaseExpr* expr) -> bool {
   return true;
 }
 
+auto DefinitionVisitor::VisitClauseExpr(expr::ClauseExpr* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return true;
+}
+
 auto DefinitionVisitor::VisitWhenExpr(expr::WhenExpr* expr) -> bool {
   ASSERT(expr);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement

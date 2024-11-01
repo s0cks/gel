@@ -279,6 +279,32 @@ auto QuotedExpr::ToString() const -> std::string {
   return ss.str();
 }
 
+auto ClauseExpr::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "ClauseExpr(";
+  ss << "key=" << GetKey()->ToString() << ", ";
+  ss << "actions=" << GetActions();
+  ss << ")";
+  return ss.str();
+}
+
+auto ClauseExpr::VisitAllActions(ExpressionVisitor* vis) -> bool {
+  ASSERT(vis);
+  for (const auto& action : actions_) {
+    ASSERT(action);
+    if (!action->Accept(vis))
+      return false;
+  }
+  return true;
+}
+
+auto ClauseExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
+  ASSERT(vis);
+  if (!GetKey()->Accept(vis))
+    return false;
+  return VisitAllActions(vis);
+}
+
 auto WhenExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
   ASSERT(vis);
   if (!GetTest()->Accept(vis))
@@ -290,19 +316,21 @@ auto WhenExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
   return true;
 }
 
+auto CaseExpr::VisitAllClauses(ExpressionVisitor* vis) -> bool {
+  ASSERT(vis);
+  for (const auto& clause : clauses_) {
+    ASSERT(clause);
+    if (!clause->Accept(vis))
+      return false;
+  }
+  return true;
+}
+
 auto CaseExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
   ASSERT(vis);
   if (!GetKey()->Accept(vis))
     return false;
-  for (const auto& clause : clauses_) {
-    if (!clause.first->Accept(vis))
-      return false;
-    for (const auto& action : clause.second) {
-      if (!action->Accept(vis))
-        return false;
-    }
-  }
-  return true;
+  return VisitAllClauses(vis);
 }
 
 auto CaseExpr::ToString() const -> std::string {
