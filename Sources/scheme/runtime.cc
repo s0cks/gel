@@ -126,7 +126,6 @@ static inline void RegisterProc(LocalScope* scope, Proc* proc = new Proc()) {
   const auto symbol = proc->GetSymbol();
   ASSERT(symbol);
   LOG_IF(FATAL, !scope->Add(symbol, proc)) << "failed to register: " << proc->ToString();
-  DVLOG(10) << proc->ToString() << " registered.";
 }
 
 auto Runtime::CreateInitScope() -> LocalScope* {

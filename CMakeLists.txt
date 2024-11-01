@@ -8,6 +8,7 @@ project(
 
 list(APPEND SCM_CXX_FLAGS
      -Wall
+     -Wno-overloaded-virtual
      -Wno-sign-compare
      -Wno-writable-strings # TODO: remove no-writable-strings
      -frtti)

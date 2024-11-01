@@ -175,26 +175,6 @@
         "command source ${workspaceFolder}/.lldbinit"
       ]
     },
-        {
-      "name": "Eval Expr (No Kernel)",
-      "type": "lldb",
-      "request": "launch",
-      "program": "${workspaceFolder}/build/Sources/scm",
-      "args": [
-        "-logtostdout",
-        "-colorlogtostdout",
-        "--expr", "${input:expression}",
-        "--reports-dir", "${workspaceFolder}/reports",
-        "--dump-ast",
-        "--dump-flow-graph",
-        "--module-dir", "${workspaceFolder}/scm",
-        "--nokernel"
-      ],
-      "cwd": "${workspaceFolder}",
-      "initCommands": [
-        "command source ${workspaceFolder}/.lldbinit"
-      ]
-    },
     {
       "name": "Eval Expr (No Kernel)",
       "type": "lldb",
@@ -205,10 +185,11 @@
         "-colorlogtostdout",
         "--expr", "${input:expression}",
         "--reports-dir", "${workspaceFolder}/reports",
+        "--module-dir", "${workspaceFolder}/scm",
         "--dump-ast",
         "--dump-flow-graph",
-        "--module-dir", "${workspaceFolder}/scm",
-        "--nokernel"
+        "--nokernel",
+        "-v=${input:verbose-level}"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [

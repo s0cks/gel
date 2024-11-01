@@ -328,19 +328,37 @@ class Pair : public Datum {
   }
 };
 
-class String : public Datum {
+class StringType : public Datum {
+  DEFINE_NON_COPYABLE_TYPE(StringType);
+
  private:
   std::string value_;
 
-  explicit String(const std::string& value) :
+ protected:
+  explicit StringType(const std::string& value) :
     Datum(),
     value_(value) {}
 
+  inline void Set(const std::string& value) {
+    value_ = value;
+  }
+
  public:
+  ~StringType() override = default;
+
   auto Get() const -> const std::string& {
     return value_;
   }
 
+  auto Equals(const std::string& rhs) const -> bool;
+};
+
+class String : public StringType {
+ protected:
+  explicit String(const std::string& value) :
+    StringType(value) {}
+
+ public:
   DECLARE_TYPE(String);
 
  public:
@@ -360,7 +378,7 @@ static inline auto IsString(Type* rhs) -> bool {
   return rhs && rhs->IsString();
 }
 
-class Symbol : public Datum {
+class Symbol : public StringType {
  public:
   struct Comparator {
     auto operator()(Symbol* lhs, Symbol* rhs) const -> bool {
@@ -370,18 +388,10 @@ class Symbol : public Datum {
   };
 
  private:
-  std::string value_;
-
   explicit Symbol(const std::string& value) :
-    Datum(),
-    value_(value) {}
+    StringType(value) {}
 
  public:
-  auto Get() const -> const std::string& {
-    return value_;
-  }
-
-  auto Equals(const std::string& rhs) const -> bool;
   DECLARE_TYPE(Symbol);
 
  public:

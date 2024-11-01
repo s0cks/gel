@@ -243,6 +243,7 @@ auto Parser::ParseExpression() -> Expression* {
     }
   }
   ASSERT(expr);
+  DVLOG(100) << "parsed: " << expr->ToString();
   ExpectNext(Token::kRParen);
   return expr;
 }

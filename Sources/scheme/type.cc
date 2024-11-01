@@ -197,7 +197,7 @@ auto Symbol::Equals(Type* rhs) const -> bool {
   return Get() == other->Get();
 }
 
-auto Symbol::Equals(const std::string& rhs) const -> bool {
+auto StringType::Equals(const std::string& rhs) const -> bool {
   return Get().compare(rhs) == 0;
 }
 
