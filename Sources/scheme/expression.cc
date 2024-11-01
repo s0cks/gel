@@ -278,4 +278,24 @@ auto QuotedExpr::ToString() const -> std::string {
   ss << ")";
   return ss.str();
 }
+
+auto WhenExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
+  ASSERT(vis);
+  if (!GetTest()->Accept(vis))
+    return false;
+  for (const auto& action : GetActions()) {
+    if (!action->Accept(vis))
+      return false;
+  }
+  return true;
+}
+
+auto WhenExpr::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "WhenExpr(";
+  ss << "value=" << GetTest()->ToString() << ", ";
+  ss << "actions=" << GetActions();
+  ss << ")";
+  return ss.str();
+}
 }  // namespace scm::expr

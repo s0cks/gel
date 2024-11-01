@@ -112,6 +112,12 @@ class MacroReplacer : public expr::ExpressionVisitor {
     return true;
   }
 
+  auto VisitWhenExpr(expr::WhenExpr* expr) -> bool override {
+    ASSERT(expr);
+    NOT_IMPLEMENTED(ERROR);  // TODO: implement
+    return true;
+  }
+
   auto VisitUnaryExpr(expr::UnaryExpr* expr) -> bool override {
     ASSERT(expr);
     NOT_IMPLEMENTED(ERROR);  // TODO: implement
@@ -307,6 +313,12 @@ class MacroEvaluator : public expr::ExpressionVisitor {
       if (eval.HasResult())
         expr->SetCdr(eval.GetResult());
     }
+    return true;
+  }
+
+  auto VisitWhenExpr(expr::WhenExpr* expr) -> bool override {
+    ASSERT(expr);
+    NOT_IMPLEMENTED(ERROR);  // TODO: implement
     return true;
   }
 

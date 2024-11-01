@@ -153,6 +153,12 @@ auto EffectVisitor::VisitModuleDef(ModuleDef* expr) -> bool {
   return false;
 }
 
+auto EffectVisitor::VisitWhenExpr(expr::WhenExpr* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return true;
+}
+
 auto EffectVisitor::VisitMacroDef(MacroDef* expr) -> bool {
   ASSERT(expr);
   MacroCompiler compiler;

@@ -16,6 +16,7 @@
   V(BinaryOpExpr)                   \
   V(BeginExpr)                      \
   V(CondExpr)                       \
+  V(WhenExpr)                       \
   V(ConsExpr)                       \
   V(LambdaExpr)                     \
   V(LocalDef)                       \
@@ -170,6 +171,18 @@ class TemplateExpression : public Expression {
 };
 
 using ExpressionList = std::vector<Expression*>;
+
+static inline auto operator<<(std::ostream& stream, const ExpressionList& rhs) -> std::ostream& {
+  stream << "[";
+  auto remaining = rhs.size();
+  for (const auto& expr : rhs) {
+    stream << expr->ToString();
+    if (--remaining >= 1)
+      stream << ", ";
+  }
+  stream << "]";
+  return stream;
+}
 
 #define DECLARE_EXPRESSION(Name)                        \
   friend class ExpressionVisitor;                       \
@@ -717,6 +730,66 @@ class CondExpr : public Expression {
     ASSERT(test);
     ASSERT(conseq);
     return new CondExpr(test, conseq, alt);
+  }
+};
+
+class WhenExpr : public Expression {
+ private:
+  Expression* test_;
+  ExpressionList actions_;
+
+ protected:
+  WhenExpr(Expression* test, const ExpressionList& actions) :
+    Expression(),
+    test_(test),
+    actions_(actions) {
+    ASSERT(test_);
+    ASSERT(!actions_.empty());
+  }
+
+ public:
+  ~WhenExpr() override = default;
+
+  auto GetTest() const -> Expression* {
+    return test_;
+  }
+
+  auto GetActions() const -> const ExpressionList& {
+    return actions_;
+  }
+
+  auto GetNumberOfActions() const -> uint64_t {
+    return actions_.size();
+  }
+
+  auto GetActionAt(const uint64_t idx) const -> Expression* {
+    ASSERT(idx >= 0 && idx <= GetNumberOfActions());
+    return actions_[idx];
+  }
+
+  auto GetNumberOfChildren() const -> uint64_t override {
+    return 1 + GetNumberOfActions();
+  }
+
+  auto GetChildAt(const uint64_t idx) const -> Expression* override {
+    ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
+    return idx == 0 ? GetTest() : GetActionAt(idx - 1);
+  }
+
+  auto VisitChildren(ExpressionVisitor* vis) -> bool override;
+  DECLARE_EXPRESSION(WhenExpr);
+
+ public:
+  static inline auto New(Expression* test, const ExpressionList& actions = {}) -> WhenExpr* {
+    ASSERT(test);
+    ASSERT(!actions.empty());
+    return new WhenExpr(test, actions);
+  }
+
+  static inline auto New(Expression* test, Expression* action) -> WhenExpr* {
+    ASSERT(test);
+    ASSERT(action);
+    return New(test, ExpressionList{action});
   }
 };
 
