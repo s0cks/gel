@@ -290,6 +290,21 @@ auto WhenExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
   return true;
 }
 
+auto CaseExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
+  ASSERT(vis);
+  if (!GetKey()->Accept(vis))
+    return false;
+  for (const auto& clause : clauses_) {
+    if (!clause.first->Accept(vis))
+      return false;
+    for (const auto& action : clause.second) {
+      if (!action->Accept(vis))
+        return false;
+    }
+  }
+  return true;
+}
+
 auto CaseExpr::ToString() const -> std::string {
   std::stringstream ss;
   ss << "WhenExpr(";

@@ -252,6 +252,9 @@ auto Parser::ParseExpression() -> Expression* {
       case Token::kWhenExpr:
         expr = ParseWhenExpr();
         break;
+      case Token::kCaseExpr:
+        expr = ParseCaseExpr();
+        break;
       default:
         Unexpected(next);
         return nullptr;
@@ -319,6 +322,34 @@ auto Parser::ParseWhenExpr() -> expr::WhenExpr* {
   if (!ParseExpressionList(actions))
     throw Exception("failed to parse actions.");
   return WhenExpr::New(test, actions);
+}
+
+auto Parser::ParseClauseList(expr::CaseExpr::ClauseList& clauses) -> bool {
+  auto peek = PeekToken();
+  while (peek.kind != Token::kRParen && peek.kind != Token::kEndOfStream) {
+    ExpectNext(Token::kLParen);
+    const auto key = ParseLiteralExpr();
+    ASSERT(key);
+
+    expr::ExpressionList actions;
+    if (!ParseExpressionList(actions))
+      throw Exception("failed to parse actions.");
+
+    clauses.emplace_back(key, actions);
+    ExpectNext(Token::kRParen);
+    peek = PeekToken();
+  }
+  return true;
+}
+
+auto Parser::ParseCaseExpr() -> expr::CaseExpr* {
+  ExpectNext(Token::kCaseExpr);
+  const auto key = ParseExpression();
+  ASSERT(key);
+  CaseExpr::ClauseList clauses;
+  if (!ParseClauseList(clauses))
+    throw Exception("failed to parse case clauses.");
+  return CaseExpr::New(key, clauses);
 }
 
 auto Parser::ParseLocalDef() -> LocalDef* {
@@ -594,6 +625,8 @@ auto Parser::NextToken() -> const Token& {
       return NextToken(Token::kEvalExpr);
     else if (ident == "when")
       return NextToken(Token::kWhenExpr);
+    else if (ident == "case")
+      return NextToken(Token::kCaseExpr);
     return NextToken(Token::kIdentifier, ident);
   }
 

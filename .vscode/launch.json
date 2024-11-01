@@ -313,5 +313,26 @@
         "command source ${workspaceFolder}/.lldbinit"
       ]
     },
+    {
+      "name": "Eval case Expr",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/Sources/scm",
+      "args": [
+        "-logtostdout",
+        "-colorlogtostdout",
+        "--reports-dir", "${workspaceFolder}/reports",
+        "--module-dir", "${workspaceFolder}/scm",
+        "--nokernel",
+        "--dump-ast",
+        "--dump-flow-graph",
+        "-v=${input:verbose-level}",
+        "--expr", "(begin (define x ${input:even-value}) (case x (10 (print \"Hello World\")) (11 (print \"Failed\"))))",
+      ],
+      "cwd": "${workspaceFolder}",
+      "initCommands": [
+        "command source ${workspaceFolder}/.lldbinit"
+      ]
+    },
   ]
 }

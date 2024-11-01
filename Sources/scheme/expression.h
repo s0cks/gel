@@ -795,6 +795,7 @@ class WhenExpr : public Expression {
 };
 
 class CaseExpr : public Expression {
+ public:
   using Clause = std::pair<Expression*, ExpressionList>;
   using ClauseList = std::vector<Clause>;
 
@@ -832,6 +833,7 @@ class CaseExpr : public Expression {
     return clauses_[idx];
   }
 
+  auto VisitChildren(ExpressionVisitor* vis) -> bool override;
   DECLARE_EXPRESSION(CaseExpr);
 
  public:
