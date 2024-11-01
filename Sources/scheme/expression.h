@@ -17,6 +17,7 @@
   V(BeginExpr)                      \
   V(CondExpr)                       \
   V(WhenExpr)                       \
+  V(CaseExpr)                       \
   V(ConsExpr)                       \
   V(LambdaExpr)                     \
   V(LocalDef)                       \
@@ -790,6 +791,52 @@ class WhenExpr : public Expression {
     ASSERT(test);
     ASSERT(action);
     return New(test, ExpressionList{action});
+  }
+};
+
+class CaseExpr : public Expression {
+  using Clause = std::pair<Expression*, ExpressionList>;
+  using ClauseList = std::vector<Clause>;
+
+ private:
+  Expression* key_;
+  ClauseList clauses_;
+
+  explicit CaseExpr(Expression* key, const ClauseList& clauses) :
+    Expression(),
+    key_(key),
+    clauses_(clauses) {}
+
+ public:
+  ~CaseExpr() override = default;
+
+  inline void SetKey(Expression* expr) {
+    ASSERT(expr);
+    key_ = expr;
+  }
+
+  auto GetKey() const -> Expression* {
+    return key_;
+  }
+
+  auto GetClauses() const -> const ClauseList& {
+    return clauses_;
+  }
+
+  auto GetNumberOfClauses() const -> uint64_t {
+    return clauses_.size();
+  }
+
+  auto GetClauseAt(const uint64_t idx) const -> const Clause& {
+    ASSERT(idx >= 0 && idx <= GetNumberOfClauses());
+    return clauses_[idx];
+  }
+
+  DECLARE_EXPRESSION(CaseExpr);
+
+ public:
+  static inline auto New(Expression* key, const ClauseList& clauses = {}) -> CaseExpr* {
+    return new CaseExpr(key, clauses);
   }
 };
 

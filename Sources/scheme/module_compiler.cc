@@ -17,6 +17,12 @@ auto DefinitionVisitor::VisitQuotedExpr(expr::QuotedExpr* expr) -> bool {
   return true;
 }
 
+auto DefinitionVisitor::VisitCaseExpr(expr::CaseExpr* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return true;
+}
+
 auto DefinitionVisitor::VisitWhenExpr(expr::WhenExpr* expr) -> bool {
   ASSERT(expr);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement

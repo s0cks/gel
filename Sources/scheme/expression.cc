@@ -290,6 +290,15 @@ auto WhenExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
   return true;
 }
 
+auto CaseExpr::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "WhenExpr(";
+  ss << "key=" << GetKey()->ToString() << ", ";
+  // TODO: ss << "clauses=" << GetClauses();
+  ss << ")";
+  return ss.str();
+}
+
 auto WhenExpr::ToString() const -> std::string {
   std::stringstream ss;
   ss << "WhenExpr(";
