@@ -1,6 +1,7 @@
 #ifndef SCM_FLOW_GRAPH_BUILDER_H
 #define SCM_FLOW_GRAPH_BUILDER_H
 
+#include "scheme/common.h"
 #include "scheme/expression.h"
 #include "scheme/flow_graph.h"
 #include "scheme/instruction.h"
@@ -237,6 +238,26 @@ class ValueVisitor : public EffectVisitor {
   inline auto HasValue() const -> bool {
     return GetValue() != nullptr;
   }
+};
+
+class MacroVisitor : public ValueVisitor {
+  DEFINE_NON_COPYABLE_TYPE(MacroVisitor);
+
+ private:
+  LocalScope* scope_;
+
+ public:
+  MacroVisitor(FlowGraphBuilder* owner, LocalScope* scope) :
+    ValueVisitor(owner),
+    scope_(scope) {}
+  ~MacroVisitor() override = default;
+
+  auto GetScope() const -> LocalScope* {
+    return scope_;
+  }
+
+  auto VisitCondExpr(expr::CondExpr* expr) -> bool override;
+  auto VisitLiteralExpr(expr::LiteralExpr* expr) -> bool override;
 };
 }  // namespace scm
 

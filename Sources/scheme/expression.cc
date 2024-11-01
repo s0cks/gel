@@ -257,6 +257,7 @@ auto MacroDef::ToString() const -> std::string {
   std::stringstream ss;
   ss << GetName() << "(";
   ss << "symbol=" << GetSymbol() << ", ";
+  ss << "body=" << GetBody()->ToString();
   ss << ")";
   return ss.str();
 }

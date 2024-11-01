@@ -3,9 +3,6 @@
 
 #include <fmt/format.h>
 #include <glog/logging.h>
-#include <mach/mach.h>
-#include <mach/mach_types.h>
-#include <mach/thread_act.h>
 #include <pthread.h>
 #include <pthread_spis.h>
 

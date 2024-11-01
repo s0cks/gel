@@ -83,6 +83,13 @@ class LocalVariable {
     return GetValue() != nullptr;
   }
 
+#define DEFINE_TYPE_CHECK(Name)                  \
+  inline auto Is##Name() const -> bool {         \
+    return HasValue() && GetValue()->Is##Name(); \
+  }
+  FOR_EACH_TYPE(DEFINE_TYPE_CHECK)
+#undef DEFINE_TYPE_CHECK
+
   auto IsGlobal() const -> bool;
 
   friend auto operator<<(std::ostream& stream, const LocalVariable& rhs) -> std::ostream& {

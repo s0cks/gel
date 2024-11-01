@@ -41,23 +41,20 @@ auto ExpressionCompiler::CompileExpression(Expression* expr) -> CompiledExpressi
     ASSERT(dotgraph);
     dotgraph->RenderPngToFilename(GetReportFilename("exec_expr_ast.png"));
   }
-
-  ExpressionLogger logger;
-  LOG_IF(FATAL, !expr->VisitAllDefinitions(&logger)) << "failed to visit definitions for: " << expr->ToString();
 #endif  // SCM_DEBUG
 
-  {
-    MacroExpander expander;
-    if (expander.Expand(&expr)) {
-#ifdef SCM_DEBUG
-      if (FLAGS_dump_ast) {
-        const auto dotgraph = expr::ExpressionToDot::BuildGraph("expr", expr);
-        ASSERT(dotgraph);
-        dotgraph->RenderPngToFilename(GetReportFilename("exec_expr_ast_expanded.png"));
-      }
-#endif  // SCM_DEBUG
-    }
-  }
+  //   {
+  //     MacroExpander expander;
+  //     if (expander.Expand(&expr)) {
+  // #ifdef SCM_DEBUG
+  //       if (FLAGS_dump_ast) {
+  //         const auto dotgraph = expr::ExpressionToDot::BuildGraph("expr", expr);
+  //         ASSERT(dotgraph);
+  //         dotgraph->RenderPngToFilename(GetReportFilename("exec_expr_ast_expanded.png"));
+  //       }
+  // #endif  // SCM_DEBUG
+  //     }
+  //   }
 
   const auto flow_graph = FlowGraphBuilder::Build(expr, GetRuntime()->GetScope());
   ASSERT(flow_graph);

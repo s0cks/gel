@@ -54,7 +54,7 @@ class ExpressionVisitor {
   virtual ~ExpressionVisitor() = default;
 };
 
-class Expression {
+class Expression : public Type {  // TODO: should Expression inherit from Type?
   DEFINE_NON_COPYABLE_TYPE(Expression);
 
  protected:
@@ -71,7 +71,6 @@ class Expression {
  public:
   virtual ~Expression() = default;
   virtual auto GetName() const -> const char* = 0;
-  virtual auto ToString() const -> std::string = 0;
   virtual auto Accept(ExpressionVisitor* vis) -> bool = 0;
 
   virtual auto GetNumberOfChildren() const -> uint64_t {
@@ -107,6 +106,17 @@ class Expression {
   }
 
   virtual auto VisitChildren(ExpressionVisitor* vis) -> bool {
+    return false;
+  }
+
+  auto GetTypename() const -> const char* override {
+    NOT_IMPLEMENTED(ERROR);  // TODO: implement
+    return "Expression";
+  }
+
+  auto Equals(Type* rhs) const -> bool override {
+    ASSERT(rhs);
+    NOT_IMPLEMENTED(ERROR);  // TODO: implement
     return false;
   }
 
@@ -665,21 +675,6 @@ class CondExpr : public Expression {
       SetAlt(alt);
   }
 
-  inline void SetTest(Expression* expr) {
-    ASSERT(expr);
-    test_ = expr;
-  }
-
-  inline void SetConseq(Expression* expr) {
-    ASSERT(expr);
-    conseq_ = expr;
-  }
-
-  inline void SetAlt(Expression* expr) {
-    ASSERT(expr);
-    alt_ = expr;
-  }
-
  public:
   ~CondExpr() override = default;
 
@@ -687,8 +682,18 @@ class CondExpr : public Expression {
     return test_;
   }
 
+  inline void SetTest(Expression* expr) {
+    ASSERT(expr);
+    test_ = expr;
+  }
+
   auto GetConseq() const -> Expression* {
     return conseq_;
+  }
+
+  inline void SetConseq(Expression* expr) {
+    ASSERT(expr);
+    conseq_ = expr;
   }
 
   auto GetAlternate() const -> Expression* {
@@ -697,6 +702,11 @@ class CondExpr : public Expression {
 
   inline auto HasAlternate() const -> bool {
     return GetAlternate() != nullptr;
+  }
+
+  inline void SetAlt(Expression* expr) {
+    ASSERT(expr);
+    alt_ = expr;
   }
 
   auto VisitChildren(ExpressionVisitor* vis) -> bool override;
@@ -988,11 +998,13 @@ class ModuleDef : public Definition {
 class MacroDef : public TemplateDefinition<1> {
  private:
   Symbol* symbol_;
+  ArgumentSet args_;
 
  protected:
-  explicit MacroDef(Symbol* symbol, Expression* body) :
+  explicit MacroDef(Symbol* symbol, const ArgumentSet& args, Expression* body) :
     TemplateDefinition<1>(),
-    symbol_(symbol) {
+    symbol_(symbol),
+    args_(args) {
     if (body)
       SetBody(body);
   }
@@ -1009,6 +1021,10 @@ class MacroDef : public TemplateDefinition<1> {
     return symbol_;
   }
 
+  auto GetArgs() const -> const ArgumentSet& {
+    return args_;
+  }
+
   inline auto GetBody() const -> Expression* {
     return GetChildAt(0);
   }
@@ -1020,9 +1036,9 @@ class MacroDef : public TemplateDefinition<1> {
   DECLARE_EXPRESSION(MacroDef);
 
  public:
-  static inline auto New(Symbol* symbol, Expression* body = nullptr) -> MacroDef* {
+  static inline auto New(Symbol* symbol, const ArgumentSet& args = {}, Expression* body = nullptr) -> MacroDef* {
     ASSERT(symbol);
-    return new MacroDef(symbol, body);
+    return new MacroDef(symbol, args, body);
   }
 };
 }  // namespace expr

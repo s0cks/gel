@@ -7,6 +7,7 @@
 #include "scheme/instruction.h"
 #include "scheme/lambda.h"
 #include "scheme/local.h"
+#include "scheme/macro_compiler.h"
 #include "scheme/native_procedure.h"
 #include "scheme/procedure.h"
 
@@ -51,16 +52,25 @@ auto EffectVisitor::VisitEvalExpr(EvalExpr* expr) -> bool {
   return true;
 }
 
-auto EffectVisitor::VisitCallProcExpr(CallProcExpr* expr) -> bool {
-  ASSERT(expr);
-  for (auto idx = 1; idx < expr->GetNumberOfChildren(); idx++) {
-    const auto arg = expr->GetChildAt(idx);
-    ASSERT(arg);
-    ValueVisitor for_value(GetOwner());
-    LOG_IF(ERROR, !arg->Accept(&for_value)) << "failed to determine value for: " << expr->ToString();
-    Append(for_value);
-  }
+static inline auto IsNativeCall(instr::Instruction* instr) -> bool {
+  ASSERT(instr);
+  if (!instr->IsConstantInstr())
+    return false;
+  const auto target = instr->AsConstantInstr()->GetValue();
+  ASSERT(target);
+  return target->IsNativeProcedure();
+}
 
+static inline auto IsMacroCall(instr::Instruction* instr) -> bool {
+  ASSERT(instr);
+  if (!instr->IsConstantInstr())
+    return false;
+  const auto target = instr->AsConstantInstr()->GetValue();
+  ASSERT(target);
+  return target->IsMacro();
+}
+
+auto EffectVisitor::VisitCallProcExpr(CallProcExpr* expr) -> bool {
   ValueVisitor for_target(GetOwner());
   {
     const auto target = expr->GetTarget();
@@ -70,17 +80,66 @@ auto EffectVisitor::VisitCallProcExpr(CallProcExpr* expr) -> bool {
       return false;
     }
   }
-  Append(for_target);
-
   const auto target = for_target.GetValue();
   ASSERT(target);
-  if (target->IsConstantInstr()) {
-    const auto target_proc = target->AsConstantInstr()->GetValue();
-    if (target_proc->IsNativeProcedure()) {
-      Add(InstanceOfInstr::New(target, IsNativeProcedure));
-      ReturnDefinition(InvokeNativeInstr::New(for_target.GetValue(), expr->GetNumberOfArgs()));
-      return true;
+  if (IsMacroCall(target)) {
+    const auto macro = target->AsConstantInstr()->GetValue()->AsMacro();
+    ASSERT(macro);
+    DLOG(INFO) << "calling macro: " << macro->ToString();
+
+    const auto& args = macro->GetArgs();
+    if (expr->GetNumberOfArgs() != args.size()) {
+      LOG(FATAL) << "not the correct number of args.";
+      return false;
     }
+
+    const auto scope = LocalScope::New(GetOwner()->GetScope());
+    ASSERT(scope);
+
+    DLOG(INFO) << "args:";
+    auto idx = 0;
+    for (const auto& arg : macro->GetArgs()) {
+      const auto symbol = Symbol::New(arg.GetName());
+      const auto value = expr->GetArgAt(idx);
+      DLOG(INFO) << "- #" << (idx) << ": " << symbol << " - " << value->ToString();
+      scope->Add(LocalVariable::New(scope, symbol, value));
+    }
+
+    MacroVisitor for_macro(GetOwner(), scope);
+    if (!macro->GetBody()->Accept(&for_macro)) {
+      throw Exception(fmt::format("failed to visit `{}` body: `{}`", macro->GetSymbol()->Get(), macro->GetBody()->ToString()));
+    }
+
+    DLOG(INFO) << "appending macro body:";
+    auto next = for_macro.GetEntryInstr();
+    while (next != nullptr) {
+      DLOG(INFO) << "- " << next->ToString();
+      if (next->IsBranchInstr()) {
+        next = next->AsBranchInstr()->GetTrueTarget();
+      } else {
+        next = next->GetNext();
+      }
+    }
+
+    Append(for_macro);
+    // TODO: expand Macro
+    return true;
+  }
+
+  ASSERT(expr);
+  for (auto idx = 1; idx < expr->GetNumberOfChildren(); idx++) {
+    const auto arg = expr->GetChildAt(idx);
+    ASSERT(arg);
+    ValueVisitor for_value(GetOwner());
+    LOG_IF(ERROR, !arg->Accept(&for_value)) << "failed to determine value for: " << expr->ToString();
+    Append(for_value);
+  }
+  Append(for_target);
+
+  if (IsNativeCall(target)) {
+    Add(InstanceOfInstr::New(target, IsNativeProcedure));
+    ReturnDefinition(InvokeNativeInstr::New(for_target.GetValue(), expr->GetNumberOfArgs()));
+    return true;
   }
 
   Add(InstanceOfInstr::New(target, IsProcedure));
@@ -96,8 +155,18 @@ auto EffectVisitor::VisitModuleDef(ModuleDef* expr) -> bool {
 
 auto EffectVisitor::VisitMacroDef(MacroDef* expr) -> bool {
   ASSERT(expr);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return false;
+  MacroCompiler compiler;
+  const auto macro = compiler.CompileMacro(expr);
+  ASSERT(macro);
+
+  const auto scope = GetOwner()->GetScope();
+  ASSERT(scope);
+  if (!scope->Add(macro->GetSymbol(), macro)) {
+    throw Exception(
+        fmt::format("cannot define Macro symbol `{}` for value: `{}`", macro->GetSymbol()->ToString(), macro->ToString()));
+  }
+
+  return true;
 }
 
 auto EffectVisitor::VisitImportDef(expr::ImportDef* expr) -> bool {
@@ -250,7 +319,12 @@ auto EffectVisitor::VisitLiteralExpr(LiteralExpr* p) -> bool {
   ASSERT(value);
   if (value->IsSymbol()) {
     LocalVariable* local = nullptr;
-    if (!GetOwner()->GetScope()->Lookup(value->AsSymbol(), &local) || !local->HasValue()) {
+    if (!GetOwner()->GetScope()->Lookup(value->AsSymbol(), &local)) {
+      ReturnDefinition(instr::LoadVariableInstr::New(value->AsSymbol()));
+      return true;
+    }
+    ASSERT(local);
+    if (!local->HasValue()) {
       ReturnDefinition(instr::LoadVariableInstr::New(value->AsSymbol()));
       return true;
     }
@@ -303,6 +377,48 @@ auto EffectVisitor::VisitSetExpr(expr::SetExpr* expr) -> bool {
   }
   Append(for_value);
   Add(StoreVariableInstr::New(expr->GetSymbol(), for_value.GetValue()));
+  return true;
+}
+
+auto MacroVisitor::VisitCondExpr(expr::CondExpr* expr) -> bool {
+  MacroVisitor for_test(GetOwner(), GetScope());
+  if (!expr->GetTest()->Accept(&for_test))
+    return false;
+  Append(for_test);
+
+  MacroVisitor for_conseq(GetOwner(), GetScope());
+  if (!expr->GetConseq()->Accept(&for_test))
+    return false;
+  Append(for_conseq);
+
+  MacroVisitor for_alt(GetOwner(), GetScope());
+  if (!expr->GetAlternate()->Accept(&for_test))
+    return false;
+  Append(for_alt);
+  return true;
+}
+
+auto MacroVisitor::VisitLiteralExpr(expr::LiteralExpr* expr) -> bool {
+  ASSERT(expr && expr->IsConstantExpr());
+  const auto value = expr->EvalToConstant();
+  ASSERT(value);
+  if (!value->IsSymbol())
+    return ValueVisitor::VisitLiteralExpr(expr);
+  LocalVariable* local = nullptr;
+  if (!GetScope()->Lookup(value->AsSymbol(), &local)) {
+    LOG(ERROR) << "cannot find macro: " << value->AsSymbol();
+    return true;
+  }
+  ASSERT(local);
+
+  // TODO: need to check if local is an Expression*
+  const auto ex = (expr::Expression*)local->GetValue();
+  ASSERT(ex);
+
+  ValueVisitor for_value(GetOwner());
+  if (!ex->Accept(&for_value))
+    return false;
+  Append(for_value);
   return true;
 }
 }  // namespace scm

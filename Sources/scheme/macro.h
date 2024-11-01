@@ -1,7 +1,7 @@
 #ifndef SCM_MACRO_H
 #define SCM_MACRO_H
 
-#include "scheme/common.h"
+#include "scheme/argument.h"
 #include "scheme/expression.h"
 #include "scheme/type.h"
 
@@ -9,11 +9,13 @@ namespace scm {
 class Macro : public Type {
  private:
   Symbol* symbol_;
+  ArgumentSet args_;
   expr::Expression* body_;
 
  protected:
-  explicit Macro(Symbol* symbol, expr::Expression* body) :
+  explicit Macro(Symbol* symbol, const ArgumentSet& args, expr::Expression* body) :
     symbol_(symbol),
+    args_(args),
     body_(body) {
     ASSERT(symbol);
   }
@@ -21,6 +23,10 @@ class Macro : public Type {
  public:
   auto GetSymbol() const -> Symbol* {
     return symbol_;
+  }
+
+  auto GetArgs() const -> const ArgumentSet& {
+    return args_;
   }
 
   auto GetBody() const -> expr::Expression* {
@@ -34,8 +40,8 @@ class Macro : public Type {
   DECLARE_TYPE(Macro);
 
  public:
-  static inline auto New(Symbol* symbol, expr::Expression* body = nullptr) -> Macro* {
-    return new Macro(symbol, body);
+  static inline auto New(Symbol* symbol, const ArgumentSet& args = {}, expr::Expression* body = nullptr) -> Macro* {
+    return new Macro(symbol, args, body);
   }
 };
 

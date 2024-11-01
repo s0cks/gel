@@ -283,10 +283,18 @@ auto Parser::ParseMacroDef() -> expr::MacroDef* {
   const auto symbol = ParseSymbol();
   ASSERT(symbol);
 
+  ExpectNext(Token::kLParen);
+  ArgumentSet args;
+  if (!ParseArguments(args)) {
+    LOG(ERROR) << "failed to parse macro args.";
+    return nullptr;
+  }
+  ExpectNext(Token::kRParen);
+
   Expression* body = nullptr;
   if (!PeekEq(Token::kRParen))
     body = ParseExpression();
-  return MacroDef::New(symbol, body);
+  return MacroDef::New(symbol, args, body);
 }
 
 auto Parser::ParseLocalDef() -> LocalDef* {
