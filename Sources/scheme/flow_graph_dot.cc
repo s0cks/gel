@@ -161,10 +161,11 @@ class DotVisitor : public InstructionVisitor, dot::GraphDecorator {
     ASSERT(instr);
     SetBlock(instr);
     Append(instr);
-    InstructionIterator iter(instr->GetFirstInstruction());
+    InstructionIterator iter(instr->GetNext());
     while (iter.HasNext()) {
       const auto next = iter.Next();
       ASSERT(next);
+      DLOG(INFO) << "next: " << next->ToString();
       if (!next->Accept(this))
         return false;
     }
@@ -276,7 +277,9 @@ class DotVisitor : public InstructionVisitor, dot::GraphDecorator {
 
   auto VisitBranchInstr(BranchInstr* instr) -> bool override {
     ASSERT(instr);
-    Append(instr);
+    const auto blk_id = GetBlock()->GetBlockId();
+    const auto branch = Append(instr);
+    ASSERT(branch);
 
     DotVisitor for_true(GetOwner(), GetGraph());
     if (!instr->GetTrueTarget()->Accept(&for_true))
@@ -303,18 +306,25 @@ class DotVisitor : public InstructionVisitor, dot::GraphDecorator {
     DotVisitor join(GetOwner(), GetGraph());
     if (!instr->GetJoin()->Accept(&join))
       return false;
-    if (for_true.HasExitNode() && join.HasEntryNode()) {
-      const auto edge_id = fmt::format("blk{0:d}blk{1:d}", for_true.GetBlock()->GetBlockId(), join.GetBlock()->GetBlockId());
-      const auto edge = NewEdge(for_true.GetExitNode(), join.GetEntryNode(), edge_id.c_str());
-      ASSERT(edge);
+    if (join.HasEntryNode()) {
+      if (for_true.HasExitNode()) {
+        const auto edge_id = fmt::format("blk{0:d}blk{1:d}", for_true.GetBlock()->GetBlockId(), join.GetBlock()->GetBlockId());
+        const auto edge = NewEdge(for_true.GetExitNode(), join.GetEntryNode(), edge_id.c_str());
+        ASSERT(edge);
+      }
+      if (for_false.HasExitNode()) {
+        const auto edge_id = fmt::format("blk{0:d}blk{1:d}", for_false.GetBlock()->GetBlockId(), join.GetBlock()->GetBlockId());
+        const auto edge = NewEdge(for_false.GetExitNode(), join.GetEntryNode(), edge_id.c_str());
+        ASSERT(edge);
+      } else {
+        const auto edge_id = fmt::format("blk{0:d}blk{1:d}", blk_id, join.GetBlock()->GetBlockId());
+        const auto edge = NewEdge(branch, join.GetEntryNode(), edge_id.c_str());
+        ASSERT(edge);
+      }
     }
 
-    if (for_false.HasExitNode() && join.HasEntryNode()) {
-      const auto edge_id = fmt::format("blk{0:d}blk{1:d}", for_false.GetBlock()->GetBlockId(), join.GetBlock()->GetBlockId());
-      const auto edge = NewEdge(for_false.GetExitNode(), join.GetEntryNode(), edge_id.c_str());
-      ASSERT(edge);
-    }
-    SetExitNode(join.GetExitNode());
+    if (join.HasExitNode())
+      SetExitNode(join.GetExitNode());
     return true;
   }
 };

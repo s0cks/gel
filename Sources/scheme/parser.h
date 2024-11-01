@@ -92,6 +92,7 @@ class Parser {
   auto ParseConsExpr() -> ConsExpr*;
   auto ParseLoadSymbol() -> LoadVariableInstr*;
   auto ParseArguments(ArgumentSet& args) -> bool;
+  auto ParseExpressionList(expr::ExpressionList& expressions) -> bool;
   auto ParseSymbolList(SymbolList& symbols) -> bool;
   auto ParseIdentifier(std::string& result) -> bool;
 
@@ -108,6 +109,7 @@ class Parser {
   auto ParseThrowExpr() -> expr::ThrowExpr*;
   auto ParseEvalExpr() -> expr::EvalExpr*;
   auto ParseQuotedExpr() -> expr::QuotedExpr*;
+  auto ParseWhenExpr() -> expr::WhenExpr*;
 
   // Definitions
   auto ParseDefinition() -> expr::Definition*;

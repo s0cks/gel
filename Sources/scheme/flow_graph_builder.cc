@@ -13,9 +13,10 @@
 
 namespace scm {
 static inline auto AppendFragment(EntryInstr* entry, EffectVisitor& vis) -> Instruction* {
+  ASSERT(entry);
   if (vis.IsEmpty())
     return entry;
-  Instruction::Link(entry, vis.GetEntryInstr());
+  entry->Append(vis.GetEntryInstr());
   return vis.GetExitInstr();
 }
 
@@ -155,7 +156,35 @@ auto EffectVisitor::VisitModuleDef(ModuleDef* expr) -> bool {
 
 auto EffectVisitor::VisitWhenExpr(expr::WhenExpr* expr) -> bool {
   ASSERT(expr);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  const auto join = JoinEntryInstr::New(GetOwner()->GetNextBlockId());
+  ASSERT(join);
+
+  // process conseq
+  const auto conseq_target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
+  for (const auto& action : expr->GetActions()) {
+    EffectVisitor for_conseq(GetOwner());
+    if (!action->Accept(&for_conseq)) {
+      LOG(ERROR) << "failed to visit action for: " << expr->ToString();
+      return false;
+    }
+    AppendFragment(conseq_target, for_conseq);
+  }
+  conseq_target->Append(GotoInstr::New(join));
+  GetOwner()->GetCurrentBlock()->AddDominated(conseq_target);
+
+  // process test
+  ValueVisitor for_test(GetOwner());
+  if (!expr->GetTest()->Accept(&for_test)) {
+    LOG(ERROR) << "failed to visit test for cond: " << expr->ToString();
+    return false;
+  }
+  Append(for_test);
+
+  const auto branch = BranchInstr::New(for_test.GetValue(), conseq_target, nullptr, join);
+  ASSERT(branch);
+  ReturnDefinition(branch);
+  SetExitInstr(join);
+  GetOwner()->GetCurrentBlock()->AddDominated(join);
   return true;
 }
 

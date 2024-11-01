@@ -126,14 +126,16 @@ auto Interpreter::VisitInvokeNativeInstr(InvokeNativeInstr* instr) -> bool {
   return true;
 }
 
+static inline auto GetTarget(const bool branch, instr::BranchInstr* instr) -> instr::EntryInstr* {
+  return branch ? instr->GetTrueTarget()
+                : (instr->HasFalseTarget() ? instr->GetFalseTarget() : (instr::EntryInstr*)instr->GetJoin());
+}
+
 auto Interpreter::VisitBranchInstr(BranchInstr* instr) -> bool {
   ASSERT(instr);
   const auto test = GetRuntime()->Pop();
-  if (!test) {
-    DLOG(ERROR) << "no test value to pop from stack.";
-    return false;
-  }
-  const auto target = Truth(test) ? instr->GetTrueTarget() : instr->GetFalseTarget();
+  ASSERT(test);
+  const auto target = GetTarget(Truth(test), instr);
   ASSERT(target);
   SetCurrentInstr(target);
   return true;

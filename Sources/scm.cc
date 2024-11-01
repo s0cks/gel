@@ -31,8 +31,8 @@ auto main(int argc, char** argv) -> int {
   if (FLAGS_eval) {
     try {
       const auto result = Runtime::Eval((*expr));
-      ASSERT(result);
-      PrintValue(std::cout, result) << std::endl;
+      if (result)
+        PrintValue(std::cout, result) << std::endl;
     } catch (const scm::Exception& exc) {
       LOG(ERROR) << "failed to execute expression.";
       std::cerr << " * expression: " << (*expr) << std::endl;

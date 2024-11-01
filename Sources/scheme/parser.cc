@@ -139,6 +139,18 @@ auto Parser::ParseArguments(ArgumentSet& args) -> bool {
   return true;
 }
 
+auto Parser::ParseExpressionList(expr::ExpressionList& expressions) -> bool {
+  auto peek = PeekToken();
+  while (peek.kind != Token::kRParen && peek.kind != Token::kEndOfStream) {
+    const auto expr = ParseExpression();
+    if (!expr)
+      return false;
+    expressions.push_back(expr);
+    peek = PeekToken();
+  }
+  return true;
+}
+
 auto Parser::ParseSymbolList(SymbolList& symbols) -> bool {
   while (PeekEq(Token::kIdentifier)) {
     const auto next = ParseSymbol();
@@ -237,6 +249,9 @@ auto Parser::ParseExpression() -> Expression* {
       case Token::kEvalExpr:
         expr = ParseEvalExpr();
         break;
+      case Token::kWhenExpr:
+        expr = ParseWhenExpr();
+        break;
       default:
         Unexpected(next);
         return nullptr;
@@ -250,7 +265,6 @@ auto Parser::ParseExpression() -> Expression* {
 
 auto Parser::ParseQuotedExpr() -> expr::QuotedExpr* {
   const auto depth = GetDepth();
-  DLOG(INFO) << "depth: " << depth;
   ExpectNext(Token::kQuote);
   SkipWhitespace();
   token_len_ = 0;
@@ -265,9 +279,7 @@ auto Parser::ParseQuotedExpr() -> expr::QuotedExpr* {
         break;
     }
   } while (true);
-  DLOG(INFO) << "quoted: " << GetBufferedText();
   ASSERT(depth == GetDepth());
-  DLOG(INFO) << "remaining: " << GetRemaining();
   return QuotedExpr::New(GetBufferedText());
 }
 
@@ -295,6 +307,18 @@ auto Parser::ParseMacroDef() -> expr::MacroDef* {
   if (!PeekEq(Token::kRParen))
     body = ParseExpression();
   return MacroDef::New(symbol, args, body);
+}
+
+auto Parser::ParseWhenExpr() -> expr::WhenExpr* {
+  ExpectNext(Token::kWhenExpr);
+
+  const auto test = ParseExpression();
+  ASSERT(test);
+
+  ExpressionList actions;
+  if (!ParseExpressionList(actions))
+    throw Exception("failed to parse actions.");
+  return WhenExpr::New(test, actions);
 }
 
 auto Parser::ParseLocalDef() -> LocalDef* {
@@ -412,38 +436,6 @@ static inline auto IsValidStringCharacter(const char c) -> bool {
 static inline auto IsValidNumberChar(const char c, const bool whole = true) -> bool {
   return isdigit(c) || (c == '.' && whole);
 }
-
-// static inline auto IsValidQuotedChar(const char c) -> bool {
-//   switch (c) {
-//     case EOF:
-//     case ')':
-//       return false;
-//     default:
-//       return true;
-//   }
-// }
-
-// auto TokenStream::NextQuote() -> const Token& {
-//   peek_ = Token{};
-//   if (PeekChar() != '(') {
-//     const auto next = NextChar();
-//     LOG(ERROR) << "unexpected token: " << next;
-//     return NextToken(Token::kInvalid, next);
-//   }
-//   NextChar();
-
-//   while (IsValidQuotedChar(PeekChar())) {
-//     buffer_[token_len_++] = NextChar();
-//   }
-
-//   if (PeekChar() != ')') {
-//     const auto next = NextChar();
-//     LOG(ERROR) << "unexpected token: " << next;
-//     return NextToken(Token::kInvalid, next);
-//   }
-//   NextChar();
-//   return NextToken(Token::kQuotedExpr, GetBufferedText());
-// }
 
 auto Parser::NextToken() -> const Token& {
   if (!peek_.IsInvalid()) {
@@ -600,6 +592,8 @@ auto Parser::NextToken() -> const Token& {
       return NextToken(Token::kCond);
     else if (ident == "eval")
       return NextToken(Token::kEvalExpr);
+    else if (ident == "when")
+      return NextToken(Token::kWhenExpr);
     return NextToken(Token::kIdentifier, ident);
   }
 
