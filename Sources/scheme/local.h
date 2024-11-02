@@ -83,6 +83,11 @@ class LocalVariable {
     return GetValue() != nullptr;
   }
 
+  inline void SetValue(Type* rhs) {
+    ASSERT(rhs);
+    value_ = rhs;
+  }
+
 #define DEFINE_TYPE_CHECK(Name)                  \
   inline auto Is##Name() const -> bool {         \
     return HasValue() && GetValue()->Is##Name(); \

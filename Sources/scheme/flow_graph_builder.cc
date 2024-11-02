@@ -462,6 +462,16 @@ auto EffectVisitor::VisitThrowExpr(expr::ThrowExpr* expr) -> bool {
 
 auto EffectVisitor::VisitSetExpr(expr::SetExpr* expr) -> bool {
   ASSERT(expr && expr->HasValue());
+
+  const auto symbol = expr->GetSymbol();
+  ASSERT(symbol);
+
+  // LocalVariable* local = nullptr;
+  // if (!GetOwner()->GetScope()->Lookup(symbol, &local)) {
+  //   LOG(FATAL) << "failed to find local: " << symbol;
+  //   return false;
+  // }
+
   ValueVisitor for_value(GetOwner());
   if (!expr->GetValue()->Accept(&for_value)) {
     LOG(FATAL) << "failed to visit SetExpr value: " << expr->GetValue()->ToString();

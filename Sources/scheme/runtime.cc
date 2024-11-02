@@ -12,6 +12,7 @@
 #include "scheme/expression_compiler.h"
 #include "scheme/instruction.h"
 #include "scheme/interpreter.h"
+#include "scheme/local.h"
 #include "scheme/local_scope.h"
 #include "scheme/module_compiler.h"
 #include "scheme/module_resolver.h"
@@ -162,7 +163,11 @@ auto Runtime::LookupSymbol(Symbol* symbol, Type** result) -> bool {
 auto Runtime::StoreSymbol(Symbol* symbol, Type* value) -> bool {
   ASSERT(symbol);
   ASSERT(value);
-  return DefineSymbol(symbol, value);
+  LocalVariable* local = nullptr;
+  if (!GetScope()->Lookup(symbol, &local))
+    return GetScope()->Add(symbol, value);
+  local->SetValue(value);
+  return true;
 }
 
 auto Runtime::Execute(GraphEntryInstr* entry) -> Type* {
