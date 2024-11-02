@@ -164,16 +164,19 @@ auto EffectVisitor::VisitCaseExpr(expr::CaseExpr* expr) -> bool {
     return false;
   }
 
+  auto remaining = expr->GetNumberOfClauses();
   for (const auto& clause : expr->GetClauses()) {
     const auto target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
     ASSERT(target);
     for (const auto& action : clause->GetActions()) {
       ASSERT(action);
-      EffectVisitor for_action(GetOwner());
+      ValueVisitor for_action(GetOwner());
       if (!action->Accept(&for_action)) {
         LOG(ERROR) << "failed to visit action for: " << expr->ToString();
         return false;
       }
+      if (--remaining <= 0)
+        for_action.AddImplicitReturn();
       AppendFragment(target, for_action);
     }
     target->Append(GotoInstr::New(join));
@@ -331,6 +334,7 @@ auto EffectVisitor::VisitCondExpr(CondExpr* expr) -> bool {
     LOG(ERROR) << "failed to visit conseq for cond: " << expr->ToString();
     return false;
   }
+  for_conseq.AddImplicitReturn();
   AppendFragment(conseq_target, for_conseq);
   conseq_target->Append(GotoInstr::New(join));
   GetOwner()->GetCurrentBlock()->AddDominated(conseq_target);
@@ -417,7 +421,6 @@ auto EffectVisitor::VisitLiteralExpr(LiteralExpr* p) -> bool {
       ReturnDefinition(instr::LoadVariableInstr::New(value->AsSymbol()));
       return true;
     }
-
     ReturnDefinition(ConstantInstr::New(local->GetValue()));
   } else {
     ReturnDefinition(ConstantInstr::New(p->GetValue()));

@@ -93,7 +93,11 @@ auto Interpreter::VisitInvokeInstr(InvokeInstr* instr) -> bool {
     throw Exception(fmt::format("expected {0:s} to be a Procedure.", target ? target->ToString() : "null"));
   const auto procedure = target->AsProcedure();
   ASSERT(procedure);
-  return procedure->Apply(GetRuntime());
+  GetRuntime()->PushScope();
+  if (!procedure->Apply(GetRuntime()))
+    return false;
+  GetRuntime()->PopScope();
+  return true;
 }
 
 auto Interpreter::VisitEvalInstr(EvalInstr* instr) -> bool {
@@ -121,7 +125,7 @@ auto Interpreter::VisitInvokeNativeInstr(InvokeNativeInstr* instr) -> bool {
 
   const auto native = procedure->AsNativeProcedure();
   ASSERT(native);
-  if (!native->ApplyProcedure(args))
+  if (!native->Apply(args))
     throw Exception(fmt::format("failed to apply procedure: {}", native->ToString()));
   return true;
 }
@@ -196,6 +200,7 @@ auto Interpreter::VisitBinaryOpInstr(BinaryOpInstr* instr) -> bool {
   const auto result = ApplyBinaryOp(instr->GetOp(), left->AsDatum(), right->AsDatum());
   ASSERT(result);
   GetRuntime()->Push(result);
+  DVLOG(100) << left << " " << instr->GetOp() << " " << right << " := " << result;
   return true;
 }
 
@@ -234,7 +239,7 @@ auto Interpreter::VisitGraphEntryInstr(GraphEntryInstr* instr) -> bool {
 
 void Interpreter::ExecuteInstr(Instruction* instr) {
   ASSERT(instr);
-  DVLOG(10) << "executing " << instr->ToString();
+  DVLOG(100) << "executing " << instr->ToString();
   LOG_IF(FATAL, !instr->Accept(this)) << "failed to execute: " << instr->ToString();
   if (instr->IsBranchInstr() || instr->IsGotoInstr())
     return;

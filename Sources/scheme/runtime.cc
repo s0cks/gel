@@ -37,8 +37,6 @@ Runtime::Runtime(LocalScope* scope) :
   ExecutionStack() {
   ASSERT(scope);
   SetScope(scope);
-  if (FLAGS_kernel)
-    LoadKernelModule();
 }
 
 Runtime::~Runtime() {
@@ -198,7 +196,10 @@ void Runtime::Init() {
 
   DVLOG(10) << "initializing runtime....";
   Type::Init();
-  runtime_.Set(new Runtime());
+  const auto runtime = new Runtime();
+  runtime_.Set(runtime);
+  if (FLAGS_kernel)
+    runtime->LoadKernelModule();
 
 #ifdef SCM_DEBUG
   const auto stop_ts = Clock::now();

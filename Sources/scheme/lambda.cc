@@ -9,9 +9,16 @@
 #include "scheme/expression.h"
 #include "scheme/expression_compiler.h"
 #include "scheme/flow_graph_builder.h"
+#include "scheme/local_scope.h"
 #include "scheme/runtime.h"
 
 namespace scm {
+Lambda::Lambda(const ArgumentSet& args, expr::Expression* body) :
+  Procedure(),
+  args_(args),
+  body_(body),
+  expr_(ExpressionCompiler::Compile(body)) {}
+
 auto Lambda::Equals(Type* rhs) const -> bool {
   if (!rhs->IsLambda())
     return false;
@@ -20,10 +27,7 @@ auto Lambda::Equals(Type* rhs) const -> bool {
 }
 
 auto Lambda::Apply(Runtime* runtime) const -> bool {
-  const auto expr = ExpressionCompiler::Compile(GetBody());
-  ASSERT(expr);
-
-  RuntimeScopeScope scope(runtime);
+  const auto scope = GetRuntime()->PushScope();
   for (const auto& arg : std::ranges::reverse_view(GetArgs())) {
     const auto value = runtime->Pop();
     ASSERT(value);
@@ -33,7 +37,8 @@ auto Lambda::Apply(Runtime* runtime) const -> bool {
     }
   }
 
-  const auto result = runtime->Execute(expr->GetEntry());
+  const auto result = runtime->Execute(expr_->GetEntry());
+  GetRuntime()->PopScope();
   if (!result) {
     DLOG(WARNING) << "no result from lambda.";
     return true;

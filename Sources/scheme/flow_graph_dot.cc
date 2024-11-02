@@ -283,7 +283,7 @@ class DotVisitor : public InstructionVisitor, dot::GraphDecorator {
     DotVisitor for_true(GetOwner(), GetGraph());
     if (!instr->GetTrueTarget()->Accept(&for_true))
       return false;
-    if (HasExitNode() && for_true.HasEntryNode()) {
+    if (for_true.HasEntryNode()) {
       const auto edge_id = fmt::format("blk{0:d}blk{1:d}", GetBlock()->GetBlockId(), for_true.GetBlock()->GetBlockId());
       const auto edge = NewEdge(GetExitNode(), for_true.GetEntryNode(), edge_id.c_str());
       ASSERT(edge);
@@ -294,8 +294,9 @@ class DotVisitor : public InstructionVisitor, dot::GraphDecorator {
     if (instr->HasFalseTarget()) {
       if (!instr->GetFalseTarget()->Accept(&for_false))
         return false;
-      if (HasExitNode() && for_false.HasEntryNode()) {
+      if (for_false.HasEntryNode()) {
         const auto edge_id = fmt::format("blk{0:d}blk{1:d}", GetBlock()->GetBlockId(), for_false.GetBlock()->GetBlockId());
+        DLOG(INFO) << "false edge_id: " << edge_id;
         const auto edge = NewEdge(GetExitNode(), for_false.GetEntryNode(), edge_id.c_str());
         ASSERT(edge);
         SetEdgeLabel(edge, "is false");
@@ -305,12 +306,14 @@ class DotVisitor : public InstructionVisitor, dot::GraphDecorator {
     DotVisitor join(GetOwner(), GetGraph());
     if (!instr->GetJoin()->Accept(&join))
       return false;
+
     if (join.HasEntryNode()) {
       if (for_true.HasExitNode()) {
         const auto edge_id = fmt::format("blk{0:d}blk{1:d}", for_true.GetBlock()->GetBlockId(), join.GetBlock()->GetBlockId());
         const auto edge = NewEdge(for_true.GetExitNode(), join.GetEntryNode(), edge_id.c_str());
         ASSERT(edge);
       }
+
       if (for_false.HasExitNode()) {
         const auto edge_id = fmt::format("blk{0:d}blk{1:d}", for_false.GetBlock()->GetBlockId(), join.GetBlock()->GetBlockId());
         const auto edge = NewEdge(for_false.GetExitNode(), join.GetEntryNode(), edge_id.c_str());

@@ -71,11 +71,13 @@ class ExecutionStack {
 
 class Module;
 class Runtime : public ExecutionStack {
-  friend class Repl;
   friend class proc::import;
   friend class proc::exit;
   friend class proc::format;  // TODO: remove
+  friend class Repl;
+  friend class Lambda;
   friend class Interpreter;
+  friend class NativeProcedure;
   friend class RuntimeScopeScope;
 
   using ModuleList = std::vector<Module*>;
@@ -105,11 +107,12 @@ class Runtime : public ExecutionStack {
     scope_ = scope;
   }
 
-  inline void PushScope() {
+  inline auto PushScope() -> LocalScope* {
     ASSERT(HasScope());
     const auto new_scope = LocalScope::New(GetScope());
     ASSERT(new_scope);
     SetScope(new_scope);
+    return new_scope;
   }
 
   inline void PopScope() {
@@ -129,10 +132,9 @@ class Runtime : public ExecutionStack {
     return SetRunning(false);
   }
 
-  void LoadKernelModule();
-
  public:
   static auto CreateInitScope() -> LocalScope*;
+  void LoadKernelModule();  // TODO: reduce visibility
 
  protected:
   explicit Runtime(LocalScope* init_scope = CreateInitScope());

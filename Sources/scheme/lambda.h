@@ -6,6 +6,7 @@
 #include "scheme/argument.h"
 #include "scheme/common.h"
 #include "scheme/procedure.h"
+#include "scheme/type.h"
 
 namespace scm {
 namespace expr {
@@ -15,12 +16,10 @@ class Lambda : public Procedure {
  private:
   ArgumentSet args_;
   expr::Expression* body_;
+  CompiledExpression* expr_ = nullptr;
 
  protected:
-  explicit Lambda(const ArgumentSet& args, expr::Expression* body) :
-    Procedure(),
-    args_(args),
-    body_(body) {}
+  explicit Lambda(const ArgumentSet& args, expr::Expression* body);
 
  public:
   auto GetArgs() const -> const ArgumentSet& {

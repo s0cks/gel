@@ -88,6 +88,7 @@ class FlowGraphBuilder {
 };
 
 class EffectVisitor : public ExpressionVisitor {
+  friend class FlowGraphBuilder;
   DEFINE_NON_COPYABLE_TYPE(EffectVisitor);
 
  private:

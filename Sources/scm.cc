@@ -3,6 +3,7 @@
 
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 
 #include "scheme/common.h"
@@ -19,38 +20,55 @@
 
 using namespace scm;
 
+static inline auto Execute(const std::string& rhs) -> int {
+  if (FLAGS_eval) {
+    try {
+      const auto result = Runtime::Eval(rhs);
+      if (result)
+        PrintValue(std::cout, result) << std::endl;
+    } catch (const scm::Exception& exc) {
+      LOG(ERROR) << "failed to execute expression.";
+      std::cerr << " * expression: " << rhs << std::endl;
+      std::cerr << " * message: " << exc.GetMessage() << std::endl;
+      return EXIT_FAILURE;
+    }
+  } else if (FLAGS_dump_ast || FLAGS_dump_flow_graph) {
+    try {
+      const auto expression = ExpressionCompiler::Compile(rhs);
+      ASSERT(expression);
+      LOG(INFO) << "result: " << expression;
+    } catch (const scm::Exception& exc) {
+      LOG(ERROR) << "failed to execute expression.";
+      std::cerr << " * expression: " << rhs << std::endl;
+      std::cerr << " * message: " << exc.GetMessage() << std::endl;
+      return EXIT_FAILURE;
+    }
+  }
+  return EXIT_SUCCESS;
+}
+
 auto main(int argc, char** argv) -> int {
   ::google::InitGoogleLogging(argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
   ::google::ParseCommandLineFlags(&argc, &argv, true);
 
   Runtime::Init();
   const auto expr = GetExpressionFlag();
-  if (!expr)
-    return Repl::Run();
+  if (expr)
+    return Execute((*expr));
 
-  if (FLAGS_eval) {
-    try {
-      const auto result = Runtime::Eval((*expr));
-      if (result)
-        PrintValue(std::cout, result) << std::endl;
-    } catch (const scm::Exception& exc) {
-      LOG(ERROR) << "failed to execute expression.";
-      std::cerr << " * expression: " << (*expr) << std::endl;
-      std::cerr << " * message: " << exc.GetMessage() << std::endl;
-      return EXIT_FAILURE;
+  if (argc >= 2) {
+    const auto script = std::string(argv[1]);
+    DVLOG(10) << "loading script from: " << script;
+    std::stringstream code;
+    {
+      std::ifstream file(script, std::ios::binary | std::ios::in);
+      LOG_IF(FATAL, !file) << "failed to load script from: " << script;
+      code << file.rdbuf();
+      file.close();
     }
-  } else if (FLAGS_dump_ast || FLAGS_dump_flow_graph) {
-    try {
-      const auto expression = ExpressionCompiler::Compile((*expr));
-      ASSERT(expression);
-      LOG(INFO) << "result: " << expression;
-    } catch (const scm::Exception& exc) {
-      LOG(ERROR) << "failed to execute expression.";
-      std::cerr << " * expression: " << (*expr) << std::endl;
-      std::cerr << " * message: " << exc.GetMessage() << std::endl;
-      return EXIT_FAILURE;
-    }
+
+    DVLOG(100) << "code:" << std::endl << code.str();
+    return Execute(code.str());
   }
-
-  return EXIT_SUCCESS;
+  return Repl::Run();
 }

@@ -20,6 +20,7 @@ class NativeProcedure : public Procedure {
 
   auto ReturnValue(Type* rhs) const -> bool;
   virtual auto ApplyProcedure(const std::vector<Type*>& args) const -> bool = 0;
+  virtual auto Apply(const std::vector<Type*>& args) const -> bool;
 
   inline auto ThrowError(const std::string& message) const -> bool {
     return ReturnValue(Error::New(message));
