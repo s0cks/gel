@@ -15,6 +15,7 @@
   V(UnaryExpr)                      \
   V(BinaryOpExpr)                   \
   V(BeginExpr)                      \
+  V(WhileExpr)                      \
   V(CondExpr)                       \
   V(ClauseExpr)                     \
   V(WhenExpr)                       \
@@ -86,6 +87,10 @@ class Expression : public Type {  // TODO: should Expression inherit from Type?
 
   inline auto HasChildAt(const uint64_t idx) const -> bool {
     return GetChildAt(idx) != nullptr;
+  }
+
+  inline auto HasChildren() const -> bool {
+    return GetNumberOfChildren() >= 1;
   }
 
   virtual auto IsConstantExpr() const -> bool {
@@ -538,6 +543,10 @@ class SequenceExpr : public Expression {
  public:
   ~SequenceExpr() override = default;
 
+  auto GetBody() const -> const ExpressionList& {
+    return children_;
+  }
+
   auto GetNumberOfChildren() const -> uint64_t override {
     return children_.size();
   }
@@ -893,6 +902,30 @@ class CaseExpr : public Expression {
  public:
   static inline auto New(Expression* key, const ClauseList& clauses = {}) -> CaseExpr* {
     return new CaseExpr(key, clauses);
+  }
+};
+
+class WhileExpr : public SequenceExpr {
+ private:
+  Expression* test_;
+
+ protected:
+  explicit WhileExpr(Expression* test, const ExpressionList& body) :
+    SequenceExpr(body),
+    test_(test) {}
+
+ public:
+  ~WhileExpr() override = default;
+
+  auto GetTest() const -> Expression* {
+    return test_;
+  }
+
+  DECLARE_EXPRESSION(WhileExpr);
+
+ public:
+  static inline auto New(Expression* test, const ExpressionList& body = {}) -> WhileExpr* {
+    return new WhileExpr(test, body);
   }
 };
 

@@ -21,4 +21,16 @@
     (or (native-procedure? x) (eq? (type? x) "Procedure"))))
   ; Misc
   (define pair? (lambda (x) (eq? (type? x) "Pair")))
-  (define module? (lambda (x) (eq? (type? x) "Module"))))
+  (define module? (lambda (x) (eq? (type? x) "Module")))
+
+  ; foreach
+  (define foreach (lambda (func seq)
+    (loop
+      (func (car seq))
+      (set! seq (cdr seq))
+      (when (null? seq)
+        (return)))))
+
+  ; map
+  (define map (lambda (func seq)
+    (print "Unavailable"))))

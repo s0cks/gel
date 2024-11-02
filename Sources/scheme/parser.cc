@@ -255,6 +255,9 @@ auto Parser::ParseExpression() -> Expression* {
       case Token::kCaseExpr:
         expr = ParseCaseExpr();
         break;
+      case Token::kWhileExpr:
+        expr = ParseWhileExpr();
+        break;
       default:
         Unexpected(next);
         return nullptr;
@@ -350,6 +353,16 @@ auto Parser::ParseCaseExpr() -> expr::CaseExpr* {
   if (!ParseClauseList(clauses))
     throw Exception("failed to parse case clauses.");
   return CaseExpr::New(key, clauses);
+}
+
+auto Parser::ParseWhileExpr() -> expr::WhileExpr* {
+  ExpectNext(Token::kWhileExpr);
+  const auto test = ParseExpression();
+  ASSERT(test);
+  ExpressionList body;
+  if (!ParseExpressionList(body))
+    throw Exception("failed to parse loop expression body.");
+  return expr::WhileExpr::New(test, body);
 }
 
 auto Parser::ParseLocalDef() -> LocalDef* {
@@ -627,6 +640,8 @@ auto Parser::NextToken() -> const Token& {
       return NextToken(Token::kWhenExpr);
     else if (ident == "case")
       return NextToken(Token::kCaseExpr);
+    else if (ident == "while")
+      return NextToken(Token::kWhileExpr);
     return NextToken(Token::kIdentifier, ident);
   }
 

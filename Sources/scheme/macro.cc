@@ -78,6 +78,12 @@ class MacroReplacer : public expr::ExpressionVisitor {
     return true;
   }
 
+  auto VisitWhileExpr(expr::WhileExpr* expr) -> bool override {
+    ASSERT(expr);
+    NOT_IMPLEMENTED(ERROR);  // TODO: implement
+    return true;
+  }
+
   auto VisitConsExpr(expr::ConsExpr* expr) -> bool override {
     ASSERT(expr);
     NOT_IMPLEMENTED(ERROR);  // TODO: implement
@@ -369,6 +375,12 @@ class MacroEvaluator : public expr::ExpressionVisitor {
     }
     if (eval.HasResult())
       expr->SetValue(eval.GetResult());
+    return true;
+  }
+
+  auto VisitWhileExpr(expr::WhileExpr* expr) -> bool override {
+    ASSERT(expr);
+    NOT_IMPLEMENTED(ERROR);  // TODO: implement
     return true;
   }
 

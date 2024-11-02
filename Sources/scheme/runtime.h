@@ -12,6 +12,7 @@
 #include "scheme/flow_graph.h"
 #include "scheme/instruction.h"
 #include "scheme/local_scope.h"
+#include "scheme/type.h"
 
 namespace scm {
 DECLARE_bool(kernel);
@@ -19,6 +20,8 @@ DECLARE_string(module_dir);
 
 namespace proc {
 class import;
+class map;
+class foreach;
 class exit;
 class format;
 class throw_exc;
@@ -48,6 +51,10 @@ class ExecutionStack {
  public:
   virtual ~ExecutionStack() = default;
 
+  auto GetStackSize() const -> uint64_t {
+    return stack_.size();
+  }
+
   inline auto HasError() const -> bool {
     if (stack_.empty())
       return false;
@@ -74,6 +81,8 @@ class Runtime : public ExecutionStack {
   friend class proc::import;
   friend class proc::exit;
   friend class proc::format;  // TODO: remove
+  friend class proc::foreach;
+  friend class proc::map;
   friend class Repl;
   friend class Lambda;
   friend class Interpreter;
@@ -150,6 +159,8 @@ class Runtime : public ExecutionStack {
   inline auto ImportModule(const std::string& name) -> bool {
     return ImportModule(Symbol::New(name));
   }
+
+  auto Apply(Procedure* proc, const std::vector<Type*>& args) -> Type*;
 
  public:
   ~Runtime();

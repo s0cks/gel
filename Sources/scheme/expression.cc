@@ -350,4 +350,12 @@ auto WhenExpr::ToString() const -> std::string {
   ss << ")";
   return ss.str();
 }
+
+auto WhileExpr::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "LoopExpr(";
+  ss << "body=" << GetBody();
+  ss << ")";
+  return ss.str();
+}
 }  // namespace scm::expr

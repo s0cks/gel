@@ -128,6 +128,7 @@ auto BranchInstr::ToString() const -> std::string {
 auto GotoInstr::ToString() const -> std::string {
   std::stringstream ss;
   ss << "GotoInstr(";
+  ss << "target=" << GetTarget()->ToString();
   ss << ")";
   return ss.str();
 }

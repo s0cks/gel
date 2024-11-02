@@ -35,6 +35,12 @@ auto DefinitionVisitor::VisitWhenExpr(expr::WhenExpr* expr) -> bool {
   return true;
 }
 
+auto DefinitionVisitor::VisitWhileExpr(expr::WhileExpr* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return true;
+}
+
 auto DefinitionVisitor::VisitLocalDef(expr::LocalDef* expr) -> bool {
   ASSERT(expr);
   const auto symbol = expr->GetSymbol();

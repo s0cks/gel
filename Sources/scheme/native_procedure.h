@@ -7,6 +7,7 @@
 namespace scm {
 class NativeProcedure : public Procedure {
   friend class Interpreter;
+  friend class Runtime;
 
  private:
   Symbol* symbol_;

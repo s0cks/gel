@@ -107,6 +107,24 @@ auto Runtime::ImportModule(Module* module) -> bool {
   return true;
 }
 
+auto Runtime::Apply(Procedure* proc, const std::vector<Type*>& args) -> Type* {
+  const auto stack_size = GetStackSize();
+  PushScope();
+  if (proc->IsProcedure()) {
+    for (const auto& arg : args) {
+      Push(arg);
+    }
+    if (!proc->Apply(this))
+      return Error::New("cannot invoke procedure");
+  } else if (proc->IsNativeProcedure()) {
+    if (!proc->AsNativeProcedure()->Apply(args))
+      return Error::New("cannot invoke procedure");
+  }
+  const auto result = GetStackSize() > stack_size ? Pop() : nullptr;
+  PopScope();
+  return result;
+}
+
 auto Runtime::ImportModule(Symbol* symbol) -> bool {
   ASSERT(symbol);
   if (FLAGS_module_dir.empty()) {
@@ -136,6 +154,8 @@ auto Runtime::CreateInitScope() -> LocalScope* {
   RegisterProc<proc::exit>(scope);
   RegisterProc<proc::format>(scope);
   RegisterProc<proc::list>(scope);
+  RegisterProc<proc::foreach>(scope);
+  RegisterProc<proc::map>(scope);
 #ifdef SCM_DEBUG
   scope->Add("debug?", Bool::True());
   RegisterProc<proc::list_symbols>(scope);

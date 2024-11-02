@@ -95,7 +95,7 @@ class Parser {
   auto ParseExpressionList(expr::ExpressionList& expressions) -> bool;
   auto ParseSymbolList(SymbolList& symbols) -> bool;
   auto ParseIdentifier(std::string& result) -> bool;
-
+  auto ParseClauseList(expr::ClauseList& clauses) -> bool;
   auto ParseLiteralValue() -> Datum*;
 
   // Expressions
@@ -110,9 +110,8 @@ class Parser {
   auto ParseEvalExpr() -> expr::EvalExpr*;
   auto ParseQuotedExpr() -> expr::QuotedExpr*;
   auto ParseWhenExpr() -> expr::WhenExpr*;
-
-  auto ParseClauseList(expr::ClauseList& clauses) -> bool;
   auto ParseCaseExpr() -> expr::CaseExpr*;
+  auto ParseWhileExpr() -> expr::WhileExpr*;
 
   // Definitions
   auto ParseDefinition() -> expr::Definition*;

@@ -240,6 +240,7 @@ auto EffectVisitor::VisitWhenExpr(expr::WhenExpr* expr) -> bool {
   const auto branch = BranchInstr::New(for_test.GetValue(), conseq_target, nullptr, join);
   ASSERT(branch);
   ReturnDefinition(branch);
+  Instruction::Link(branch, join);
   SetExitInstr(join);
   GetOwner()->GetCurrentBlock()->AddDominated(join);
   return true;
@@ -258,6 +259,40 @@ auto EffectVisitor::VisitMacroDef(MacroDef* expr) -> bool {
         fmt::format("cannot define Macro symbol `{}` for value: `{}`", macro->GetSymbol()->ToString(), macro->ToString()));
   }
 
+  return true;
+}
+
+auto EffectVisitor::VisitWhileExpr(expr::WhileExpr* expr) -> bool {
+  ASSERT(expr);
+  const auto target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
+  ASSERT(target);
+  const auto join = JoinEntryInstr::New(GetOwner()->GetNextBlockId());
+  ASSERT(join);
+  for (const auto& expr : expr->GetBody()) {
+    EffectVisitor for_expr(GetOwner());
+    if (!expr->Accept(&for_expr)) {
+      LOG(ERROR) << "failed to visit action for: " << expr->ToString();
+      return false;
+    }
+    AppendFragment(target, for_expr);
+  }
+
+  ValueVisitor for_test(GetOwner());
+  if (!expr->GetTest()->Accept(&for_test)) {
+    LOG(ERROR) << "failed to visit test for: " << expr->ToString();
+    return false;
+  }
+  AppendFragment(target, for_test);
+  const auto branch = BranchInstr::New(for_test.GetValue(), target, nullptr, join);
+  ASSERT(branch);
+  target->Append(branch);
+  GetOwner()->GetCurrentBlock()->AddDominated(target);
+
+  Append(for_test);
+
+  ReturnDefinition(branch);
+  SetExitInstr(join);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return true;
 }
 
