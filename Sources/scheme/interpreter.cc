@@ -126,9 +126,12 @@ auto Interpreter::VisitInvokeNativeInstr(InvokeNativeInstr* instr) -> bool {
   return true;
 }
 
-static inline auto GetTarget(const bool branch, instr::BranchInstr* instr) -> instr::EntryInstr* {
-  return branch ? instr->GetTrueTarget()
-                : (instr->HasFalseTarget() ? instr->GetFalseTarget() : (instr::EntryInstr*)instr->GetJoin());
+static inline auto GetTarget(const bool branch, instr::BranchInstr* instr) -> instr::Instruction* {
+  if (branch)
+    return instr->GetTrueTarget();
+  if (instr->HasFalseTarget())
+    return instr->GetFalseTarget();
+  return instr->GetNext();
 }
 
 auto Interpreter::VisitBranchInstr(BranchInstr* instr) -> bool {

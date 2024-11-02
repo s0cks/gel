@@ -9,6 +9,7 @@
 
 namespace scm {
 class FlowGraphBuilder {
+  friend class ClauseVisitor;
   friend class EffectVisitor;
   DEFINE_NON_COPYABLE_TYPE(FlowGraphBuilder);
 
@@ -137,7 +138,7 @@ class EffectVisitor : public ExpressionVisitor {
     exit_ = nullptr;
   }
 
-  void Append(EffectVisitor& rhs) {
+  void Append(const EffectVisitor& rhs) {
     if (rhs.IsEmpty())
       return;
     if (IsEmpty()) {

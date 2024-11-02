@@ -8,6 +8,7 @@
 
 #include "scheme/error.h"
 #include "scheme/local_scope.h"
+#include "scheme/native_procedure.h"
 #include "scheme/procedure.h"
 #include "scheme/runtime.h"
 #include "scheme/type.h"
@@ -87,4 +88,19 @@ NATIVE_PROCEDURE_F(format) {
   ASSERT(!result.empty());
   return ReturnValue(String::New(result));
 }
+
+#ifdef SCM_DEBUG
+
+NATIVE_PROCEDURE_F(list_symbols) {
+  ASSERT(HasRuntime());
+  ASSERT(args.empty());
+
+  const auto scope = GetRuntime()->GetScope();
+  ASSERT(scope);
+
+  LocalScopePrinter::Print(scope, __FILE__, __LINE__);
+  return true;
+}
+
+#endif  // SCM_DEBUG
 }  // namespace scm::proc

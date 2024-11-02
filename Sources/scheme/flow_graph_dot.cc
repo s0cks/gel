@@ -147,7 +147,7 @@ class DotVisitor : public InstructionVisitor, dot::GraphDecorator {
     ASSERT(instr);
     SetBlock(instr);
     Append(instr);
-    InstructionIterator iter(instr->GetFirstInstruction());
+    InstructionIterator iter(instr->GetNext());
     while (iter.HasNext()) {
       const auto next = iter.Next();
       ASSERT(next);
@@ -165,7 +165,6 @@ class DotVisitor : public InstructionVisitor, dot::GraphDecorator {
     while (iter.HasNext()) {
       const auto next = iter.Next();
       ASSERT(next);
-      DLOG(INFO) << "next: " << next->ToString();
       if (!next->Accept(this))
         return false;
     }
@@ -322,9 +321,6 @@ class DotVisitor : public InstructionVisitor, dot::GraphDecorator {
         ASSERT(edge);
       }
     }
-
-    if (join.HasExitNode())
-      SetExitNode(join.GetExitNode());
     return true;
   }
 };

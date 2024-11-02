@@ -103,10 +103,16 @@ auto LocalScopePrinter::PrintLocalScope(LocalScope* scope) -> bool {
   ASSERT(scope);
   __ << "Local Scope (" << scope->GetNumberOfLocals() << " locals):";
   Indent();
-  if (!scope->VisitAllLocals(this)) {
-    LOG(FATAL) << "failed to visit local scope: " << scope->ToString();
-    return false;
-  }
+  do {
+    if (!scope->VisitAllLocals(this)) {
+      LOG(FATAL) << "failed to visit local scope: " << scope->ToString();
+      return false;
+    }
+
+    if (!IsRecursive() || !scope->HasParent())
+      break;
+    scope = scope->GetParent();
+  } while (true);
   Deindent();
   return true;
 }

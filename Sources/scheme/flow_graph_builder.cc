@@ -156,7 +156,49 @@ auto EffectVisitor::VisitModuleDef(ModuleDef* expr) -> bool {
 
 auto EffectVisitor::VisitCaseExpr(expr::CaseExpr* expr) -> bool {
   ASSERT(expr);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  const auto join = JoinEntryInstr::New(GetOwner()->GetNextBlockId());
+  ASSERT(join);
+
+  ValueVisitor for_key(GetOwner());
+  if (!expr->GetKey()->Accept(&for_key)) {
+    return false;
+  }
+
+  for (const auto& clause : expr->GetClauses()) {
+    const auto target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
+    ASSERT(target);
+    for (const auto& action : clause->GetActions()) {
+      ASSERT(action);
+      EffectVisitor for_action(GetOwner());
+      if (!action->Accept(&for_action)) {
+        LOG(ERROR) << "failed to visit action for: " << expr->ToString();
+        return false;
+      }
+      AppendFragment(target, for_action);
+    }
+    target->Append(GotoInstr::New(join));
+
+    ValueVisitor for_key(GetOwner());
+    if (!expr->GetKey()->Accept(&for_key)) {
+      return false;
+    }
+
+    ValueVisitor for_test(GetOwner());
+    if (!clause->GetKey()->Accept(&for_test)) {
+      LOG(ERROR) << "failed to visit test for cond: " << expr->ToString();
+      return false;
+    }
+
+    Append(for_test);
+    Append(for_key);
+    const auto cmp = instr::BinaryOpInstr::NewEquals();
+    Add(cmp);
+    Add(BranchInstr::New(cmp, target, nullptr, join));
+    GetOwner()->GetCurrentBlock()->AddDominated(target);
+  }
+
+  SetExitInstr(join);
+  GetOwner()->GetCurrentBlock()->AddDominated(join);
   return true;
 }
 

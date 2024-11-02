@@ -84,6 +84,7 @@ auto GraphEntryInstr::ToString() const -> std::string {
 auto TargetEntryInstr::ToString() const -> std::string {
   std::stringstream ss;
   ss << "TargetEntryInstr(";
+  ss << "block_id=" << GetBlockId();
   ss << ")";
   return ss.str();
 }
@@ -115,6 +116,11 @@ auto BinaryOpInstr::ToString() const -> std::string {
 auto BranchInstr::ToString() const -> std::string {
   std::stringstream ss;
   ss << "BranchInstr(";
+  ss << "test=" << GetTest()->ToString() << ", ";
+  ss << "true_target=" << GetTrueTarget()->ToString() << ", ";
+  if (HasFalseTarget())
+    ss << "false_target=" << GetFalseTarget()->ToString() << ", ";
+  ss << "join=" << GetJoin()->ToString();
   ss << ")";
   return ss.str();
 }

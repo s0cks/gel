@@ -10,6 +10,10 @@ DECLARE_NATIVE_PROCEDURE(exit);
 DECLARE_NATIVE_PROCEDURE(format);
 DECLARE_NATIVE_PROCEDURE(list);
 _DECLARE_NATIVE_PROCEDURE(type, "type?");
+
+#ifdef SCM_DEBUG
+_DECLARE_NATIVE_PROCEDURE(list_symbols, "list-symbols!");
+#endif  // SCM_DEBUG
 }  // namespace scm::proc
 
 #endif  // SCM_NATIVES_H

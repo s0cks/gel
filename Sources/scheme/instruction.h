@@ -11,7 +11,9 @@
 
 namespace scm {
 class EffectVisitor;
+class ClauseVisitor;
 class FlowGraphBuilder;
+
 namespace instr {
 #define FOR_EACH_INSTRUCTION(V) \
   V(ConstantInstr)              \
@@ -157,6 +159,7 @@ class InstructionIterator {
 
 class EntryInstr : public Instruction {
   friend class scm::EffectVisitor;
+  friend class scm::ClauseVisitor;
   friend class scm::FlowGraphBuilder;
   DEFINE_NON_COPYABLE_TYPE(EntryInstr);
 
@@ -526,6 +529,13 @@ class BinaryOpInstr : public Definition {
   static inline auto New(const expr::BinaryOp op) -> BinaryOpInstr* {
     return new BinaryOpInstr(op);
   }
+
+#define DEFINE_NEW_OP(Name)                          \
+  static inline auto New##Name() -> BinaryOpInstr* { \
+    return New(expr::BinaryOp::k##Name);             \
+  }
+  FOR_EACH_BINARY_OP(DEFINE_NEW_OP)
+#undef DEFINE_NEW_OP
 };
 
 class UnaryOpInstr : public Definition {
