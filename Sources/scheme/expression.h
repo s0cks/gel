@@ -795,7 +795,7 @@ class WhenExpr : public Expression {
   }
 };
 
-class ClauseExpr : public Expression {
+class ClauseExpr : public Expression {  // TODO: should this be a WhenExpr?
  private:
   Expression* key_;
   ExpressionList actions_;
