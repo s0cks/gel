@@ -109,7 +109,6 @@ auto Runtime::ImportModule(Module* module) -> bool {
 
 auto Runtime::Apply(Procedure* proc, const std::vector<Type*>& args) -> Type* {
   const auto stack_size = GetStackSize();
-  PushScope();
   if (proc->IsProcedure()) {
     for (const auto& arg : args) {
       Push(arg);
@@ -121,7 +120,6 @@ auto Runtime::Apply(Procedure* proc, const std::vector<Type*>& args) -> Type* {
       return Error::New("cannot invoke procedure");
   }
   const auto result = GetStackSize() > stack_size ? Pop() : nullptr;
-  PopScope();
   return result;
 }
 

@@ -75,7 +75,6 @@ auto Interpreter::VisitUnaryOpInstr(UnaryOpInstr* instr) -> bool {
 auto Interpreter::VisitGotoInstr(GotoInstr* instr) -> bool {
   ASSERT(instr);
   ASSERT(instr->HasTarget());
-  GetRuntime()->PopScope();
   SetCurrentInstr(instr->GetTarget());
   return true;
 }
@@ -94,9 +93,16 @@ auto Interpreter::VisitInvokeInstr(InvokeInstr* instr) -> bool {
   const auto procedure = target->AsProcedure();
   ASSERT(procedure);
   GetRuntime()->PushScope();
-  if (!procedure->Apply(GetRuntime()))
-    return false;
+  const auto result = procedure->Apply(GetRuntime());
   GetRuntime()->PopScope();
+  return result;
+}
+
+auto Interpreter::VisitInvokeDynamicInstr(InvokeDynamicInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto target = GetRuntime()->Pop();
+  ASSERT(target->IsSymbol());
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return true;
 }
 
@@ -125,17 +131,19 @@ auto Interpreter::VisitInvokeNativeInstr(InvokeNativeInstr* instr) -> bool {
 
   const auto native = procedure->AsNativeProcedure();
   ASSERT(native);
+  GetRuntime()->PushScope();
   if (!native->Apply(args))
     throw Exception(fmt::format("failed to apply procedure: {}", native->ToString()));
+  GetRuntime()->PopScope();
   return true;
 }
 
-static inline auto GetTarget(const bool branch, instr::BranchInstr* instr) -> instr::Instruction* {
+static inline auto GetTarget(const bool branch, instr::BranchInstr* instr) -> instr::EntryInstr* {
   if (branch)
     return instr->GetTrueTarget();
   if (instr->HasFalseTarget())
     return instr->GetFalseTarget();
-  return instr->HasNext() ? instr->GetNext() : instr->GetJoin();
+  return instr->GetJoin();
 }
 
 auto Interpreter::VisitBranchInstr(BranchInstr* instr) -> bool {
@@ -143,8 +151,7 @@ auto Interpreter::VisitBranchInstr(BranchInstr* instr) -> bool {
   const auto test = GetRuntime()->Pop();
   ASSERT(test);
   const auto target = GetTarget(Truth(test), instr);
-  ASSERT(target);
-  SetCurrentInstr(target);
+  SetCurrentInstr(target ? target : instr->GetNext());
   return true;
 }
 
@@ -210,7 +217,6 @@ auto Interpreter::VisitTargetEntryInstr(TargetEntryInstr* instr) -> bool {
 }
 
 auto Interpreter::VisitJoinEntryInstr(JoinEntryInstr* instr) -> bool {
-  GetRuntime()->PushScope();
   return true;
 }
 

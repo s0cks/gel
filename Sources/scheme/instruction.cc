@@ -72,7 +72,7 @@ auto EntryInstr::VisitDominated(InstructionVisitor* vis) -> bool {
 auto GraphEntryInstr::GetFirstInstruction() const -> Instruction* {
   const auto next = GetNext();
   ASSERT(next);
-  return next->IsTargetEntryInstr() ? next->AsTargetEntryInstr()->GetFirstInstruction() : next;
+  return next->IsEntryInstr() ? ((EntryInstr*)next)->GetFirstInstruction() : next;
 }
 
 auto GraphEntryInstr::ToString() const -> std::string {
@@ -162,6 +162,14 @@ auto ThrowInstr::ToString() const -> std::string {
 auto InvokeInstr::ToString() const -> std::string {
   std::stringstream ss;
   ss << "InvokeInstr(";
+  ss << "target=" << GetTarget()->ToString();
+  ss << ")";
+  return ss.str();
+}
+
+auto InvokeDynamicInstr::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "InvokeDynamicInstr(";
   ss << "target=" << GetTarget()->ToString();
   ss << ")";
   return ss.str();

@@ -148,6 +148,21 @@ class GraphDecorator {
     return N<false>(name);
   }
 
+  inline auto GetNode(const std::string& name) -> Node* {
+    ASSERT(!name.empty());
+    return GetNode(name.c_str());
+  }
+
+  inline auto HasNode(const char* name) -> bool {
+    ASSERT(name);
+    return GetNode(name) != nullptr;
+  }
+
+  inline auto HasNode(const std::string& name) -> bool {
+    ASSERT(!name.empty());
+    return HasNode(name.c_str());
+  }
+
   inline auto NewEdge(Node* from, Node* to, const char* name) -> Edge* {
     ASSERT(from);
     ASSERT(to);

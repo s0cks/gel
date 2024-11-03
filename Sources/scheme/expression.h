@@ -977,9 +977,9 @@ class LambdaExpr : public Expression {
 
  protected:
   ArgumentSet args_;
-  Expression* body_;
+  ExpressionList body_;
 
-  explicit LambdaExpr(const ArgumentSet& args, Expression* body) :
+  explicit LambdaExpr(const ArgumentSet& args, const ExpressionList& body) :
     Expression(),
     args_(args),
     body_(body) {}
@@ -991,20 +991,24 @@ class LambdaExpr : public Expression {
     return args_;
   }
 
-  auto GetBody() const -> Expression* {
+  auto GetBody() const -> const ExpressionList& {
     return body_;
   }
 
-  inline auto HasBody() const -> bool {
-    return GetBody() != nullptr;
+  inline auto IsEmpty() const -> bool {
+    return body_.empty();
   }
 
   auto VisitChildren(ExpressionVisitor* vis) -> bool override;
   DECLARE_EXPRESSION(LambdaExpr);
 
  public:
-  static inline auto New(const ArgumentSet& args, Expression* body) -> LambdaExpr* {
+  static inline auto New(const ArgumentSet& args, const ExpressionList& body = {}) -> LambdaExpr* {
     return new LambdaExpr(args, body);
+  }
+
+  static inline auto New(const ArgumentSet& args, Expression* body) -> LambdaExpr* {
+    return New(args, ExpressionList{body});
   }
 };
 

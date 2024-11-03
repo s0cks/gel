@@ -117,6 +117,7 @@ class Runtime : public ExecutionStack {
   }
 
   inline auto PushScope() -> LocalScope* {
+    // DLOG(INFO) << "push scope.";
     ASSERT(HasScope());
     const auto new_scope = LocalScope::New(GetScope());
     ASSERT(new_scope);
@@ -125,7 +126,7 @@ class Runtime : public ExecutionStack {
   }
 
   inline void PopScope() {
-    ASSERT(HasScope());
+    // DLOG(INFO) << "pop scope.";
     const auto curr_scope = GetScope();
     ASSERT(curr_scope);
     ASSERT(curr_scope->HasParent());

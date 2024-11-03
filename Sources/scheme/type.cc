@@ -7,6 +7,7 @@
 
 #include "scheme/common.h"
 #include "scheme/expression.h"
+#include "scheme/native_procedure.h"
 
 namespace scm {
 void Type::Init() {
@@ -280,6 +281,9 @@ auto PrintValue(std::ostream& stream, Type* value) -> std::ostream& {
     return stream << '"' << value->AsString()->Get() << '"';
   } else if (value->IsSymbol()) {
     return stream << value->AsSymbol()->Get();
+  } else if (value->IsNativeProcedure()) {
+    stream << "NativeProcedure #" << value->AsNativeProcedure()->GetSymbol()->Get();
+    return stream;
   } else if (value->IsPair()) {
     stream << "(";
     PrintValue(stream, value->AsPair()->GetCar()) << ", ";

@@ -10,323 +10,281 @@
 #include "scheme/common.h"
 #include "scheme/expression.h"
 #include "scheme/flow_graph.h"
+#include "scheme/flow_graph_builder.h"
 #include "scheme/gv.h"
 #include "scheme/instruction.h"
 
 namespace scm {
-class DotVisitor : public InstructionVisitor, dot::GraphDecorator {
-  using InstrNode = std::pair<Instruction*, Node*>;
-  DEFINE_NON_COPYABLE_TYPE(DotVisitor);
+namespace dot {
+auto EffectVisitor::VisitGraphEntryInstr(instr::GraphEntryInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto node = Append(instr);
+  ASSERT(node);
+  return true;
+}
 
- private:
-  FlowGraphToDotGraph* owner_ = nullptr;
-  NodeList nodes_{};
-  Node* entry_node_ = nullptr;
-  Node* exit_node_ = nullptr;
-  EntryInstr* block_ = nullptr;
+auto EffectVisitor::VisitTargetEntryInstr(instr::TargetEntryInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto node = Append(instr);
+  ASSERT(node);
+  return true;
+}
 
-  inline void SetBlock(EntryInstr* blk) {
-    ASSERT(blk);
-    block_ = blk;
+auto EffectVisitor::VisitJoinEntryInstr(instr::JoinEntryInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto node = Append(instr);
+  ASSERT(node);
+  return true;
+}
+
+auto EffectVisitor::VisitGotoInstr(instr::GotoInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto node = Append(instr);
+  ASSERT(node);
+
+  const auto target = instr->GetTarget();
+  ASSERT(target);
+  BlockVisitor for_target(GetOwner());
+  if (!target->Accept(&for_target)) {
+    LOG(ERROR) << "failed to visit goto target.";
+    return false;
   }
 
-  inline auto GetBlock() const -> EntryInstr* {
-    return block_;
+  if (for_target.HasEntry()) {
+    const auto edge_id = fmt::format("blk{}blk{}", GetCurrentBlock()->GetBlockId(), target->GetBlockId());
+    const auto edge = NewEdge(node, for_target.GetEntry(), edge_id.c_str());
+    ASSERT(edge);
   }
+  return true;
+}
 
-  inline auto HasBlock() const -> bool {
-    return GetBlock() != nullptr;
+auto EffectVisitor::VisitBranchInstr(instr::BranchInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto node = Append(instr);
+  ASSERT(node);
+
+  Node* join = nullptr;
+  if (SeenBlock(instr->GetJoin())) {
+    join = GetBlockNode(instr->GetJoin());
+  } else {
+    BlockVisitor for_join(GetOwner());
+    if (!instr->GetJoin()->Accept(&for_join))
+      return false;
+    join = for_join.GetEntry();
   }
+  ASSERT(join);
+  SetExit(node);  // TODO: fix, the Append above for the Join sets the exit to itself and we want the BranchInstr in this case
 
-  inline void SetEntryNode(Node* node) {
-    ASSERT(node);
-    entry_node_ = node;
-  }
-
-  inline auto GetEntryNode() const -> Node* {
-    return entry_node_;
-  }
-
-  inline auto HasEntryNode() const -> bool {
-    return GetEntryNode() != nullptr;
-  }
-
-  inline void SetExitNode(Node* node) {
-    ASSERT(node);
-    exit_node_ = node;
-  }
-
-  inline auto GetExitNode() const -> Node* {
-    return exit_node_;
-  }
-
-  inline auto HasExitNode() const -> bool {
-    return GetExitNode() != nullptr;
-  }
-
-  inline void SetOwner(FlowGraphToDotGraph* owner) {
-    ASSERT(owner);
-    owner_ = owner;
-  }
-
-  inline auto CreateNode() -> Node* {
-    const auto node_id = fmt::format("b{0:d}n{1:d}", GetBlock()->GetBlockId(), nodes_.size() + 1);
-    const auto node = NewNode(node_id);
-    ASSERT(node);
-    nodes_.push_back(node);
-    return node;
-  }
-
-  inline auto CreateNode(Instruction* instr) -> Node* {
-    ASSERT(instr);
-    const auto node = CreateNode();
-    SetNodeLabel(node, instr->GetName());
-    return node;
-  }
-
-  inline void Append(Node* node, const bool create_edge = true) {
-    ASSERT(node);
-    if (!HasEntryNode()) {
-      SetEntryNode(node);
-      SetExitNode(node);
-      return;
+  {
+    // true
+    const auto target = instr->GetTrueTarget();
+    ASSERT(target);
+    BlockVisitor for_true(GetOwner());
+    if (!target->Accept(&for_true))
+      return false;
+    if (for_true.HasEntry()) {
+      const auto edge_id = fmt::format("blk{}blk{}", GetCurrentBlock()->GetBlockId(), target->GetBlockId());
+      const auto edge = NewEdge(GetExit(), for_true.GetEntry(), edge_id.c_str());
+      ASSERT(edge);
+      SetEdgeLabel(edge, "#t");
     }
-
-    if (HasExitNode() && create_edge) {
-      const auto previous = GetExitNode();
-      const auto edge = NewEdge(previous, node, "");
+    if (for_true.HasExit() && join) {
+      const auto edge_id = fmt::format("blk{}blk{}", target->GetBlockId(), instr->GetJoin()->GetBlockId());
+      const auto edge = NewEdge(for_true.GetExit(), join, edge_id.c_str());
       ASSERT(edge);
     }
-    SetExitNode(node);
   }
 
-  inline auto Append(Instruction* instr, const bool create_edge = true) -> Node* {
-    ASSERT(instr);
-    const auto node = CreateNode(instr);
-    ASSERT(node);
-    Append(node, create_edge);
-    return node;
+  {
+    // false
+    const auto target = instr->GetFalseTarget();
+    BlockVisitor for_false(GetOwner());
+    if (target && !target->Accept(&for_false))
+      return false;
+    if (for_false.HasEntry()) {
+      const auto edge_id = fmt::format("blk{}blk{}", GetCurrentBlock()->GetBlockId(), target->GetBlockId());
+      const auto edge = NewEdge(GetExit(), for_false.GetEntry(), edge_id.c_str());
+      ASSERT(edge);
+      SetEdgeLabel(edge, "#f");
+    }
+    if (for_false.HasExit()) {
+      const auto edge_id = fmt::format("blk{}blk{}", target->GetBlockId(), instr->GetJoin()->GetBlockId());
+      const auto edge = NewEdge(for_false.GetExit(), join, edge_id.c_str());
+      ASSERT(edge);
+    }
+
+    if (!target && !instr->HasNext() && join) {
+      const auto edge_id = fmt::format("blk{}blk{}", GetCurrentBlock()->GetBlockId(), instr->GetJoin()->GetBlockId());
+      const auto edge = NewEdge(node, join, edge_id.c_str());
+      ASSERT(edge);
+    }
   }
 
- public:
-  explicit DotVisitor(FlowGraphToDotGraph* owner, Agraph_t* graph) :
-    InstructionVisitor(),
-    dot::GraphDecorator(graph) {
-    SetOwner(owner);
-  }
-  ~DotVisitor() override = default;
+  BlockVisitor for_join(GetOwner());
+  if (!instr->GetJoin()->Accept(&for_join))
+    return false;
 
-  auto GetOwner() const -> FlowGraphToDotGraph* {
-    return owner_;
-  }
+  SetExit(node);
+  return true;
+}
 
-  auto VisitGraphEntryInstr(GraphEntryInstr* instr) -> bool override {
-    ASSERT(instr);
-    SetBlock(instr);
-    Append(instr);
-    if (!instr->HasNext())
-      return true;
-    const auto next = instr->GetNext();
+auto EffectVisitor::VisitLoadVariableInstr(instr::LoadVariableInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto node = Append(instr);
+  ASSERT(node);
+  return true;
+}
+
+auto EffectVisitor::VisitStoreVariableInstr(instr::StoreVariableInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto node = Append(instr);
+  ASSERT(node);
+  return true;
+}
+
+auto EffectVisitor::VisitUnaryOpInstr(instr::UnaryOpInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto node = Append(instr);
+  ASSERT(node);
+  return true;
+}
+
+auto EffectVisitor::VisitBinaryOpInstr(instr::BinaryOpInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto node = Append(instr);
+  ASSERT(node);
+  std::stringstream label;
+  label << instr->GetName() << std::endl;
+  label << "Op: " << instr->GetOp();
+  SetNodeLabel(node, label);
+  return true;
+}
+
+auto EffectVisitor::VisitConsInstr(instr::ConsInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto node = Append(instr);
+  ASSERT(node);
+  return true;
+}
+
+auto EffectVisitor::VisitEvalInstr(instr::EvalInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto node = Append(instr);
+  ASSERT(node);
+  return true;
+}
+
+auto EffectVisitor::VisitInvokeInstr(instr::InvokeInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto node = Append(instr);
+  ASSERT(node);
+  return true;
+}
+
+auto EffectVisitor::VisitInvokeDynamicInstr(instr::InvokeDynamicInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto node = Append(instr);
+  ASSERT(node);
+  return true;
+}
+
+auto EffectVisitor::VisitInvokeNativeInstr(instr::InvokeNativeInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto node = Append(instr);
+  ASSERT(node);
+  return true;
+}
+
+auto EffectVisitor::VisitReturnInstr(instr::ReturnInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto node = Append(instr);
+  ASSERT(node);
+  return true;
+}
+
+auto EffectVisitor::VisitThrowInstr(instr::ThrowInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto node = Append(instr);
+  ASSERT(node);
+  return true;
+}
+
+auto EffectVisitor::VisitInstanceOfInstr(instr::InstanceOfInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto node = Append(instr);
+  ASSERT(node);
+  return true;
+}
+
+auto EffectVisitor::VisitConstantInstr(instr::ConstantInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto node = Append(instr);
+  ASSERT(node);
+  std::stringstream label;
+  label << instr->GetName() << std::endl;
+  label << "Value := ";
+  PrintValue(label, instr->GetValue());
+  SetNodeLabel(node, label);
+  return true;
+}
+
+auto BlockVisitor::VisitGraphEntryInstr(instr::GraphEntryInstr* instr) -> bool {
+  ASSERT(instr);
+  GetOwner()->SetBlock(instr);
+  if (!EffectVisitor::VisitGraphEntryInstr(instr))
+    return false;
+  ASSERT(instr && instr->HasNext() && instr->GetNext()->IsTargetEntryInstr());
+  const auto target = instr->GetNext()->AsTargetEntryInstr();
+
+  BlockVisitor for_target_effect(GetOwner());
+  if (!target->Accept(&for_target_effect))
+    return false;
+
+  if (for_target_effect.HasEntry()) {
+    const auto edge_id = fmt::format("blk{}blk{}", instr->GetBlockId(), target->GetBlockId());
+    const auto edge = NewEdge(GetExit(), for_target_effect.GetEntry(), edge_id.c_str());
+    ASSERT(edge);
+  }
+  return true;
+}
+
+auto BlockVisitor::VisitTargetEntryInstr(instr::TargetEntryInstr* instr) -> bool {
+  ASSERT(instr);
+  if (SeenBlock(instr))
+    return true;
+
+  GetOwner()->SetBlock(instr);
+  if (!EffectVisitor::VisitTargetEntryInstr(instr))
+    return false;
+
+  instr::InstructionIterator iter(instr->GetFirstInstruction());
+  while (iter.HasNext()) {
+    const auto next = iter.Next();
     ASSERT(next);
-
-    DotVisitor vis(GetOwner(), GetGraph());
-    if (!next->Accept(&vis))
+    if (!next->Accept(this))
       return false;
-
-    if (HasExitNode() && vis.HasEntryNode()) {
-      const auto edge_id = fmt::format("blk{0:d}blk{1:d}", GetBlock()->GetBlockId(), vis.GetBlock()->GetBlockId());
-      const auto edge = NewEdge(GetExitNode(), vis.GetEntryNode(), edge_id.c_str());
-      ASSERT(edge);
-    }
-
-    SetExitNode(vis.GetExitNode());
-    return true;
   }
+  return true;
+}
 
-  auto VisitTargetEntryInstr(TargetEntryInstr* instr) -> bool override {
-    ASSERT(instr);
-    SetBlock(instr);
-    Append(instr);
-    InstructionIterator iter(instr->GetNext());
-    while (iter.HasNext()) {
-      const auto next = iter.Next();
-      ASSERT(next);
-      if (!next->Accept(this))
-        return false;
-    }
+auto BlockVisitor::VisitJoinEntryInstr(instr::JoinEntryInstr* instr) -> bool {
+  ASSERT(instr);
+  if (SeenBlock(instr))
     return true;
-  }
 
-  auto VisitJoinEntryInstr(JoinEntryInstr* instr) -> bool override {
-    ASSERT(instr);
-    SetBlock(instr);
-    Append(instr);
-    InstructionIterator iter(instr->GetNext());
-    while (iter.HasNext()) {
-      const auto next = iter.Next();
-      ASSERT(next);
-      if (!next->Accept(this))
-        return false;
-    }
-    return true;
-  }
-
-  auto VisitConstantInstr(ConstantInstr* instr) -> bool override {
-    ASSERT(instr);
-    const auto node = Append(instr);
-    ASSERT(node);
-    std::stringstream label;
-    label << instr->GetName() << std::endl;
-    label << "Value := ";
-    PrintValue(label, instr->GetValue());
-    SetNodeLabel(node, label);
-    return true;
-  }
-
-  auto VisitConsInstr(ConsInstr* instr) -> bool override {
-    ASSERT(instr);
-    Append(instr);
-    return true;
-  }
-
-  auto VisitInstanceOfInstr(InstanceOfInstr* instr) -> bool override {
-    ASSERT(instr);
-    Append(instr);
-    return true;
-  }
-
-  auto VisitReturnInstr(ReturnInstr* instr) -> bool override {
-    ASSERT(instr);
-    Append(instr);
-    return true;
-  }
-
-  auto VisitBinaryOpInstr(BinaryOpInstr* instr) -> bool override {
-    ASSERT(instr);
-    const auto node = Append(instr);
-    ASSERT(node);
-    std::stringstream label;
-    label << instr->GetName() << std::endl;
-    label << "Op: " << instr->GetOp();
-    SetNodeLabel(node, label);
-    return true;
-  }
-
-  auto VisitLoadVariableInstr(LoadVariableInstr* instr) -> bool override {
-    ASSERT(instr);
-    const auto node = Append(instr);
-    ASSERT(node);
-    const auto symbol = instr->GetSymbol();
-    ASSERT(symbol);
-    std::stringstream label;
-    label << instr->GetName() << std::endl;
-    label << "Symbol := " << symbol->Get();
-    SetNodeLabel(node, label);
-    return true;
-  }
-
-  auto VisitStoreVariableInstr(StoreVariableInstr* instr) -> bool override {
-    ASSERT(instr);
-    const auto node = Append(instr);
-    ASSERT(node);
-    const auto symbol = instr->GetSymbol();
-    ASSERT(symbol);
-    std::stringstream label;
-    label << instr->GetName() << std::endl;
-    label << "Symbol := " << symbol->Get();
-    SetNodeLabel(node, label);
-    return true;
-  }
-
-  auto VisitGotoInstr(GotoInstr* instr) -> bool override {
-    ASSERT(instr);
-    Append(instr);
-    return true;
-  }
-
-  auto VisitEvalInstr(EvalInstr* instr) -> bool override {
-    ASSERT(instr);
-    Append(instr);
-    return true;
-  }
-
-  auto VisitThrowInstr(ThrowInstr* instr) -> bool override {
-    ASSERT(instr);
-    Append(instr);
-    return true;
-  }
-
-  auto VisitInvokeNativeInstr(InvokeNativeInstr* instr) -> bool override {
-    ASSERT(instr);
-    Append(instr);
-    return true;
-  }
-
-  auto VisitInvokeInstr(InvokeInstr* instr) -> bool override {
-    ASSERT(instr);
-    Append(instr);
-    return true;
-  }
-
-  auto VisitUnaryOpInstr(UnaryOpInstr* instr) -> bool override {
-    ASSERT(instr);
-    Append(instr);
-    return true;
-  }
-
-  auto VisitBranchInstr(BranchInstr* instr) -> bool override {
-    ASSERT(instr);
-    const auto blk_id = GetBlock()->GetBlockId();
-    const auto branch = Append(instr);
-    ASSERT(branch);
-
-    DotVisitor for_true(GetOwner(), GetGraph());
-    if (!instr->GetTrueTarget()->Accept(&for_true))
+  GetOwner()->SetBlock(instr);
+  if (!EffectVisitor::VisitJoinEntryInstr(instr))
+    return false;
+  instr::InstructionIterator iter(instr->GetFirstInstruction());
+  while (iter.HasNext()) {
+    const auto next = iter.Next();
+    ASSERT(next);
+    if (!next->Accept(this))
       return false;
-    if (for_true.HasEntryNode()) {
-      const auto edge_id = fmt::format("blk{0:d}blk{1:d}", GetBlock()->GetBlockId(), for_true.GetBlock()->GetBlockId());
-      const auto edge = NewEdge(GetExitNode(), for_true.GetEntryNode(), edge_id.c_str());
-      ASSERT(edge);
-      SetEdgeLabel(edge, "is true");
-    }
-
-    DotVisitor for_false(GetOwner(), GetGraph());
-    if (instr->HasFalseTarget()) {
-      if (!instr->GetFalseTarget()->Accept(&for_false))
-        return false;
-      if (for_false.HasEntryNode()) {
-        const auto edge_id = fmt::format("blk{0:d}blk{1:d}", GetBlock()->GetBlockId(), for_false.GetBlock()->GetBlockId());
-        DLOG(INFO) << "false edge_id: " << edge_id;
-        const auto edge = NewEdge(GetExitNode(), for_false.GetEntryNode(), edge_id.c_str());
-        ASSERT(edge);
-        SetEdgeLabel(edge, "is false");
-      }
-    }
-
-    DotVisitor join(GetOwner(), GetGraph());
-    if (!instr->GetJoin()->Accept(&join))
-      return false;
-
-    if (join.HasEntryNode()) {
-      if (for_true.HasExitNode()) {
-        const auto edge_id = fmt::format("blk{0:d}blk{1:d}", for_true.GetBlock()->GetBlockId(), join.GetBlock()->GetBlockId());
-        const auto edge = NewEdge(for_true.GetExitNode(), join.GetEntryNode(), edge_id.c_str());
-        ASSERT(edge);
-      }
-
-      if (for_false.HasExitNode()) {
-        const auto edge_id = fmt::format("blk{0:d}blk{1:d}", for_false.GetBlock()->GetBlockId(), join.GetBlock()->GetBlockId());
-        const auto edge = NewEdge(for_false.GetExitNode(), join.GetEntryNode(), edge_id.c_str());
-        ASSERT(edge);
-      } else {
-        const auto edge_id = fmt::format("blk{0:d}blk{1:d}", blk_id, join.GetBlock()->GetBlockId());
-        const auto edge = NewEdge(branch, join.GetEntryNode(), edge_id.c_str());
-        ASSERT(edge);
-      }
-    }
-    return true;
   }
-};
+  return true;
+}
+}  // namespace dot
 
 auto FlowGraphToDotGraph::Build() -> dot::Graph* {
   const auto flow_graph = GetFlowGraph();
@@ -338,11 +296,8 @@ auto FlowGraphToDotGraph::Build() -> dot::Graph* {
   SetNodeAttr("width", "1.5");
   const auto graph_entry = flow_graph->GetEntry();
   ASSERT(graph_entry);
-  DotVisitor vis(this, GetGraph());
-  if (!graph_entry->Accept(&vis)) {
-    LOG(ERROR) << "failed to visit: " << graph_entry;
-    return nullptr;
-  }
+  dot::BlockVisitor vis(this);
+  LOG_IF(FATAL, !graph_entry->Accept(&vis)) << "failed to visit: " << graph_entry->ToString();
   return dot::Graph::New(this);
 }
 }  // namespace scm

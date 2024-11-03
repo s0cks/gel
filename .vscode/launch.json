@@ -23,7 +23,8 @@
       "id": "target-script",
       "type": "pickString",
       "options": [
-        "factorial.cl"
+        "factorial.cl",
+        "countdown.cl",
       ],
       "default": "while.cl",
       "description": "A value that is even."
@@ -117,6 +118,8 @@
         "-colorlogtostdout",
         "--reports-dir", "${workspaceFolder}/reports",
         "--module-dir", "${workspaceFolder}/scm",
+        "--dump-ast",
+        "--dump-flow-graph",
         "-v=${input:verbose-level}"
       ],
       "cwd": "${workspaceFolder}",

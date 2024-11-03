@@ -30,7 +30,7 @@ class CompiledExpression : public Procedure {
     return GetEntry() != nullptr;
   }
 
-  auto Apply(Runtime* state) const -> bool override;
+  auto Apply(Runtime* state) -> bool override;
   DECLARE_TYPE(CompiledExpression);
 
  public:

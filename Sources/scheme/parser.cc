@@ -177,7 +177,14 @@ auto Parser::ParseLambdaExpr() -> LambdaExpr* {
     return nullptr;
   }
   ExpectNext(Token::kRParen);
-  return LambdaExpr::New(args, ParseExpression());
+  PushScope();
+  ExpressionList body;
+  if (!ParseExpressionList(body)) {
+    LOG(FATAL) << "failed to parse lambda body.";
+    return nullptr;
+  }
+  PopScope();
+  return LambdaExpr::New(args, body);
 }
 
 auto Parser::ParseSetExpr() -> SetExpr* {
@@ -377,8 +384,14 @@ auto Parser::ParseDefunExpr() -> LocalDef* {
     return nullptr;
   }
   ExpectNext(Token::kRParen);
-  const auto body = ParseExpression();
-  ASSERT(body);
+
+  PushScope();
+  ExpressionList body;
+  if (!ParseExpressionList(body)) {
+    LOG(FATAL) << "failed to parse lambda body.";
+    return nullptr;
+  }
+  PopScope();
   return LocalDef::New(symbol, LambdaExpr::New(args, body));
 }
 

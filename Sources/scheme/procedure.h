@@ -29,7 +29,7 @@ class Procedure : public Type {
     return false;
   }
 
-  virtual auto Apply(Runtime* state) const -> bool = 0;
+  virtual auto Apply(Runtime* state) -> bool = 0;
 };
 
 static inline auto IsProcedure(Type* rhs) -> bool {

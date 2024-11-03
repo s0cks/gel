@@ -10,11 +10,8 @@ auto NativeProcedure::ReturnValue(Type* rhs) const -> bool {
 }
 
 auto NativeProcedure::Apply(const std::vector<Type*>& rhs) const -> bool {
-  GetRuntime()->PushScope();
-  if (!ApplyProcedure(rhs))
-    return false;
-  GetRuntime()->PopScope();
-  return true;
+  const auto result = ApplyProcedure(rhs);
+  return result;
 }
 
 auto NativeProcedure::Equals(Type* rhs) const -> bool {

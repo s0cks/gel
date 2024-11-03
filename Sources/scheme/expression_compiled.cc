@@ -3,7 +3,7 @@
 #include "scheme/runtime.h"
 
 namespace scm {
-auto CompiledExpression::Apply(Runtime* state) const -> bool {
+auto CompiledExpression::Apply(Runtime* state) -> bool {
   ASSERT(state);
   ASSERT(HasEntry());
   return state->Execute(GetEntry());

@@ -180,10 +180,10 @@ auto CondExpr::ToString() const -> std::string {
 
 auto LambdaExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
   ASSERT(vis);
-  if (!HasBody())
-    return true;
-  if (!GetBody()->Accept(vis))
-    return false;
+  for (const auto& expr : body_) {
+    if (!expr->Accept(vis))
+      return false;
+  }
   return true;
 }
 
@@ -191,8 +191,8 @@ auto LambdaExpr::ToString() const -> std::string {
   std::stringstream ss;
   ss << GetName() << "(";
   ss << "args=" << GetArgs();
-  if (HasBody())
-    ss << ", body=" << GetBody()->ToString();
+  if (!IsEmpty())
+    ss << ", body=" << GetBody();
   ss << ")";
   return ss.str();
 }

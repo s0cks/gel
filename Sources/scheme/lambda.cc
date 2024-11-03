@@ -13,11 +13,12 @@
 #include "scheme/runtime.h"
 
 namespace scm {
-Lambda::Lambda(const ArgumentSet& args, expr::Expression* body) :
+Lambda::Lambda(const ArgumentSet& args, expr::LambdaExpr* expr) :
   Procedure(),
   args_(args),
-  body_(body),
-  expr_(ExpressionCompiler::Compile(body)) {}
+  expr_(expr) {
+  ASSERT(expr_);
+}
 
 auto Lambda::Equals(Type* rhs) const -> bool {
   if (!rhs->IsLambda())
@@ -26,23 +27,26 @@ auto Lambda::Equals(Type* rhs) const -> bool {
   return false;
 }
 
-auto Lambda::Apply(Runtime* runtime) const -> bool {
-  const auto scope = GetRuntime()->PushScope();
+auto Lambda::Apply(Runtime* runtime) -> bool {
+  if (expr_) {
+    compiled_ = ExpressionCompiler::Compile(expr::BeginExpr::New(expr_->GetBody()));
+  }
+  LOG_IF(FATAL, !compiled_) << "cannot exec uncompiled lambda: " << ToString();
   for (const auto& arg : std::ranges::reverse_view(GetArgs())) {
     const auto value = runtime->Pop();
     ASSERT(value);
-    if (!scope->Add(Symbol::New(arg.GetName()), value)) {
+    if (!runtime->GetScope()->Add(Symbol::New(arg.GetName()), value)) {
       LOG(ERROR) << "failed to define argument value.";
+      GetRuntime()->PopScope();
       return false;
     }
   }
 
-  const auto result = runtime->Execute(expr_->GetEntry());
-  GetRuntime()->PopScope();
-  if (!result) {
-    DLOG(WARNING) << "no result from lambda.";
+  runtime->PushScope();
+  const auto result = runtime->Execute(compiled_->GetEntry());
+  runtime->PopScope();
+  if (!result)
     return true;
-  }
   runtime->Push(result);
   return true;
 }
@@ -51,7 +55,7 @@ auto Lambda::ToString() const -> std::string {
   std::stringstream ss;
   ss << "Lambda(";
   ss << "args=" << GetArgs() << ", ";
-  ss << "body=" << GetBody()->ToString();
+  ss << "expr=" << GetExpression()->ToString();
   ss << ")";
   return ss.str();
 }

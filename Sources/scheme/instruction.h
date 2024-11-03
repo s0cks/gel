@@ -27,6 +27,7 @@ namespace instr {
   V(TargetEntryInstr)           \
   V(JoinEntryInstr)             \
   V(InvokeInstr)                \
+  V(InvokeDynamicInstr)         \
   V(InvokeNativeInstr)          \
   V(ReturnInstr)                \
   V(BranchInstr)                \
@@ -417,6 +418,41 @@ class InvokeInstr : public Definition {
   }
 };
 
+class InvokeDynamicInstr : public Definition {
+ private:
+  Definition* target_;
+  uint64_t num_args_;
+
+ protected:
+  explicit InvokeDynamicInstr(Definition* target, uint64_t num_args) :
+    Definition(),
+    target_(target),
+    num_args_(num_args) {
+    ASSERT(target_);
+    ASSERT(num_args_ >= 0);
+  }
+
+ public:
+  ~InvokeDynamicInstr() override = default;
+
+  auto GetTarget() const -> Definition* {
+    return target_;
+  }
+
+  auto GetNumberOfArgs() const -> uint64_t {
+    return num_args_;
+  }
+
+  DECLARE_INSTRUCTION(InvokeDynamicInstr);
+
+ public:
+  static inline auto New(Definition* target, const uint64_t num_args) -> InvokeDynamicInstr* {
+    ASSERT(target);
+    ASSERT(num_args >= 0);
+    return new InvokeDynamicInstr(target, num_args);
+  }
+};
+
 class InvokeNativeInstr : public Definition {
  private:
   Definition* target_;
@@ -569,16 +605,16 @@ class UnaryOpInstr : public Definition {
   }
 };
 
-class BranchInstr : public Definition {
+class BranchInstr : public Instruction {
  private:
   Definition* test_ = nullptr;
-  TargetEntryInstr* true_target_ = nullptr;
-  TargetEntryInstr* false_target_ = nullptr;
+  EntryInstr* true_target_ = nullptr;
+  EntryInstr* false_target_ = nullptr;
   JoinEntryInstr* join_ = nullptr;
 
  protected:
-  explicit BranchInstr(Definition* test, TargetEntryInstr* true_target, TargetEntryInstr* false_target, JoinEntryInstr* join) :
-    Definition() {
+  explicit BranchInstr(Definition* test, EntryInstr* true_target, EntryInstr* false_target, JoinEntryInstr* join) :
+    Instruction() {
     SetTest(test);
     SetTrueTarget(true_target);
     if (false_target)
@@ -591,12 +627,12 @@ class BranchInstr : public Definition {
     test_ = test;
   }
 
-  inline void SetTrueTarget(TargetEntryInstr* target) {
+  inline void SetTrueTarget(EntryInstr* target) {
     ASSERT(target);
     true_target_ = target;
   }
 
-  inline void SetFalseTarget(TargetEntryInstr* target) {
+  inline void SetFalseTarget(EntryInstr* target) {
     ASSERT(target);
     false_target_ = target;
   }
@@ -613,11 +649,11 @@ class BranchInstr : public Definition {
     return test_;
   }
 
-  auto GetTrueTarget() const -> TargetEntryInstr* {
+  auto GetTrueTarget() const -> EntryInstr* {
     return true_target_;
   }
 
-  auto GetFalseTarget() const -> TargetEntryInstr* {
+  auto GetFalseTarget() const -> EntryInstr* {
     return false_target_;
   }
 
@@ -636,11 +672,17 @@ class BranchInstr : public Definition {
   DECLARE_INSTRUCTION(BranchInstr);
 
  public:
-  static inline auto New(Definition* test, TargetEntryInstr* true_target, TargetEntryInstr* false_target = nullptr,
-                         JoinEntryInstr* join = nullptr) -> BranchInstr* {
+  static inline auto New(Definition* test, EntryInstr* true_target, EntryInstr* false_target, JoinEntryInstr* join)
+      -> BranchInstr* {
     ASSERT(test);
     ASSERT(true_target);
     return new BranchInstr(test, true_target, false_target, join);
+  }
+
+  static inline auto New(Definition* test, EntryInstr* true_target, JoinEntryInstr* join) -> BranchInstr* {
+    ASSERT(test);
+    ASSERT(true_target);
+    return New(test, true_target, nullptr, join);
   }
 };
 

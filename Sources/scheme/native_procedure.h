@@ -36,7 +36,7 @@ class NativeProcedure : public Procedure {
     return true;
   }
 
-  auto Apply(Runtime* runtime) const -> bool override {
+  auto Apply(Runtime* runtime) -> bool override {
     ASSERT(runtime);
     return ThrowError("Invalid State.");
   }

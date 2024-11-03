@@ -10,35 +10,36 @@
 
 namespace scm {
 namespace expr {
+class LambdaExpr;
 class Expression;
-}
+}  // namespace expr
 class Lambda : public Procedure {
  private:
   ArgumentSet args_;
-  expr::Expression* body_;
-  CompiledExpression* expr_ = nullptr;
+  expr::LambdaExpr* expr_;
+  CompiledExpression* compiled_ = nullptr;
 
  protected:
-  explicit Lambda(const ArgumentSet& args, expr::Expression* body);
+  explicit Lambda(const ArgumentSet& args, expr::LambdaExpr* body);
 
  public:
   auto GetArgs() const -> const ArgumentSet& {
     return args_;
   }
 
-  auto GetBody() const -> expr::Expression* {
-    return body_;
+  auto GetExpression() const -> expr::LambdaExpr* {
+    return expr_;
   }
 
   auto GetNumberOfArgs() const -> uint64_t {
     return args_.size();
   }
 
-  auto Apply(Runtime* state) const -> bool override;
+  auto Apply(Runtime* state) -> bool override;
   DECLARE_TYPE(Lambda);
 
  public:
-  static inline auto New(const ArgumentSet& args, expr::Expression* body) -> Lambda* {
+  static inline auto New(const ArgumentSet& args, expr::LambdaExpr* body) -> Lambda* {
     return new Lambda(args, body);
   }
 };

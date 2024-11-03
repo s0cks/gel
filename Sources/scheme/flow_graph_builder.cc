@@ -10,6 +10,7 @@
 #include "scheme/macro_compiler.h"
 #include "scheme/native_procedure.h"
 #include "scheme/procedure.h"
+#include "scheme/type.h"
 
 namespace scm {
 static inline auto AppendFragment(EntryInstr* entry, EffectVisitor& vis) -> Instruction* {
@@ -27,14 +28,13 @@ auto FlowGraphBuilder::BuildGraph() -> FlowGraph* {
   const auto target_entry = TargetEntryInstr::New(GetNextBlockId());
   ASSERT(target_entry);
   SetCurrentBlock(target_entry);
-  ValueVisitor for_effect(this);
+  EffectVisitor for_effect(this);
   if (!GetExpr()->Accept(&for_effect)) {
     LOG(ERROR) << "failed to visit: " << GetExpr()->ToString();
     return nullptr;  // TODO: free entry
   }
+  for_effect.AddImplicitReturn();
   AppendFragment(target_entry, for_effect);
-  if (for_effect.HasValue())
-    target_entry->Append(ReturnInstr::New(for_effect.GetValue()));  // NOLINT
   SetGraphEntry(graph_entry);
   graph_entry->Append(target_entry);
   graph_entry->AddDominated(target_entry);
@@ -159,44 +159,32 @@ auto EffectVisitor::VisitCaseExpr(expr::CaseExpr* expr) -> bool {
   const auto join = JoinEntryInstr::New(GetOwner()->GetNextBlockId());
   ASSERT(join);
 
-  ValueVisitor for_key(GetOwner());
-  if (!expr->GetKey()->Accept(&for_key)) {
-    return false;
-  }
-
-  auto remaining = expr->GetNumberOfClauses();
   for (const auto& clause : expr->GetClauses()) {
-    const auto target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
-    ASSERT(target);
-    for (const auto& action : clause->GetActions()) {
-      ASSERT(action);
-      ValueVisitor for_action(GetOwner());
-      if (!action->Accept(&for_action)) {
-        LOG(ERROR) << "failed to visit action for: " << expr->ToString();
-        return false;
-      }
-      if (--remaining <= 0)
-        for_action.AddImplicitReturn();
-      AppendFragment(target, for_action);
-    }
-    target->Append(GotoInstr::New(join));
-
-    ValueVisitor for_key(GetOwner());
-    if (!expr->GetKey()->Accept(&for_key)) {
+    ASSERT(clause);
+    EffectVisitor for_clause(GetOwner());
+    if (clause && !clause->Accept(&for_clause)) {
+      LOG(ERROR) << "failed to visit clause: " << clause->ToString();
       return false;
     }
+    for_clause.Add(GotoInstr::New(join));
 
     ValueVisitor for_test(GetOwner());
+    if (!expr->GetKey()->Accept(&for_test)) {
+      return false;
+    }
+    ASSERT(clause->GetKey());
     if (!clause->GetKey()->Accept(&for_test)) {
       LOG(ERROR) << "failed to visit test for cond: " << expr->ToString();
       return false;
     }
 
-    Append(for_test);
-    Append(for_key);
+    ASSERT(for_clause.GetEntryInstr() != nullptr && for_clause.GetEntryInstr()->IsEntryInstr());
+    const auto target = ((EntryInstr*)for_clause.GetEntryInstr());
     const auto cmp = instr::BinaryOpInstr::NewEquals();
-    Add(cmp);
-    Add(BranchInstr::New(cmp, target, nullptr, join));
+    for_test.Add(cmp);
+    const auto branch = BranchInstr::New(cmp, target, join);
+    for_test.Add(branch);
+    Append(for_test);
     GetOwner()->GetCurrentBlock()->AddDominated(target);
   }
 
@@ -207,7 +195,25 @@ auto EffectVisitor::VisitCaseExpr(expr::CaseExpr* expr) -> bool {
 
 auto EffectVisitor::VisitClauseExpr(expr::ClauseExpr* expr) -> bool {
   ASSERT(expr);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+
+  const auto target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
+  ASSERT(target);
+  Add(target);
+
+  auto remaining = expr->GetNumberOfActions();
+  for (const auto& action : expr->GetActions()) {
+    ASSERT(action);
+    EffectVisitor for_action(GetOwner());
+    if (!action->Accept(&for_action)) {
+      LOG(ERROR) << "failed to visit action for: " << expr->ToString();
+      return false;
+    }
+    if (--remaining <= 0)
+      for_action.AddImplicitReturn();
+    AppendFragment(target, for_action);
+    SetExitInstr(for_action.GetExitInstr());
+  }
+  GetOwner()->GetCurrentBlock()->AddDominated(target);
   return true;
 }
 
@@ -237,10 +243,9 @@ auto EffectVisitor::VisitWhenExpr(expr::WhenExpr* expr) -> bool {
   }
   Append(for_test);
 
-  const auto branch = BranchInstr::New(for_test.GetValue(), conseq_target, nullptr, join);
+  const auto branch = BranchInstr::New(for_test.GetValue(), conseq_target, join);
   ASSERT(branch);
-  ReturnDefinition(branch);
-  Instruction::Link(branch, join);
+  Add(branch);
   SetExitInstr(join);
   GetOwner()->GetCurrentBlock()->AddDominated(join);
   return true;
@@ -266,16 +271,13 @@ auto EffectVisitor::VisitWhileExpr(expr::WhileExpr* expr) -> bool {
   ASSERT(expr);
   const auto target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
   ASSERT(target);
+  Add(target);
+
+  const auto body_target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
+  ASSERT(body_target);
+
   const auto join = JoinEntryInstr::New(GetOwner()->GetNextBlockId());
   ASSERT(join);
-  for (const auto& expr : expr->GetBody()) {
-    EffectVisitor for_expr(GetOwner());
-    if (!expr->Accept(&for_expr)) {
-      LOG(ERROR) << "failed to visit action for: " << expr->ToString();
-      return false;
-    }
-    AppendFragment(target, for_expr);
-  }
 
   ValueVisitor for_test(GetOwner());
   if (!expr->GetTest()->Accept(&for_test)) {
@@ -283,15 +285,21 @@ auto EffectVisitor::VisitWhileExpr(expr::WhileExpr* expr) -> bool {
     return false;
   }
   AppendFragment(target, for_test);
-  const auto branch = BranchInstr::New(for_test.GetValue(), target, nullptr, join);
-  ASSERT(branch);
-  target->Append(branch);
-  GetOwner()->GetCurrentBlock()->AddDominated(target);
+  target->Append(BranchInstr::New(for_test.GetValue(), body_target, join));
 
-  Append(for_test);
+  EffectVisitor for_body(GetOwner());
+  for (const auto& expr : expr->GetBody()) {
+    if (!expr->Accept(&for_body)) {
+      LOG(ERROR) << "failed to visit action for: " << expr->ToString();
+      return false;
+    }
+  }
+  AppendFragment(body_target, for_body);
+  body_target->Append(instr::GotoInstr::New(target));
 
-  ReturnDefinition(branch);
   SetExitInstr(join);
+  GetOwner()->GetCurrentBlock()->AddDominated(target);
+  GetOwner()->GetCurrentBlock()->AddDominated(join);
   return true;
 }
 
@@ -317,8 +325,7 @@ auto EffectVisitor::VisitBeginExpr(BeginExpr* expr) -> bool {
   while (IsOpen() && (idx < expr->GetNumberOfChildren())) {
     const auto child = expr->GetChildAt(idx++);
     ASSERT(child);
-
-    ValueVisitor vis(GetOwner());
+    EffectVisitor vis(GetOwner());
     if (!child->Accept(&vis))
       break;
     Append(vis);
@@ -395,9 +402,9 @@ auto EffectVisitor::VisitCondExpr(CondExpr* expr) -> bool {
   Append(for_test);
 
   const auto branch = expr->HasAlternate() ? BranchInstr::New(for_test.GetValue(), conseq_target, alt_target, join)
-                                           : BranchInstr::New(for_test.GetValue(), conseq_target, nullptr, join);
+                                           : BranchInstr::New(for_test.GetValue(), conseq_target, join);
   ASSERT(branch);
-  ReturnDefinition(branch);
+  Add(branch);
   SetExitInstr(join);
 
   GetOwner()->GetCurrentBlock()->AddDominated(join);
@@ -405,7 +412,7 @@ auto EffectVisitor::VisitCondExpr(CondExpr* expr) -> bool {
 }
 
 auto EffectVisitor::VisitLambdaExpr(LambdaExpr* expr) -> bool {
-  const auto lambda = Lambda::New(expr->GetArgs(), expr->GetBody());
+  const auto lambda = Lambda::New(expr->GetArgs(), expr);
   ASSERT(lambda);
   ReturnDefinition(ConstantInstr::New(lambda));
   return true;
@@ -451,11 +458,12 @@ auto EffectVisitor::VisitLiteralExpr(LiteralExpr* p) -> bool {
       return true;
     }
     ASSERT(local);
-    if (!local->HasValue()) {
-      ReturnDefinition(instr::LoadVariableInstr::New(value->AsSymbol()));
+    if (local->HasValue() && local->GetValue()->IsNativeProcedure()) {
+      ReturnDefinition(ConstantInstr::New(local->GetValue()));
       return true;
     }
-    ReturnDefinition(ConstantInstr::New(local->GetValue()));
+    ReturnDefinition(instr::LoadVariableInstr::New(value->AsSymbol()));
+    return true;
   } else {
     ReturnDefinition(ConstantInstr::New(p->GetValue()));
   }

@@ -459,16 +459,15 @@ static inline auto Car(Type* rhs) -> Type* {
   ASSERT(rhs);
   if (rhs->IsPair())
     return rhs->AsPair()->GetCar();
-  LOG(FATAL) << rhs << " is not a Pair or List.";
-  return nullptr;
+  return Null::Get();
 }
 
 static inline auto Cdr(Type* rhs) -> Type* {
   ASSERT(rhs);
   if (rhs->IsPair())
     return rhs->AsPair()->GetCdr();
-  LOG(FATAL) << rhs << " is not a Pair or List.";
-  return nullptr;
+  LOG(ERROR) << rhs << " is not a Pair or List.";
+  return Null::Get();
 }
 
 static inline auto Truth(scm::Type* rhs) -> bool {

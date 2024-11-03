@@ -175,7 +175,7 @@ auto ModuleCompiler::CompileModule(expr::ModuleDef* expr) -> Module* {
 
 auto DefinitionValueVisitor::VisitLambdaExpr(expr::LambdaExpr* expr) -> bool {
   ASSERT(expr);
-  ReturnValue(Lambda::New(expr->GetArgs(), expr->GetBody()));
+  ReturnValue(Lambda::New(expr->GetArgs(), expr));
   return true;
 }
 }  // namespace scm

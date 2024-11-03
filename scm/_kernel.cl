@@ -42,18 +42,15 @@
       (* x (factorial (- x 1)))))
   ; foreach
   (defun foreach (f seq)
-    (begin
-      (define current seq)
-      (while (not (null? current))
-        (set! result (cons (f (car current)) result))
-        (set! current (cdr current)))
-      result))
+    (define current seq)
+    (while (not (null? current))
+      (f (car current))
+      (set! current (cdr current))))
   ; map
   (defun map (f seq)
-    (begin
-      (define result '())
-      (define current seq)
-      (while (not (null? current))
-        (set! result (cons (f (car current)) result))
-        (set! current (cdr current)))
-      result)))
+    (define result '())
+    (define current seq)
+    (while (not (null? current))
+      (set! result (cons (f (car current)) result))
+      (set! current (cdr current)))
+    result))
