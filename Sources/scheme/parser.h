@@ -116,6 +116,7 @@ class Parser {
   // Definitions
   auto ParseDefinition() -> expr::Definition*;
   auto ParseLocalDef() -> expr::LocalDef*;
+  auto ParseDefunExpr() -> expr::LocalDef*;
   auto ParseImportDef() -> expr::ImportDef*;
   auto ParseMacroDef() -> expr::MacroDef*;
 

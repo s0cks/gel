@@ -2,6 +2,7 @@
 
 #include <glog/logging.h>
 
+#include "scheme/argument.h"
 #include "scheme/common.h"
 #include "scheme/expression.h"
 #include "scheme/instruction.h"
@@ -365,6 +366,22 @@ auto Parser::ParseWhileExpr() -> expr::WhileExpr* {
   return expr::WhileExpr::New(test, body);
 }
 
+auto Parser::ParseDefunExpr() -> LocalDef* {
+  ExpectNext(Token::kDefun);
+  const auto symbol = ParseSymbol();
+  ASSERT(symbol);
+  ExpectNext(Token::kLParen);
+  ArgumentSet args;
+  if (!ParseArguments(args)) {
+    LOG(FATAL) << "failed to parse lambda arguments.";
+    return nullptr;
+  }
+  ExpectNext(Token::kRParen);
+  const auto body = ParseExpression();
+  ASSERT(body);
+  return LocalDef::New(symbol, LambdaExpr::New(args, body));
+}
+
 auto Parser::ParseLocalDef() -> LocalDef* {
   ExpectNext(Token::kLocalDef);
   const auto symbol = ParseSymbol();
@@ -415,6 +432,9 @@ auto Parser::ParseDefinition() -> expr::Definition* {
   expr::Definition* defn = nullptr;
   const auto& next = PeekToken();
   switch (next.kind) {
+    case Token::kDefun:
+      defn = ParseDefunExpr();
+      break;
     case Token::kLocalDef:
       defn = ParseLocalDef();
       break;
@@ -642,6 +662,8 @@ auto Parser::NextToken() -> const Token& {
       return NextToken(Token::kCaseExpr);
     else if (ident == "while")
       return NextToken(Token::kWhileExpr);
+    else if (ident == "defun")
+      return NextToken(Token::kDefun);
     return NextToken(Token::kIdentifier, ident);
   }
 

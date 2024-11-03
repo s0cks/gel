@@ -43,6 +43,7 @@ struct Position {
   V(Not)                      \
   V(And)                      \
   V(Or)                       \
+  V(Defun)                    \
   V(LessThan)                 \
   V(GreaterThan)              \
   V(LessThanEqual)            \

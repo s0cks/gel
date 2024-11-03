@@ -90,49 +90,6 @@ NATIVE_PROCEDURE_F(format) {
   return ReturnValue(String::New(result));
 }
 
-NATIVE_PROCEDURE_F(foreach) {
-  ASSERT(GetRuntime());
-  if (args.size() != 2)
-    return ThrowError("expected: (foreach func list)");
-  const auto f = args[0];
-  ASSERT(f);
-  if (!f->IsProcedure())
-    return ThrowError(fmt::format("expected {} to be a procedure.", f->ToString()));
-  DLOG(INFO) << "proc: " << f->ToString();
-
-  const auto values = args[1];
-  auto value = values;
-  do {
-    const auto result = GetRuntime()->Apply(f->AsProcedure(), {value});
-    DLOG_IF(INFO, result) << "result: " << result->ToString();
-    if (result)
-      return ReturnValue(result);
-  } while (true);
-  return ThrowError(fmt::format("{} is not implemented!", __PRETTY_FUNCTION__));
-}
-
-NATIVE_PROCEDURE_F(map) {
-  ASSERT(GetRuntime());
-  if (args.size() != 2)
-    return ThrowError("expected: (foreach func list)");
-  const auto f = args[0];
-  ASSERT(f);
-  if (!f->IsProcedure())
-    return ThrowError(fmt::format("expected {} to be a procedure.", f->ToString()));
-  DLOG(INFO) << "proc: " << f->ToString();
-
-  auto result = Symbol::New("()");
-  ASSERT(result);
-
-  const auto values = args[1];
-  auto value = values;
-  do {
-    const auto rhs = GetRuntime()->Apply(f->AsProcedure(), {value});
-    ASSERT(rhs);
-  } while (true);
-  return ReturnValue(result);
-}
-
 #ifdef SCM_DEBUG
 
 NATIVE_PROCEDURE_F(list_symbols) {
