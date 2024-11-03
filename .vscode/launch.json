@@ -23,9 +23,9 @@
       "id": "target-script",
       "type": "pickString",
       "options": [
-        "loop.cl"
+        "factorial.cl"
       ],
-      "default": "loop.cl",
+      "default": "while.cl",
       "description": "A value that is even."
     },
     {
@@ -350,27 +350,6 @@
       ]
     },
     {
-      "name": "Factorial",
-      "type": "lldb",
-      "request": "launch",
-      "program": "${workspaceFolder}/build/Sources/scm",
-      "args": [
-        "-logtostdout",
-        "-colorlogtostdout",
-        "--reports-dir", "${workspaceFolder}/reports",
-        "--module-dir", "${workspaceFolder}/scm",
-        "--nokernel",
-        "--dump-ast",
-        "--dump-flow-graph",
-        "-v=${input:verbose-level}",
-        "--expr", "(begin (define factorial (lambda (x) (cond (eq? x 1) 1 (* x (factorial (- x 1)))))) (define y ${input:factorial-value}) (print (format \"{}! equals: {}\" y (factorial y))))",
-      ],
-      "cwd": "${workspaceFolder}",
-      "initCommands": [
-        "command source ${workspaceFolder}/.lldbinit"
-      ]
-    },
-    {
       "name": "Run Script",
       "type": "lldb",
       "request": "launch",
@@ -380,7 +359,6 @@
         "-colorlogtostdout",
         "--reports-dir", "${workspaceFolder}/reports",
         "--module-dir", "${workspaceFolder}/scm",
-        "--nokernel",
         "-v=${input:verbose-level}",
         "${workspaceFolder}/scm/${input:target-script}"
       ],

@@ -6,6 +6,7 @@
   (define max (lambda (a b) (cond (> a b) a b)))
   (define min (lambda (a b) (cond (< a b) a b)))
   ; Types
+  (define null? (lambda (x) (eq? (type? x) "Null")))
   ; Numbers
   (define long? (lambda (x) (eq? (type? x) "Long")))
   (define double? (lambda (x) (eq? (type? x) "Double")))
@@ -22,15 +23,24 @@
   ; Misc
   (define pair? (lambda (x) (eq? (type? x) "Pair")))
   (define module? (lambda (x) (eq? (type? x) "Module")))
-
+  ; factorial
+  (define factorial (lambda (x)
+    (cond (eq? x 1) 1
+      (* x (factorial (- x 1))))))
   ; foreach
-  (define foreach (lambda (func seq)
-    (loop
-      (func (car seq))
-      (set! seq (cdr seq))
-      (when (null? seq)
-        (return)))))
-
+  (define _foreach (lambda (f seq)
+    (begin
+      (define current seq)
+      (while (not (null? current))
+        (set! result (cons (f (car current)) result))
+        (set! current (cdr current)))
+      result)))
   ; map
-  (define map (lambda (func seq)
-    (print "Unavailable"))))
+  (define _map (lambda (f seq)
+    (begin
+      (define result '())
+      (define current seq)
+      (while (not (null? current))
+        (set! result (cons (f (car current)) result))
+        (set! current (cdr current)))
+      result))))

@@ -292,7 +292,6 @@ auto EffectVisitor::VisitWhileExpr(expr::WhileExpr* expr) -> bool {
 
   ReturnDefinition(branch);
   SetExitInstr(join);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return true;
 }
 
