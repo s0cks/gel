@@ -1,8 +1,8 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
+#include "scheme/object.h"
 #include "scheme/scheme.h"
-#include "scheme/type.h"
 
 using namespace scm;
 
@@ -11,6 +11,6 @@ auto main(int argc, char** argv) -> int {
   ::testing::InitGoogleTest(&argc, argv);
   ::google::ParseCommandLineFlags(&argc, &argv, false);
   LOG(INFO) << "Running unit tests for scheme v" << scm::GetVersion() << "....";
-  Type::Init();
+  Object::Init();
   return RUN_ALL_TESTS();
 }

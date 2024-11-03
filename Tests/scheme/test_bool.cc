@@ -1,7 +1,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "scheme/type.h"
+#include "scheme/object.h"
 
 namespace scm {
 using namespace ::testing;

@@ -3,7 +3,7 @@
 
 #include <set>
 
-#include "scheme/type.h"
+#include "scheme/object.h"
 
 namespace scm {
 

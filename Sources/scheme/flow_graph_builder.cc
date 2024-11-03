@@ -9,8 +9,8 @@
 #include "scheme/local.h"
 #include "scheme/macro_compiler.h"
 #include "scheme/native_procedure.h"
+#include "scheme/object.h"
 #include "scheme/procedure.h"
-#include "scheme/type.h"
 
 namespace scm {
 static inline auto AppendFragment(EntryInstr* entry, EffectVisitor& vis) -> Instruction* {

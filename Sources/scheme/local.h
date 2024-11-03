@@ -5,7 +5,7 @@
 #include <string>
 #include <utility>
 
-#include "scheme/type.h"
+#include "scheme/object.h"
 
 namespace scm {
 class LocalVariable;
@@ -29,9 +29,9 @@ class LocalVariable {
   LocalScope* owner_;
   uint64_t index_;
   std::string name_;
-  Type* value_;
+  Object* value_;
 
-  LocalVariable(LocalScope* owner, uint64_t index, std::string name, Type* value = nullptr) :
+  LocalVariable(LocalScope* owner, uint64_t index, std::string name, Object* value = nullptr) :
     owner_(owner),
     index_(index),
     name_(std::move(name)),
@@ -51,7 +51,7 @@ class LocalVariable {
     name_ = name;
   }
 
-  void SetConstantValue(Type* value) {
+  void SetConstantValue(Object* value) {
     ASSERT(value);
     value_ = value;
   }
@@ -75,7 +75,7 @@ class LocalVariable {
     return name_;
   }
 
-  auto GetValue() const -> Type* {
+  auto GetValue() const -> Object* {
     return value_;
   }
 
@@ -83,7 +83,7 @@ class LocalVariable {
     return GetValue() != nullptr;
   }
 
-  inline void SetValue(Type* rhs) {
+  inline void SetValue(Object* rhs) {
     ASSERT(rhs);
     value_ = rhs;
   }
@@ -109,7 +109,7 @@ class LocalVariable {
   }
 
  public:
-  static inline auto New(LocalScope* owner, const uint64_t index, const std::string& name, Type* value = nullptr)
+  static inline auto New(LocalScope* owner, const uint64_t index, const std::string& name, Object* value = nullptr)
       -> LocalVariable* {
     ASSERT(owner);
     ASSERT(index >= 0);
@@ -117,8 +117,8 @@ class LocalVariable {
     return new LocalVariable(owner, index, name, value);
   }
 
-  static auto New(LocalScope* owner, const std::string& name, Type* value = nullptr) -> LocalVariable*;
-  static auto New(LocalScope* owner, const Symbol* symbol, Type* value = nullptr) -> LocalVariable*;
+  static auto New(LocalScope* owner, const std::string& name, Object* value = nullptr) -> LocalVariable*;
+  static auto New(LocalScope* owner, const Symbol* symbol, Object* value = nullptr) -> LocalVariable*;
 };
 }  // namespace scm
 

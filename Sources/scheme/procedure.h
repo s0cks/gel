@@ -3,12 +3,12 @@
 
 #include "scheme/common.h"
 #include "scheme/local_scope.h"
-#include "scheme/type.h"
+#include "scheme/object.h"
 
 namespace scm {
 class State;
 class Runtime;
-class Procedure : public Type {
+class Procedure : public Object {
   DEFINE_NON_COPYABLE_TYPE(Procedure);
 
  protected:
@@ -17,7 +17,7 @@ class Procedure : public Type {
  public:
   ~Procedure() override = default;
 
-  auto Equals(Type* rhs) const -> bool override {
+  auto Equals(Object* rhs) const -> bool override {
     return rhs && rhs->IsProcedure();
   }
 
@@ -32,7 +32,7 @@ class Procedure : public Type {
   virtual auto Apply(Runtime* state) -> bool = 0;
 };
 
-static inline auto IsProcedure(Type* rhs) -> bool {
+static inline auto IsProcedure(Object* rhs) -> bool {
   return rhs && rhs->IsProcedure();
 }
 }  // namespace scm

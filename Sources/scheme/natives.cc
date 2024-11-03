@@ -10,12 +10,12 @@
 #include "scheme/error.h"
 #include "scheme/local_scope.h"
 #include "scheme/native_procedure.h"
+#include "scheme/object.h"
 #include "scheme/procedure.h"
 #include "scheme/runtime.h"
-#include "scheme/type.h"
 
 namespace scm::proc {
-static inline auto ToSymbol(Type* rhs) -> std::optional<Symbol*> {
+static inline auto ToSymbol(Object* rhs) -> std::optional<Symbol*> {
   if (!rhs)
     return std::nullopt;
   if (rhs->IsSymbol())
@@ -54,7 +54,7 @@ NATIVE_PROCEDURE_F(type) {
   ASSERT(!args.empty());
   const auto value = args[0];
   ASSERT(value);
-  return ReturnValue(String::New(value->GetTypename()));
+  return ReturnValue(String::New(value->GetObjectname()));
 }
 
 NATIVE_PROCEDURE_F(exit) {
@@ -65,7 +65,7 @@ NATIVE_PROCEDURE_F(exit) {
 NATIVE_PROCEDURE_F(list) {
   if (args.empty())
     return Null::Get();
-  Type* result = Null::Get();
+  Object* result = Null::Get();
   for (const auto& arg : args) {
     result = Pair::New(arg, result);
   }
@@ -82,7 +82,7 @@ NATIVE_PROCEDURE_F(format) {
   const auto& fmt_val = format->AsString()->Get();
   ASSERT(!fmt_val.empty());
   fmt::dynamic_format_arg_store<fmt::format_context> fmt_args{};
-  std::for_each(std::begin(args) + 1, std::end(args), [&fmt_args](Type* arg) {
+  std::for_each(std::begin(args) + 1, std::end(args), [&fmt_args](Object* arg) {
     fmt_args.push_back(String::ValueOf(arg)->Get());
   });
   const auto result = fmt::vformat(fmt_val, fmt_args);

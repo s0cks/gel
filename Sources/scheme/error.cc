@@ -3,7 +3,7 @@
 #include <sstream>
 
 namespace scm {
-auto Error::Equals(Type* rhs) const -> bool {
+auto Error::Equals(Object* rhs) const -> bool {
   if (!rhs || !rhs->IsError())
     return false;
   ASSERT(rhs->IsError());

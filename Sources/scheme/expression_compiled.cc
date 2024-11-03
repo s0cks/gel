@@ -9,7 +9,7 @@ auto CompiledExpression::Apply(Runtime* state) -> bool {
   return state->Execute(GetEntry());
 }
 
-auto CompiledExpression::Equals(Type* rhs) const -> bool {
+auto CompiledExpression::Equals(Object* rhs) const -> bool {
   if (!rhs || !rhs->IsCompiledExpression())
     return false;
   return GetEntry() == rhs->AsCompiledExpression()->GetEntry();

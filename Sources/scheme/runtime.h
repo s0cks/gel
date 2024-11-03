@@ -12,7 +12,7 @@
 #include "scheme/flow_graph.h"
 #include "scheme/instruction.h"
 #include "scheme/local_scope.h"
-#include "scheme/type.h"
+#include "scheme/object.h"
 
 namespace scm {
 DECLARE_bool(kernel);
@@ -28,7 +28,7 @@ class throw_exc;
 }  // namespace proc
 
 class ExecutionStack {
-  using Stack = std::stack<Type*>;
+  using Stack = std::stack<Object*>;
   DEFINE_NON_COPYABLE_TYPE(ExecutionStack);
 
  private:
@@ -148,10 +148,10 @@ class Runtime : public ExecutionStack {
 
  protected:
   explicit Runtime(LocalScope* init_scope = CreateInitScope());
-  auto StoreSymbol(Symbol* symbol, Type* value) -> bool;
+  auto StoreSymbol(Symbol* symbol, Object* value) -> bool;
 
-  auto DefineSymbol(Symbol* symbol, Type* value) -> bool;
-  auto LookupSymbol(Symbol* symbol, Type** result) -> bool;
+  auto DefineSymbol(Symbol* symbol, Object* value) -> bool;
+  auto LookupSymbol(Symbol* symbol, Object** result) -> bool;
   auto CallProcedure(Procedure* procedure) -> bool;
 
   auto ImportModule(Module* module) -> bool;
@@ -161,7 +161,7 @@ class Runtime : public ExecutionStack {
     return ImportModule(Symbol::New(name));
   }
 
-  auto Apply(Procedure* proc, const std::vector<Type*>& args) -> Type*;
+  auto Apply(Procedure* proc, const std::vector<Object*>& args) -> Object*;
 
  public:
   ~Runtime();
@@ -178,7 +178,7 @@ class Runtime : public ExecutionStack {
     return running_;
   }
 
-  auto Execute(GraphEntryInstr* entry) -> Type*;
+  auto Execute(GraphEntryInstr* entry) -> Object*;
 
   inline void PushError(Error* error) {
     ASSERT(error);
@@ -191,8 +191,8 @@ class Runtime : public ExecutionStack {
   }
 
  private:
-  static auto Eval(GraphEntryInstr* graph_entry) -> Type*;
-  static inline auto Eval(FlowGraph* flow_graph) -> Type* {
+  static auto Eval(GraphEntryInstr* graph_entry) -> Object*;
+  static inline auto Eval(FlowGraph* flow_graph) -> Object* {
     ASSERT(flow_graph);
     return Eval(flow_graph->GetEntry());
   }
@@ -202,7 +202,7 @@ class Runtime : public ExecutionStack {
     return new Runtime(init_scope);
   }
 
-  static auto Eval(const std::string& expr) -> Type*;
+  static auto Eval(const std::string& expr) -> Object*;
 
  public:
   static void Init();

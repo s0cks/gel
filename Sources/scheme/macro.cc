@@ -8,7 +8,7 @@
 #include "scheme/local_scope.h"
 
 namespace scm {
-auto Macro::Equals(Type* rhs) const -> bool {
+auto Macro::Equals(Object* rhs) const -> bool {
   if (!rhs || !rhs->IsMacro())
     return false;
   const auto other = rhs->AsMacro();

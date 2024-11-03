@@ -10,7 +10,7 @@
 #include "scheme/lambda.h"
 #include "scheme/local.h"
 #include "scheme/local_scope.h"
-#include "scheme/type.h"
+#include "scheme/object.h"
 
 namespace scm {
 namespace expr {

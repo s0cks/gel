@@ -7,7 +7,7 @@
 #include "scheme/local_assertions.h"
 #include "scheme/local_scope.h"
 #include "scheme/mock_local_scope.h"
-#include "scheme/type.h"
+#include "scheme/object.h"
 #include "scheme/type_assertions.h"
 
 namespace scm {

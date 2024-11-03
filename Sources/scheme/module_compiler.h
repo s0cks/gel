@@ -48,7 +48,7 @@ class DefinitionVisitor : public expr::ExpressionVisitor {
     return GetOwner()->GetScope();
   }
 
-  virtual void ReturnValue(Type* value) {}
+  virtual void ReturnValue(Object* value) {}
 
  public:
   explicit DefinitionVisitor(ModuleCompiler* owner) :
@@ -68,9 +68,9 @@ class DefinitionValueVisitor : public DefinitionVisitor {
   DEFINE_NON_COPYABLE_TYPE(DefinitionValueVisitor);
 
  private:
-  Type* result_ = nullptr;
+  Object* result_ = nullptr;
 
-  void ReturnValue(Type* value) override {
+  void ReturnValue(Object* value) override {
     ASSERT(value);
     result_ = value;
   }
@@ -80,7 +80,7 @@ class DefinitionValueVisitor : public DefinitionVisitor {
     DefinitionVisitor(owner) {}
   ~DefinitionValueVisitor() override = default;
 
-  auto GetResult() const -> Type* {
+  auto GetResult() const -> Object* {
     return result_;
   }
 

@@ -3,18 +3,18 @@
 #include "scheme/runtime.h"
 
 namespace scm {
-auto NativeProcedure::ReturnValue(Type* rhs) const -> bool {
+auto NativeProcedure::ReturnValue(Object* rhs) const -> bool {
   ASSERT(rhs);
   GetRuntime()->Push(rhs);
   return true;
 }
 
-auto NativeProcedure::Apply(const std::vector<Type*>& rhs) const -> bool {
+auto NativeProcedure::Apply(const std::vector<Object*>& rhs) const -> bool {
   const auto result = ApplyProcedure(rhs);
   return result;
 }
 
-auto NativeProcedure::Equals(Type* rhs) const -> bool {
+auto NativeProcedure::Equals(Object* rhs) const -> bool {
   if (!rhs || !rhs->IsNativeProcedure())
     return false;
   return GetSymbol()->Equals(rhs->AsNativeProcedure()->GetSymbol());

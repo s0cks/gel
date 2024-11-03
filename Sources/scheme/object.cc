@@ -1,4 +1,4 @@
-#include "scheme/type.h"
+#include "scheme/object.h"
 
 #include <glog/logging.h>
 
@@ -10,7 +10,7 @@
 #include "scheme/native_procedure.h"
 
 namespace scm {
-void Type::Init() {
+void Object::Init() {
   DVLOG(10) << "initializing type system....";
   Bool::Init();
 }
@@ -51,7 +51,7 @@ auto Datum::Compare(Datum* rhs) const -> int {
 static Bool* kTrue = nullptr;   // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 static Bool* kFalse = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
-auto Bool::Equals(Type* rhs) const -> bool {
+auto Bool::Equals(Object* rhs) const -> bool {
   if (!rhs->IsBool())
     return false;
   return Get() == rhs->AsBool()->Get();
@@ -127,7 +127,7 @@ auto Long::Compare(Datum* rhs) const -> int {
   return 0;
 }
 
-auto Long::Equals(Type* rhs) const -> bool {
+auto Long::Equals(Object* rhs) const -> bool {
   if (!rhs || !rhs->IsLong())
     return false;
   const auto other = rhs->AsLong();
@@ -156,7 +156,7 @@ auto Long::ToString() const -> std::string {
 FOR_EACH_NUMBER_BINARY_OP(DEFINE_BINARY_OP);
 #undef DEFINE_BINARY_OP
 
-auto Double::Equals(Type* rhs) const -> bool {
+auto Double::Equals(Object* rhs) const -> bool {
   if (!rhs || !rhs->IsDouble())
     return false;
   return Get() == rhs->AsDouble()->Get();
@@ -170,7 +170,7 @@ auto Double::ToString() const -> std::string {
   return ss.str();
 }
 
-auto Pair::Equals(Type* rhs) const -> bool {
+auto Pair::Equals(Object* rhs) const -> bool {
   if (!rhs->IsPair())
     return false;
   const auto other = rhs->AsPair();
@@ -191,14 +191,14 @@ auto Pair::ToString() const -> std::string {
   return ss.str();
 }
 
-auto Symbol::Equals(Type* rhs) const -> bool {
+auto Symbol::Equals(Object* rhs) const -> bool {
   if (!rhs->IsSymbol())
     return false;
   const auto other = rhs->AsSymbol();
   return Get() == other->Get();
 }
 
-auto StringType::Equals(const std::string& rhs) const -> bool {
+auto StringObject::Equals(const std::string& rhs) const -> bool {
   return Get().compare(rhs) == 0;
 }
 
@@ -215,7 +215,7 @@ auto Symbol::New(const std::string& rhs) -> Symbol* {
   return new Symbol(rhs);
 }
 
-auto Null::Equals(Type* rhs) const -> bool {
+auto Null::Equals(Object* rhs) const -> bool {
   return rhs->IsNull();
 }
 
@@ -232,7 +232,7 @@ auto Null::Get() -> Null* {
   return kNull;
 }
 
-auto String::Equals(Type* rhs) const -> bool {
+auto String::Equals(Object* rhs) const -> bool {
   ASSERT(rhs);
   if (!rhs->IsString())
     return false;
@@ -249,7 +249,7 @@ auto String::ToString() const -> std::string {
   return ss.str();
 }
 
-auto String::ValueOf(Type* rhs) -> String* {
+auto String::ValueOf(Object* rhs) -> String* {
   std::stringstream ss;
   if (rhs->IsBool()) {
     ss << (Bool::Unbox(rhs->AsBool()) ? "#t" : "#f");
@@ -267,7 +267,7 @@ auto String::ValueOf(Type* rhs) -> String* {
   return String::New(ss.str());
 }
 
-auto PrintValue(std::ostream& stream, Type* value) -> std::ostream& {
+auto PrintValue(std::ostream& stream, Object* value) -> std::ostream& {
   ASSERT(value);
   if (value->IsNull()) {
     return stream << "`()";

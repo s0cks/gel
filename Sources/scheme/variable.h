@@ -4,7 +4,7 @@
 #include <string>
 #include <utility>
 
-#include "scheme/type.h"
+#include "scheme/object.h"
 
 namespace scm {
 class Variable {

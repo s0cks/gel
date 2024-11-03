@@ -20,7 +20,7 @@ Lambda::Lambda(const ArgumentSet& args, expr::LambdaExpr* expr) :
   ASSERT(expr_);
 }
 
-auto Lambda::Equals(Type* rhs) const -> bool {
+auto Lambda::Equals(Object* rhs) const -> bool {
   if (!rhs->IsLambda())
     return false;
   NOT_IMPLEMENTED(ERROR);  // TODO: implement

@@ -37,7 +37,7 @@ class LocalScope {
   virtual auto Has(const std::string& name, const bool recursive = false) -> bool;
   virtual auto Has(const Symbol* symbol, const bool recursive = false) -> bool;
   virtual auto Add(LocalVariable* local) -> bool;
-  auto Add(Symbol* symbol, Type* value = nullptr) -> bool;
+  auto Add(Symbol* symbol, Object* value = nullptr) -> bool;
   virtual auto Add(LocalScope* scope) -> bool;
   virtual auto Lookup(const std::string& name, LocalVariable** result, const bool recursive = true) -> bool;
   auto Lookup(const Symbol* symbol, LocalVariable** result, const bool recursive = true) -> bool;
@@ -50,7 +50,7 @@ class LocalScope {
     return locals_.size();
   }
 
-  inline auto Add(const std::string& name, Type* value = nullptr) -> bool {
+  inline auto Add(const std::string& name, Object* value = nullptr) -> bool {
     ASSERT(!name.empty());
 
     LocalVariable* local = nullptr;

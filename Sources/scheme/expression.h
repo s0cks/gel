@@ -7,7 +7,7 @@
 
 #include "scheme/common.h"
 #include "scheme/lambda.h"
-#include "scheme/type.h"
+#include "scheme/object.h"
 #include "scheme/variable.h"
 
 #define FOR_EACH_EXPRESSION_NODE(V) \
@@ -58,7 +58,7 @@ class ExpressionVisitor {
   virtual ~ExpressionVisitor() = default;
 };
 
-class Expression : public Type {  // TODO: should Expression inherit from Type?
+class Expression : public Object {  // TODO: should Expression inherit from Object?
   DEFINE_NON_COPYABLE_TYPE(Expression);
 
  protected:
@@ -97,7 +97,7 @@ class Expression : public Type {  // TODO: should Expression inherit from Type?
     return false;
   }
 
-  virtual auto EvalToConstant() const -> Type* {
+  virtual auto EvalToConstant() const -> Object* {
     return nullptr;
   }
 
@@ -117,12 +117,12 @@ class Expression : public Type {  // TODO: should Expression inherit from Type?
     return false;
   }
 
-  auto GetTypename() const -> const char* override {
+  auto GetObjectname() const -> const char* override {
     NOT_IMPLEMENTED(ERROR);  // TODO: implement
     return "Expression";
   }
 
-  auto Equals(Type* rhs) const -> bool override {
+  auto Equals(Object* rhs) const -> bool override {
     ASSERT(rhs);
     NOT_IMPLEMENTED(ERROR);  // TODO: implement
     return false;
@@ -225,7 +225,7 @@ class LiteralExpr : public Expression {
     return true;
   }
 
-  auto EvalToConstant() const -> Type* override {
+  auto EvalToConstant() const -> Object* override {
     return value_;
   }
 
@@ -326,7 +326,7 @@ class BinaryOpExpr : public TemplateExpression<2> {
 #undef DEFINE_OP_CHECK
 
   auto IsConstantExpr() const -> bool override;
-  auto EvalToConstant() const -> Type* override;
+  auto EvalToConstant() const -> Object* override;
   auto VisitChildren(ExpressionVisitor* vis) -> bool override;
   DECLARE_EXPRESSION(BinaryOpExpr);
 
@@ -388,7 +388,7 @@ class ConsExpr : public TemplateExpression<2> {
   }
 
   auto IsConstantExpr() const -> bool override;
-  auto EvalToConstant() const -> Type* override;
+  auto EvalToConstant() const -> Object* override;
   DECLARE_EXPRESSION(ConsExpr);
 
  public:

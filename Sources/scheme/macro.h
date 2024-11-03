@@ -3,10 +3,10 @@
 
 #include "scheme/argument.h"
 #include "scheme/expression.h"
-#include "scheme/type.h"
+#include "scheme/object.h"
 
 namespace scm {
-class Macro : public Type {
+class Macro : public Object {
  private:
   Symbol* symbol_;
   ArgumentSet args_;

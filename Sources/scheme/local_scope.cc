@@ -4,7 +4,7 @@
 
 #include "scheme/common.h"
 #include "scheme/local.h"
-#include "scheme/type.h"
+#include "scheme/object.h"
 
 namespace scm {
 auto LocalScope::Has(const std::string& name, const bool recursive) -> bool {
@@ -32,7 +32,7 @@ auto LocalScope::Add(LocalVariable* local) -> bool {
   return true;
 }
 
-auto LocalScope::Add(Symbol* symbol, Type* value) -> bool {
+auto LocalScope::Add(Symbol* symbol, Object* value) -> bool {
   ASSERT(symbol);
   return Add(symbol->Get(), value);
 }

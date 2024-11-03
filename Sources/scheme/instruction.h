@@ -284,23 +284,23 @@ class Definition : public Instruction {
 
 class ConstantInstr : public Definition {
  private:
-  Type* value_;
+  Object* value_;
 
-  explicit ConstantInstr(Type* value) :
+  explicit ConstantInstr(Object* value) :
     Definition(),
     value_(value) {}
 
  public:
   ~ConstantInstr() override = default;
 
-  auto GetValue() const -> Type* {
+  auto GetValue() const -> Object* {
     return value_;
   }
 
   DECLARE_INSTRUCTION(ConstantInstr);
 
  public:
-  static inline auto New(Type* value) -> ConstantInstr* {
+  static inline auto New(Object* value) -> ConstantInstr* {
     ASSERT(value);
     return new ConstantInstr(value);
   }
@@ -755,7 +755,7 @@ class ConsInstr : public Definition {
 
 class InstanceOfInstr : public Instruction {
  public:
-  using Predicate = std::function<bool(Type*)>;
+  using Predicate = std::function<bool(Object*)>;
 
  private:
   Definition* value_;

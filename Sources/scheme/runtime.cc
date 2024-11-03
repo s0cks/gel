@@ -17,11 +17,11 @@
 #include "scheme/module_compiler.h"
 #include "scheme/module_resolver.h"
 #include "scheme/natives.h"
+#include "scheme/object.h"
 #include "scheme/os_thread.h"
 #include "scheme/parser.h"
 #include "scheme/procedure.h"
 #include "scheme/tracing.h"
-#include "scheme/type.h"
 
 namespace scm {
 DEFINE_bool(kernel, true, "Load the kernel at boot.");
@@ -107,7 +107,7 @@ auto Runtime::ImportModule(Module* module) -> bool {
   return true;
 }
 
-auto Runtime::Apply(Procedure* proc, const std::vector<Type*>& args) -> Type* {
+auto Runtime::Apply(Procedure* proc, const std::vector<Object*>& args) -> Object* {
   const auto stack_size = GetStackSize();
   if (proc->IsProcedure()) {
     for (const auto& arg : args) {
@@ -159,14 +159,14 @@ auto Runtime::CreateInitScope() -> LocalScope* {
   return scope;
 }
 
-auto Runtime::DefineSymbol(Symbol* symbol, Type* value) -> bool {
+auto Runtime::DefineSymbol(Symbol* symbol, Object* value) -> bool {
   ASSERT(symbol);
   ASSERT(value);
   ASSERT(HasScope());
   return GetScope()->Add(symbol, value);
 }
 
-auto Runtime::LookupSymbol(Symbol* symbol, Type** result) -> bool {
+auto Runtime::LookupSymbol(Symbol* symbol, Object** result) -> bool {
   ASSERT(symbol);
   LocalVariable* local = nullptr;
   if (!GetScope()->Lookup(symbol, &local))
@@ -176,7 +176,7 @@ auto Runtime::LookupSymbol(Symbol* symbol, Type** result) -> bool {
   return local->HasValue();
 }
 
-auto Runtime::StoreSymbol(Symbol* symbol, Type* value) -> bool {
+auto Runtime::StoreSymbol(Symbol* symbol, Object* value) -> bool {
   ASSERT(symbol);
   ASSERT(value);
   LocalVariable* local = nullptr;
@@ -186,7 +186,7 @@ auto Runtime::StoreSymbol(Symbol* symbol, Type* value) -> bool {
   return true;
 }
 
-auto Runtime::Execute(GraphEntryInstr* entry) -> Type* {
+auto Runtime::Execute(GraphEntryInstr* entry) -> Object* {
   ASSERT(entry && entry->IsGraphEntryInstr());
   PushScope();
   Interpreter interpreter(this);
@@ -196,13 +196,13 @@ auto Runtime::Execute(GraphEntryInstr* entry) -> Type* {
   return result;
 }
 
-auto Runtime::Eval(GraphEntryInstr* graph_entry) -> Type* {
+auto Runtime::Eval(GraphEntryInstr* graph_entry) -> Object* {
   ASSERT(HasRuntime());
   ASSERT(graph_entry);
   return GetRuntime()->Execute(graph_entry);
 }
 
-auto Runtime::Eval(const std::string& expr) -> Type* {
+auto Runtime::Eval(const std::string& expr) -> Object* {
   ASSERT(!expr.empty());
   DVLOG(10) << "evaluating expression:" << std::endl << expr;
   const auto e = ExpressionCompiler::Compile(expr);
@@ -216,7 +216,7 @@ void Runtime::Init() {
 #endif  // SCM_DEBUG
 
   DVLOG(10) << "initializing runtime....";
-  Type::Init();
+  Object::Init();
   const auto runtime = new Runtime();
   runtime_.Set(runtime);
   if (FLAGS_kernel)

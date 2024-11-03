@@ -8,15 +8,15 @@
 #include "scheme/expression.h"
 #include "scheme/instruction.h"
 #include "scheme/native_procedure.h"
+#include "scheme/object.h"
 #include "scheme/runtime.h"
-#include "scheme/type.h"
 
 namespace scm {
 auto Interpreter::VisitLoadVariableInstr(LoadVariableInstr* instr) -> bool {
   ASSERT(instr);
   const auto symbol = instr->GetSymbol();
   ASSERT(symbol);
-  Type* result = nullptr;
+  Object* result = nullptr;
   if (!GetRuntime()->LookupSymbol(symbol, &result)) {
     LOG(ERROR) << "failed to find symbol: " << symbol;
     GetRuntime()->Push(Error::New(fmt::format("failed to find Symbol: `{0:s}`", symbol->Get())));
@@ -43,7 +43,7 @@ auto Interpreter::VisitReturnInstr(ReturnInstr* instr) -> bool {
   return true;
 }
 
-static inline auto Unary(const expr::UnaryOp op, Type* rhs) -> Type* {
+static inline auto Unary(const expr::UnaryOp op, Object* rhs) -> Object* {
   ASSERT(rhs);
   switch (op) {
     case expr::kNot:
@@ -123,7 +123,7 @@ auto Interpreter::VisitInvokeNativeInstr(InvokeNativeInstr* instr) -> bool {
     throw Exception(fmt::format("expected {0:s} to be a NativeProcedure.", target ? target->ToString() : "null"));
   const auto procedure = target->AsProcedure();
   ASSERT(procedure && procedure->IsNative());
-  std::vector<Type*> args{};
+  std::vector<Object*> args{};
   for (auto idx = 0; idx < instr->GetNumberOfArgs(); idx++) {
     args.push_back(GetRuntime()->Pop());
   }

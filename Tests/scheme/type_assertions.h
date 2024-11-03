@@ -9,7 +9,7 @@
 #include "scheme/lambda.h"
 #include "scheme/macro.h"
 #include "scheme/native_procedure.h"
-#include "scheme/type.h"
+#include "scheme/object.h"
 
 namespace scm {
 using namespace ::testing;

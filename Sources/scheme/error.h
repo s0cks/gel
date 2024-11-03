@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include "scheme/type.h"
+#include "scheme/object.h"
 
 namespace scm {
 class Error : public Datum {
@@ -31,7 +31,7 @@ class Error : public Datum {
     return new Error(String::New(message));
   }
 
-  static inline auto New(Type* rhs) -> Error* {
+  static inline auto New(Object* rhs) -> Error* {
     ASSERT(rhs && rhs->IsString());
     return New(rhs->AsString());
   }

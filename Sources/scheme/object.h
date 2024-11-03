@@ -33,15 +33,15 @@ FOR_EACH_TYPE(FORWARD_DECLARE)
 #undef FORWARD_DECLARE
 
 class Datum;
-class Type {
-  DEFINE_NON_COPYABLE_TYPE(Type)
+class Object {
+  DEFINE_NON_COPYABLE_TYPE(Object)
  protected:
-  Type() = default;
+  Object() = default;
 
  public:
-  virtual ~Type() = default;
-  virtual auto GetTypename() const -> const char* = 0;
-  virtual auto Equals(Type* rhs) const -> bool = 0;
+  virtual ~Object() = default;
+  virtual auto GetObjectname() const -> const char* = 0;
+  virtual auto Equals(Object* rhs) const -> bool = 0;
   virtual auto ToString() const -> std::string = 0;
 
   virtual auto AsDatum() -> Datum* {
@@ -69,24 +69,24 @@ class Type {
   static void Init();
 };
 
-static inline auto operator<<(std::ostream& stream, Type* rhs) -> std::ostream& {
+static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream& {
   return stream << rhs->ToString();
 }
 
-#define DECLARE_TYPE(Name)                           \
-  DEFINE_NON_COPYABLE_TYPE(Name)                     \
- public:                                             \
-  ~Name() override = default;                        \
-  auto GetTypename() const -> const char* override { \
-    return #Name;                                    \
-  }                                                  \
-  auto Equals(Type* rhs) const -> bool override;     \
-  auto ToString() const -> std::string override;     \
-  auto As##Name() -> Name* override {                \
-    return this;                                     \
+#define DECLARE_TYPE(Name)                             \
+  DEFINE_NON_COPYABLE_TYPE(Name)                       \
+ public:                                               \
+  ~Name() override = default;                          \
+  auto GetObjectname() const -> const char* override { \
+    return #Name;                                      \
+  }                                                    \
+  auto Equals(Object* rhs) const -> bool override;     \
+  auto ToString() const -> std::string override;       \
+  auto As##Name() -> Name* override {                  \
+    return this;                                       \
   }
 
-class Datum : public Type {
+class Datum : public Object {
   DEFINE_NON_COPYABLE_TYPE(Datum);
 
  protected:
@@ -285,16 +285,16 @@ class Double : public Number {
 
 class Pair : public Datum {
  private:
-  Type* car_;
-  Type* cdr_;
+  Object* car_;
+  Object* cdr_;
 
  protected:
-  explicit Pair(Type* car = nullptr, Type* cdr = nullptr) :
+  explicit Pair(Object* car = nullptr, Object* cdr = nullptr) :
     car_(car),
     cdr_(cdr) {}
 
  public:
-  auto GetCar() const -> Type* {
+  auto GetCar() const -> Object* {
     return car_;
   }
 
@@ -307,7 +307,7 @@ class Pair : public Datum {
     car_ = rhs;
   }
 
-  auto GetCdr() const -> Type* {
+  auto GetCdr() const -> Object* {
     return cdr_;
   }
 
@@ -323,19 +323,19 @@ class Pair : public Datum {
   DECLARE_TYPE(Pair);
 
  public:
-  static inline auto New(Type* car = nullptr, Type* cdr = nullptr) -> Pair* {
+  static inline auto New(Object* car = nullptr, Object* cdr = nullptr) -> Pair* {
     return new Pair(car, cdr);
   }
 };
 
-class StringType : public Datum {
-  DEFINE_NON_COPYABLE_TYPE(StringType);
+class StringObject : public Datum {
+  DEFINE_NON_COPYABLE_TYPE(StringObject);
 
  private:
   std::string value_;
 
  protected:
-  explicit StringType(const std::string& value) :
+  explicit StringObject(const std::string& value) :
     Datum(),
     value_(value) {}
 
@@ -344,7 +344,7 @@ class StringType : public Datum {
   }
 
  public:
-  ~StringType() override = default;
+  ~StringObject() override = default;
 
   auto Get() const -> const std::string& {
     return value_;
@@ -353,10 +353,10 @@ class StringType : public Datum {
   auto Equals(const std::string& rhs) const -> bool;
 };
 
-class String : public StringType {
+class String : public StringObject {
  protected:
   explicit String(const std::string& value) :
-    StringType(value) {}
+    StringObject(value) {}
 
  public:
   DECLARE_TYPE(String);
@@ -366,19 +366,19 @@ class String : public StringType {
     return new String(value);
   }
 
-  static inline auto Unbox(Type* rhs) -> const std::string& {
+  static inline auto Unbox(Object* rhs) -> const std::string& {
     ASSERT(rhs && rhs->IsString());
     return rhs->AsString()->Get();
   }
 
-  static auto ValueOf(Type* rhs) -> String*;
+  static auto ValueOf(Object* rhs) -> String*;
 };
 
-static inline auto IsString(Type* rhs) -> bool {
+static inline auto IsString(Object* rhs) -> bool {
   return rhs && rhs->IsString();
 }
 
-class Symbol : public StringType {
+class Symbol : public StringObject {
  public:
   struct Comparator {
     auto operator()(Symbol* lhs, Symbol* rhs) const -> bool {
@@ -389,7 +389,7 @@ class Symbol : public StringType {
 
  private:
   explicit Symbol(const std::string& value) :
-    StringType(value) {}
+    StringObject(value) {}
 
  public:
   DECLARE_TYPE(Symbol);
@@ -398,7 +398,7 @@ class Symbol : public StringType {
   static auto New(const std::string& rhs) -> Symbol*;
 };
 
-static inline auto IsSymbol(Type* rhs) -> bool {
+static inline auto IsSymbol(Object* rhs) -> bool {
   return rhs && rhs->IsSymbol();
 }
 
@@ -447,22 +447,22 @@ class List : public Datum {
   }
 };
 
-auto PrintValue(std::ostream& stream, Type* value) -> std::ostream&;
+auto PrintValue(std::ostream& stream, Object* value) -> std::ostream&;
 
-static inline auto BinaryAnd(Type* lhs, Type* rhs) -> Datum* {
+static inline auto BinaryAnd(Object* lhs, Object* rhs) -> Datum* {
   ASSERT(lhs && lhs->IsDatum());
   ASSERT(rhs && rhs->IsDatum());
   return lhs->AsDatum()->And(rhs->AsDatum());
 }
 
-static inline auto Car(Type* rhs) -> Type* {
+static inline auto Car(Object* rhs) -> Object* {
   ASSERT(rhs);
   if (rhs->IsPair())
     return rhs->AsPair()->GetCar();
   return Null::Get();
 }
 
-static inline auto Cdr(Type* rhs) -> Type* {
+static inline auto Cdr(Object* rhs) -> Object* {
   ASSERT(rhs);
   if (rhs->IsPair())
     return rhs->AsPair()->GetCdr();
@@ -470,23 +470,23 @@ static inline auto Cdr(Type* rhs) -> Type* {
   return Null::Get();
 }
 
-static inline auto Truth(scm::Type* rhs) -> bool {
+static inline auto Truth(scm::Object* rhs) -> bool {
   ASSERT(rhs);
   if (rhs->IsBool())
     return rhs->AsBool()->Get();
   return !rhs->IsNull();  // TODO: better truth?
 }
 
-static inline auto Not(Type* rhs) -> Type* {
+static inline auto Not(Object* rhs) -> Object* {
   ASSERT(rhs);
   return Truth(rhs) ? Bool::False() : Bool::True();
 }
 }  // namespace scm
 
 template <>
-struct fmt::formatter<scm::Type> : public fmt::formatter<std::string> {
+struct fmt::formatter<scm::Object> : public fmt::formatter<std::string> {
   template <typename FormatContext>
-  constexpr auto format(const scm::Type& value, FormatContext& ctx) const -> decltype(ctx.out()) {
+  constexpr auto format(const scm::Object& value, FormatContext& ctx) const -> decltype(ctx.out()) {
     return fmt::format_to(ctx.out(), "{}", value.ToString());
   }
 };

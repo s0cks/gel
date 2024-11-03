@@ -28,7 +28,7 @@ class Repl {
     out() << "Error: " << rhs.what() << std::endl;
   }
 
-  inline void Respond(Type* rhs) {
+  inline void Respond(Object* rhs) {
     ASSERT(rhs);
     if (rhs->IsError())
       return Respond(rhs->AsError());

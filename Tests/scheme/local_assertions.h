@@ -4,7 +4,7 @@
 #include <gtest/gtest.h>
 
 #include "scheme/local.h"
-#include "scheme/type.h"
+#include "scheme/object.h"
 
 namespace scm {
 using namespace ::testing;

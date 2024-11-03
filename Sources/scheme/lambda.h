@@ -5,8 +5,8 @@
 
 #include "scheme/argument.h"
 #include "scheme/common.h"
+#include "scheme/object.h"
 #include "scheme/procedure.h"
-#include "scheme/type.h"
 
 namespace scm {
 namespace expr {

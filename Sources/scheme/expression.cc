@@ -56,7 +56,7 @@ auto BinaryOpExpr::IsConstantExpr() const -> bool {
   return GetLeft()->IsConstantExpr() && GetRight()->IsConstantExpr();
 }
 
-auto BinaryOpExpr::EvalToConstant() const -> Type* {
+auto BinaryOpExpr::EvalToConstant() const -> Object* {
   ASSERT(IsConstantExpr());
   const auto left = GetLeft()->EvalToConstant();
   ASSERT(left && left->IsAtom());
@@ -92,7 +92,7 @@ auto ConsExpr::IsConstantExpr() const -> bool {
   return GetCar()->IsConstantExpr() && GetCdr()->IsConstantExpr();
 }
 
-auto ConsExpr::EvalToConstant() const -> Type* {
+auto ConsExpr::EvalToConstant() const -> Object* {
   ASSERT(IsConstantExpr());
   const auto car = GetCar()->EvalToConstant();
   ASSERT(car);
