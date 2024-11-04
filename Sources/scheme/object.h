@@ -213,28 +213,29 @@ class Number : public Datum {
   DEFINE_NON_COPYABLE_TYPE(Number);
 
  private:
-  union {
-    uint64_t long_;
-    double double_;
-  };
+  std::variant<uint64_t, double> value_;
 
  protected:
   explicit Number(const uint64_t value) :
     Datum(),
-    long_(value) {}
+    value_(value) {}
   explicit Number(const double value) :
     Datum(),
-    double_(value) {}
+    value_(value) {}
 
  public:
   ~Number() override = default;
 
+  auto value() const -> const std::variant<uint64_t, double>& {
+    return value_;
+  }
+
   auto GetLong() const -> uint64_t {
-    return long_;
+    return std::get<uint64_t>(value());
   }
 
   auto GetDouble() const -> double {
-    return double_;
+    return std::get<double>(value());
   }
 
   auto AsNumber() -> Number* override {
