@@ -3,6 +3,7 @@
 #include <glog/logging.h>
 
 #include <sstream>
+#include <string>
 #include <utility>
 
 #include "scheme/common.h"
@@ -12,35 +13,66 @@
 namespace scm {
 void Object::Init() {
   DVLOG(10) << "initializing type system....";
+  Class::Init();
   Bool::Init();
+  Long::Init();
+  Error::Init();
+  Pair::Init();
+  Double::Init();
+  Symbol::Init();
+  String::Init();
+}
+
+void Class::Init() {}
+
+Class* Long::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+void Long::Init() {
+  ASSERT(kClass == nullptr);
+  kClass = Class::New("Long");
+  ASSERT(kClass);
+}
+
+Class* Double::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+void Double::Init() {
+  ASSERT(kClass == nullptr);
+  kClass = Class::New("Double");
+  ASSERT(kClass);
+}
+
+auto Class::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "Class(";
+  ss << "name=" << GetName()->Get();
+  ss << ")";
+  return ss.str();
 }
 
 auto Datum::Add(Datum* rhs) const -> Datum* {
-  return Null::Get();
+  return Pair::Empty();
 }
 
 auto Datum::Sub(Datum* rhs) const -> Datum* {
-  return Null::Get();
+  return Pair::Empty();
 }
 
 auto Datum::Mul(Datum* rhs) const -> Datum* {
-  return Null::Get();
+  return Pair::Empty();
 }
 
 auto Datum::Div(Datum* rhs) const -> Datum* {
-  return Null::Get();
+  return Pair::Empty();
 }
 
 auto Datum::Mod(Datum* rhs) const -> Datum* {
-  return Null::Get();
+  return Pair::Empty();
 }
 
 auto Datum::And(Datum* rhs) const -> Datum* {
-  return Null::Get();
+  return Pair::Empty();
 }
 
 auto Datum::Or(Datum* rhs) const -> Datum* {
-  return Null::Get();
+  return Pair::Empty();
 }
 
 auto Datum::Compare(Datum* rhs) const -> int {
@@ -69,7 +101,11 @@ auto Bool::Or(Datum* rhs) const -> Datum* {
   return Box(Get() || Truth(rhs));
 }
 
+Class* Bool::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 void Bool::Init() {
+  ASSERT(kClass == nullptr);
+  kClass = Class::New("Bool");
+  ASSERT(kClass);
   kTrue = NewTrue();
   kFalse = NewFalse();
 }
@@ -106,7 +142,7 @@ auto Number::New(const double rhs) -> Number* {
   auto Long::Name(Datum* rhs) const -> Datum* {                                                                    \
     if (!rhs || !rhs->IsNumber()) {                                                                                \
       LOG(ERROR) << rhs << " is not a Number.";                                                                    \
-      return Null::Get();                                                                                          \
+      return Pair::Empty();                                                                                        \
     }                                                                                                              \
     const auto left_num = rhs->AsNumber();                                                                         \
     ASSERT(left_num);                                                                                              \
@@ -146,7 +182,7 @@ auto Long::ToString() const -> std::string {
   auto Double::Name(Datum* rhs) const -> Datum* {                                           \
     if (!rhs || !rhs->IsNumber()) {                                                         \
       LOG(ERROR) << rhs << " is not a Number.";                                             \
-      return Null::Get();                                                                   \
+      return Pair::Empty();                                                                 \
     }                                                                                       \
     const auto left_num = rhs->AsNumber();                                                  \
     ASSERT(left_num);                                                                       \
@@ -170,6 +206,13 @@ auto Double::ToString() const -> std::string {
   return ss.str();
 }
 
+Class* Pair::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+void Pair::Init() {
+  ASSERT(kClass == nullptr);
+  kClass = Class::New("Pair");
+  ASSERT(kClass);
+}
+
 auto Pair::Equals(Object* rhs) const -> bool {
   if (!rhs->IsPair())
     return false;
@@ -191,6 +234,10 @@ auto Pair::ToString() const -> std::string {
   return ss.str();
 }
 
+auto Pair::Empty() -> Pair* {
+  return new Pair();
+}
+
 auto Symbol::Equals(Object* rhs) const -> bool {
   if (!rhs->IsSymbol())
     return false;
@@ -200,6 +247,13 @@ auto Symbol::Equals(Object* rhs) const -> bool {
 
 auto StringObject::Equals(const std::string& rhs) const -> bool {
   return Get().compare(rhs) == 0;
+}
+
+Class* Symbol::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+void Symbol::Init() {
+  ASSERT(kClass == nullptr);
+  kClass = Class::New("Symbol");
+  ASSERT(kClass);
 }
 
 auto Symbol::ToString() const -> std::string {
@@ -215,21 +269,11 @@ auto Symbol::New(const std::string& rhs) -> Symbol* {
   return new Symbol(rhs);
 }
 
-auto Null::Equals(Object* rhs) const -> bool {
-  return rhs->IsNull();
-}
-
-auto Null::ToString() const -> std::string {
-  return "()";
-}
-
-auto Null::Get() -> Null* {
-  static Null* kNull = nullptr;  // NOLINT
-  if (!kNull) {
-    kNull = New();
-    ASSERT(kNull);
-  }
-  return kNull;
+Class* String::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+void String::Init() {
+  ASSERT(kClass == nullptr);
+  kClass = Class::New("String");
+  ASSERT(kClass);
 }
 
 auto String::Equals(Object* rhs) const -> bool {
@@ -259,8 +303,6 @@ auto String::ValueOf(Object* rhs) -> String* {
     ss << rhs->AsDouble()->Get();
   } else if (rhs->IsSymbol()) {
     ss << rhs->AsSymbol()->Get();
-  } else if (rhs->IsNull()) {
-    ss << "'()";
   } else {
     ss << rhs->ToString();
   }
@@ -269,9 +311,7 @@ auto String::ValueOf(Object* rhs) -> String* {
 
 auto PrintValue(std::ostream& stream, Object* value) -> std::ostream& {
   ASSERT(value);
-  if (value->IsNull()) {
-    return stream << "`()";
-  } else if (value->IsBool()) {
+  if (value->IsBool()) {
     return stream << (value->AsBool()->Get() ? "#t" : "#f");
   } else if (value->IsDouble()) {
     return stream << (value->AsDouble()->Get());
@@ -286,11 +326,26 @@ auto PrintValue(std::ostream& stream, Object* value) -> std::ostream& {
     return stream;
   } else if (value->IsPair()) {
     stream << "(";
-    PrintValue(stream, value->AsPair()->GetCar()) << ", ";
-    PrintValue(stream, value->AsPair()->GetCdr());
+    if (!value->AsPair()->IsEmpty()) {
+      PrintValue(stream, value->AsPair()->GetCar()) << ", ";
+      PrintValue(stream, value->AsPair()->GetCdr());
+    }
     stream << ")";
     return stream;
   }
   return stream << value->ToString();
+}
+
+auto Class::Equals(Object* rhs) const -> bool {
+  if (!rhs || !rhs->IsClass())
+    return false;
+  const auto other = rhs->AsClass();
+  ASSERT(other);
+  return GetName()->Equals(other->GetName());
+}
+
+auto Class::New(const std::string& name) -> Class* {
+  ASSERT(!name.empty());
+  return New(String::New(name));
 }
 }  // namespace scm

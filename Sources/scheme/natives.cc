@@ -11,6 +11,7 @@
 #include "scheme/local_scope.h"
 #include "scheme/native_procedure.h"
 #include "scheme/object.h"
+#include "scheme/parser.h"
 #include "scheme/procedure.h"
 #include "scheme/runtime.h"
 
@@ -54,6 +55,8 @@ NATIVE_PROCEDURE_F(type) {
   ASSERT(!args.empty());
   const auto value = args[0];
   ASSERT(value);
+  if (value->IsPair() && value->AsPair()->IsEmpty())
+    return ReturnValue(String::New("Null"));
   return ReturnValue(String::New(value->GetObjectname()));
 }
 
@@ -64,8 +67,8 @@ NATIVE_PROCEDURE_F(exit) {
 
 NATIVE_PROCEDURE_F(list) {
   if (args.empty())
-    return Null::Get();
-  Object* result = Null::Get();
+    return Pair::Empty();
+  Object* result = Pair::Empty();
   for (const auto& arg : args) {
     result = Pair::New(arg, result);
   }

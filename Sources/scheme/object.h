@@ -12,13 +12,12 @@
 
 namespace scm {
 #define FOR_EACH_TYPE(V) \
+  V(Class)               \
   V(Bool)                \
   V(Lambda)              \
   V(Procedure)           \
   V(NativeProcedure)     \
-  V(Null)                \
   V(Pair)                \
-  V(List)                \
   V(Number)              \
   V(Double)              \
   V(Long)                \
@@ -86,6 +85,34 @@ static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream
     return this;                                       \
   }
 
+class Class : public Object {
+ private:
+  String* name_;
+
+ protected:
+  explicit Class(String* name) :
+    Object(),
+    name_(name) {
+    ASSERT(name_);
+  }
+
+ public:
+  auto GetName() const -> String* {
+    return name_;
+  }
+
+  DECLARE_TYPE(Class);
+
+ public:
+  static void Init();
+  static inline auto New(String* name) -> Class* {
+    ASSERT(name);
+    return new Class(name);
+  }
+
+  static auto New(const std::string& name) -> Class*;
+};
+
 class Datum : public Object {
   DEFINE_NON_COPYABLE_TYPE(Datum);
 
@@ -111,48 +138,7 @@ class Datum : public Object {
   virtual auto And(Datum* rhs) const -> Datum*;
   virtual auto Or(Datum* rhs) const -> Datum*;
   virtual auto Compare(Datum* rhs) const -> int;
-};
-
-class Null : public Datum {
- protected:
-  Null() = default;
-
- public:
-  auto IsAtom() const -> bool override {
-    return false;
-  }
-
-  auto Add(Datum* rhs) const -> Datum* override {
-    if (rhs->IsAtom())
-      return rhs;
-    return Get();
-  }
-
-  auto Sub(Datum* rhs) const -> Datum* override {
-    if (rhs->IsAtom())
-      return rhs;
-    return Get();
-  }
-
-  auto Mul(Datum* rhs) const -> Datum* override {
-    if (rhs->IsAtom())
-      return rhs;
-    return Get();
-  }
-
-  auto Div(Datum* rhs) const -> Datum* override {
-    if (rhs->IsAtom())
-      return rhs;
-    return Get();
-  }
-
-  DECLARE_TYPE(Null);
-
- public:
-  static auto Get() -> Null*;
-  static inline auto New() -> Null* {
-    return new Null();
-  }
+  virtual auto GetType() const -> Class* = 0;
 };
 
 class Bool : public Datum {
@@ -168,10 +154,17 @@ class Bool : public Datum {
     return value_;
   }
 
+  auto GetType() const -> Class* override {
+    return GetClass();
+  }
+
   auto And(Datum* rhs) const -> Datum* override;
   auto Or(Datum* rhs) const -> Datum* override;
 
   DECLARE_TYPE(Bool);
+
+ private:
+  static Class* kClass;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
  public:
   static void Init();
@@ -195,6 +188,11 @@ class Bool : public Datum {
   static inline auto Unbox(Bool* rhs) -> bool {
     ASSERT(rhs);
     return rhs->Get();
+  }
+
+  static inline auto GetClass() -> Class* {
+    ASSERT(kClass);
+    return kClass;
   }
 };
 
@@ -247,6 +245,10 @@ class Long : public Number {
     return GetLong();
   }
 
+  auto GetType() const -> Class* override {
+    return GetClass();
+  }
+
   auto Add(Datum* rhs) const -> Datum* override;
   auto Sub(Datum* rhs) const -> Datum* override;
   auto Mul(Datum* rhs) const -> Datum* override;
@@ -255,7 +257,17 @@ class Long : public Number {
   auto Compare(Datum* rhs) const -> int override;
   DECLARE_TYPE(Long);
 
+ private:
+  static Class* kClass;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+
  public:
+  static void Init();
+
+  static inline auto GetClass() -> Class* {
+    ASSERT(kClass);
+    return kClass;
+  }
+
   static inline auto New(const uintptr_t value) -> Long* {
     return new Long(value);
   }
@@ -271,15 +283,28 @@ class Double : public Number {
     return GetDouble();
   }
 
+  auto GetType() const -> Class* override {
+    return GetClass();
+  }
+
   auto Add(Datum* rhs) const -> Datum* override;
   auto Sub(Datum* rhs) const -> Datum* override;
   auto Mul(Datum* rhs) const -> Datum* override;
   auto Div(Datum* rhs) const -> Datum* override;
   DECLARE_TYPE(Double);
 
+ private:
+  static Class* kClass;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+
  public:
+  static void Init();
   static inline auto New(const double value) -> Double* {
     return new Double(value);
+  }
+
+  static inline auto GetClass() -> Class* {
+    ASSERT(kClass);
+    return kClass;
   }
 };
 
@@ -320,11 +345,29 @@ class Pair : public Datum {
     cdr_ = rhs;
   }
 
+  auto GetType() const -> Class* override {
+    return kClass;
+  }
+
+  inline auto IsEmpty() const -> bool {
+    return !HasCar() && !HasCdr();
+  }
+
   DECLARE_TYPE(Pair);
 
+ private:
+  static Class* kClass;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+
  public:
+  static void Init();
+  static auto Empty() -> Pair*;
   static inline auto New(Object* car = nullptr, Object* cdr = nullptr) -> Pair* {
     return new Pair(car, cdr);
+  }
+
+  static inline auto GetClass() -> Class* {
+    ASSERT(kClass);
+    return kClass;
   }
 };
 
@@ -359,9 +402,17 @@ class String : public StringObject {
     StringObject(value) {}
 
  public:
+  auto GetType() const -> Class* override {
+    return GetClass();
+  }
+
   DECLARE_TYPE(String);
 
+ private:
+  static Class* kClass;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+
  public:
+  static void Init();
   static inline auto New(const std::string& value) -> String* {
     return new String(value);
   }
@@ -369,6 +420,11 @@ class String : public StringObject {
   static inline auto Unbox(Object* rhs) -> const std::string& {
     ASSERT(rhs && rhs->IsString());
     return rhs->AsString()->Get();
+  }
+
+  static inline auto GetClass() -> Class* {
+    ASSERT(kClass);
+    return kClass;
   }
 
   static auto ValueOf(Object* rhs) -> String*;
@@ -392,10 +448,23 @@ class Symbol : public StringObject {
     StringObject(value) {}
 
  public:
+  auto GetType() const -> Class* override {
+    return GetClass();
+  }
+
   DECLARE_TYPE(Symbol);
 
+ private:
+  static Class* kClass;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+
  public:
+  static void Init();
   static auto New(const std::string& rhs) -> Symbol*;
+
+  static inline auto GetClass() -> Class* {
+    ASSERT(kClass);
+    return kClass;
+  }
 };
 
 static inline auto IsSymbol(Object* rhs) -> bool {
@@ -417,36 +486,6 @@ static inline auto operator<<(std::ostream& stream, const SymbolList& rhs) -> st
   return stream;
 }
 
-class List : public Datum {
- private:
-  std::vector<Datum*> data_;
-
-  explicit List(const std::vector<Datum*>& data) :
-    data_(data) {}
-
- public:
-  auto GetLength() const -> uint64_t {
-    return data_.size();
-  }
-
-  auto GetDatumAt(const uint64_t idx) const -> Datum* {
-    ASSERT(idx >= 0 && idx <= GetLength());
-    return data_[idx] ? data_[idx] : Null::Get();
-  }
-
-  void SetDatumAt(const uint64_t idx, Datum* rhs) {
-    ASSERT(idx >= 0 && idx <= GetLength());
-    data_[idx] = rhs ? rhs : Null::Get();
-  }
-
-  DECLARE_TYPE(List);
-
- public:
-  static inline auto New(const std::vector<Datum*>& data = {}) -> List* {
-    return new List(data);
-  }
-};
-
 auto PrintValue(std::ostream& stream, Object* value) -> std::ostream&;
 
 static inline auto BinaryAnd(Object* lhs, Object* rhs) -> Datum* {
@@ -459,7 +498,7 @@ static inline auto Car(Object* rhs) -> Object* {
   ASSERT(rhs);
   if (rhs->IsPair())
     return rhs->AsPair()->GetCar();
-  return Null::Get();
+  return Pair::Empty();
 }
 
 static inline auto Cdr(Object* rhs) -> Object* {
@@ -467,14 +506,14 @@ static inline auto Cdr(Object* rhs) -> Object* {
   if (rhs->IsPair())
     return rhs->AsPair()->GetCdr();
   LOG(ERROR) << rhs << " is not a Pair or List.";
-  return Null::Get();
+  return Pair::Empty();
 }
 
 static inline auto Truth(scm::Object* rhs) -> bool {
   ASSERT(rhs);
   if (rhs->IsBool())
     return rhs->AsBool()->Get();
-  return !rhs->IsNull();  // TODO: better truth?
+  return !(rhs->IsPair() && rhs->AsPair()->IsEmpty());  // TODO: better truth?
 }
 
 static inline auto Not(Object* rhs) -> Object* {

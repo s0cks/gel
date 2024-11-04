@@ -157,7 +157,7 @@ auto Interpreter::VisitBranchInstr(BranchInstr* instr) -> bool {
 
 auto Interpreter::VisitInstanceOfInstr(InstanceOfInstr* instr) -> bool {
   ASSERT(instr);
-  const auto stack_top = GetRuntime()->StackTop().value_or(Null::Get());
+  const auto stack_top = GetRuntime()->StackTop().value_or(Pair::Empty());
   ASSERT(stack_top);
   const auto predicate = instr->GetPredicate();
   if (!predicate(stack_top)) {

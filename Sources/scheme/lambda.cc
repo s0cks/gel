@@ -13,9 +13,9 @@
 #include "scheme/runtime.h"
 
 namespace scm {
-Lambda::Lambda(const ArgumentSet& args, expr::LambdaExpr* expr) :
+Lambda::Lambda(ArgumentSet args, expr::LambdaExpr* expr) :
   Procedure(),
-  args_(args),
+  args_(std::move(args)),
   expr_(expr) {
   ASSERT(expr_);
 }

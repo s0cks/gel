@@ -72,7 +72,7 @@ auto EntryInstr::VisitDominated(InstructionVisitor* vis) -> bool {
 auto GraphEntryInstr::GetFirstInstruction() const -> Instruction* {
   const auto next = GetNext();
   ASSERT(next);
-  return next->IsEntryInstr() ? ((EntryInstr*)next)->GetFirstInstruction() : next;
+  return next->IsEntryInstr() ? next->AsEntryInstr()->GetFirstInstruction() : next;
 }
 
 auto GraphEntryInstr::ToString() const -> std::string {

@@ -53,6 +53,8 @@ class InstructionVisitor {
 #undef DECLARE_VISIT
 };
 
+class Definition;
+class EntryInstr;
 class Instruction {
   DEFINE_NON_COPYABLE_TYPE(Instruction);
 
@@ -97,12 +99,20 @@ class Instruction {
 
   void Append(Instruction* instr);
 
-  virtual auto IsEntryInstr() const -> bool {
-    return false;
+  virtual auto AsEntryInstr() -> EntryInstr* {
+    return nullptr;
   }
 
-  virtual auto IsDefinition() const -> bool {
-    return false;
+  auto IsEntryInstr() -> bool {
+    return AsEntryInstr() != nullptr;
+  }
+
+  virtual auto AsDefinition() -> Definition* {
+    return nullptr;
+  }
+
+  auto IsDefinition() -> bool {
+    return AsDefinition() != nullptr;
   }
 
 #define DEFINE_TYPE_CHECK(Name)      \
@@ -191,8 +201,8 @@ class EntryInstr : public Instruction {
     return block_id_;
   }
 
-  auto IsEntryInstr() const -> bool override {
-    return true;
+  auto AsEntryInstr() -> EntryInstr* override {
+    return this;
   }
 
   auto GetDominator() const -> EntryInstr* {
@@ -277,8 +287,12 @@ class Definition : public Instruction {
  public:
   ~Definition() override = default;
 
-  auto IsDefinition() const -> bool override {
-    return true;
+  auto AsDefinition() -> Definition* override {
+    return this;
+  }
+
+  auto IsDefinition() -> bool {
+    return AsDefinition() != nullptr;
   }
 };
 

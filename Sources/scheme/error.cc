@@ -2,7 +2,17 @@
 
 #include <sstream>
 
+#include "scheme/common.h"
+#include "scheme/object.h"
+
 namespace scm {
+Class* Error::kClass = nullptr;
+void Error::Init() {
+  ASSERT(kClass == nullptr);
+  kClass = Class::New("Error");
+  ASSERT(kClass);
+}
+
 auto Error::Equals(Object* rhs) const -> bool {
   if (!rhs || !rhs->IsError())
     return false;

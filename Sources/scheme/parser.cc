@@ -8,6 +8,7 @@
 #include "scheme/instruction.h"
 #include "scheme/local.h"
 #include "scheme/local_scope.h"
+#include "scheme/object.h"
 #include "scheme/token.h"
 
 namespace scm {
@@ -277,7 +278,7 @@ auto Parser::ParseExpression() -> Expression* {
   return expr;
 }
 
-auto Parser::ParseQuotedExpr() -> expr::QuotedExpr* {
+auto Parser::ParseQuotedExpr() -> expr::Expression* {
   const auto depth = GetDepth();
   ExpectNext(Token::kQuote);
   SkipWhitespace();
@@ -294,6 +295,9 @@ auto Parser::ParseQuotedExpr() -> expr::QuotedExpr* {
     }
   } while (true);
   ASSERT(depth == GetDepth());
+  const auto text = GetBufferedText();
+  if (text == "()")
+    return LiteralExpr::New(Pair::Empty());
   return QuotedExpr::New(GetBufferedText());
 }
 

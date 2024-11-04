@@ -175,7 +175,7 @@ class EffectVisitor : public ExpressionVisitor {
 
   inline void AddImplicitReturn() {
     const auto exit = GetExitInstr();
-    if (!exit->IsReturnInstr())
+    if (exit && !exit->IsReturnInstr())
       Add(CreateReturnForExit(exit));
   }
 

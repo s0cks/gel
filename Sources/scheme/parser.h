@@ -108,7 +108,7 @@ class Parser {
   auto ParseLambdaExpr() -> expr::LambdaExpr*;
   auto ParseThrowExpr() -> expr::ThrowExpr*;
   auto ParseEvalExpr() -> expr::EvalExpr*;
-  auto ParseQuotedExpr() -> expr::QuotedExpr*;
+  auto ParseQuotedExpr() -> expr::Expression*;
   auto ParseWhenExpr() -> expr::WhenExpr*;
   auto ParseCaseExpr() -> expr::CaseExpr*;
   auto ParseWhileExpr() -> expr::WhileExpr*;

@@ -24,7 +24,7 @@ FOR_EACH_TYPE(DEFINE_TYPE_ASSERTION)
 #undef DEFINE_TYPE_ASSERTION
 
 static inline auto IsNull(Datum* d) -> AssertionResult {
-  if (!d || !d->IsNull())
+  if (!d || !(d->IsPair() && d->AsPair()->IsEmpty()))
     return AssertionFailure() << "expected " << d << " to be Null.";
   return AssertionSuccess();
 }

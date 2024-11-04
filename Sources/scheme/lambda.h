@@ -20,7 +20,7 @@ class Lambda : public Procedure {
   CompiledExpression* compiled_ = nullptr;
 
  protected:
-  explicit Lambda(const ArgumentSet& args, expr::LambdaExpr* body);
+  explicit Lambda(ArgumentSet args, expr::LambdaExpr* body);
 
  public:
   auto GetArgs() const -> const ArgumentSet& {

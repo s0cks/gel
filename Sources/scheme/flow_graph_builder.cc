@@ -28,7 +28,7 @@ auto FlowGraphBuilder::BuildGraph() -> FlowGraph* {
   const auto target_entry = TargetEntryInstr::New(GetNextBlockId());
   ASSERT(target_entry);
   SetCurrentBlock(target_entry);
-  EffectVisitor for_effect(this);
+  ValueVisitor for_effect(this);
   if (!GetExpr()->Accept(&for_effect)) {
     LOG(ERROR) << "failed to visit: " << GetExpr()->ToString();
     return nullptr;  // TODO: free entry
@@ -179,7 +179,7 @@ auto EffectVisitor::VisitCaseExpr(expr::CaseExpr* expr) -> bool {
     }
 
     ASSERT(for_clause.GetEntryInstr() != nullptr && for_clause.GetEntryInstr()->IsEntryInstr());
-    const auto target = ((EntryInstr*)for_clause.GetEntryInstr());
+    const auto target = for_clause.GetEntryInstr()->AsEntryInstr();
     const auto cmp = instr::BinaryOpInstr::NewEquals();
     for_test.Add(cmp);
     const auto branch = BranchInstr::New(cmp, target, join);
