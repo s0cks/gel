@@ -5,4 +5,11 @@
 #include "scheme/common.h"
 #include "scheme/runtime.h"
 
-namespace scm {}  // namespace scm
+namespace scm {
+Class* Procedure::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+void Procedure::Init() {
+  ASSERT(kClass == nullptr);
+  kClass = Class::New("Procedure");
+  ASSERT(kClass);
+}
+}  // namespace scm

@@ -8,6 +8,13 @@
 #include "scheme/local_scope.h"
 
 namespace scm {
+Class* Macro::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+void Macro::Init() {
+  ASSERT(kClass == nullptr);
+  kClass = Class::New("Macro");
+  ASSERT(kClass);
+}
+
 auto Macro::Equals(Object* rhs) const -> bool {
   if (!rhs || !rhs->IsMacro())
     return false;

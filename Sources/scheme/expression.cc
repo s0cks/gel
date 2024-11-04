@@ -9,6 +9,13 @@
 #include "scheme/common.h"
 
 namespace scm::expr {
+Class* Expression::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+void Expression::Init() {
+  ASSERT(kClass == nullptr);
+  kClass = Class::New("Expression");
+  ASSERT(kClass);
+}
+
 #define DEFINE_ACCEPT(Name)                           \
   auto Name::Accept(ExpressionVisitor* vis) -> bool { \
     ASSERT(vis);                                      \

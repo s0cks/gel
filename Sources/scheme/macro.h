@@ -2,6 +2,7 @@
 #define SCM_MACRO_H
 
 #include "scheme/argument.h"
+#include "scheme/common.h"
 #include "scheme/expression.h"
 #include "scheme/object.h"
 
@@ -37,11 +38,24 @@ class Macro : public Object {
     return GetBody() != nullptr;
   }
 
+  auto GetType() const -> Class* override {
+    return GetClass();
+  }
+
   DECLARE_TYPE(Macro);
 
+ private:
+  static Class* kClass;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+
  public:
+  static void Init();
   static inline auto New(Symbol* symbol, const ArgumentSet& args = {}, expr::Expression* body = nullptr) -> Macro* {
     return new Macro(symbol, args, body);
+  }
+
+  static inline auto GetClass() -> Class* {
+    ASSERT(kClass);
+    return kClass;
   }
 };
 

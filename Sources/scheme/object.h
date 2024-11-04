@@ -39,7 +39,7 @@ class Object {
 
  public:
   virtual ~Object() = default;
-  virtual auto GetObjectname() const -> const char* = 0;
+  virtual auto GetType() const -> Class* = 0;
   virtual auto Equals(Object* rhs) const -> bool = 0;
   virtual auto ToString() const -> std::string = 0;
 
@@ -72,19 +72,18 @@ static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream
   return stream << rhs->ToString();
 }
 
-#define DECLARE_TYPE(Name)                             \
-  DEFINE_NON_COPYABLE_TYPE(Name)                       \
- public:                                               \
-  ~Name() override = default;                          \
-  auto GetObjectname() const -> const char* override { \
-    return #Name;                                      \
-  }                                                    \
-  auto Equals(Object* rhs) const -> bool override;     \
-  auto ToString() const -> std::string override;       \
-  auto As##Name() -> Name* override {                  \
-    return this;                                       \
+#define DECLARE_TYPE(Name)                         \
+  DEFINE_NON_COPYABLE_TYPE(Name)                   \
+ public:                                           \
+  ~Name() override = default;                      \
+  auto Equals(Object* rhs) const -> bool override; \
+  auto ToString() const -> std::string override;   \
+  auto As##Name() -> Name* override {              \
+    return this;                                   \
   }
 
+class Class;
+using ClassList = std::vector<Class*>;
 class Class : public Object {
  private:
   String* name_;
@@ -101,16 +100,29 @@ class Class : public Object {
     return name_;
   }
 
+  auto GetType() const -> Class* override {
+    return GetClass();
+  }
+
   DECLARE_TYPE(Class);
+
+ private:
+  static Class* kClass;   // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+  static ClassList all_;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
  public:
   static void Init();
-  static inline auto New(String* name) -> Class* {
-    ASSERT(name);
-    return new Class(name);
+  static auto New(String* name) -> Class*;
+  static auto New(const std::string& name) -> Class*;
+
+  static inline auto GetClass() -> Class* {
+    ASSERT(kClass);
+    return kClass;
   }
 
-  static auto New(const std::string& name) -> Class*;
+  static inline auto GetAllClasses() -> const ClassList& {
+    return all_;
+  }
 };
 
 class Datum : public Object {
@@ -138,7 +150,6 @@ class Datum : public Object {
   virtual auto And(Datum* rhs) const -> Datum*;
   virtual auto Or(Datum* rhs) const -> Datum*;
   virtual auto Compare(Datum* rhs) const -> int;
-  virtual auto GetType() const -> Class* = 0;
 };
 
 class Bool : public Datum {

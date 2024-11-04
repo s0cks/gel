@@ -57,7 +57,7 @@ auto main(int argc, char** argv) -> int {
     return Execute((*expr));
 
   if (argc >= 2) {
-    const auto script = std::string(argv[1]);
+    const auto script = std::string(argv[1]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     DVLOG(10) << "loading script from: " << script;
     std::stringstream code;
     {

@@ -117,9 +117,8 @@ class Expression : public Object {  // TODO: should Expression inherit from Obje
     return false;
   }
 
-  auto GetObjectname() const -> const char* override {
-    NOT_IMPLEMENTED(ERROR);  // TODO: implement
-    return "Expression";
+  auto GetType() const -> Class* override {
+    return GetClass();
   }
 
   auto Equals(Object* rhs) const -> bool override {
@@ -137,6 +136,16 @@ class Expression : public Object {  // TODO: should Expression inherit from Obje
   }
   FOR_EACH_EXPRESSION_NODE(DEFINE_TYPE_CHECK)
 #undef DEFINE_TYPE_CHECK
+ private:
+  static Class* kClass;
+
+ public:
+  void Init();
+
+  static inline auto GetClass() -> Class* {
+    ASSERT(kClass);
+    return kClass;
+  }
 };
 
 template <const int NumInputs>

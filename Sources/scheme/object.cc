@@ -23,7 +23,13 @@ void Object::Init() {
   String::Init();
 }
 
-void Class::Init() {}
+ClassList Class::all_ = {};      // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+Class* Class::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+void Class::Init() {
+  ASSERT(kClass == nullptr);
+  kClass = Class::New("Class");
+  ASSERT(kClass);
+}
 
 Class* Long::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 void Long::Init() {
@@ -342,6 +348,14 @@ auto Class::Equals(Object* rhs) const -> bool {
   const auto other = rhs->AsClass();
   ASSERT(other);
   return GetName()->Equals(other->GetName());
+}
+
+auto Class::New(String* name) -> Class* {
+  ASSERT(name);
+  const auto cls = new Class(name);
+  ASSERT(cls);
+  all_.push_back(cls);
+  return cls;
 }
 
 auto Class::New(const std::string& name) -> Class* {

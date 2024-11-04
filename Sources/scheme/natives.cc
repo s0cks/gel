@@ -57,7 +57,7 @@ NATIVE_PROCEDURE_F(type) {
   ASSERT(value);
   if (value->IsPair() && value->AsPair()->IsEmpty())
     return ReturnValue(String::New("Null"));
-  return ReturnValue(String::New(value->GetObjectname()));
+  return ReturnValue(value->GetType()->GetName());
 }
 
 NATIVE_PROCEDURE_F(exit) {
@@ -103,6 +103,17 @@ NATIVE_PROCEDURE_F(list_symbols) {
   ASSERT(scope);
 
   LocalScopePrinter::Print(scope, __FILE__, __LINE__);
+  return true;
+}
+
+NATIVE_PROCEDURE_F(list_classes) {
+  ASSERT(HasRuntime());
+  ASSERT(args.empty());
+  DLOG(INFO) << "classes: ";
+  for (const auto& cls : Class::GetAllClasses()) {
+    ASSERT(cls);
+    DLOG(INFO) << "- " << cls->ToString();
+  }
   return true;
 }
 

@@ -30,6 +30,21 @@ class Procedure : public Object {
   }
 
   virtual auto Apply(Runtime* state) -> bool = 0;
+
+  auto GetType() const -> Class* override {
+    return GetClass();
+  }
+
+ private:
+  static Class* kClass;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+
+ public:
+  static void Init();
+
+  static inline auto GetClass() -> Class* {
+    ASSERT(kClass);
+    return kClass;
+  }
 };
 
 static inline auto IsProcedure(Object* rhs) -> bool {

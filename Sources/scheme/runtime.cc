@@ -155,6 +155,7 @@ auto Runtime::CreateInitScope() -> LocalScope* {
 #ifdef SCM_DEBUG
   scope->Add("debug?", Bool::True());
   RegisterProc<proc::list_symbols>(scope);
+  RegisterProc<proc::list_classes>(scope);
 #endif  // SCM_DEBUG
   return scope;
 }
