@@ -8,23 +8,24 @@
 #include <string>
 #include <unordered_set>
 
+#include "gmock/gmock.h"
 #include "scheme/common.h"
 
 namespace scm {
 #define FOR_EACH_TYPE(V) \
   V(Class)               \
   V(Bool)                \
-  V(Lambda)              \
-  V(Procedure)           \
-  V(NativeProcedure)     \
-  V(Pair)                \
   V(Number)              \
   V(Double)              \
   V(Long)                \
   V(String)              \
   V(Symbol)              \
   V(Macro)               \
-  V(CompiledExpression)  \
+  V(Procedure)           \
+  V(Lambda)              \
+  V(NativeProcedure)     \
+  V(Pair)                \
+  V(Script)              \
   V(Error)
 
 #define FORWARD_DECLARE(Name) class Name;
@@ -64,8 +65,16 @@ class Object {
   }
   FOR_EACH_TYPE(DEFINE_TYPE_CHECK)
 #undef DEFINE_TYPE_CHECK
+ private:
+  static Class* kClass;
+
  public:
   static void Init();
+
+  static inline auto GetClass() -> Class* {
+    ASSERT(kClass);
+    return kClass;
+  }
 };
 
 static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream& {
@@ -75,7 +84,6 @@ static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream
 #define DECLARE_TYPE(Name)                         \
   DEFINE_NON_COPYABLE_TYPE(Name)                   \
  public:                                           \
-  ~Name() override = default;                      \
   auto Equals(Object* rhs) const -> bool override; \
   auto ToString() const -> std::string override;   \
   auto As##Name() -> Name* override {              \
@@ -85,17 +93,31 @@ static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream
 class Class;
 using ClassList = std::vector<Class*>;
 class Class : public Object {
+  friend class Object;
+
  private:
+  Class* parent_;
   String* name_;
 
  protected:
-  explicit Class(String* name) :
+  explicit Class(Class* parent, String* name) :
     Object(),
+    parent_(parent),
     name_(name) {
     ASSERT(name_);
   }
 
  public:
+  ~Class() override = default;
+
+  auto GetParent() const -> Class* {
+    return parent_;
+  }
+
+  inline auto HasParent() const -> bool {
+    return GetParent() != nullptr;
+  }
+
   auto GetName() const -> String* {
     return name_;
   }
@@ -104,16 +126,24 @@ class Class : public Object {
     return GetClass();
   }
 
+  auto IsInstanceOf(Class* rhs) const -> bool;
   DECLARE_TYPE(Class);
 
  private:
   static Class* kClass;   // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
   static ClassList all_;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
+  static inline auto New(String* name) -> Class* {
+    ASSERT(name);
+    return new Class(nullptr, name);
+  }
+
+  static auto New(const std::string& name) -> Class*;
+
  public:
   static void Init();
-  static auto New(String* name) -> Class*;
-  static auto New(const std::string& name) -> Class*;
+  static auto New(Class* parent, String* name) -> Class*;
+  static auto New(Class* parent, const std::string& name) -> Class*;
 
   static inline auto GetClass() -> Class* {
     ASSERT(kClass);
@@ -161,6 +191,8 @@ class Bool : public Datum {
     value_(value) {}
 
  public:
+  ~Bool() override = default;
+
   auto Get() const -> bool {
     return value_;
   }
@@ -253,6 +285,8 @@ class Long : public Number {
     Number(value) {}
 
  public:
+  ~Long() override = default;
+
   inline auto Get() const -> uint64_t {
     return GetLong();
   }
@@ -291,6 +325,8 @@ class Double : public Number {
     Number(value) {}
 
  public:
+  ~Double() override = default;
+
   inline auto Get() const -> double {
     return GetDouble();
   }
@@ -331,6 +367,8 @@ class Pair : public Datum {
     cdr_(cdr) {}
 
  public:
+  ~Pair() override = default;
+
   auto GetCar() const -> Object* {
     return car_;
   }
@@ -414,6 +452,8 @@ class String : public StringObject {
     StringObject(value) {}
 
  public:
+  ~String() override = default;
+
   auto GetType() const -> Class* override {
     return GetClass();
   }
@@ -442,10 +482,6 @@ class String : public StringObject {
   static auto ValueOf(Object* rhs) -> String*;
 };
 
-static inline auto IsString(Object* rhs) -> bool {
-  return rhs && rhs->IsString();
-}
-
 class Symbol : public StringObject {
  public:
   struct Comparator {
@@ -460,6 +496,8 @@ class Symbol : public StringObject {
     StringObject(value) {}
 
  public:
+  ~Symbol() override = default;
+
   auto GetType() const -> Class* override {
     return GetClass();
   }
@@ -479,10 +517,6 @@ class Symbol : public StringObject {
   }
 };
 
-static inline auto IsSymbol(Object* rhs) -> bool {
-  return rhs && rhs->IsSymbol();
-}
-
 using SymbolList = std::vector<Symbol*>;
 using SymbolSet = std::unordered_set<Symbol*, Symbol::Comparator>;
 
@@ -500,6 +534,29 @@ static inline auto operator<<(std::ostream& stream, const SymbolList& rhs) -> st
 
 auto PrintValue(std::ostream& stream, Object* value) -> std::ostream&;
 
+#define DEFINE_TYPE_PRED(Name)                       \
+  static inline auto Is##Name(Object* rhs) -> bool { \
+    return rhs && rhs->Is##Name();                   \
+  }
+FOR_EACH_TYPE(DEFINE_TYPE_PRED)
+#undef DEFINE_TYPE_PRED
+
+#define DEFINE_TYPE_CAST(Name)                        \
+  static inline auto To##Name(Object* rhs) -> Name* { \
+    ASSERT(rhs&& Is##Name(rhs));                      \
+    return rhs->As##Name();                           \
+  }
+FOR_EACH_TYPE(DEFINE_TYPE_CAST)
+#undef DEFINE_TYPE_CAST
+
+static inline auto Null() -> Object* {
+  return Pair::Empty();
+}
+
+static inline auto IsNull(Object* rhs) -> bool {
+  return !rhs || (rhs->IsPair() && rhs->AsPair()->IsEmpty());
+}
+
 static inline auto BinaryAnd(Object* lhs, Object* rhs) -> Datum* {
   ASSERT(lhs && lhs->IsDatum());
   ASSERT(rhs && rhs->IsDatum());
@@ -508,24 +565,25 @@ static inline auto BinaryAnd(Object* lhs, Object* rhs) -> Datum* {
 
 static inline auto Car(Object* rhs) -> Object* {
   ASSERT(rhs);
-  if (rhs->IsPair())
-    return rhs->AsPair()->GetCar();
-  return Pair::Empty();
+  if (!IsPair(rhs))
+    return Null();  // TODO: throw error.
+  const auto value = rhs->AsPair()->GetCar();
+  return value ? value : Null();
 }
 
 static inline auto Cdr(Object* rhs) -> Object* {
   ASSERT(rhs);
-  if (rhs->IsPair())
-    return rhs->AsPair()->GetCdr();
-  LOG(ERROR) << rhs << " is not a Pair or List.";
-  return Pair::Empty();
+  if (!IsPair(rhs))
+    return Null();  // TODO: throw error.
+  const auto value = rhs->AsPair()->GetCdr();
+  return value ? value : Null();
 }
 
 static inline auto Truth(scm::Object* rhs) -> bool {
   ASSERT(rhs);
   if (rhs->IsBool())
     return rhs->AsBool()->Get();
-  return !(rhs->IsPair() && rhs->AsPair()->IsEmpty());  // TODO: better truth?
+  return !IsNull(rhs);
 }
 
 static inline auto Not(Object* rhs) -> Object* {

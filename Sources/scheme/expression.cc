@@ -12,7 +12,7 @@ namespace scm::expr {
 Class* Expression::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 void Expression::Init() {
   ASSERT(kClass == nullptr);
-  kClass = Class::New("Expression");
+  kClass = Class::New(Object::GetClass(), "Expression");
   ASSERT(kClass);
 }
 
@@ -93,28 +93,6 @@ auto BinaryOpExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
   if (!GetRight()->Accept(vis))
     return false;
   return true;
-}
-
-auto ConsExpr::IsConstantExpr() const -> bool {
-  return GetCar()->IsConstantExpr() && GetCdr()->IsConstantExpr();
-}
-
-auto ConsExpr::EvalToConstant() const -> Object* {
-  ASSERT(IsConstantExpr());
-  const auto car = GetCar()->EvalToConstant();
-  ASSERT(car);
-  const auto cdr = GetCdr()->EvalToConstant();
-  ASSERT(cdr);
-  return Pair::New(car, cdr);
-}
-
-auto ConsExpr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << GetName() << "(";
-  ss << "car=" << GetCar()->ToString() << ", ";
-  ss << "cdr=" << GetCdr()->ToString();
-  ss << ")";
-  return ss.str();
 }
 
 auto BinaryOpExpr::ToString() const -> std::string {
@@ -227,35 +205,6 @@ auto ImportDef::ToString() const -> std::string {
   std::stringstream ss;
   ss << GetName() << "(";
   ss << "symbol=" << GetSymbol();
-  ss << ")";
-  return ss.str();
-}
-
-auto ModuleDef::VisitChildren(ExpressionVisitor* vis) -> bool {
-  ASSERT(vis);
-  for (const auto& defn : definitions_) {
-    if (!defn->Accept(vis))
-      return false;
-  }
-  return true;
-}
-
-auto ModuleDef::VisitAllImportDefs(ExpressionVisitor* vis) -> bool {
-  ASSERT(vis);
-  for (const auto& defn : definitions_) {
-    if (defn->IsImportDef()) {
-      if (!defn->Accept(vis))
-        return false;
-    }
-  }
-  return true;
-}
-
-auto ModuleDef::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << GetName() << "(";
-  ss << "symbol=" << GetSymbol() << ", ";
-  ss << "definitions=" << definitions_;
   ss << ")";
   return ss.str();
 }

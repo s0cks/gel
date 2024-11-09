@@ -13,8 +13,8 @@ class FlowGraphTest : public Test {};
 
 TEST_F(FlowGraphTest, Test_Builder) {  // NOLINT
   const auto expr = Parser::ParseExpr("(begin (define test #t) (+ 99 1))");
-  FlowGraphBuilder builder(expr);
-  const auto flow_graph = builder.BuildGraph();
+  const auto scope = LocalScope::New();
+  const auto flow_graph = FlowGraphBuilder::Build(expr, scope);
   ASSERT_TRUE(flow_graph);
   ASSERT_TRUE(flow_graph->GetEntry());
 #ifdef SCM_DEBUG

@@ -28,6 +28,8 @@ class NativeProcedure : public Procedure {
   }
 
  public:
+  ~NativeProcedure() override = default;
+
   auto GetSymbol() const -> Symbol* {
     return symbol_;
   }
@@ -36,17 +38,23 @@ class NativeProcedure : public Procedure {
     return true;
   }
 
-  auto Apply(Runtime* runtime) -> bool override {
-    ASSERT(runtime);
-    return ThrowError("Invalid State.");
+  auto GetType() const -> Class* override {
+    return GetClass();
   }
 
   DECLARE_TYPE(NativeProcedure);
-};
 
-static inline auto IsNativeProcedure(Object* rhs) -> bool {
-  return rhs && rhs->IsProcedure() && rhs->AsProcedure()->IsNative();
-}
+ private:
+  static Class* kClass;
+
+ public:
+  static void Init();
+
+  static inline auto GetClass() -> Class* {
+    ASSERT(kClass);
+    return kClass;
+  }
+};
 
 #define _DEFINE_NATIVE_PROCEDURE_TYPE(Name, Sym)                                \
   DEFINE_NON_COPYABLE_TYPE(Name);                                               \

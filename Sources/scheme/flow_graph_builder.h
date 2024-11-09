@@ -5,7 +5,7 @@
 #include "scheme/expression.h"
 #include "scheme/flow_graph.h"
 #include "scheme/instruction.h"
-#include "scheme/program.h"
+#include "scheme/object.h"
 
 namespace scm {
 class FlowGraphBuilder {
@@ -14,7 +14,6 @@ class FlowGraphBuilder {
   DEFINE_NON_COPYABLE_TYPE(FlowGraphBuilder);
 
  private:
-  Expression* expr_;
   LocalScope* scope_ = nullptr;
   GraphEntryInstr* entry_ = nullptr;
   EntryInstr* block_ = nullptr;
@@ -46,17 +45,11 @@ class FlowGraphBuilder {
   }
 
  public:
-  explicit FlowGraphBuilder(Expression* expr, LocalScope* scope = LocalScope::New()) :
-    expr_(expr),
+  explicit FlowGraphBuilder(LocalScope* scope) :
     scope_(scope) {
-    ASSERT(expr_);
     ASSERT(scope_);
   }
   ~FlowGraphBuilder() = default;
-
-  auto GetExpr() const -> Expression* {
-    return expr_;
-  }
 
   auto GetScope() const -> LocalScope* {
     return scope_;
@@ -70,21 +63,9 @@ class FlowGraphBuilder {
     return GetGraphEntry() != nullptr;
   }
 
-  auto BuildGraph() -> FlowGraph*;
-
  public:
-  static inline auto Build(Expression* expr, LocalScope* scope = LocalScope::New()) -> FlowGraph* {
-    ASSERT(expr);
-    ASSERT(scope);
-    FlowGraphBuilder builder(expr, scope);
-    return builder.BuildGraph();
-  }
-
-  static inline auto Build(Program* program) -> FlowGraph* {
-    ASSERT(program);
-    ASSERT(program->GetNumberOfExpressions() >= 1);
-    return Build(program->GetExpressionAt(0));
-  }
+  static auto Build(Expression* expr, LocalScope* scope) -> FlowGraph*;
+  static auto Build(Script* script, LocalScope* scope) -> FlowGraph*;
 };
 
 class EffectVisitor : public ExpressionVisitor {

@@ -28,10 +28,6 @@ class RuntimeTest : public Test {
     return old;
   }
 
-  inline auto GetScope() const -> LocalScope* {
-    return GetRuntime()->GetScope();
-  }
-
  public:
   ~RuntimeTest() override = default;
 

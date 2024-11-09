@@ -1,7 +1,10 @@
 #ifndef SCM_INTERPRETER_H
 #define SCM_INTERPRETER_H
 
+#include "scheme/common.h"
 #include "scheme/instruction.h"
+#include "scheme/platform.h"
+#include "scheme/stack_frame.h"
 
 namespace scm {
 class Runtime;
@@ -12,6 +15,7 @@ class Interpreter : public InstructionVisitor {
  private:
   Runtime* runtime_;
   Instruction* current_ = nullptr;
+  std::stack<StackFrame> stack_{};
 
  protected:
   explicit Interpreter(Runtime* runtime) :
@@ -34,6 +38,31 @@ class Interpreter : public InstructionVisitor {
 
   void ExecuteInstr(Instruction* instr);
 
+  auto GetCurrentStackFrame() -> StackFrame* {
+    return &stack_.top();
+  }
+
+  auto HasStackFrame() const -> bool {
+    return !stack_.empty();
+  }
+
+  auto PopStackFrame() -> StackFrame;
+  auto PushStackFrame(LocalScope* locals) -> StackFrame*;
+  void Execute(instr::TargetEntryInstr* target, LocalScope* locals);
+
+  inline auto Next() -> bool {
+    const auto next = HasCurrentInstr() ? GetCurrentInstr()->GetNext() : nullptr;
+    SetCurrentInstr(next);
+    return true;
+  }
+
+  auto PushError(const std::string& message) -> bool;
+
+  inline auto Goto(Instruction* instr) -> bool {
+    SetCurrentInstr(instr);
+    return true;
+  }
+
  public:
   ~Interpreter() = default;
 
@@ -41,7 +70,6 @@ class Interpreter : public InstructionVisitor {
     return runtime_;
   }
 
-  void Run(GraphEntryInstr* entry);
 #define DECLARE_VISIT(Name) auto Visit##Name(Name* instr) -> bool override;
   FOR_EACH_INSTRUCTION(DECLARE_VISIT)
 #undef DECLARE_VISIT

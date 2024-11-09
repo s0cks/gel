@@ -7,13 +7,14 @@
 #include <iostream>
 
 #include "scheme/common.h"
+#include "scheme/disassembler.h"
 #include "scheme/error.h"
 #include "scheme/expression_compiler.h"
 #include "scheme/expression_dot.h"
 #include "scheme/flags.h"
 #include "scheme/flow_graph_builder.h"
 #include "scheme/flow_graph_dot.h"
-#include "scheme/module_compiler.h"
+#include "scheme/local_scope.h"
 #include "scheme/parser.h"
 #include "scheme/repl.h"
 #include "scheme/runtime.h"
@@ -24,8 +25,10 @@ static inline auto Execute(const std::string& rhs) -> int {
   if (FLAGS_eval) {
     try {
       const auto result = Runtime::Eval(rhs);
-      if (result)
+      if (result) {
+        std::cout << "result: ";
         PrintValue(std::cout, result) << std::endl;
+      }
     } catch (const scm::Exception& exc) {
       LOG(ERROR) << "failed to execute expression.";
       std::cerr << " * expression: " << rhs << std::endl;
@@ -34,9 +37,10 @@ static inline auto Execute(const std::string& rhs) -> int {
     }
   } else if (FLAGS_dump_ast || FLAGS_dump_flow_graph) {
     try {
-      const auto expression = ExpressionCompiler::Compile(rhs);
-      ASSERT(expression);
-      LOG(INFO) << "result: " << expression;
+      const auto expression = ExpressionCompiler::Compile(rhs, GetRuntime()->GetGlobalScope());
+      ASSERT(expression && expression->HasEntry());
+      LOG(INFO) << "result: ";
+      LOG_IF(FATAL, !Disassembler::Disassemble(expression->GetEntry())) << "failed to disassemble: " << expression;
     } catch (const scm::Exception& exc) {
       LOG(ERROR) << "failed to execute expression.";
       std::cerr << " * expression: " << rhs << std::endl;
@@ -67,8 +71,26 @@ auto main(int argc, char** argv) -> int {
       file.close();
     }
 
-    DVLOG(100) << "code:" << std::endl << code.str();
-    return Execute(code.str());
+    std::stringstream code_copy;
+    code_copy << code.rdbuf();
+    const auto ss = Parser::ParseScript(code_copy);
+    ASSERT(ss);
+
+    ScriptCompiler::Compile(ss);
+    ASSERT(ss && ss->IsCompiled());
+
+    try {
+      const auto result = Runtime::Exec(ss);
+      if (result) {
+        std::cout << "result: ";
+        PrintValue(std::cout, result) << std::endl;
+      }
+      return EXIT_SUCCESS;
+    } catch (const scm::Exception& exc) {
+      LOG(ERROR) << "failed to execute compiled script:";
+      std::cerr << " * message: " << exc.GetMessage() << std::endl;
+      return EXIT_FAILURE;
+    }
   }
   return Repl::Run();
 }

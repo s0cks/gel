@@ -9,11 +9,20 @@
 #include "scheme/common.h"
 #include "scheme/expression.h"
 #include "scheme/native_procedure.h"
+#include "scheme/script.h"
 
 namespace scm {
+Class* Object::kClass = nullptr;
 void Object::Init() {
+  ASSERT(kClass == nullptr);
+  kClass = Class::New("Object");
+  ASSERT(kClass);
   DVLOG(10) << "initializing type system....";
   Class::Init();
+  Script::Init();
+  Procedure::Init();
+  NativeProcedure::Init();
+  Lambda::Init();
   Bool::Init();
   Long::Init();
   Error::Init();
@@ -27,21 +36,21 @@ ClassList Class::all_ = {};      // NOLINT(cppcoreguidelines-avoid-non-const-glo
 Class* Class::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 void Class::Init() {
   ASSERT(kClass == nullptr);
-  kClass = Class::New("Class");
+  kClass = Class::New(Object::GetClass(), "Class");
   ASSERT(kClass);
 }
 
 Class* Long::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 void Long::Init() {
   ASSERT(kClass == nullptr);
-  kClass = Class::New("Long");
+  kClass = Class::New(Object::GetClass(), "Long");  // TODO: extend from Number class
   ASSERT(kClass);
 }
 
 Class* Double::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 void Double::Init() {
   ASSERT(kClass == nullptr);
-  kClass = Class::New("Double");
+  kClass = Class::New(Object::GetClass(), "Double");  // TODO: extend from Number class
   ASSERT(kClass);
 }
 
@@ -110,7 +119,7 @@ auto Bool::Or(Datum* rhs) const -> Datum* {
 Class* Bool::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 void Bool::Init() {
   ASSERT(kClass == nullptr);
-  kClass = Class::New("Bool");
+  kClass = Class::New(Object::GetClass(), "Bool");
   ASSERT(kClass);
   kTrue = NewTrue();
   kFalse = NewFalse();
@@ -215,7 +224,7 @@ auto Double::ToString() const -> std::string {
 Class* Pair::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 void Pair::Init() {
   ASSERT(kClass == nullptr);
-  kClass = Class::New("Pair");
+  kClass = Class::New(Object::GetClass(), "Pair");
   ASSERT(kClass);
 }
 
@@ -258,7 +267,7 @@ auto StringObject::Equals(const std::string& rhs) const -> bool {
 Class* Symbol::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 void Symbol::Init() {
   ASSERT(kClass == nullptr);
-  kClass = Class::New("Symbol");
+  kClass = Class::New(Object::GetClass(), "Symbol");
   ASSERT(kClass);
 }
 
@@ -278,7 +287,7 @@ auto Symbol::New(const std::string& rhs) -> Symbol* {
 Class* String::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 void String::Init() {
   ASSERT(kClass == nullptr);
-  kClass = Class::New("String");
+  kClass = Class::New(Object::GetClass(), "String");
   ASSERT(kClass);
 }
 
@@ -342,6 +351,17 @@ auto PrintValue(std::ostream& stream, Object* value) -> std::ostream& {
   return stream << value->ToString();
 }
 
+auto Class::IsInstanceOf(Class* rhs) const -> bool {
+  ASSERT(rhs);
+  auto cls = this;
+  while (cls) {
+    if (cls->Equals(rhs))
+      return true;
+    cls = cls->GetParent();
+  }
+  return false;
+}
+
 auto Class::Equals(Object* rhs) const -> bool {
   if (!rhs || !rhs->IsClass())
     return false;
@@ -350,16 +370,23 @@ auto Class::Equals(Object* rhs) const -> bool {
   return GetName()->Equals(other->GetName());
 }
 
-auto Class::New(String* name) -> Class* {
+auto Class::New(const std::string& name) -> Class* {
+  ASSERT(!name.empty());
+  return New(String::New(name));
+}
+
+auto Class::New(Class* parent, String* name) -> Class* {
+  ASSERT(parent);
   ASSERT(name);
-  const auto cls = new Class(name);
+  const auto cls = new Class(parent, name);
   ASSERT(cls);
   all_.push_back(cls);
   return cls;
 }
 
-auto Class::New(const std::string& name) -> Class* {
+auto Class::New(Class* parent, const std::string& name) -> Class* {
+  ASSERT(parent);
   ASSERT(!name.empty());
-  return New(String::New(name));
+  return New(parent, String::New(name));
 }
 }  // namespace scm

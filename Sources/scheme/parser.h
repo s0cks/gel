@@ -11,8 +11,9 @@
 #include "scheme/expression.h"
 #include "scheme/instruction.h"
 #include "scheme/lambda.h"
-#include "scheme/module.h"
-#include "scheme/program.h"
+#include "scheme/local_scope.h"
+#include "scheme/runtime.h"
+#include "scheme/script.h"
 #include "scheme/token.h"
 
 namespace scm {
@@ -36,6 +37,13 @@ class Parser {
   uint64_t depth_ = 0;
   Token next_{};
   Token peek_{};
+  std::stack<Object*> owner_stack_{};
+  Script* script_;
+
+  inline void SetScript(Script* script) {
+    ASSERT(script);
+    script_ = script;
+  }
 
  protected:
   inline void SetScope(LocalScope* scope) {
@@ -51,8 +59,6 @@ class Parser {
   template <const bool IsTopLevel = false>
   static inline auto IsValidDefinition(const Token& rhs) -> bool {
     switch (rhs.kind) {
-      case Token::kModuleDef:
-        return IsTopLevel;
       case Token::kLocalDef:
         return true;
       default:
@@ -67,7 +73,7 @@ class Parser {
     return false;
   }
 
-  template <const google::LogSeverity Severity = google::ERROR>
+  template <const google::LogSeverity Severity = google::FATAL>
   inline auto Unexpected(const Token& actual) -> bool {
     LOG_AT_LEVEL(Severity) << "unexpected: " << actual;
     return false;
@@ -84,12 +90,11 @@ class Parser {
       Unexpected(rhs, next);
   }
 
+  auto ParseLocalVariable() -> LocalVariable*;
+  auto ParseNamedLambda() -> Lambda*;
+
   // Misc
-  void PushScope();
-  void PopScope();
   auto ParseSymbol() -> Symbol*;
-  auto ParseCondExpr() -> CondExpr*;
-  auto ParseConsExpr() -> ConsExpr*;
   auto ParseLoadSymbol() -> LoadVariableInstr*;
   auto ParseArguments(ArgumentSet& args) -> bool;
   auto ParseExpressionList(expr::ExpressionList& expressions) -> bool;
@@ -112,6 +117,7 @@ class Parser {
   auto ParseWhenExpr() -> expr::WhenExpr*;
   auto ParseCaseExpr() -> expr::CaseExpr*;
   auto ParseWhileExpr() -> expr::WhileExpr*;
+  auto ParseCondExpr() -> CondExpr*;
 
   // Definitions
   auto ParseDefinition() -> expr::Definition*;
@@ -240,8 +246,11 @@ class Parser {
     return (wpos_ = num_read) >= 1;
   }
 
+  void PopScope();
+  auto PushScope() -> LocalScope*;
+
  public:
-  explicit Parser(std::istream& stream, LocalScope* scope = LocalScope::New()) :
+  explicit Parser(std::istream& stream, LocalScope* scope) :
     stream_(stream),
     scope_(scope) {
     ASSERT(stream.good());
@@ -251,8 +260,8 @@ class Parser {
   }
   ~Parser() = default;
 
-  auto ParseModuleDef() -> expr::ModuleDef*;
   auto ParseExpression() -> Expression*;
+  auto ParseScript() -> Script*;
 
  public:
   static inline auto ParseExpr(std::istream& stream, LocalScope* scope = LocalScope::New()) -> expr::Expression* {
@@ -269,17 +278,12 @@ class Parser {
     return ParseExpr(ss, scope);
   }
 
-  static inline auto ParseModule(std::istream& stream, LocalScope* scope = LocalScope::New()) -> expr::ModuleDef* {
+  static inline auto ParseScript(std::istream& stream, LocalScope* scope = LocalScope::New(GetRuntime()->GetGlobalScope()))
+      -> Script* {
     ASSERT(stream.good());
     ASSERT(scope);
     Parser parser(stream, scope);
-    return parser.ParseModuleDef();
-  }
-
-  static inline auto ParseModule(const std::string& expr, LocalScope* scope = LocalScope::New()) -> expr::ModuleDef* {
-    ASSERT(!expr.empty());
-    std::istringstream ss(expr);
-    return ParseModule(ss, scope);
+    return parser.ParseScript();
   }
 };
 }  // namespace scm

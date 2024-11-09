@@ -1,6 +1,7 @@
 #ifndef SCM_MACRO_COMPILER_H
 #define SCM_MACRO_COMPILER_H
 
+#include "scheme/common.h"
 #include "scheme/expression.h"
 #include "scheme/macro.h"
 
@@ -18,7 +19,7 @@ class MacroCompiler {
   }
 
  public:
-  explicit MacroCompiler(LocalScope* scope = LocalScope::New()) :
+  explicit MacroCompiler(LocalScope* scope) :
     scope_(scope) {
     ASSERT(scope_);
   }
@@ -39,11 +40,13 @@ class MacroCompiler {
   auto CompileMacro(expr::MacroDef* expr) -> Macro*;
 
  public:
-  static inline auto Compile(expr::MacroDef* expr, LocalScope* scope = LocalScope::New()) {
+  static inline auto Compile(expr::MacroDef* expr) -> Macro* {
     ASSERT(expr);
-    ASSERT(scope);
-    MacroCompiler compiler(scope);
-    return compiler.CompileMacro(expr);
+    // ASSERT(scope);
+    // MacroCompiler compiler(scope);
+    // return compiler.CompileMacro(expr);
+    NOT_IMPLEMENTED(FATAL);  // TODO: implement
+    return nullptr;
   }
 };
 }  // namespace scm

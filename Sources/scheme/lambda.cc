@@ -13,11 +13,11 @@
 #include "scheme/runtime.h"
 
 namespace scm {
-Lambda::Lambda(ArgumentSet args, expr::LambdaExpr* expr) :
-  Procedure(),
-  args_(std::move(args)),
-  expr_(expr) {
-  ASSERT(expr_);
+Class* Lambda::kClass = nullptr;
+void Lambda::Init() {
+  ASSERT(kClass == nullptr);
+  kClass = Class::New(Procedure::GetClass(), "Lambda");
+  ASSERT(kClass);
 }
 
 auto Lambda::Equals(Object* rhs) const -> bool {
@@ -27,36 +27,32 @@ auto Lambda::Equals(Object* rhs) const -> bool {
   return false;
 }
 
-auto Lambda::Apply(Runtime* runtime) -> bool {
-  if (expr_) {
-    compiled_ = ExpressionCompiler::Compile(expr::BeginExpr::New(expr_->GetBody()));
-  }
-  LOG_IF(FATAL, !compiled_) << "cannot exec uncompiled lambda: " << ToString();
-  for (const auto& arg : std::ranges::reverse_view(GetArgs())) {
-    const auto value = runtime->Pop();
-    ASSERT(value);
-    if (!runtime->GetScope()->Add(Symbol::New(arg.GetName()), value)) {
-      LOG(ERROR) << "failed to define argument value.";
-      GetRuntime()->PopScope();
-      return false;
-    }
-  }
-
-  runtime->PushScope();
-  const auto result = runtime->Execute(compiled_->GetEntry());
-  runtime->PopScope();
-  if (!result)
-    return true;
-  runtime->Push(result);
-  return true;
+void Lambda::Apply() {
+  LOG_IF(FATAL, IsEmpty()) << "cannot compile Lambda w/ empty body.";
+  const auto runtime = GetRuntime();
+  const auto scope = runtime->GetCurrentScope();
+  ASSERT(runtime);
+  runtime->Call(GetEntry()->GetTarget(), scope);
 }
 
 auto Lambda::ToString() const -> std::string {
   std::stringstream ss;
   ss << "Lambda(";
+  if (HasOwner())
+    ss << "owner=" << GetOwner() << ", ";
+  if (HasName())
+    ss << "name=" << GetName()->Get() << ", ";
   ss << "args=" << GetArgs() << ", ";
-  ss << "expr=" << GetExpression()->ToString();
+  ss << "body=" << GetBody()->GetName();
   ss << ")";
   return ss.str();
+}
+
+auto LambdaCompiler::CompileLambda(Lambda* lambda) -> bool {
+  ASSERT(lambda);
+  const auto flow_graph = ExpressionCompiler::Compile(lambda->GetBody(), GetScope());
+  if (flow_graph && flow_graph->HasEntry())
+    lambda->SetEntry(flow_graph->GetEntry());
+  return lambda->IsCompiled();
 }
 }  // namespace scm

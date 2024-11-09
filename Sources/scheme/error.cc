@@ -9,7 +9,7 @@ namespace scm {
 Class* Error::kClass = nullptr;
 void Error::Init() {
   ASSERT(kClass == nullptr);
-  kClass = Class::New("Error");
+  kClass = Class::New(Object::GetClass(), "Error");
   ASSERT(kClass);
 }
 

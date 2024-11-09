@@ -45,7 +45,6 @@ auto LocalScope::Add(LocalScope* scope) -> bool {
       return false;
     }
   }
-  DVLOG(10) << "added " << scope->GetNumberOfLocals() << " locals to scope.";
   return true;
 }
 
@@ -67,7 +66,12 @@ auto LocalScope::Lookup(const Symbol* symbol, LocalVariable** result, const bool
 
 static inline auto operator<<(std::ostream& stream, const std::vector<LocalVariable*>& rhs) -> std::ostream& {
   stream << "[";
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  auto remaining = rhs.size();
+  for (const auto& local : rhs) {
+    stream << (*local);
+    if (--remaining >= 1)
+      stream << ", ";
+  }
   stream << "]";
   return stream;
 }

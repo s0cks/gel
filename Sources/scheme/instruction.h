@@ -238,6 +238,14 @@ class GraphEntryInstr : public EntryInstr {
  public:
   ~GraphEntryInstr() override = default;
 
+  auto HasTarget() const -> bool {
+    return HasNext() && GetNext()->IsTargetEntryInstr();
+  }
+
+  auto GetTarget() -> TargetEntryInstr* {
+    return HasTarget() ? GetNext()->AsTargetEntryInstr() : nullptr;
+  }
+
   auto GetFirstInstruction() const -> Instruction* override;
 
   DECLARE_INSTRUCTION(GraphEntryInstr);
@@ -773,14 +781,15 @@ class InstanceOfInstr : public Instruction {
 
  private:
   Definition* value_;
-  Predicate predicate_;
+  Class* type_;
 
  public:
-  explicit InstanceOfInstr(Definition* value, Predicate predicate) :
+  explicit InstanceOfInstr(Definition* value, Class* type) :
     Instruction(),
     value_(value),
-    predicate_(predicate) {
+    type_(type) {
     ASSERT(value_);
+    ASSERT(type_);
   }
   ~InstanceOfInstr() override = default;
 
@@ -788,16 +797,17 @@ class InstanceOfInstr : public Instruction {
     return value_;
   }
 
-  auto GetPredicate() const -> Predicate {
-    return predicate_;
+  auto GetType() const -> Class* {
+    return type_;
   }
 
   DECLARE_INSTRUCTION(InstanceOfInstr);
 
  public:
-  static inline auto New(Definition* value, Predicate predicate) -> InstanceOfInstr* {
+  static inline auto New(Definition* value, Class* type) -> InstanceOfInstr* {
     ASSERT(value);
-    return new InstanceOfInstr(value, predicate);
+    ASSERT(type);
+    return new InstanceOfInstr(value, type);
   }
 };
 }  // namespace instr

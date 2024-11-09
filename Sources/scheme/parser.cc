@@ -12,12 +12,13 @@
 #include "scheme/token.h"
 
 namespace scm {
-void Parser::PushScope() {
+auto Parser::PushScope() -> LocalScope* {
   const auto old_scope = GetScope();
   ASSERT(old_scope);
   const auto new_scope = LocalScope::New(old_scope);
   ASSERT(new_scope);
   SetScope(new_scope);
+  return new_scope;
 }
 
 void Parser::PopScope() {
@@ -107,15 +108,6 @@ auto Parser::ParseBinaryOpExpr() -> BinaryOpExpr* {
   } while (true);
   ASSERT(left_expr->IsBinaryOpExpr());
   return left_expr->AsBinaryOpExpr();
-}
-
-auto Parser::ParseConsExpr() -> ConsExpr* {
-  ExpectNext(Token::kConsExpr);
-  const auto car = ParseExpression();
-  ASSERT(car);
-  const auto cdr = ParseExpression();
-  ASSERT(cdr);
-  return ConsExpr::New(car, cdr);
 }
 
 auto Parser::ParseCondExpr() -> CondExpr* {
@@ -223,11 +215,11 @@ auto Parser::ParseExpression() -> Expression* {
   } else {
     switch (next.kind) {
       // Definitions
-      case Token::kLocalDef:
-        expr = ParseLocalDef();
-        break;
       case Token::kMacroDef:
         expr = ParseMacroDef();
+        break;
+      case Token::kDefun:
+        expr = ParseDefunExpr();
         break;
       // Expressions
       case Token::kBeginExpr:
@@ -241,9 +233,6 @@ auto Parser::ParseExpression() -> Expression* {
         break;
       case Token::kCond:
         expr = ParseCondExpr();
-        break;
-      case Token::kConsExpr:
-        expr = ParseConsExpr();
         break;
       case Token::kThrowExpr:
         expr = ParseThrowExpr();
@@ -273,7 +262,6 @@ auto Parser::ParseExpression() -> Expression* {
     }
   }
   ASSERT(expr);
-  DVLOG(100) << "parsed: " << expr->ToString();
   ExpectNext(Token::kRParen);
   return expr;
 }
@@ -426,24 +414,6 @@ auto Parser::ParseIdentifier(std::string& result) -> bool {
   return true;
 }
 
-auto Parser::ParseModuleDef() -> expr::ModuleDef* {
-  PushScope();
-  ExpectNext(Token::kLParen);
-  ExpectNext(Token::kModuleDef);
-  const auto symbol = ParseSymbol();
-  ASSERT(symbol);
-  const auto m = ModuleDef::New(symbol);
-  ASSERT(m);
-  while (!PeekEq(Token::kRParen)) {
-    const auto defn = ParseDefinition();
-    ASSERT(defn);
-    m->Append(defn);
-  }
-  ExpectNext(Token::kRParen);
-  PopScope();
-  return m;
-}
-
 auto Parser::ParseDefinition() -> expr::Definition* {
   ExpectNext(Token::kLParen);
   expr::Definition* defn = nullptr;
@@ -451,9 +421,6 @@ auto Parser::ParseDefinition() -> expr::Definition* {
   switch (next.kind) {
     case Token::kDefun:
       defn = ParseDefunExpr();
-      break;
-    case Token::kLocalDef:
-      defn = ParseLocalDef();
       break;
     case Token::kImportDef:
       defn = ParseImportDef();
@@ -535,10 +502,10 @@ auto Parser::NextToken() -> const Token& {
       return NextToken(Token::kRParen);
     case '+':
       Advance();
-      return NextToken(Token::kPlus);
+      return NextToken(Token::kAdd);
     case '-':
       Advance();
-      return NextToken(Token::kMinus);
+      return NextToken(Token::kSubtract);
     case '*':
       Advance();
       return NextToken(Token::kMultiply);
@@ -553,10 +520,10 @@ auto Parser::NextToken() -> const Token& {
       return NextToken(Token::kEquals);
     case '&':
       Advance();
-      return NextToken(Token::kAnd);
+      return NextToken(Token::kBinaryAnd);
     case '|':
       Advance();
-      return NextToken(Token::kOr);
+      return NextToken(Token::kBinaryOr);
     case '!':
       Advance();
       return NextToken(Token::kNot);
@@ -630,25 +597,23 @@ auto Parser::NextToken() -> const Token& {
     }
     const auto ident = GetBufferedText();
     if (ident == "define")
-      return NextToken(Token::kLocalDef);
-    else if (ident == "defmodule")
-      return NextToken(Token::kModuleDef);
+      return NextToken(Token::kDefine);
     else if (ident == "defmacro")
       return NextToken(Token::kMacroDef);
     else if (ident == "import")
       return NextToken(Token::kImportDef);
     else if (ident == "cons")
-      return NextToken(Token::kConsExpr);
+      return NextToken(Token::kCons);
     else if (ident == "car")
-      return NextToken(Token::kCarExpr);
+      return NextToken(Token::kCar);
     else if (ident == "cdr")
-      return NextToken(Token::kCdrExpr);
+      return NextToken(Token::kCdr);
     else if (ident == "begin")
       return NextToken(Token::kBeginExpr);
     else if (ident == "add")
-      return NextToken(Token::kPlus);
+      return NextToken(Token::kAdd);
     else if (ident == "subtract")
-      return NextToken(Token::kMinus);
+      return NextToken(Token::kSubtract);
     else if (ident == "multiply")
       return NextToken(Token::kMultiply);
     else if (ident == "divide")
@@ -660,9 +625,9 @@ auto Parser::NextToken() -> const Token& {
     else if (ident == "not")
       return NextToken(Token::kNot);
     else if (ident == "and")
-      return NextToken(Token::kAnd);
+      return NextToken(Token::kBinaryAnd);
     else if (ident == "or")
-      return NextToken(Token::kOr);
+      return NextToken(Token::kBinaryOr);
     else if (ident == "throw")
       return NextToken(Token::kThrowExpr);
     else if (ident == "eq?")
@@ -685,5 +650,136 @@ auto Parser::NextToken() -> const Token& {
   }
 
   return NextToken(Token::kInvalid, GetRemaining());
+}
+
+auto Parser::ParseLocalVariable() -> LocalVariable* {
+  ExpectNext(Token::kDefine);
+  const auto symbol = ParseSymbol();
+  ASSERT(symbol);
+  const auto value = ParseExpression();
+  ASSERT(value);
+  const auto local = LocalVariable::New(GetScope(), symbol, value->IsConstantExpr() ? value->EvalToConstant() : nullptr);
+  ASSERT(local);
+  // TODO: store value if not constant
+  if (!GetScope()->Add(local))
+    throw Exception(fmt::format("failed to add LocalVariable: {}", local->GetName()));
+  return local;
+}
+
+auto Parser::ParseNamedLambda() -> Lambda* {
+  ExpectNext(Token::kDefun);
+  // name
+  const auto name = ParseSymbol();
+  ASSERT(name);
+  LOG_IF(WARNING, GetScope()->Has(name)) << "redefining: " << name;
+  // arguments
+  ExpectNext(Token::kLParen);
+  ArgumentSet args;
+  if (!ParseArguments(args))
+    throw Exception("failed to parse ArgumentSet");
+  ExpectNext(Token::kRParen);
+  // body TODO: allow (<expression list>)
+  PushScope();
+  ExpressionList body;
+  if (!ParseExpressionList(body)) {
+    LOG(FATAL) << "failed to parse lambda body.";
+    return nullptr;
+  }
+  PopScope();
+
+  const auto lambda = Lambda::New(args, body);
+  ASSERT(lambda);
+  lambda->SetName(name);
+  return lambda;
+}
+
+auto Parser::ParseScript() -> Script* {
+  const auto scope = PushScope();
+  ASSERT(scope);
+  const auto script = Script::New(scope);
+  ASSERT(script);
+  while (!PeekEq(Token::kEndOfStream)) {
+    const auto& peek = PeekToken();
+    if (peek.IsLiteral() || peek.IsIdentifier()) {
+      script->Append(ParseLiteralExpr());
+    } else if (peek.IsQuote()) {
+      script->Append(ParseQuotedExpr());
+    }
+
+    Expression* expr = nullptr;
+    ExpectNext(Token::kLParen);
+    const auto next = PeekToken();
+    if (next.IsUnaryOp()) {
+      expr = ParseUnaryExpr();
+    } else if (next.IsBinaryOp()) {
+      expr = ParseBinaryOpExpr();
+    } else {
+      switch (next.kind) {
+        // Definitions
+        case Token::kDefine: {
+          const auto local = ParseLocalVariable();
+          ASSERT(local);
+          break;
+        }
+        case Token::kDefun: {
+          const auto lambda = ParseNamedLambda();
+          ASSERT(lambda && lambda->HasName());
+          const auto local = LocalVariable::New(GetScope(), lambda->GetName(), lambda);
+          ASSERT(local);
+          scope->Add(local);
+          script->Append(lambda);
+          break;
+        }
+        case Token::kMacroDef:
+          expr = ParseMacroDef();
+          break;
+        // Expressions
+        case Token::kBeginExpr:
+          expr = ParseBeginExpr();
+          break;
+        case Token::kLambdaExpr:
+          expr = ParseLambdaExpr();
+          break;
+        case Token::kSetExpr:
+          expr = ParseSetExpr();
+          break;
+        case Token::kCond:
+          expr = ParseCondExpr();
+          break;
+        case Token::kThrowExpr:
+          expr = ParseThrowExpr();
+          break;
+        case Token::kLParen:
+        case Token::kIdentifier:
+          expr = ParseCallProcExpr();
+          break;
+        case Token::kQuote:
+          expr = ParseQuotedExpr();
+          break;
+        case Token::kEvalExpr:
+          expr = ParseEvalExpr();
+          break;
+        case Token::kWhenExpr:
+          expr = ParseWhenExpr();
+          break;
+        case Token::kCaseExpr:
+          expr = ParseCaseExpr();
+          break;
+        case Token::kWhileExpr:
+          expr = ParseWhileExpr();
+          break;
+        default:
+          Unexpected(next);
+          return nullptr;
+      }
+    }
+    ExpectNext(Token::kRParen);
+    if (expr) {
+      script->Append(expr);
+      DVLOG(100) << "parsed: " << expr->ToString();
+    }
+  }
+  PopScope();
+  return script;
 }
 }  // namespace scm

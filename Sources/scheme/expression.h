@@ -5,8 +5,9 @@
 #include <string>
 #include <utility>
 
+#include "scheme/argument.h"
 #include "scheme/common.h"
-#include "scheme/lambda.h"
+#include "scheme/local_scope.h"
 #include "scheme/object.h"
 #include "scheme/variable.h"
 
@@ -20,10 +21,8 @@
   V(ClauseExpr)                     \
   V(WhenExpr)                       \
   V(CaseExpr)                       \
-  V(ConsExpr)                       \
   V(LambdaExpr)                     \
   V(LocalDef)                       \
-  V(ModuleDef)                      \
   V(ImportDef)                      \
   V(MacroDef)                       \
   V(EvalExpr)                       \
@@ -259,7 +258,8 @@ class LiteralExpr : public Expression {
   V(GreaterThan)              \
   V(GreaterThanEqual)         \
   V(LessThan)                 \
-  V(LessThanEqual)
+  V(LessThanEqual)            \
+  V(Cons)
 
 enum BinaryOp : uint64_t {
 #define DEFINE_BINARY_OP(Name) k##Name,
@@ -356,70 +356,24 @@ class BinaryOpExpr : public TemplateExpression<2> {
 #undef DEFINE_NEW_OP
 };
 
-class ConsExpr : public TemplateExpression<2> {
-  static constexpr const auto kLeftInput = 0;
-  static constexpr const auto kRightInput = 1;
-
- protected:
-  explicit ConsExpr(Expression* left, Expression* right) :
-    TemplateExpression<2>() {
-    SetCar(left);
-    SetCdr(right);
-  }
-
- public:
-  ~ConsExpr() override = default;
-
-  auto GetCar() const -> Expression* {
-    return GetChildAt(kLeftInput);
-  }
-
-  inline auto HasCar() const -> bool {
-    return GetCar() != nullptr;
-  }
-
-  inline void SetCar(Expression* value) {
-    ASSERT(value);
-    SetChildAt(kLeftInput, value);
-  }
-
-  auto GetCdr() const -> Expression* {
-    return GetChildAt(kRightInput);
-  }
-
-  inline auto HasCdr() const -> bool {
-    return GetCdr() != nullptr;
-  }
-
-  inline void SetCdr(Expression* value) {
-    ASSERT(value);
-    SetChildAt(kRightInput, value);
-  }
-
-  auto IsConstantExpr() const -> bool override;
-  auto EvalToConstant() const -> Object* override;
-  DECLARE_EXPRESSION(ConsExpr);
-
- public:
-  static inline auto New(Expression* car, Expression* cdr) -> ConsExpr* {
-    ASSERT(car);
-    ASSERT(cdr);
-    return new ConsExpr(car, cdr);
-  }
-};
+#define FOR_EACH_UNARY_OP(V) \
+  V(Not)                     \
+  V(Car)                     \
+  V(Cdr)
 
 enum UnaryOp : uint64_t {
-  kNot,
-  kCar,
-  kCdr,
+#define DEFINE_UNARY_OP(Name) k##Name,
+  FOR_EACH_UNARY_OP(DEFINE_UNARY_OP)
+#undef DEFINE_UNARY_OP
 };
 
 static inline auto operator<<(std::ostream& stream, const UnaryOp& rhs) -> std::ostream& {
   switch (rhs) {
-    case kCar:
-      return stream << "car";
-    case kCdr:
-      return stream << "cdr";
+#define DEFINE_TO_STRING(Name) \
+  case UnaryOp::k##Name:       \
+    return stream << #Name;
+    FOR_EACH_UNARY_OP(DEFINE_TO_STRING)
+#undef DEFINE_TO_STRING
     default:
       return stream << "Unknown UnaryOp: " << static_cast<uint64_t>(rhs);
   }
@@ -1153,67 +1107,6 @@ class ImportDef : public Definition {
   static inline auto New(Symbol* symbol) -> ImportDef* {
     ASSERT(symbol);
     return new ImportDef(symbol);
-  }
-};
-
-class ModuleDef : public Definition {
-  friend class scm::Parser;
-
- private:
-  Symbol* symbol_ = nullptr;
-  DefinitionList definitions_{};
-
- protected:
-  ModuleDef(Symbol* symbol) :
-    Definition() {
-    SetSymbol(symbol);
-  }
-
-  inline void SetSymbol(Symbol* symbol) {
-    ASSERT(symbol);
-    symbol_ = symbol;
-  }
-
-  void SetChildAt(const uint64_t idx, Expression* expr) override {
-    ASSERT(idx >= 0 && idx < GetNumberOfChildren())
-    ASSERT(expr);
-    ASSERT(expr->IsDefinition());
-    definitions_[idx] = expr->AsDefinition();
-  }
-
-  inline void Append(Definition* defn) {
-    ASSERT(defn);
-    definitions_.push_back(defn);
-  }
-
- public:
-  ~ModuleDef() override = default;
-
-  auto GetSymbol() const -> Symbol* {
-    return symbol_;
-  }
-
-  auto GetNumberOfChildren() const -> uint64_t override {
-    return definitions_.size();
-  }
-
-  auto GetChildAt(const uint64_t idx) const -> Expression* override {
-    ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
-    return definitions_[idx];
-  }
-
-  auto GetDefinitionAt(const uint64_t idx) const -> Definition* {
-    return GetChildAt(idx)->AsDefinition();
-  }
-
-  auto VisitAllImportDefs(ExpressionVisitor* vis) -> bool;
-  auto VisitChildren(ExpressionVisitor* vis) -> bool override;
-  DECLARE_EXPRESSION(ModuleDef);
-
- public:
-  static inline auto New(Symbol* symbol) -> ModuleDef* {
-    ASSERT(symbol);
-    return new ModuleDef(symbol);
   }
 };
 

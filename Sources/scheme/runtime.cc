@@ -5,6 +5,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <ranges>
 
 #include "scheme/common.h"
 #include "scheme/error.h"
@@ -14,8 +15,7 @@
 #include "scheme/interpreter.h"
 #include "scheme/local.h"
 #include "scheme/local_scope.h"
-#include "scheme/module_compiler.h"
-#include "scheme/module_resolver.h"
+#include "scheme/native_procedure.h"
 #include "scheme/natives.h"
 #include "scheme/object.h"
 #include "scheme/os_thread.h"
@@ -35,13 +35,14 @@ auto GetRuntime() -> Runtime* {
 }
 
 Runtime::Runtime(LocalScope* scope) :
-  ExecutionStack() {
-  ASSERT(scope);
-  SetScope(scope);
+  ExecutionStack(),
+  scope_(scope),
+  interpreter_(this) {
+  ASSERT(scope_);
 }
 
 Runtime::~Runtime() {
-  if (HasScope()) {
+  if (scope_) {
     delete scope_;
     scope_ = nullptr;
   }
@@ -50,7 +51,7 @@ Runtime::~Runtime() {
 void Runtime::LoadKernelModule() {
   ASSERT(FLAGS_kernel);
   DVLOG(10) << "loading kernel module....";
-  LOG_IF(FATAL, !ImportModule("_kernel")) << "failed to import kernel module.";
+  LOG_IF(FATAL, !Import("_kernel", GetGlobalScope())) << "failed to import kernel module.";
 }
 
 static inline auto FileExists(const std::string& filename) -> bool {
@@ -58,16 +59,35 @@ static inline auto FileExists(const std::string& filename) -> bool {
   return file.good();
 }
 
-class RuntimeModuleResolver : public ModuleResolver {
-  DEFINE_NON_COPYABLE_TYPE(RuntimeModuleResolver);
+class ScriptResolver {
+  DEFINE_NON_COPYABLE_TYPE(ScriptResolver);
 
- private:
-  RuntimeModuleResolver() = default;
+ protected:
+  ScriptResolver() = default;
 
  public:
-  ~RuntimeModuleResolver() override = default;
+  virtual ~ScriptResolver() = default;
+  virtual auto ResolveScript(Symbol* symbol) -> Script* = 0;
+};
+class RuntimeScriptResolver : public ScriptResolver {
+  DEFINE_NON_COPYABLE_TYPE(RuntimeScriptResolver);
 
-  auto ResolveModule(Symbol* symbol) -> Module* override {
+ private:
+  LocalScope* scope_;
+
+  explicit RuntimeScriptResolver(LocalScope* scope) :
+    scope_(scope) {
+    ASSERT(scope_);
+  }
+
+ public:
+  ~RuntimeScriptResolver() override = default;
+
+  auto GetScope() const -> LocalScope* {
+    return scope_;
+  }
+
+  auto ResolveScript(Symbol* symbol) -> Script* override {
     ASSERT(symbol);
     ASSERT(!FLAGS_module_dir.empty());
     const auto module_filename = fmt::format("{0:s}/{1:s}.cl", FLAGS_module_dir, symbol->Get());
@@ -79,31 +99,23 @@ class RuntimeModuleResolver : public ModuleResolver {
 
     std::ifstream file(module_filename, std::ios::in | std::ios::binary);
     ASSERT(file.good());
-    std::stringstream contents;
-    contents << file.rdbuf();
-    const auto code = contents.str();
-
-    const auto module_expr = Parser::ParseModule(code);
-    ASSERT(module_expr);
-    const auto module = ModuleCompiler::Compile(module_expr);
-    ASSERT(module);
-    return module;
+    return Parser::ParseScript(file, GetScope());
   }
 
  public:
-  static inline auto Resolve(Symbol* symbol) -> Module* {
+  static inline auto Resolve(Symbol* symbol, LocalScope* scope) -> Script* {
     ASSERT(symbol);
-    RuntimeModuleResolver resolver;
-    return resolver.ResolveModule(symbol);
+    RuntimeScriptResolver resolver(scope);
+    return resolver.ResolveScript(symbol);
   }
 };
 
-auto Runtime::ImportModule(Module* module) -> bool {
-  ASSERT(module);
-  const auto scope = module->GetScope();
+auto Runtime::Import(Script* script) -> bool {
+  ASSERT(script);
+  const auto scope = script->GetScope();
   ASSERT(scope);
   scope_->Add(scope);
-  modules_.push_back(module);
+  scripts_.push_back(script);
   return true;
 }
 
@@ -113,8 +125,7 @@ auto Runtime::Apply(Procedure* proc, const std::vector<Object*>& args) -> Object
     for (const auto& arg : args) {
       Push(arg);
     }
-    if (!proc->Apply(this))
-      return Error::New("cannot invoke procedure");
+    proc->Apply();
   } else if (proc->IsNativeProcedure()) {
     if (!proc->AsNativeProcedure()->Apply(args))
       return Error::New("cannot invoke procedure");
@@ -123,15 +134,15 @@ auto Runtime::Apply(Procedure* proc, const std::vector<Object*>& args) -> Object
   return result;
 }
 
-auto Runtime::ImportModule(Symbol* symbol) -> bool {
+auto Runtime::Import(Symbol* symbol, LocalScope* scope) -> bool {
   ASSERT(symbol);
   if (FLAGS_module_dir.empty()) {
     LOG(ERROR) << "cannot import module " << symbol << ", no module dir specified.";
     return true;
   }
-  const auto module = RuntimeModuleResolver::Resolve(symbol);
+  const auto module = RuntimeScriptResolver::Resolve(symbol, scope);
   ASSERT(module);
-  return ImportModule(module);
+  return Import(module);
 }
 
 template <class Proc>
@@ -153,6 +164,7 @@ auto Runtime::CreateInitScope() -> LocalScope* {
   RegisterProc<proc::format>(scope);
   RegisterProc<proc::list>(scope);
 #ifdef SCM_DEBUG
+  RegisterProc<proc::frame>(scope);
   scope->Add("debug?", Bool::True());
   RegisterProc<proc::list_symbols>(scope);
   RegisterProc<proc::list_classes>(scope);
@@ -163,14 +175,21 @@ auto Runtime::CreateInitScope() -> LocalScope* {
 auto Runtime::DefineSymbol(Symbol* symbol, Object* value) -> bool {
   ASSERT(symbol);
   ASSERT(value);
-  ASSERT(HasScope());
-  return GetScope()->Add(symbol, value);
+  const auto frame = GetCurrentFrame();
+  ASSERT(frame);
+  const auto locals = frame->GetLocals();
+  ASSERT(locals);
+  return locals->Add(symbol, value);
 }
 
 auto Runtime::LookupSymbol(Symbol* symbol, Object** result) -> bool {
   ASSERT(symbol);
+  const auto frame = GetCurrentFrame();
+  ASSERT(frame);
+  const auto locals = frame->GetLocals();
+  ASSERT(locals);
   LocalVariable* local = nullptr;
-  if (!GetScope()->Lookup(symbol, &local))
+  if (!locals->Lookup(symbol, &local))
     return false;
   ASSERT(local);
   (*result) = local->GetValue();
@@ -180,35 +199,82 @@ auto Runtime::LookupSymbol(Symbol* symbol, Object** result) -> bool {
 auto Runtime::StoreSymbol(Symbol* symbol, Object* value) -> bool {
   ASSERT(symbol);
   ASSERT(value);
+  const auto frame = GetCurrentFrame();
+  ASSERT(frame);
+  const auto locals = frame->GetLocals();
+  ASSERT(locals);
   LocalVariable* local = nullptr;
-  if (!GetScope()->Lookup(symbol, &local))
-    return GetScope()->Add(symbol, value);
+  if (!locals->Lookup(symbol, &local))
+    return locals->Add(symbol, value);
   local->SetValue(value);
   return true;
 }
 
-auto Runtime::Execute(GraphEntryInstr* entry) -> Object* {
-  ASSERT(entry && entry->IsGraphEntryInstr());
-  PushScope();
-  Interpreter interpreter(this);
-  interpreter.Run(entry);
-  const auto result = Pop();
-  PopScope();
-  return result;
+void Runtime::Call(instr::TargetEntryInstr* target, LocalScope* locals) {
+  ASSERT(target && target->HasNext());
+  const auto frame = interpreter_.PushStackFrame(locals);
+  ASSERT(frame);
+  interpreter_.Execute(target, locals);
 }
 
-auto Runtime::Eval(GraphEntryInstr* graph_entry) -> Object* {
-  ASSERT(HasRuntime());
-  ASSERT(graph_entry);
-  return GetRuntime()->Execute(graph_entry);
+void Runtime::Call(Lambda* lambda) {
+  ASSERT(lambda);
+  const auto locals = LocalScope::New(GetCurrentScope());
+  ASSERT(locals);
+  for (const auto& arg : std::ranges::reverse_view(lambda->GetArgs())) {
+    const auto symbol = Symbol::New(arg.GetName());
+    ASSERT(symbol);
+    const auto value = Pop();
+    ASSERT(value);
+    const auto local = LocalVariable::New(locals, symbol, value);
+    ASSERT(local);
+    if (!locals->Add(local))
+      throw Exception("failed to add parameter local");
+  }
+  return Call(lambda->GetEntry()->GetTarget(), locals);
+}
+
+void Runtime::Call(NativeProcedure* native, const std::vector<Object*>& args) {
+  ASSERT(native);
+  const auto locals = LocalScope::New(GetCurrentScope());
+  ASSERT(locals);
+  for (auto idx = 0; idx < args.size(); idx++) {
+    locals->Add(Symbol::New(fmt::format("arg{}", idx)), args[idx]);
+  }
+  const auto frame = interpreter_.PushStackFrame(locals);
+  ASSERT(frame);
+  if (!native->Apply(args))
+    throw Exception(fmt::format("failed to apply procedure: {}", native->ToString()));
+  interpreter_.PopStackFrame();
 }
 
 auto Runtime::Eval(const std::string& expr) -> Object* {
   ASSERT(!expr.empty());
   DVLOG(10) << "evaluating expression:" << std::endl << expr;
-  const auto e = ExpressionCompiler::Compile(expr);
+  const auto runtime = GetRuntime();
+  ASSERT(runtime);
+  const auto scope = runtime->GetGlobalScope();
+  const auto e = ExpressionCompiler::Compile(expr, scope);
   ASSERT(e && e->HasEntry());
-  return Eval(e->GetEntry());
+  ASSERT(!runtime->HasFrame());
+  runtime->Call(e->GetEntry()->GetTarget(), scope);
+  ASSERT(!runtime->HasFrame());
+  return runtime->Pop();
+}
+
+auto Runtime::Exec(Script* script) -> Object* {
+  ASSERT(script && script->IsCompiled());
+  const auto runtime = GetRuntime();
+  ASSERT(runtime);
+  const auto scope = LocalScope::Union(
+      {
+          script->GetScope(),
+      },
+      runtime->GetGlobalScope());
+  ASSERT(!runtime->HasFrame());
+  runtime->Call(script->GetEntry()->GetTarget(), scope);
+  ASSERT(!runtime->HasFrame());
+  return runtime->Pop();
 }
 
 void Runtime::Init() {

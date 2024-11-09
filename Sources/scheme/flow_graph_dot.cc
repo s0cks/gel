@@ -13,6 +13,8 @@
 #include "scheme/flow_graph_builder.h"
 #include "scheme/gv.h"
 #include "scheme/instruction.h"
+#include "scheme/native_procedure.h"
+#include "scheme/object.h"
 
 namespace scm {
 namespace dot {
@@ -188,10 +190,23 @@ auto EffectVisitor::VisitInvokeDynamicInstr(instr::InvokeDynamicInstr* instr) ->
   return true;
 }
 
+static inline auto GetTargetNativeProcedure(instr::InvokeNativeInstr* instr) -> NativeProcedure* {
+  ASSERT(instr->GetTarget() && instr->GetTarget()->IsConstantInstr());
+  const auto target = instr->GetTarget()->AsConstantInstr();
+  ASSERT(target && target->GetValue()->IsNativeProcedure());
+  return target->GetValue()->AsNativeProcedure();
+}
+
 auto EffectVisitor::VisitInvokeNativeInstr(instr::InvokeNativeInstr* instr) -> bool {
   ASSERT(instr);
   const auto node = Append(instr);
   ASSERT(node);
+  std::stringstream label;
+  label << instr->GetName() << std::endl;
+  const auto target = GetTargetNativeProcedure(instr);
+  ASSERT(target);
+  label << "Procedure: " << target->GetSymbol()->Get();
+  SetNodeLabel(node, label);
   return true;
 }
 
@@ -213,6 +228,11 @@ auto EffectVisitor::VisitInstanceOfInstr(instr::InstanceOfInstr* instr) -> bool 
   ASSERT(instr);
   const auto node = Append(instr);
   ASSERT(node);
+  std::stringstream label;
+  label << instr->GetName() << std::endl;
+  label << "Value := ";
+  PrintValue(label, instr->GetType());
+  SetNodeLabel(node, label);
   return true;
 }
 

@@ -1,3 +1,4 @@
-(foreach
-  (lambda (x) (print x))
-  (list 10 11 12))
+(define x 10)
+(while (> x 0)
+  (print (format "> {}" x))
+  (set! x (- x 1)))

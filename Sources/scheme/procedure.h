@@ -6,13 +6,17 @@
 #include "scheme/object.h"
 
 namespace scm {
-class State;
-class Runtime;
 class Procedure : public Object {
+  friend class Runtime;
+  friend class Interpreter;
   DEFINE_NON_COPYABLE_TYPE(Procedure);
 
  protected:
   Procedure() = default;
+
+  virtual void Apply() {
+    // do nothing
+  }
 
  public:
   ~Procedure() override = default;
@@ -29,8 +33,6 @@ class Procedure : public Object {
     return false;
   }
 
-  virtual auto Apply(Runtime* state) -> bool = 0;
-
   auto GetType() const -> Class* override {
     return GetClass();
   }
@@ -46,10 +48,6 @@ class Procedure : public Object {
     return kClass;
   }
 };
-
-static inline auto IsProcedure(Object* rhs) -> bool {
-  return rhs && rhs->IsProcedure();
-}
 }  // namespace scm
 
 #endif  // SCM_PROCEDURE_H

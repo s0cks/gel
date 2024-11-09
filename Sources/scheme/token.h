@@ -27,27 +27,15 @@ struct Position {
 
 #define FOR_EACH_TOKEN(V)     \
   FOR_EACH_EXPRESSION_NODE(V) \
+  FOR_EACH_BINARY_OP(V)       \
+  FOR_EACH_UNARY_OP(V)        \
+  V(Define)                   \
   V(Comment)                  \
-  V(Plus)                     \
-  V(Minus)                    \
-  V(Multiply)                 \
-  V(Divide)                   \
-  V(Modulus)                  \
-  V(CarExpr)                  \
-  V(CdrExpr)                  \
   V(Hash)                     \
   V(Quote)                    \
-  V(Equals)                   \
   V(DoubleQuote)              \
   V(Cond)                     \
-  V(Not)                      \
-  V(And)                      \
-  V(Or)                       \
   V(Defun)                    \
-  V(LessThan)                 \
-  V(GreaterThan)              \
-  V(LessThanEqual)            \
-  V(GreaterThanEqual)         \
   V(LParen)                   \
   V(RParen)                   \
   V(Identifier)               \
@@ -109,16 +97,25 @@ struct Token {
     }
   }
 
+  auto IsIdentifier() const -> bool {
+    return kind == Token::kIdentifier;
+  }
+
+  auto IsQuote() const -> bool {
+    return kind == Token::kQuote;
+  }
+
   auto IsBinaryOp() const -> bool {
     switch (kind) {
-      case Kind::kPlus:
-      case Kind::kMinus:
+      case Kind::kAdd:
+      case Kind::kSubtract:
       case Kind::kMultiply:
       case Kind::kDivide:
       case Kind::kModulus:
-      case Kind::kAnd:
-      case Kind::kOr:
+      case Kind::kBinaryAnd:
+      case Kind::kBinaryOr:
       case Kind::kEquals:
+      case Kind::kCons:
       case Kind::kLessThan:
       case Kind::kLessThanEqual:
       case Kind::kGreaterThan:
@@ -132,30 +129,11 @@ struct Token {
   auto ToBinaryOp() const -> std::optional<expr::BinaryOp> {
     ASSERT(IsBinaryOp());
     switch (kind) {
-      case Token::kPlus:
-        return {BinaryOp::kAdd};
-      case Token::kMinus:
-        return {BinaryOp::kSubtract};
-      case Token::kMultiply:
-        return {BinaryOp::kMultiply};
-      case Token::kDivide:
-        return {BinaryOp::kDivide};
-      case Token::kModulus:
-        return {BinaryOp::kModulus};
-      case Token::kEquals:
-        return {BinaryOp::kEquals};
-      case Token::kAnd:
-        return {BinaryOp::kBinaryAnd};
-      case Token::kOr:
-        return {BinaryOp::kBinaryOr};
-      case Token::kGreaterThan:
-        return {BinaryOp::kGreaterThan};
-      case Token::kGreaterThanEqual:
-        return {BinaryOp::kGreaterThanEqual};
-      case Token::kLessThan:
-        return {BinaryOp::kLessThan};
-      case Token::kLessThanEqual:
-        return {BinaryOp::kLessThanEqual};
+#define DEFINE_TO_BINARY_OP(Name) \
+  case Token::k##Name:            \
+    return {BinaryOp::k##Name};
+      FOR_EACH_BINARY_OP(DEFINE_TO_BINARY_OP)
+#undef DEFINE_TO_BINARY_OP
       default:
         return std::nullopt;
     }
@@ -164,8 +142,8 @@ struct Token {
   auto IsUnaryOp() const -> bool {
     switch (kind) {
       case Kind::kNot:
-      case Kind::kCarExpr:
-      case Kind::kCdrExpr:
+      case Kind::kCar:
+      case Kind::kCdr:
         return true;
       default:
         return false;
@@ -175,12 +153,11 @@ struct Token {
   auto ToUnaryOp() const -> std::optional<expr::UnaryOp> {
     ASSERT(IsUnaryOp());
     switch (kind) {
-      case Token::kNot:
-        return {expr::UnaryOp::kNot};
-      case Token::kCarExpr:
-        return {expr::UnaryOp::kCar};
-      case Token::kCdrExpr:
-        return {expr::UnaryOp::kCdr};
+#define TO_UNARY_OP(Name) \
+  case Token::k##Name:    \
+    return {expr::UnaryOp::k##Name};
+      FOR_EACH_UNARY_OP(TO_UNARY_OP)
+#undef TO_UNARY_OP
       default:
         return std::nullopt;
     }

@@ -43,6 +43,8 @@ using ubyte = uint8_t;
 using word = intptr_t;
 using uword = uintptr_t;
 
+#define UNALLOCATED 0
+
 #ifdef ARCH_IS_X32
 static constexpr int kWordSizeLog2 = kInt32SizeLog2;
 #elif defined(ARCH_IS_ARM64) || defined(ARCH_IS_X64)

@@ -7,6 +7,9 @@
 namespace scm {
 class Symbol;
 class LocalScope {
+  friend class Repl;
+  friend class Parser;
+  friend class Runtime;
   using LocalList = std::vector<LocalVariable*>;
   DEFINE_NON_COPYABLE_TYPE(LocalScope);
 
@@ -60,6 +63,7 @@ class LocalScope {
       DLOG(ERROR) << "cannot overwrite local: " << (*local);
       return false;
     }
+    DLOG(INFO) << (*local) << " := " << value;
     local->SetConstantValue(value);
     return true;
   }
@@ -170,6 +174,10 @@ class LocalScopePrinter : public LocalVariableVisitor {
     return printer.PrintLocalScope(scope);
   }
 };
+
+#define PRINT_SCOPE_AT_LEVEL(Severity, Scope) LocalScopePrinter::Print<Severity>((Scope), __FILE__, __LINE__)
+#define PRINT_SCOPE(Severity, Scope) PRINT_SCOPE_AT_LEVEL(google::Severity, Scope)
+
 }  // namespace scm
 
 #endif  // SCM_LOCAL_SCOPE_H

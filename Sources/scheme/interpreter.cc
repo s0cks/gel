@@ -7,25 +7,32 @@
 #include "scheme/error.h"
 #include "scheme/expression.h"
 #include "scheme/instruction.h"
+#include "scheme/lambda.h"
 #include "scheme/native_procedure.h"
 #include "scheme/object.h"
+#include "scheme/platform.h"
 #include "scheme/runtime.h"
 
 namespace scm {
+auto Interpreter::PushError(const std::string& message) -> bool {
+  ASSERT(!message.empty());
+  GetRuntime()->PushError(message);
+  return true;
+}
+
 auto Interpreter::VisitLoadVariableInstr(LoadVariableInstr* instr) -> bool {
   ASSERT(instr);
   const auto symbol = instr->GetSymbol();
   ASSERT(symbol);
   Object* result = nullptr;
   if (!GetRuntime()->LookupSymbol(symbol, &result)) {
-    LOG(ERROR) << "failed to find symbol: " << symbol;
     GetRuntime()->Push(Error::New(fmt::format("failed to find Symbol: `{0:s}`", symbol->Get())));
-    return true;
+    return Next();
   }
 
   ASSERT(result);
   GetRuntime()->Push(result);
-  return true;
+  return Next();
 }
 
 auto Interpreter::VisitConsInstr(ConsInstr* instr) -> bool {
@@ -35,12 +42,14 @@ auto Interpreter::VisitConsInstr(ConsInstr* instr) -> bool {
   const auto car = GetRuntime()->Pop();
   ASSERT(car);
   GetRuntime()->Push(Pair::New(car, cdr));
-  return true;
+  return Next();
 }
 
 auto Interpreter::VisitReturnInstr(ReturnInstr* instr) -> bool {
-  GetRuntime()->PopScope();
-  return true;
+  const auto frame = PopStackFrame();
+  if (!frame.HasReturnAddress())
+    return Next();
+  return Goto((Instruction*)frame.GetReturnAddressPointer());
 }
 
 static inline auto Unary(const expr::UnaryOp op, Object* rhs) -> Object* {
@@ -61,49 +70,54 @@ static inline auto Unary(const expr::UnaryOp op, Object* rhs) -> Object* {
 auto Interpreter::VisitUnaryOpInstr(UnaryOpInstr* instr) -> bool {
   ASSERT(instr);
   const auto value = GetRuntime()->Pop();
-  if (!value) {
-    LOG(FATAL) << "invalid value.";
-    return false;
-  }
-
+  ASSERT(value);
   const auto result = Unary(instr->GetOp(), value);
   ASSERT(result);
   GetRuntime()->Push(result);
-  return true;
+  return Next();
 }
 
 auto Interpreter::VisitGotoInstr(GotoInstr* instr) -> bool {
   ASSERT(instr);
   ASSERT(instr->HasTarget());
-  SetCurrentInstr(instr->GetTarget());
-  return true;
+  return Goto(instr->GetTarget());
 }
 
 auto Interpreter::VisitThrowInstr(ThrowInstr* instr) -> bool {
   ASSERT(instr);
   GetRuntime()->Push(Error::New(GetRuntime()->Pop()));
-  return true;
+  return Next();
 }
 
 auto Interpreter::VisitInvokeInstr(InvokeInstr* instr) -> bool {
   ASSERT(instr);
-  const auto target = GetRuntime()->Pop();
+  const auto runtime = GetRuntime();
+  ASSERT(runtime);
+  const auto target = runtime->Pop();
   if (!IsProcedure(target))
     throw Exception(fmt::format("expected {0:s} to be a Procedure.", target ? target->ToString() : "null"));
   const auto procedure = target->AsProcedure();
   ASSERT(procedure);
-  GetRuntime()->PushScope();
-  const auto result = procedure->Apply(GetRuntime());
-  GetRuntime()->PopScope();
-  return result;
+  if (procedure->IsLambda()) {
+    const auto lambda = procedure->AsLambda();
+    ASSERT(lambda);
+    if (!lambda->IsCompiled()) {
+      if (!LambdaCompiler::Compile(lambda, runtime->GetCurrentScope())) {
+        LOG(FATAL) << "failed to compile: " << lambda->ToString();
+        return false;
+      }
+    }
+    GetRuntime()->Call(lambda);
+  }
+  return Next();
 }
 
 auto Interpreter::VisitInvokeDynamicInstr(InvokeDynamicInstr* instr) -> bool {
   ASSERT(instr);
   const auto target = GetRuntime()->Pop();
   ASSERT(target->IsSymbol());
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return true;
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return Next();
 }
 
 auto Interpreter::VisitEvalInstr(EvalInstr* instr) -> bool {
@@ -113,7 +127,7 @@ auto Interpreter::VisitEvalInstr(EvalInstr* instr) -> bool {
   const auto result = GetRuntime()->Eval(String::Unbox(value));
   ASSERT(result);
   GetRuntime()->Push(result);
-  return true;
+  return Next();
 }
 
 auto Interpreter::VisitInvokeNativeInstr(InvokeNativeInstr* instr) -> bool {
@@ -128,14 +142,8 @@ auto Interpreter::VisitInvokeNativeInstr(InvokeNativeInstr* instr) -> bool {
     args.push_back(GetRuntime()->Pop());
   }
   std::ranges::reverse(std::begin(args), std::end(args));
-
-  const auto native = procedure->AsNativeProcedure();
-  ASSERT(native);
-  GetRuntime()->PushScope();
-  if (!native->Apply(args))
-    throw Exception(fmt::format("failed to apply procedure: {}", native->ToString()));
-  GetRuntime()->PopScope();
-  return true;
+  GetRuntime()->Call(procedure->AsNativeProcedure(), args);
+  return Next();
 }
 
 static inline auto GetTarget(const bool branch, instr::BranchInstr* instr) -> instr::EntryInstr* {
@@ -151,20 +159,19 @@ auto Interpreter::VisitBranchInstr(BranchInstr* instr) -> bool {
   const auto test = GetRuntime()->Pop();
   ASSERT(test);
   const auto target = GetTarget(Truth(test), instr);
-  SetCurrentInstr(target ? target : instr->GetNext());
-  return true;
+  return Goto(target ? target : instr->GetNext());
 }
 
 auto Interpreter::VisitInstanceOfInstr(InstanceOfInstr* instr) -> bool {
   ASSERT(instr);
-  const auto stack_top = GetRuntime()->StackTop().value_or(Pair::Empty());
-  ASSERT(stack_top);
-  const auto predicate = instr->GetPredicate();
-  if (!predicate(stack_top)) {
-    GetRuntime()->PushError(fmt::format("unexpected: {}", stack_top->ToString()));
-    return true;
-  }
-  return true;
+  const auto type = instr->GetType();
+  ASSERT(type);
+  const auto stack_top = GetRuntime()->StackTop();
+  if (!stack_top)
+    return PushError(fmt::format("stack top is null, expected: {}", type->GetName()->Get()));
+  if (!(*stack_top)->GetType()->IsInstanceOf(instr->GetType()))
+    return PushError(fmt::format("unexpected stack top: {}, expected: {}", (*stack_top)->ToString(), type->GetName()->Get()));
+  return Next();
 }
 
 static inline auto ApplyBinaryOp(BinaryOp op, Datum* lhs, Datum* rhs) -> Datum* {
@@ -193,6 +200,8 @@ static inline auto ApplyBinaryOp(BinaryOp op, Datum* lhs, Datum* rhs) -> Datum* 
       return Bool::Box(lhs->Compare(rhs) < 0);
     case expr::kLessThanEqual:
       return Bool::Box(lhs->Compare(rhs) <= 0);
+    case expr::kCons:
+      return Pair::New(lhs, rhs);
     default:
       LOG(FATAL) << "invalid BinaryOp: " << op;
       return nullptr;
@@ -208,23 +217,22 @@ auto Interpreter::VisitBinaryOpInstr(BinaryOpInstr* instr) -> bool {
   ASSERT(result);
   GetRuntime()->Push(result);
   DVLOG(100) << left << " " << instr->GetOp() << " " << right << " := " << result;
-  return true;
+  return Next();
 }
 
 auto Interpreter::VisitTargetEntryInstr(TargetEntryInstr* instr) -> bool {
-  GetRuntime()->PushScope();
-  return true;
+  return Next();
 }
 
 auto Interpreter::VisitJoinEntryInstr(JoinEntryInstr* instr) -> bool {
-  return true;
+  return Next();
 }
 
 auto Interpreter::VisitConstantInstr(ConstantInstr* instr) -> bool {
   const auto value = instr->GetValue();
   ASSERT(value);
   GetRuntime()->Push(value);
-  return true;
+  return Next();
 }
 
 auto Interpreter::VisitStoreVariableInstr(StoreVariableInstr* instr) -> bool {
@@ -233,32 +241,44 @@ auto Interpreter::VisitStoreVariableInstr(StoreVariableInstr* instr) -> bool {
   const auto symbol = instr->GetSymbol();
   ASSERT(symbol);
   if (!GetRuntime()->StoreSymbol(symbol, value)) {
-    LOG(ERROR) << "failed to store symbol " << symbol << " to value: " << value;
-    return false;
+    LOG(FATAL) << "failed to store symbol " << symbol << " to value: " << value;
+    return Next();
   }
-  return true;
+  return Next();
 }
 
 auto Interpreter::VisitGraphEntryInstr(GraphEntryInstr* instr) -> bool {
-  return true;
+  return Next();
 }
 
 void Interpreter::ExecuteInstr(Instruction* instr) {
   ASSERT(instr);
   DVLOG(100) << "executing " << instr->ToString();
   LOG_IF(FATAL, !instr->Accept(this)) << "failed to execute: " << instr->ToString();
-  if (instr->IsBranchInstr() || instr->IsGotoInstr())
-    return;
-  SetCurrentInstr(instr->GetNext());
 }
 
-void Interpreter::Run(GraphEntryInstr* entry) {
-  ASSERT(entry && entry->HasNext());
-  SetCurrentInstr(entry);
-  while (HasCurrentInstr() && !GetRuntime()->HasError()) {
-    const auto next = GetCurrentInstr();
-    ASSERT(next);
-    ExecuteInstr(next);
+auto Interpreter::PushStackFrame(LocalScope* locals) -> StackFrame* {
+  ASSERT(locals);
+  const auto return_address = (uword)(HasCurrentInstr() && !stack_.empty() ? GetCurrentInstr()->GetNext() : UNALLOCATED);
+  stack_.push(StackFrame(stack_.size(), locals, return_address));
+  // DLOG(INFO) << "pushed: " << stack_.top();
+  return &stack_.top();
+}
+
+auto Interpreter::PopStackFrame() -> StackFrame {
+  ASSERT(!stack_.empty());
+  const auto frame = stack_.top();
+  stack_.pop();
+  // DLOG(INFO) << "popped: " << frame;
+  return frame;
+}
+
+void Interpreter::Execute(instr::TargetEntryInstr* target, LocalScope* locals) {
+  SetCurrentInstr(target);
+  while (HasCurrentInstr()) {
+    ExecuteInstr(GetCurrentInstr());
+    if (GetRuntime()->HasError())
+      break;
   }
 }
 }  // namespace scm

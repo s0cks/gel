@@ -9,6 +9,10 @@ build/*
 docs/*
 !/docs/.gitkeep
 
+# keep logs/ dir
+logs/*
+!/logs/.gitkeep
+
 # keep reports/ dir
 reports/*
 !/reports/.gitkeep

@@ -60,7 +60,7 @@ class Repl {
   }
 
  public:
-  explicit Repl(std::istream& in, std::ostream& out, LocalScope* scope = LocalScope::New());
+  explicit Repl(std::istream& in, std::ostream& out, LocalScope* scope);
   ~Repl() = default;
 
   auto GetScope() const -> LocalScope* {
@@ -70,6 +70,7 @@ class Repl {
   auto RunRepl() -> int;
 
  public:
+  // TODO: clean this function up
   static inline auto Run(std::istream& is = std::cin, std::ostream& os = std::cout, LocalScope* scope = LocalScope::New())
       -> int {
     ASSERT(scope);

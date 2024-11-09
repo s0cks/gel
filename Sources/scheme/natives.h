@@ -12,6 +12,7 @@ DECLARE_NATIVE_PROCEDURE(list);
 _DECLARE_NATIVE_PROCEDURE(type, "type?");
 
 #ifdef SCM_DEBUG
+_DECLARE_NATIVE_PROCEDURE(frame, "frame?");
 _DECLARE_NATIVE_PROCEDURE(list_symbols, "list-symbols!");
 _DECLARE_NATIVE_PROCEDURE(list_classes, "list-classes!");
 #endif  // SCM_DEBUG

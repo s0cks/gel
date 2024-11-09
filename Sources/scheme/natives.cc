@@ -5,8 +5,10 @@
 #include <fmt/format.h>
 
 #include <iostream>
+#include <ranges>
 
 #include "scheme/argument.h"
+#include "scheme/common.h"
 #include "scheme/error.h"
 #include "scheme/local_scope.h"
 #include "scheme/native_procedure.h"
@@ -14,18 +16,9 @@
 #include "scheme/parser.h"
 #include "scheme/procedure.h"
 #include "scheme/runtime.h"
+#include "scheme/stack_frame.h"
 
 namespace scm::proc {
-static inline auto ToSymbol(Object* rhs) -> std::optional<Symbol*> {
-  if (!rhs)
-    return std::nullopt;
-  if (rhs->IsSymbol())
-    return {rhs->AsSymbol()};
-  else if (rhs->IsString())
-    return {Symbol::New(rhs->AsString()->Get())};
-  return std::nullopt;
-}
-
 NATIVE_PROCEDURE_F(import) {
   ASSERT(!args.empty());
   const auto arg = args[0];
@@ -35,13 +28,11 @@ NATIVE_PROCEDURE_F(import) {
     LOG(FATAL) << arg << " is not a valid Symbol.";
     return false;
   }
-  if (!GetRuntime()->ImportModule((*symbol))) {
-    LOG(FATAL) << "failed to import module: " << (*symbol);
+  if (!GetRuntime()->Import(symbol, GetRuntime()->GetCurrentScope())) {
+    LOG(FATAL) << "failed to import module: " << symbol;
     return false;
   }
-  DLOG(INFO) << (*symbol) << " imported!";
-  LOG(INFO) << "new scope:";
-  LocalScopePrinter::Print<google::INFO, true>(GetRuntime()->GetScope(), __FILE__, __LINE__);
+  DLOG(INFO) << symbol << " imported!";
   return true;
 }
 
@@ -69,7 +60,7 @@ NATIVE_PROCEDURE_F(list) {
   if (args.empty())
     return Pair::Empty();
   Object* result = Pair::Empty();
-  for (const auto& arg : args) {
+  for (auto arg : std::ranges::reverse_view(args)) {
     result = Pair::New(arg, result);
   }
   return ReturnValue(result);
@@ -95,14 +86,26 @@ NATIVE_PROCEDURE_F(format) {
 
 #ifdef SCM_DEBUG
 
+NATIVE_PROCEDURE_F(frame) {
+  const auto runtime = GetRuntime();
+  ASSERT(runtime);
+  DLOG(INFO) << "stack frames:";
+  StackFrameIterator iter(runtime->GetStackFrames());
+  while (iter.HasNext()) {
+    DLOG(INFO) << "- " << iter.Next();
+  }
+  return true;
+}
+
 NATIVE_PROCEDURE_F(list_symbols) {
   ASSERT(HasRuntime());
   ASSERT(args.empty());
-
-  const auto scope = GetRuntime()->GetScope();
-  ASSERT(scope);
-
-  LocalScopePrinter::Print(scope, __FILE__, __LINE__);
+  const auto frame = GetRuntime()->GetCurrentFrame();
+  ASSERT(frame);
+  const auto locals = frame->GetLocals();
+  ASSERT(locals);
+  LOG(INFO) << "Locals:";
+  LocalScopePrinter::Print<google::INFO, true>(locals, __FILE__, __LINE__);
   return true;
 }
 

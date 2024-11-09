@@ -3,6 +3,13 @@
 #include "scheme/runtime.h"
 
 namespace scm {
+Class* NativeProcedure::kClass = nullptr;
+void NativeProcedure::Init() {
+  ASSERT(kClass == nullptr);
+  kClass = Class::New(Procedure::GetClass(), "NativeProcedure");
+  ASSERT(kClass);
+}
+
 auto NativeProcedure::ReturnValue(Object* rhs) const -> bool {
   ASSERT(rhs);
   GetRuntime()->Push(rhs);

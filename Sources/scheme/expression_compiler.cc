@@ -33,7 +33,7 @@ class ExpressionLogger : public ExpressionVisitor {
 #undef DEFINE_VISIT
 };
 
-auto ExpressionCompiler::CompileExpression(Expression* expr) -> CompiledExpression* {
+auto ExpressionCompiler::CompileExpression(Expression* expr) -> FlowGraph* {
   ASSERT(expr);
 #ifdef SCM_DEBUG
   if (FLAGS_dump_ast) {
@@ -43,20 +43,7 @@ auto ExpressionCompiler::CompileExpression(Expression* expr) -> CompiledExpressi
   }
 #endif  // SCM_DEBUG
 
-  //   {
-  //     MacroExpander expander;
-  //     if (expander.Expand(&expr)) {
-  // #ifdef SCM_DEBUG
-  //       if (FLAGS_dump_ast) {
-  //         const auto dotgraph = expr::ExpressionToDot::BuildGraph("expr", expr);
-  //         ASSERT(dotgraph);
-  //         dotgraph->RenderPngToFilename(GetReportFilename("exec_expr_ast_expanded.png"));
-  //       }
-  // #endif  // SCM_DEBUG
-  //     }
-  //   }
-
-  const auto flow_graph = FlowGraphBuilder::Build(expr, GetRuntime()->GetScope());
+  const auto flow_graph = FlowGraphBuilder::Build(expr, GetScope());
   ASSERT(flow_graph);
   ASSERT(flow_graph->HasEntry());
 #ifdef SCM_DEBUG
@@ -66,10 +53,10 @@ auto ExpressionCompiler::CompileExpression(Expression* expr) -> CompiledExpressi
     dotgraph->RenderPngToFilename(GetReportFilename("exec_expr_flow_graph.png"));
   }
 #endif  // SCM_DEBUG
-  return CompiledExpression::New(flow_graph);
+  return flow_graph;
 }
 
-auto ExpressionCompiler::Compile(const std::string& expr) -> CompiledExpression* {
+auto ExpressionCompiler::Compile(const std::string& expr, LocalScope* locals) -> FlowGraph* {
   ASSERT(!expr.empty());
 #ifdef SCM_DEBUG
   DVLOG(SCM_VLEVEL_1) << "compiling expression: " << std::endl << expr;
@@ -77,7 +64,7 @@ auto ExpressionCompiler::Compile(const std::string& expr) -> CompiledExpression*
   const auto start = Clock::now();
 #endif  // SCM_DEBUG
 
-  const auto result = Compile(Parser::ParseExpr(expr));
+  const auto result = Compile(Parser::ParseExpr(expr, locals), locals);
   ASSERT(result);
 
 #ifdef SCM_DEBUG

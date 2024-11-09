@@ -7,10 +7,10 @@
 #include "scheme/instruction.h"
 #include "scheme/lambda.h"
 #include "scheme/local.h"
-#include "scheme/macro_compiler.h"
 #include "scheme/native_procedure.h"
 #include "scheme/object.h"
 #include "scheme/procedure.h"
+#include "scheme/script.h"
 
 namespace scm {
 static inline auto AppendFragment(EntryInstr* entry, EffectVisitor& vis) -> Instruction* {
@@ -19,26 +19,6 @@ static inline auto AppendFragment(EntryInstr* entry, EffectVisitor& vis) -> Inst
     return entry;
   entry->Append(vis.GetEntryInstr());
   return vis.GetExitInstr();
-}
-
-auto FlowGraphBuilder::BuildGraph() -> FlowGraph* {
-  const auto graph_entry = GraphEntryInstr::New(GetNextBlockId());
-  ASSERT(graph_entry);
-
-  const auto target_entry = TargetEntryInstr::New(GetNextBlockId());
-  ASSERT(target_entry);
-  SetCurrentBlock(target_entry);
-  ValueVisitor for_effect(this);
-  if (!GetExpr()->Accept(&for_effect)) {
-    LOG(ERROR) << "failed to visit: " << GetExpr()->ToString();
-    return nullptr;  // TODO: free entry
-  }
-  for_effect.AddImplicitReturn();
-  AppendFragment(target_entry, for_effect);
-  SetGraphEntry(graph_entry);
-  graph_entry->Append(target_entry);
-  graph_entry->AddDominated(target_entry);
-  return new FlowGraph(graph_entry);
 }
 
 auto EffectVisitor::VisitEvalExpr(EvalExpr* expr) -> bool {
@@ -62,14 +42,14 @@ static inline auto IsNativeCall(instr::Instruction* instr) -> bool {
   return target->IsNativeProcedure();
 }
 
-static inline auto IsMacroCall(instr::Instruction* instr) -> bool {
-  ASSERT(instr);
-  if (!instr->IsConstantInstr())
-    return false;
-  const auto target = instr->AsConstantInstr()->GetValue();
-  ASSERT(target);
-  return target->IsMacro();
-}
+// static inline auto IsMacroCall(instr::Instruction* instr) -> bool {
+//   ASSERT(instr);
+//   if (!instr->IsConstantInstr())
+//     return false;
+//   const auto target = instr->AsConstantInstr()->GetValue();
+//   ASSERT(target);
+//   return target->IsMacro();
+// }
 
 auto EffectVisitor::VisitCallProcExpr(CallProcExpr* expr) -> bool {
   ValueVisitor for_target(GetOwner());
@@ -83,49 +63,50 @@ auto EffectVisitor::VisitCallProcExpr(CallProcExpr* expr) -> bool {
   }
   const auto target = for_target.GetValue();
   ASSERT(target);
-  if (IsMacroCall(target)) {
-    const auto macro = target->AsConstantInstr()->GetValue()->AsMacro();
-    ASSERT(macro);
-    DLOG(INFO) << "calling macro: " << macro->ToString();
+  // TOOD:
+  //  if (IsMacroCall(target)) {
+  //    const auto macro = target->AsConstantInstr()->GetValue()->AsMacro();
+  //    ASSERT(macro);
+  //    DLOG(INFO) << "calling macro: " << macro->ToString();
 
-    const auto& args = macro->GetArgs();
-    if (expr->GetNumberOfArgs() != args.size()) {
-      LOG(FATAL) << "not the correct number of args.";
-      return false;
-    }
+  //   const auto& args = macro->GetArgs();
+  //   if (expr->GetNumberOfArgs() != args.size()) {
+  //     LOG(FATAL) << "not the correct number of args.";
+  //     return false;
+  //   }
 
-    const auto scope = LocalScope::New(GetOwner()->GetScope());
-    ASSERT(scope);
+  //   const auto scope = LocalScope::New(GetOwner()->GetScope());
+  //   ASSERT(scope);
 
-    DLOG(INFO) << "args:";
-    auto idx = 0;
-    for (const auto& arg : macro->GetArgs()) {
-      const auto symbol = Symbol::New(arg.GetName());
-      const auto value = expr->GetArgAt(idx);
-      DLOG(INFO) << "- #" << (idx) << ": " << symbol << " - " << value->ToString();
-      scope->Add(LocalVariable::New(scope, symbol, value));
-    }
+  //   DLOG(INFO) << "args:";
+  //   auto idx = 0;
+  //   for (const auto& arg : macro->GetArgs()) {
+  //     const auto symbol = Symbol::New(arg.GetName());
+  //     const auto value = expr->GetArgAt(idx);
+  //     DLOG(INFO) << "- #" << (idx) << ": " << symbol << " - " << value->ToString();
+  //     scope->Add(LocalVariable::New(scope, symbol, value));
+  //   }
 
-    MacroVisitor for_macro(GetOwner(), scope);
-    if (!macro->GetBody()->Accept(&for_macro)) {
-      throw Exception(fmt::format("failed to visit `{}` body: `{}`", macro->GetSymbol()->Get(), macro->GetBody()->ToString()));
-    }
+  //   MacroVisitor for_macro(GetOwner(), scope);
+  //   if (!macro->GetBody()->Accept(&for_macro)) {
+  //     throw Exception(fmt::format("failed to visit `{}` body: `{}`", macro->GetSymbol()->Get(), macro->GetBody()->ToString()));
+  //   }
 
-    DLOG(INFO) << "appending macro body:";
-    auto next = for_macro.GetEntryInstr();
-    while (next != nullptr) {
-      DLOG(INFO) << "- " << next->ToString();
-      if (next->IsBranchInstr()) {
-        next = next->AsBranchInstr()->GetTrueTarget();
-      } else {
-        next = next->GetNext();
-      }
-    }
+  //   DLOG(INFO) << "appending macro body:";
+  //   auto next = for_macro.GetEntryInstr();
+  //   while (next != nullptr) {
+  //     DLOG(INFO) << "- " << next->ToString();
+  //     if (next->IsBranchInstr()) {
+  //       next = next->AsBranchInstr()->GetTrueTarget();
+  //     } else {
+  //       next = next->GetNext();
+  //     }
+  //   }
 
-    Append(for_macro);
-    // TODO: expand Macro
-    return true;
-  }
+  //   Append(for_macro);
+  //   // TODO: expand Macro
+  //   return true;
+  // }
 
   ASSERT(expr);
   for (auto idx = 1; idx < expr->GetNumberOfChildren(); idx++) {
@@ -138,20 +119,14 @@ auto EffectVisitor::VisitCallProcExpr(CallProcExpr* expr) -> bool {
   Append(for_target);
 
   if (IsNativeCall(target)) {
-    Add(InstanceOfInstr::New(target, IsNativeProcedure));
+    Add(InstanceOfInstr::New(target, NativeProcedure::GetClass()));
     ReturnDefinition(InvokeNativeInstr::New(for_target.GetValue(), expr->GetNumberOfArgs()));
     return true;
   }
 
-  Add(InstanceOfInstr::New(target, IsProcedure));
+  Add(InstanceOfInstr::New(target, Procedure::GetClass()));
   ReturnDefinition(InvokeInstr::New(target));
   return true;
-}
-
-auto EffectVisitor::VisitModuleDef(ModuleDef* expr) -> bool {
-  ASSERT(expr);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return false;
 }
 
 auto EffectVisitor::VisitCaseExpr(expr::CaseExpr* expr) -> bool {
@@ -253,21 +228,20 @@ auto EffectVisitor::VisitWhenExpr(expr::WhenExpr* expr) -> bool {
 
 auto EffectVisitor::VisitMacroDef(MacroDef* expr) -> bool {
   ASSERT(expr);
-  MacroCompiler compiler;
-  const auto macro = compiler.CompileMacro(expr);
-  ASSERT(macro);
-
-  const auto scope = GetOwner()->GetScope();
-  ASSERT(scope);
-  if (!scope->Add(macro->GetSymbol(), macro)) {
-    throw Exception(
-        fmt::format("cannot define Macro symbol `{}` for value: `{}`", macro->GetSymbol()->ToString(), macro->ToString()));
-  }
-
+  // TODO:
+  //  MacroCompiler compiler;
+  //  const auto macro = compiler.CompileMacro(expr);
+  //  ASSERT(macro);
+  // const auto scope = GetOwner()->GetScope();
+  // ASSERT(scope);
+  // if (!scope->Add(macro->GetSymbol(), macro)) {
+  //   throw Exception(
+  //       fmt::format("cannot define Macro symbol `{}` for value: `{}`", macro->GetSymbol()->ToString(), macro->ToString()));
+  // }
   return true;
 }
 
-auto EffectVisitor::VisitWhileExpr(expr::WhileExpr* expr) -> bool {
+auto EffectVisitor::VisitWhileExpr(expr::WhileExpr* expr) -> bool {  // TODO: clean this up
   ASSERT(expr);
   const auto target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
   ASSERT(target);
@@ -337,33 +311,6 @@ auto EffectVisitor::VisitBeginExpr(BeginExpr* expr) -> bool {
   return true;
 }
 
-auto EffectVisitor::VisitConsExpr(ConsExpr* expr) -> bool {
-  ASSERT(expr);
-
-  ValueVisitor for_car(GetOwner());
-  {
-    ASSERT(expr->HasCar());
-    if (!expr->GetCar()->Accept(&for_car)) {
-      LOG(FATAL) << "failed to visit cons car: " << expr->GetCar()->ToString();
-      return false;
-    }
-  }
-  Append(for_car);
-
-  ValueVisitor for_cdr(GetOwner());
-  {
-    ASSERT(expr->HasCdr());
-    if (!expr->GetCdr()->Accept(&for_cdr)) {
-      LOG(FATAL) << "failed to visit cons cdr: " << expr->GetCdr()->ToString();
-      return false;
-    }
-  }
-  Append(for_cdr);
-
-  ReturnDefinition(ConsInstr::New(for_car.GetValue(), for_cdr.GetValue()));
-  return true;
-}
-
 auto EffectVisitor::VisitCondExpr(CondExpr* expr) -> bool {
   ASSERT(expr);
   const auto join = JoinEntryInstr::New(GetOwner()->GetNextBlockId());
@@ -375,7 +322,6 @@ auto EffectVisitor::VisitCondExpr(CondExpr* expr) -> bool {
     LOG(ERROR) << "failed to visit conseq for cond: " << expr->ToString();
     return false;
   }
-  for_conseq.AddImplicitReturn();
   AppendFragment(conseq_target, for_conseq);
   conseq_target->Append(GotoInstr::New(join));
   GetOwner()->GetCurrentBlock()->AddDominated(conseq_target);
@@ -412,7 +358,7 @@ auto EffectVisitor::VisitCondExpr(CondExpr* expr) -> bool {
 }
 
 auto EffectVisitor::VisitLambdaExpr(LambdaExpr* expr) -> bool {
-  const auto lambda = Lambda::New(expr->GetArgs(), expr);
+  const auto lambda = Lambda::New(expr->GetArgs(), expr->GetBody());
   ASSERT(lambda);
   ReturnDefinition(ConstantInstr::New(lambda));
   return true;
@@ -497,7 +443,7 @@ auto EffectVisitor::VisitThrowExpr(expr::ThrowExpr* expr) -> bool {
     return false;
   }
   Append(for_value);
-  Add(InstanceOfInstr::New(for_value.GetValue(), IsString));
+  Add(InstanceOfInstr::New(for_value.GetValue(), String::GetClass()));
   Add(ThrowInstr::New(for_value.GetValue()));
   return true;
 }
@@ -556,5 +502,63 @@ auto MacroVisitor::VisitLiteralExpr(expr::LiteralExpr* expr) -> bool {
     return false;
   Append(for_value);
   return true;
+}
+
+auto FlowGraphBuilder::Build(Expression* expr, LocalScope* scope) -> FlowGraph* {
+  ASSERT(expr);
+  ASSERT(scope);
+  FlowGraphBuilder builder(scope);
+  const auto graph_entry = GraphEntryInstr::New(builder.GetNextBlockId());
+  ASSERT(graph_entry);
+  builder.SetCurrentBlock(graph_entry);
+  const auto target = TargetEntryInstr::New(builder.GetNextBlockId());
+  ASSERT(target);
+  builder.SetCurrentBlock(target);
+  ValueVisitor for_effect(&builder);
+  if (!expr->Accept(&for_effect)) {
+    LOG(ERROR) << "failed to visit: " << expr->ToString();
+    return nullptr;  // TODO: free entry
+  }
+  AppendFragment(target, for_effect);
+  {
+    const auto last = target->GetLastInstruction();
+    if (last && !last->IsReturnInstr()) {
+      target->Append(last->IsDefinition() ? instr::ReturnInstr::New(last->AsDefinition()) : instr::ReturnInstr::New());
+    }
+  }
+  graph_entry->Append(target);
+  graph_entry->AddDominated(target);
+  return new FlowGraph(graph_entry);
+}
+
+auto FlowGraphBuilder::Build(Script* script, LocalScope* scope) -> FlowGraph* {
+  ASSERT(script);
+  ASSERT(scope);
+  FlowGraphBuilder builder(scope);
+  const auto graph_entry = GraphEntryInstr::New(builder.GetNextBlockId());
+  ASSERT(graph_entry);
+  builder.SetCurrentBlock(graph_entry);
+  const auto target = TargetEntryInstr::New(builder.GetNextBlockId());
+  ASSERT(target);
+  builder.SetCurrentBlock(target);
+  const auto& body = script->GetBody();
+  for (const auto& expr : body) {
+    EffectVisitor for_effect(&builder);
+    if (!expr->Accept(&for_effect)) {
+      LOG(ERROR) << "failed to visit: " << expr->ToString();
+      return nullptr;  // TODO: free entry
+    }
+    AppendFragment(target, for_effect);
+  }
+  {
+    const auto last = target->GetLastInstruction();
+    DLOG(INFO) << "last: " << last->ToString();
+    if (last && !last->IsReturnInstr()) {
+      last->Append(last->IsDefinition() ? instr::ReturnInstr::New(last->AsDefinition()) : instr::ReturnInstr::New());
+    }
+  }
+  graph_entry->Append(target);
+  graph_entry->AddDominated(target);
+  return new FlowGraph(graph_entry);
 }
 }  // namespace scm

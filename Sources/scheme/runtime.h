@@ -11,8 +11,12 @@
 #include "scheme/flags.h"
 #include "scheme/flow_graph.h"
 #include "scheme/instruction.h"
+#include "scheme/interpreter.h"
 #include "scheme/local_scope.h"
+#include "scheme/native_procedure.h"
+#include "scheme/natives.h"
 #include "scheme/object.h"
+#include "scheme/stack_frame.h"
 
 namespace scm {
 DECLARE_bool(kernel);
@@ -25,10 +29,12 @@ class foreach;
 class exit;
 class format;
 class throw_exc;
+class frame;
 }  // namespace proc
 
+using Stack = std::stack<Object*>;
+
 class ExecutionStack {
-  using Stack = std::stack<Object*>;
   DEFINE_NON_COPYABLE_TYPE(ExecutionStack);
 
  private:
@@ -46,6 +52,10 @@ class ExecutionStack {
     if (stack_.empty())
       return std::nullopt;
     return {stack_.top()};
+  }
+
+  inline auto stack() const -> const Stack& {
+    return stack_;
   }
 
  public:
@@ -83,56 +93,27 @@ class Runtime : public ExecutionStack {
   friend class proc::format;  // TODO: remove
   friend class proc::foreach;
   friend class proc::map;
+  friend class proc::frame;
   friend class Repl;
   friend class Lambda;
   friend class Interpreter;
   friend class NativeProcedure;
   friend class RuntimeScopeScope;
+  friend class RuntimeStackIterator;
 
   using ModuleList = std::vector<Module*>;
   DEFINE_NON_COPYABLE_TYPE(Runtime);
 
  private:
   LocalScope* scope_ = nullptr;
-  Instruction* current_ = nullptr;
-  ModuleList modules_{};
+  std::vector<Script*> scripts_{};
   bool running_ = false;
+  bool executing_ = false;
+  Interpreter interpreter_;
 
-  inline void SetCurrentInstr(Instruction* instr) {
-    ASSERT(instr);
-    current_ = instr;
-  }
-
-  inline auto GetCurrentInstr() const -> Instruction* {
-    return current_;
-  }
-
-  inline auto HasCurrentInstr() const -> bool {
-    return GetCurrentInstr() != nullptr;
-  }
-
-  inline void SetScope(LocalScope* scope) {
-    ASSERT(scope);
-    scope_ = scope;
-  }
-
-  inline auto PushScope() -> LocalScope* {
-    // DLOG(INFO) << "push scope.";
-    ASSERT(HasScope());
-    const auto new_scope = LocalScope::New(GetScope());
-    ASSERT(new_scope);
-    SetScope(new_scope);
-    return new_scope;
-  }
-
-  inline void PopScope() {
-    // DLOG(INFO) << "pop scope.";
-    const auto curr_scope = GetScope();
-    ASSERT(curr_scope);
-    ASSERT(curr_scope->HasParent());
-    SetScope(curr_scope->GetParent());
-    ASSERT(HasScope());
-  }
+  void Call(instr::TargetEntryInstr* target, LocalScope* locals);
+  void Call(NativeProcedure* native, const std::vector<Object*>& args);
+  void Call(Lambda* lambda);
 
   inline void SetRunning(const bool rhs = true) {
     running_ = rhs;
@@ -142,6 +123,10 @@ class Runtime : public ExecutionStack {
     return SetRunning(false);
   }
 
+  auto GetStackFrames() const -> const std::stack<StackFrame>& {
+    return interpreter_.stack_;
+  }
+
  public:
   static auto CreateInitScope() -> LocalScope*;
   void LoadKernelModule();  // TODO: reduce visibility
@@ -149,37 +134,17 @@ class Runtime : public ExecutionStack {
  protected:
   explicit Runtime(LocalScope* init_scope = CreateInitScope());
   auto StoreSymbol(Symbol* symbol, Object* value) -> bool;
-
   auto DefineSymbol(Symbol* symbol, Object* value) -> bool;
   auto LookupSymbol(Symbol* symbol, Object** result) -> bool;
-  auto CallProcedure(Procedure* procedure) -> bool;
-
-  auto ImportModule(Module* module) -> bool;
-  auto ImportModule(Symbol* symbol) -> bool;
-
-  inline auto ImportModule(const std::string& name) -> bool {
-    return ImportModule(Symbol::New(name));
-  }
-
   auto Apply(Procedure* proc, const std::vector<Object*>& args) -> Object*;
+  auto Import(Script* module) -> bool;
+  auto Import(Symbol* symbol, LocalScope* scope) -> bool;
 
- public:
-  ~Runtime();
-
-  auto GetScope() const -> LocalScope* {
-    return scope_;
+  inline auto Import(const std::string& name, LocalScope* scope) -> bool {
+    return Import(Symbol::New(name), scope);
   }
 
-  inline auto HasScope() const -> bool {
-    return GetScope() != nullptr;
-  }
-
-  auto IsRunning() const -> bool {
-    return running_;
-  }
-
-  auto Execute(GraphEntryInstr* entry) -> Object*;
-
+  // Stack
   inline void PushError(Error* error) {
     ASSERT(error);
     return Push(error);
@@ -190,11 +155,29 @@ class Runtime : public ExecutionStack {
     return PushError(Error::New(message));
   }
 
- private:
-  static auto Eval(GraphEntryInstr* graph_entry) -> Object*;
-  static inline auto Eval(FlowGraph* flow_graph) -> Object* {
-    ASSERT(flow_graph);
-    return Eval(flow_graph->GetEntry());
+ public:
+  ~Runtime();
+
+  auto IsRunning() const -> bool {
+    return running_;
+  }
+
+  auto GetCurrentFrame() -> StackFrame* {
+    return interpreter_.GetCurrentStackFrame();
+  }
+
+  auto HasFrame() const -> bool {
+    return interpreter_.HasStackFrame();
+  }
+
+  auto GetGlobalScope() const -> LocalScope* {
+    return scope_;
+  }
+
+  auto GetCurrentScope() -> LocalScope* {
+    const auto frame = GetCurrentFrame();
+    ASSERT(frame);
+    return frame->GetLocals();
   }
 
  public:
@@ -203,9 +186,33 @@ class Runtime : public ExecutionStack {
   }
 
   static auto Eval(const std::string& expr) -> Object*;
+  static auto Exec(Script* script) -> Object*;
 
  public:
   static void Init();
+};
+
+class RuntimeStackIterator {
+  DEFINE_NON_COPYABLE_TYPE(RuntimeStackIterator);
+
+ private:
+  Stack stack_;
+
+ public:
+  RuntimeStackIterator(Runtime* runtime) :
+    stack_(runtime->stack()) {}
+  ~RuntimeStackIterator() = default;
+
+  auto HasNext() const -> bool {
+    return !stack_.empty();
+  }
+
+  auto Next() -> Stack::value_type {
+    const auto next = stack_.top();
+    ASSERT(next);
+    stack_.pop();
+    return next;
+  }
 };
 
 auto GetRuntime() -> Runtime*;
@@ -213,49 +220,6 @@ auto GetRuntime() -> Runtime*;
 inline auto HasRuntime() -> bool {
   return GetRuntime() != nullptr;
 }
-
-class RuntimeScopeScope {
-  DEFINE_NON_COPYABLE_TYPE(RuntimeScopeScope);
-
- private:
-  Runtime* runtime_;
-
- public:
-  explicit RuntimeScopeScope(Runtime* runtime) :
-    runtime_(runtime) {
-    ASSERT(runtime);
-    const auto new_scope = LocalScope::New(GetRuntime()->GetScope());
-    ASSERT(new_scope);
-    GetRuntime()->SetScope(new_scope);
-  }
-  ~RuntimeScopeScope() {
-    const auto curr_scope = GetRuntime()->GetScope();
-    ASSERT(curr_scope);
-    const auto next_scope = curr_scope->GetParent();
-    ASSERT(next_scope);
-    GetRuntime()->SetScope(next_scope);
-  }
-
-  inline auto GetRuntime() const -> Runtime* {
-    return runtime_;
-  }
-
-  inline auto GetCurrentScope() const -> LocalScope* {
-    return GetRuntime()->GetScope();
-  }
-
-  inline auto GetParentScope() const -> LocalScope* {
-    return GetCurrentScope()->GetParent();
-  }
-
-  inline auto HasParentScope() const -> bool {
-    return GetParentScope() != nullptr;
-  }
-
-  inline auto operator->() const -> LocalScope* {
-    return GetCurrentScope();
-  }
-};
 }  // namespace scm
 
 #endif  // SCM_RUNTIME_H
