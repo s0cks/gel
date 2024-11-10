@@ -222,26 +222,6 @@ class ValueVisitor : public EffectVisitor {
     return GetValue() != nullptr;
   }
 };
-
-class MacroVisitor : public ValueVisitor {
-  DEFINE_NON_COPYABLE_TYPE(MacroVisitor);
-
- private:
-  LocalScope* scope_;
-
- public:
-  MacroVisitor(FlowGraphBuilder* owner, LocalScope* scope) :
-    ValueVisitor(owner),
-    scope_(scope) {}
-  ~MacroVisitor() override = default;
-
-  auto GetScope() const -> LocalScope* {
-    return scope_;
-  }
-
-  auto VisitCondExpr(expr::CondExpr* expr) -> bool override;
-  auto VisitLiteralExpr(expr::LiteralExpr* expr) -> bool override;
-};
 }  // namespace scm
 
 #endif  // SCM_FLOW_GRAPH_BUILDER_H

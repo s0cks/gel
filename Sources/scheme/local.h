@@ -101,9 +101,9 @@ class LocalVariable {
     stream << "LocalVariable(";
     stream << "owner=" << rhs.GetOwner() << ", ";
     stream << "index=" << rhs.GetIndex() << ", ";
-    stream << "name=" << rhs.GetName() << ", ";
+    stream << "name=" << rhs.GetName();
     if (rhs.HasValue())
-      stream << "value=" << rhs.GetValue()->ToString();
+      stream << ", value=" << rhs.GetValue()->ToString();
     stream << ")";
     return stream;
   }

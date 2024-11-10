@@ -27,7 +27,8 @@
         "countdown.cl",
         "test-only.cl",
         "foreach.cl",
-        "map.cl"
+        "map.cl",
+        "set-car.cl"
       ],
       "default": "while.cl",
       "description": "A value that is even."

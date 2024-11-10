@@ -55,7 +55,6 @@
   (cdr (cdr (cdr (car xs)))))
 (defun cddddr (xs)
   (cdr (cdr (cdr (cdr xs)))))
-
 (define PI 3.14159)
 ; (define TAU (* 2 PI))
 (defun sq (x)
@@ -63,9 +62,11 @@
 (defun even? (x)
   (eq? (% x 2) 0))
 (defun max (a b)
-  (cond (> a b) a b))
+  (cond ((> a b) a)
+    b))
 (defun min (a b)
-  (cond (< a b) a b))
+  (cond ((< a b) a)
+    b))
 ; Types
 (defun null? (x)
   (eq? (type? x) "Null"))
@@ -87,7 +88,7 @@
 (defun native-procedure? (x)
   (eq? (type? x) "NativeProcedure"))
 (defun procedure? (x)
-  (or (native-procedure? x) (eq? (type? x) "Procedure")))
+  (or (native-procedure? x) (lambda? x) (eq? (type? x) "Procedure")))
 ; Misc
 (defun pair? (x)
   (eq? (type? x) "Pair"))
@@ -98,15 +99,20 @@
   (cond (eq? x 1) 1
     (* x (factorial (- x 1)))))
 ; foreach
-(defun foreach (f seq)
+(defun apply (f seq)
   (cond (null? seq) seq
     (begin
       (f (car seq))
-      (foreach f (cdr seq)))))
+      (apply f (cdr seq)))))
 ; map
 (defun map (f seq)
-  (cond (null? seq) seq
-    (cons (f (car seq)) (map f (cdr seq)))))
+  (cond (null? seq) seq)
+    (cons (f (car seq)) (map f (cdr seq))))
+; filter
+(defun filter (p seq)
+ (cond (null? seq) seq
+   (p (car seq)) (cons (car seq) (filter p (cdr seq)))
+   (filter p (cdr seq))))
 ; length
 (defun length (seq)
   (cond (null? seq) 0
@@ -115,6 +121,3 @@
 (defun append (seq x)
   (cond (null? seq) x
     (cons (car seq) (append (cdr seq) x))))
-; list
-(defun list? (xs)
-  (or (null? xs) (and (pair? xs) (list? (cdr xs)))))

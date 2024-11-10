@@ -647,40 +647,112 @@ class CallProcExpr : public Expression {
   }
 };
 
+class ClauseExpr : public Expression {  // TODO: should this be a WhenExpr?
+ private:
+  Expression* key_;
+  ExpressionList actions_;
+
+  ClauseExpr(Expression* key, const ExpressionList& actions) :
+    Expression(),
+    key_(key),
+    actions_(actions) {
+    ASSERT(key_);
+    ASSERT(!actions_.empty());
+  }
+
+ public:
+  ~ClauseExpr() override = default;
+
+  auto GetKey() const -> Expression* {
+    return key_;
+  }
+
+  auto GetActions() const -> const ExpressionList& {
+    return actions_;
+  }
+
+  auto GetNumberOfActions() const -> uint64_t {
+    return actions_.size();
+  }
+
+  auto GetActionAt(const uint64_t idx) const -> Expression* {
+    ASSERT(idx >= 0 && idx <= GetNumberOfActions());
+    return actions_[idx];
+  }
+
+  auto GetNumberOfChildren() const -> uint64_t override {
+    return 1 + GetNumberOfActions();
+  }
+
+  auto GetChildAt(const uint64_t idx) const -> Expression* override {
+    ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
+    return idx == 0 ? GetKey() : GetActionAt(idx - 1);
+  }
+
+  auto VisitAllActions(ExpressionVisitor* vis) -> bool;
+  auto VisitChildren(ExpressionVisitor* vis) -> bool override;
+  DECLARE_EXPRESSION(ClauseExpr);
+
+ public:
+  static inline auto New(Expression* key, const ExpressionList& actions = {}) -> ClauseExpr* {
+    ASSERT(key);
+    ASSERT(!actions.empty());
+    return new ClauseExpr(key, actions);
+  }
+
+  static inline auto New(Expression* key, Expression* action) -> ClauseExpr* {
+    ASSERT(key);
+    ASSERT(action);
+    return New(key, ExpressionList{action});
+  }
+};
+
+using ClauseList = std::vector<ClauseExpr*>;
+
+static inline auto operator<<(std::ostream& stream, const ClauseList& rhs) -> std::ostream& {
+  stream << "[";
+  auto remaining = rhs.size();
+  for (const auto& clause : rhs) {
+    stream << clause->ToString();
+    if (--remaining >= 1)
+      stream << ", ";
+  }
+  stream << "]";
+  return stream;
+}
+
 class CondExpr : public Expression {
  private:
-  Expression* test_ = nullptr;
-  Expression* conseq_ = nullptr;
+  ClauseList clauses_;
   Expression* alt_ = nullptr;
 
  protected:
-  CondExpr(Expression* test, Expression* conseq, Expression* alt) :
-    Expression() {
-    SetTest(test);
-    SetConseq(conseq);
-    if (alt)
-      SetAlt(alt);
+  CondExpr(const ClauseList& clauses, Expression* alt) :
+    Expression(),
+    clauses_(clauses),
+    alt_(alt) {
+    ASSERT(!clauses_.empty());
   }
 
  public:
   ~CondExpr() override = default;
 
-  auto GetTest() const -> Expression* {
-    return test_;
+  auto GetClauses() const -> const ClauseList& {
+    return clauses_;
   }
 
-  inline void SetTest(Expression* expr) {
-    ASSERT(expr);
-    test_ = expr;
+  auto GetNumberOfClauses() const -> uint64_t {
+    return clauses_.size();
   }
 
-  auto GetConseq() const -> Expression* {
-    return conseq_;
+  auto GetClauseAt(const uint64_t idx) const -> ClauseExpr* {
+    ASSERT(idx >= 0 && idx <= GetNumberOfClauses());
+    return clauses_[idx];
   }
 
-  inline void SetConseq(Expression* expr) {
-    ASSERT(expr);
-    conseq_ = expr;
+  void SetClauseAt(const uint64_t idx, ClauseExpr* expr) {
+    ASSERT(idx >= 0 && idx <= GetNumberOfClauses());
+    clauses_[idx] = expr;
   }
 
   auto GetAlternate() const -> Expression* {
@@ -696,14 +768,33 @@ class CondExpr : public Expression {
     alt_ = expr;
   }
 
+  auto GetNumberOfChildren() const -> uint64_t override {
+    return (HasAlternate() ? 1 : 0) + GetNumberOfClauses();
+  }
+
+  auto GetChildAt(const uint64_t idx) const -> Expression* override {
+    ASSERT(idx >= 0 && idx < GetNumberOfChildren());
+    return (idx >= 0 && idx <= GetNumberOfClauses()) ? clauses_[idx] : GetAlternate();
+  }
+
+  auto VisitAllClauses(ExpressionVisitor* vis) -> bool;
   auto VisitChildren(ExpressionVisitor* vis) -> bool override;
   DECLARE_EXPRESSION(CondExpr);
 
  public:
+  static inline auto New(const ClauseList& clauses = {}, Expression* alt = nullptr) -> CondExpr* {
+    ASSERT(!clauses.empty());
+    return new CondExpr(clauses, alt);
+  }
+
   static inline auto New(Expression* test, Expression* conseq, Expression* alt = nullptr) -> CondExpr* {
     ASSERT(test);
     ASSERT(conseq);
-    return new CondExpr(test, conseq, alt);
+    return New(
+        ClauseList{
+            ClauseExpr::New(test, conseq),
+        },
+        alt);
   }
 };
 
@@ -766,62 +857,6 @@ class WhenExpr : public Expression {
     return New(test, ExpressionList{action});
   }
 };
-
-class ClauseExpr : public Expression {  // TODO: should this be a WhenExpr?
- private:
-  Expression* key_;
-  ExpressionList actions_;
-
-  ClauseExpr(Expression* key, const ExpressionList& actions) :
-    Expression(),
-    key_(key),
-    actions_(actions) {
-    ASSERT(key_);
-    ASSERT(!actions_.empty());
-  }
-
- public:
-  ~ClauseExpr() override = default;
-
-  auto GetKey() const -> Expression* {
-    return key_;
-  }
-
-  auto GetActions() const -> const ExpressionList& {
-    return actions_;
-  }
-
-  auto GetNumberOfActions() const -> uint64_t {
-    return actions_.size();
-  }
-
-  auto GetActionAt(const uint64_t idx) const -> Expression* {
-    ASSERT(idx >= 0 && idx <= GetNumberOfActions());
-    return actions_[idx];
-  }
-
-  auto GetNumberOfChildren() const -> uint64_t override {
-    return 1 + GetNumberOfActions();
-  }
-
-  auto GetChildAt(const uint64_t idx) const -> Expression* override {
-    ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
-    return idx == 0 ? GetKey() : GetActionAt(idx - 1);
-  }
-
-  auto VisitAllActions(ExpressionVisitor* vis) -> bool;
-  auto VisitChildren(ExpressionVisitor* vis) -> bool override;
-  DECLARE_EXPRESSION(ClauseExpr);
-
- public:
-  static inline auto New(Expression* key, const ExpressionList& actions = {}) -> ClauseExpr* {
-    ASSERT(key);
-    ASSERT(!actions.empty());
-    return new ClauseExpr(key, actions);
-  }
-};
-
-using ClauseList = std::vector<ClauseExpr*>;
 
 class CaseExpr : public Expression {
  private:

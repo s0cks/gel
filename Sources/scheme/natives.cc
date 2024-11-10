@@ -84,6 +84,33 @@ NATIVE_PROCEDURE_F(format) {
   return ReturnValue(String::New(result));
 }
 
+// (set-car! <seq> <value>)
+NATIVE_PROCEDURE_F(set_car) {
+  const auto& seq = args[0];
+  ASSERT(seq);
+  if (!seq->IsPair())
+    return ThrowError(fmt::format("expected {} to be a Pair.", (*seq)));
+  const auto& value = args[1];
+  ASSERT(value);
+  if (!value->IsDatum())
+    return ThrowError(fmt::format("expected {} to be a Datum.", (*value)));
+  SetCar(seq, value);
+  return true;
+}
+
+NATIVE_PROCEDURE_F(set_cdr) {
+  const auto& seq = args[0];
+  ASSERT(seq);
+  if (!seq->IsPair())
+    return ThrowError(fmt::format("expected {} to be a Pair.", (*seq)));
+  const auto& value = args[1];
+  ASSERT(value);
+  if (!value->IsDatum())
+    return ThrowError(fmt::format("expected {} to be a Datum.", (*value)));
+  SetCdr(seq, value);
+  return true;
+}
+
 #ifdef SCM_DEBUG
 
 NATIVE_PROCEDURE_F(frame) {

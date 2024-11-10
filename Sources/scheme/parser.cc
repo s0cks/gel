@@ -112,15 +112,20 @@ auto Parser::ParseBinaryOpExpr() -> BinaryOpExpr* {
 
 auto Parser::ParseCondExpr() -> CondExpr* {
   ExpectNext(Token::kCond);
-  const auto test = ParseExpression();
-  ASSERT(test);
-  const auto consequent = ParseExpression();
-  ASSERT(consequent);
-  if (PeekEq(Token::kRParen))
-    return CondExpr::New(test, consequent);
-  const auto alternate = ParseExpression();
-  LOG_IF(FATAL, !PeekEq(Token::kRParen)) << "unexpected: " << NextToken() << ", expected: " << Token::kRParen;
-  return CondExpr::New(test, consequent, alternate);
+  expr::ClauseList clauses;
+  expr::Expression* alt = nullptr;
+  do {
+    const auto a = ParseExpression();
+    ASSERT(a);
+    if (PeekEq(Token::kRParen)) {
+      alt = a;
+      break;
+    }
+    const auto b = ParseExpression();
+    ASSERT(b);
+    clauses.push_back(expr::ClauseExpr::New(a, b));
+  } while (!PeekEq(Token::kRParen));
+  return CondExpr::New(clauses, alt);
 }
 
 auto Parser::ParseArguments(ArgumentSet& args) -> bool {

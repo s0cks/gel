@@ -377,7 +377,7 @@ class Pair : public Datum {
     return GetCar() != nullptr;
   }
 
-  void SetCar(Datum* rhs) {
+  void SetCar(Object* rhs) {
     ASSERT(rhs);
     car_ = rhs;
   }
@@ -390,7 +390,7 @@ class Pair : public Datum {
     return GetCdr() != nullptr;
   }
 
-  void SetCdr(Datum* rhs) {
+  void SetCdr(Object* rhs) {
     ASSERT(rhs);
     cdr_ = rhs;
   }
@@ -589,6 +589,16 @@ static inline auto Truth(scm::Object* rhs) -> bool {
 static inline auto Not(Object* rhs) -> Object* {
   ASSERT(rhs);
   return Truth(rhs) ? Bool::False() : Bool::True();
+}
+
+static inline void SetCar(Object* seq, Object* value) {
+  ASSERT(seq && seq->IsPair());
+  (seq->AsPair())->SetCar(value);
+}
+
+static inline void SetCdr(Object* seq, Object* value) {
+  ASSERT(seq && seq->IsPair());
+  (seq->AsPair())->SetCdr(value);
 }
 }  // namespace scm
 

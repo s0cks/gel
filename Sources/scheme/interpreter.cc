@@ -151,7 +151,9 @@ static inline auto GetTarget(const bool branch, instr::BranchInstr* instr) -> in
     return instr->GetTrueTarget();
   if (instr->HasFalseTarget())
     return instr->GetFalseTarget();
-  return instr->GetJoin();
+  if (!instr->HasNext())
+    return instr->GetJoin();
+  return nullptr;
 }
 
 auto Interpreter::VisitBranchInstr(BranchInstr* instr) -> bool {

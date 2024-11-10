@@ -163,6 +163,8 @@ auto Runtime::CreateInitScope() -> LocalScope* {
   RegisterProc<proc::exit>(scope);
   RegisterProc<proc::format>(scope);
   RegisterProc<proc::list>(scope);
+  RegisterProc<proc::set_car>(scope);
+  RegisterProc<proc::set_cdr>(scope);
 #ifdef SCM_DEBUG
   RegisterProc<proc::frame>(scope);
   scope->Add("debug?", Bool::True());
@@ -258,7 +260,7 @@ auto Runtime::Eval(const std::string& expr) -> Object* {
   ASSERT(e && e->HasEntry());
   ASSERT(!runtime->HasFrame());
   runtime->Call(e->GetEntry()->GetTarget(), scope);
-  ASSERT(!runtime->HasFrame());
+  ASSERT(!runtime->HasFrame() || runtime->HasError());
   return runtime->Pop();
 }
 
@@ -273,7 +275,7 @@ auto Runtime::Exec(Script* script) -> Object* {
       runtime->GetGlobalScope());
   ASSERT(!runtime->HasFrame());
   runtime->Call(script->GetEntry()->GetTarget(), scope);
-  ASSERT(!runtime->HasFrame());
+  ASSERT(!runtime->HasFrame() || runtime->HasError());
   return runtime->Pop();
 }
 

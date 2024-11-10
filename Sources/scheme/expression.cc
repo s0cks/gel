@@ -140,11 +140,19 @@ auto SetExpr::ToString() const -> std::string {
   return ss.str();
 }
 
+auto CondExpr::VisitAllClauses(ExpressionVisitor* vis) -> bool {
+  ASSERT(vis);
+  for (const auto& clause : clauses_) {
+    ASSERT(clause);
+    if (!clause->Accept(vis))
+      return false;
+  }
+  return true;
+}
+
 auto CondExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
   ASSERT(vis);
-  if (!GetTest()->Accept(vis))
-    return false;
-  if (!GetConseq()->Accept(vis))
+  if (!VisitAllClauses(vis))
     return false;
   if (HasAlternate()) {
     if (!GetAlternate()->Accept(vis))
@@ -156,8 +164,7 @@ auto CondExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
 auto CondExpr::ToString() const -> std::string {
   std::stringstream ss;
   ss << GetName() << "(";
-  ss << "test=" << GetTest() << ", ";
-  ss << "consequent=" << GetConseq() << ", ";
+  ss << "clauses=" << GetClauses() << ", ";
   ss << "alternate=" << GetAlternate();
   ss << ")";
   return ss.str();

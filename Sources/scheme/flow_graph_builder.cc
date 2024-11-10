@@ -315,44 +315,48 @@ auto EffectVisitor::VisitCondExpr(CondExpr* expr) -> bool {
   ASSERT(expr);
   const auto join = JoinEntryInstr::New(GetOwner()->GetNextBlockId());
 
-  // process conseq
-  const auto conseq_target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
-  ValueVisitor for_conseq(GetOwner());
-  if (!expr->GetConseq()->Accept(&for_conseq)) {
-    LOG(ERROR) << "failed to visit conseq for cond: " << expr->ToString();
-    return false;
-  }
-  AppendFragment(conseq_target, for_conseq);
-  conseq_target->Append(GotoInstr::New(join));
-  GetOwner()->GetCurrentBlock()->AddDominated(conseq_target);
+  for (const auto& clause : expr->GetClauses()) {
+    // process conseq
+    const auto target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
+    ASSERT(target);
+    for (const auto& action : clause->GetActions()) {
+      ASSERT(action);
+      ValueVisitor for_action(GetOwner());
+      if (!action->Accept(&for_action)) {
+        LOG(ERROR) << "failed to visit conseq for cond: " << expr->ToString();
+        return false;
+      }
+      AppendFragment(target, for_action);
+    }
+    target->Append(GotoInstr::New(join));
+    GetOwner()->GetCurrentBlock()->AddDominated(target);
 
-  // process alt
-  const auto alt_target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
-  ValueVisitor for_alt(GetOwner());
-  if (expr->HasAlternate()) {
+    ValueVisitor for_test(GetOwner());
+    if (!clause->GetKey()->Accept(&for_test)) {
+      LOG(ERROR) << "failed to visit clause for cond: " << expr->ToString();
+      return false;
+    }
+    Append(for_test);
+    const auto branch = BranchInstr::New(for_test.GetValue(), target, join);
+    ASSERT(branch);
+    Add(branch);
+  }
+
+  if (expr->HasAlternate()) {  // process alt (else)
+    const auto target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
+    ASSERT(target);
+    Add(target);
+    ValueVisitor for_alt(GetOwner());
     if (!expr->GetAlternate()->Accept(&for_alt)) {
       LOG(ERROR) << "failed to visit alternate for cond: " << expr->ToString();
       return false;
     }
-    AppendFragment(alt_target, for_alt);
-    alt_target->Append(GotoInstr::New(join));
-    GetOwner()->GetCurrentBlock()->AddDominated(alt_target);
+    AppendFragment(target, for_alt);
+    target->Append(GotoInstr::New(join));
+    GetOwner()->GetCurrentBlock()->AddDominated(target);
   }
 
-  // process test
-  ValueVisitor for_test(GetOwner());
-  if (!expr->GetTest()->Accept(&for_test)) {
-    LOG(ERROR) << "failed to visit test for cond: " << expr->ToString();
-    return false;
-  }
-  Append(for_test);
-
-  const auto branch = expr->HasAlternate() ? BranchInstr::New(for_test.GetValue(), conseq_target, alt_target, join)
-                                           : BranchInstr::New(for_test.GetValue(), conseq_target, join);
-  ASSERT(branch);
-  Add(branch);
   SetExitInstr(join);
-
   GetOwner()->GetCurrentBlock()->AddDominated(join);
   return true;
 }
@@ -462,48 +466,6 @@ auto EffectVisitor::VisitSetExpr(expr::SetExpr* expr) -> bool {
   return true;
 }
 
-auto MacroVisitor::VisitCondExpr(expr::CondExpr* expr) -> bool {
-  MacroVisitor for_test(GetOwner(), GetScope());
-  if (!expr->GetTest()->Accept(&for_test))
-    return false;
-  Append(for_test);
-
-  MacroVisitor for_conseq(GetOwner(), GetScope());
-  if (!expr->GetConseq()->Accept(&for_test))
-    return false;
-  Append(for_conseq);
-
-  MacroVisitor for_alt(GetOwner(), GetScope());
-  if (!expr->GetAlternate()->Accept(&for_test))
-    return false;
-  Append(for_alt);
-  return true;
-}
-
-auto MacroVisitor::VisitLiteralExpr(expr::LiteralExpr* expr) -> bool {
-  ASSERT(expr && expr->IsConstantExpr());
-  const auto value = expr->EvalToConstant();
-  ASSERT(value);
-  if (!value->IsSymbol())
-    return ValueVisitor::VisitLiteralExpr(expr);
-  LocalVariable* local = nullptr;
-  if (!GetScope()->Lookup(value->AsSymbol(), &local)) {
-    LOG(ERROR) << "cannot find macro: " << value->AsSymbol();
-    return true;
-  }
-  ASSERT(local);
-
-  // TODO: need to check if local is an Expression*
-  const auto ex = (expr::Expression*)local->GetValue();
-  ASSERT(ex);
-
-  ValueVisitor for_value(GetOwner());
-  if (!ex->Accept(&for_value))
-    return false;
-  Append(for_value);
-  return true;
-}
-
 auto FlowGraphBuilder::Build(Expression* expr, LocalScope* scope) -> FlowGraph* {
   ASSERT(expr);
   ASSERT(scope);
@@ -514,18 +476,15 @@ auto FlowGraphBuilder::Build(Expression* expr, LocalScope* scope) -> FlowGraph* 
   const auto target = TargetEntryInstr::New(builder.GetNextBlockId());
   ASSERT(target);
   builder.SetCurrentBlock(target);
-  ValueVisitor for_effect(&builder);
+  EffectVisitor for_effect(&builder);
   if (!expr->Accept(&for_effect)) {
     LOG(ERROR) << "failed to visit: " << expr->ToString();
     return nullptr;  // TODO: free entry
   }
+  const auto exit = for_effect.GetExitInstr();
+  if (exit && !exit->IsReturnInstr())
+    for_effect.Add(exit->IsDefinition() ? instr::ReturnInstr::New(exit->AsDefinition()) : instr::ReturnInstr::New());
   AppendFragment(target, for_effect);
-  {
-    const auto last = target->GetLastInstruction();
-    if (last && !last->IsReturnInstr()) {
-      target->Append(last->IsDefinition() ? instr::ReturnInstr::New(last->AsDefinition()) : instr::ReturnInstr::New());
-    }
-  }
   graph_entry->Append(target);
   graph_entry->AddDominated(target);
   return new FlowGraph(graph_entry);
@@ -542,20 +501,19 @@ auto FlowGraphBuilder::Build(Script* script, LocalScope* scope) -> FlowGraph* {
   ASSERT(target);
   builder.SetCurrentBlock(target);
   const auto& body = script->GetBody();
+  auto remaining = body.size();
   for (const auto& expr : body) {
     EffectVisitor for_effect(&builder);
     if (!expr->Accept(&for_effect)) {
       LOG(ERROR) << "failed to visit: " << expr->ToString();
       return nullptr;  // TODO: free entry
     }
-    AppendFragment(target, for_effect);
-  }
-  {
-    const auto last = target->GetLastInstruction();
-    DLOG(INFO) << "last: " << last->ToString();
-    if (last && !last->IsReturnInstr()) {
-      last->Append(last->IsDefinition() ? instr::ReturnInstr::New(last->AsDefinition()) : instr::ReturnInstr::New());
+    if (--remaining == 0) {
+      const auto exit = for_effect.GetExitInstr();
+      if (exit && !exit->IsReturnInstr())
+        for_effect.Add(exit->IsDefinition() ? instr::ReturnInstr::New(exit->AsDefinition()) : instr::ReturnInstr::New());
     }
+    AppendFragment(target, for_effect);
   }
   graph_entry->Append(target);
   graph_entry->AddDominated(target);
