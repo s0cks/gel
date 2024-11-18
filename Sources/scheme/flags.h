@@ -8,7 +8,27 @@
 #include <optional>
 #include <string>
 
+#include "scheme/platform.h"
+
 namespace scm {
+#if defined(ARCH_IS_X64) || defined(ARCH_IS_ARM64)
+
+#define DECLARE_word(Name) DECLARE_int64(Name);
+#define DEFINE_word(Name, Default, Description) DEFINE_int64(Name, Default, Description);
+#define DECLARE_uword(Name) DECLARE_uint64(Name);
+#define DEFINE_uword(Name, Default, Description) DEFINE_uint64(Name, Default, Description);
+
+#elif defined(ARCH_IS_X32)
+
+#define DECLARE_word(Name) DECLARE_int32(Name);
+#define DEFINE_word(Name, Default, Description) DEFINE_int32(Name, Default, Description);
+#define DECLARE_uword(Name) DECLARE_uint32(Name);
+#define DEFINE_uword(Name, Default, Description) DEFINE_uint32(Name, Default, Description);
+
+#else
+#error "Unsupported Operating System"
+#endif
+
 DECLARE_bool(eval);
 DECLARE_bool(dump_ast);
 DECLARE_bool(dump_flow_graph);

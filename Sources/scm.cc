@@ -14,6 +14,7 @@
 #include "scheme/flags.h"
 #include "scheme/flow_graph_builder.h"
 #include "scheme/flow_graph_dot.h"
+#include "scheme/heap.h"
 #include "scheme/local_scope.h"
 #include "scheme/parser.h"
 #include "scheme/repl.h"
@@ -51,9 +52,41 @@ static inline auto Execute(const std::string& rhs) -> int {
   return EXIT_SUCCESS;
 }
 
+class PointerPrinter : public PointerVisitor {
+  DEFINE_NON_COPYABLE_TYPE(PointerPrinter);
+
+ private:
+  uword count_ = 0;
+
+ public:
+  PointerPrinter() = default;
+  ~PointerPrinter() override = default;
+
+  auto Visit(Pointer* ptr) -> bool override {
+    ASSERT(ptr);
+    DLOG(INFO) << "- #" << (++count_) << " " << (*ptr);
+    return true;
+  }
+};
+
 auto main(int argc, char** argv) -> int {
   ::google::InitGoogleLogging(argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
   ::google::ParseCommandLineFlags(&argc, &argv, true);
+
+  Heap::Init();
+  const auto heap = Heap::GetHeap();
+  ASSERT(heap);
+  for (auto x = 0; x < 100; x++) {
+    const auto ptr = (uword*)heap->TryAllocate(sizeof(uword));
+    ASSERT(ptr);
+    (*ptr) = x;
+  }
+
+  PointerPrinter printer;
+  DLOG(INFO) << "pointers:";
+  LOG_IF(FATAL, !heap->GetNewZone().VisitAllPointers(&printer)) << "failed to visit Pointers in: " << heap->GetNewZone();
+
+  PrintHeap(*heap);
 
   Runtime::Init();
   const auto expr = GetExpressionFlag();

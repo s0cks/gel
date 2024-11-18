@@ -61,6 +61,10 @@ class ThreadLocal {
     return Get() != nullptr;
   }
 
+  inline auto IsEmpty() const -> bool {
+    return Get() == nullptr;
+  }
+
   operator bool() const {
     return Has();
   }
