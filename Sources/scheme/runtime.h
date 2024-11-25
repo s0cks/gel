@@ -115,6 +115,23 @@ class Runtime : public ExecutionStack {
   void Call(NativeProcedure* native, const std::vector<Object*>& args);
   void Call(Lambda* lambda);
 
+  inline void PopN(std::vector<Object*>& result, const uword num, const bool reverse = false) {
+    for (auto idx = 0; idx < num; idx++) {
+      result.push_back(Pop());
+    }
+    if (reverse)
+      std::ranges::reverse(std::begin(result), std::end(result));
+  }
+
+  inline void CallWithNArgs(NativeProcedure* native, const uword num_args) {
+    ASSERT(native);
+    ASSERT(num_args >= 0);
+    std::vector<Object*> args{};
+    PopN(args, num_args, true);
+    ASSERT(num_args == args.size());
+    return Call(native, args);
+  }
+
   inline void SetRunning(const bool rhs = true) {
     running_ = rhs;
   }

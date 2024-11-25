@@ -10,6 +10,7 @@
 namespace scm {
 static constexpr const auto kLargeObjectSize = 4 * 1024;
 class Heap {
+  friend class Collector;
   DEFINE_NON_COPYABLE_TYPE(Heap);
 
  private:
@@ -19,6 +20,14 @@ class Heap {
   Heap();
 
   void Clear();
+
+  inline auto new_zone() -> NewZone& {
+    return new_zone_;
+  }
+
+  inline auto old_zone() -> OldZone& {
+    return old_zone_;
+  }
 
  public:
   ~Heap();

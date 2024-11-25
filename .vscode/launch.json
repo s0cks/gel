@@ -28,7 +28,9 @@
         "test-only.cl",
         "foreach.cl",
         "map.cl",
-        "set-car.cl"
+        "set-car.cl",
+        "test-let.cl",
+        "apply-print.cl"
       ],
       "default": "while.cl",
       "description": "A value that is even."

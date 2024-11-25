@@ -28,6 +28,7 @@
   V(EvalExpr)                       \
   V(CallProcExpr)                   \
   V(SetExpr)                        \
+  V(LetExpr)                        \
   V(ThrowExpr)                      \
   V(QuotedExpr)
 
@@ -202,6 +203,12 @@ static inline auto operator<<(std::ostream& stream, const ExpressionList& rhs) -
 #define DECLARE_EXPRESSION(Name)                        \
   friend class ExpressionVisitor;                       \
   DEFINE_NON_COPYABLE_TYPE(Name);                       \
+                                                        \
+ public:                                                \
+  static auto operator new(const size_t sz) -> void*;   \
+  static inline void operator delete(void* ptr) {       \
+    ASSERT(ptr);                                        \
+  }                                                     \
                                                         \
  public:                                                \
   auto Accept(ExpressionVisitor* vis) -> bool override; \
@@ -514,6 +521,10 @@ class SequenceExpr : public Expression {
     return children_.size();
   }
 
+  inline auto IsEmpty() const -> bool {
+    return GetNumberOfChildren() == 0;
+  }
+
   auto GetChildAt(const uint64_t idx) const -> Expression* override {
     ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
     return children_[idx];
@@ -533,6 +544,10 @@ class SequenceExpr : public Expression {
   void RemoveChildAt(const uint64_t idx) override {
     ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
     children_.erase(children_.begin() + idx);
+  }
+
+  auto GetLastExpr() const -> Expression* {
+    return IsEmpty() ? nullptr : children_.back();
   }
 
   auto IsConstantExpr() const -> bool override;
@@ -1007,6 +1022,83 @@ class LambdaExpr : public Expression {
 
   static inline auto New(const ArgumentSet& args, Expression* body) -> LambdaExpr* {
     return New(args, ExpressionList{body});
+  }
+};
+
+class Binding {
+  DEFINE_DEFAULT_COPYABLE_TYPE(Binding);
+
+ private:
+  Symbol* symbol_;
+  Expression* value_;
+
+ public:
+  Binding() = default;
+  Binding(Symbol* symbol, Expression* value) :
+    symbol_(symbol),
+    value_(value) {}
+  ~Binding() = default;
+
+  auto GetSymbol() const -> Symbol* {
+    return symbol_;
+  }
+
+  auto GetValue() const -> Expression* {
+    return value_;
+  }
+
+  friend auto operator<<(std::ostream& stream, const Binding& rhs) -> std::ostream& {
+    stream << "Binding(";
+    stream << "symbol=" << rhs.GetSymbol() << ", ";
+    stream << "value=" << rhs.GetValue();
+    stream << ")";
+    return stream;
+  }
+};
+
+using BindingList = std::vector<Binding>;
+
+class LetExpr : public SequenceExpr {
+ private:
+  LocalScope* scope_;
+  BindingList bindings_;
+
+  explicit LetExpr(LocalScope* scope, const BindingList& bindings, const ExpressionList& body) :
+    SequenceExpr(body),
+    scope_(scope),
+    bindings_(bindings) {
+    ASSERT(scope);
+  }
+
+ public:
+  ~LetExpr() override = default;
+
+  auto GetScope() const -> LocalScope* {
+    return scope_;
+  }
+
+  auto GetBindings() const -> const BindingList& {
+    return bindings_;
+  }
+
+  auto GetNumberOfBindings() const -> uword {
+    return bindings_.size();
+  }
+
+  auto GetBindingAt(const uint64_t idx) const -> const Binding& {
+    ASSERT(idx >= 0 && idx <= GetNumberOfBindings());
+    return bindings_[idx];
+  }
+
+  auto VisitAllBindings(ExpressionVisitor* vis) -> bool;
+  auto VisitChildren(ExpressionVisitor* vis) -> bool override;
+  DECLARE_EXPRESSION(LetExpr);
+
+ public:
+  static inline auto New(LocalScope* scope, const BindingList& bindings, const ExpressionList& body = {}) -> LetExpr* {
+    ASSERT(scope);
+    ASSERT(!body.empty());  // TODO: is this assertion necessary?
+    return new LetExpr(scope, bindings, body);
   }
 };
 

@@ -41,6 +41,11 @@ class Procedure : public Object {
   static Class* kClass;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
  public:
+  static auto operator new(const size_t sz) -> void*;
+  static inline void operator delete(void* ptr) {
+    ASSERT(ptr);
+    // do nothing
+  }
   static void Init();
 
   static inline auto GetClass() -> Class* {

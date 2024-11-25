@@ -35,16 +35,6 @@ auto Interpreter::VisitLoadVariableInstr(LoadVariableInstr* instr) -> bool {
   return Next();
 }
 
-auto Interpreter::VisitConsInstr(ConsInstr* instr) -> bool {
-  ASSERT(instr);
-  const auto cdr = GetRuntime()->Pop();
-  ASSERT(cdr);
-  const auto car = GetRuntime()->Pop();
-  ASSERT(car);
-  GetRuntime()->Push(Pair::New(car, cdr));
-  return Next();
-}
-
 auto Interpreter::VisitReturnInstr(ReturnInstr* instr) -> bool {
   const auto frame = PopStackFrame();
   if (!frame.HasReturnAddress())
@@ -89,6 +79,19 @@ auto Interpreter::VisitThrowInstr(ThrowInstr* instr) -> bool {
   return Next();
 }
 
+auto Interpreter::VisitInvokeNativeInstr(InvokeNativeInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto target = GetRuntime()->Pop();
+  if (!target || !target->IsNativeProcedure())
+    throw Exception(fmt::format("expected {0:s} to be a NativeProcedure.", target ? target->ToString() : "null"));
+  const auto procedure = target->AsProcedure();
+  ASSERT(procedure && procedure->IsNative());
+  const auto runtime = GetRuntime();
+  ASSERT(runtime);
+  runtime->CallWithNArgs(procedure->AsNativeProcedure(), instr->GetNumberOfArgs());
+  return Next();
+}
+
 auto Interpreter::VisitInvokeInstr(InvokeInstr* instr) -> bool {
   ASSERT(instr);
   const auto runtime = GetRuntime();
@@ -101,13 +104,13 @@ auto Interpreter::VisitInvokeInstr(InvokeInstr* instr) -> bool {
   if (procedure->IsLambda()) {
     const auto lambda = procedure->AsLambda();
     ASSERT(lambda);
-    if (!lambda->IsCompiled()) {
-      if (!LambdaCompiler::Compile(lambda, runtime->GetCurrentScope())) {
-        LOG(FATAL) << "failed to compile: " << lambda->ToString();
-        return false;
-      }
+    if (!LambdaCompiler::Compile(lambda, runtime->GetCurrentScope())) {
+      LOG(FATAL) << "failed to compile: " << lambda->ToString();
+      return false;
     }
-    GetRuntime()->Call(lambda);
+    runtime->Call(lambda);
+  } else if (procedure->IsNativeProcedure()) {
+    runtime->CallWithNArgs(procedure->AsNativeProcedure(), instr->GetNumberOfArgs());
   }
   return Next();
 }
@@ -127,22 +130,6 @@ auto Interpreter::VisitEvalInstr(EvalInstr* instr) -> bool {
   const auto result = GetRuntime()->Eval(String::Unbox(value));
   ASSERT(result);
   GetRuntime()->Push(result);
-  return Next();
-}
-
-auto Interpreter::VisitInvokeNativeInstr(InvokeNativeInstr* instr) -> bool {
-  ASSERT(instr);
-  const auto target = GetRuntime()->Pop();
-  if (!target || !target->IsNativeProcedure())
-    throw Exception(fmt::format("expected {0:s} to be a NativeProcedure.", target ? target->ToString() : "null"));
-  const auto procedure = target->AsProcedure();
-  ASSERT(procedure && procedure->IsNative());
-  std::vector<Object*> args{};
-  for (auto idx = 0; idx < instr->GetNumberOfArgs(); idx++) {
-    args.push_back(GetRuntime()->Pop());
-  }
-  std::ranges::reverse(std::begin(args), std::end(args));
-  GetRuntime()->Call(procedure->AsNativeProcedure(), args);
   return Next();
 }
 
@@ -263,7 +250,7 @@ auto Interpreter::PushStackFrame(LocalScope* locals) -> StackFrame* {
   ASSERT(locals);
   const auto return_address = (uword)(HasCurrentInstr() && !stack_.empty() ? GetCurrentInstr()->GetNext() : UNALLOCATED);
   stack_.push(StackFrame(stack_.size(), locals, return_address));
-  // DLOG(INFO) << "pushed: " << stack_.top();
+  DVLOG(1000) << "pushed: " << stack_.top();
   return &stack_.top();
 }
 
@@ -271,7 +258,7 @@ auto Interpreter::PopStackFrame() -> StackFrame {
   ASSERT(!stack_.empty());
   const auto frame = stack_.top();
   stack_.pop();
-  // DLOG(INFO) << "popped: " << frame;
+  DVLOG(1000) << "popped: " << frame;
   return frame;
 }
 

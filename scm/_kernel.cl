@@ -59,13 +59,15 @@
 ; (define TAU (* 2 PI))
 (defun sq (x)
   (* x x))
+(defun zero? (x)
+  (eq? x 0))
 (defun even? (x)
-  (eq? (% x 2) 0))
+  (zero? (% x 2)))
 (defun max (a b)
-  (cond ((> a b) a)
+  (cond (> a b) a
     b))
 (defun min (a b)
-  (cond ((< a b) a)
+  (cond (< a b) a
     b))
 ; Types
 (defun null? (x)
@@ -106,8 +108,8 @@
       (apply f (cdr seq)))))
 ; map
 (defun map (f seq)
-  (cond (null? seq) seq)
-    (cons (f (car seq)) (map f (cdr seq))))
+  (cond (null? seq) seq
+    (cons (f (car seq)) (map f (cdr seq)))))
 ; filter
 (defun filter (p seq)
  (cond (null? seq) seq
@@ -121,3 +123,15 @@
 (defun append (seq x)
   (cond (null? seq) x
     (cons (car seq) (append (cdr seq) x))))
+; reverse
+(defun _reverse (seq acc)
+  (cond (null? seq) acc
+    (_reverse (cdr seq) (cons (car seq) acc))))
+(defun reverse (seq)
+  (_reverse seq '()))
+; nth
+(defun nth (seq n)
+  (when (or (> n (length seq)) (< n 0))
+    (throw (format "Index `{}` out of bounds" n)))
+  (cond (eq? n 0) (car seq)
+    (nth (cdr seq) (- n 1))))

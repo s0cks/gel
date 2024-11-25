@@ -87,12 +87,6 @@ auto Disassembler::VisitConstantInstr(instr::ConstantInstr* instr) -> bool {
   return true;
 }
 
-auto Disassembler::VisitConsInstr(instr::ConsInstr* instr) -> bool {
-  ASSERT(instr);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return true;
-}
-
 auto Disassembler::VisitReturnInstr(instr::ReturnInstr* instr) -> bool {
   ASSERT(instr);
   DLOG(INFO) << "ret";

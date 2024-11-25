@@ -58,6 +58,10 @@ class StackFrame {
     stream << ")";
     return stream;
   }
+
+  auto operator==(const StackFrame& rhs) const -> bool {
+    return GetId() == rhs.GetId() && GetReturnAddress() == rhs.GetReturnAddress();
+  }
 };
 
 class StackFrameIterator {

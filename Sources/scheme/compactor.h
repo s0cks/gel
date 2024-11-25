@@ -1,0 +1,4 @@
+#ifndef SCM_COMPACTOR_H
+#define SCM_COMPACTOR_H
+
+#endif  // SCM_COMPACTOR_H

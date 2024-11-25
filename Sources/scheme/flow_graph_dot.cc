@@ -162,13 +162,6 @@ auto EffectVisitor::VisitBinaryOpInstr(instr::BinaryOpInstr* instr) -> bool {
   return true;
 }
 
-auto EffectVisitor::VisitConsInstr(instr::ConsInstr* instr) -> bool {
-  ASSERT(instr);
-  const auto node = Append(instr);
-  ASSERT(node);
-  return true;
-}
-
 auto EffectVisitor::VisitEvalInstr(instr::EvalInstr* instr) -> bool {
   ASSERT(instr);
   const auto node = Append(instr);

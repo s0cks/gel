@@ -8,10 +8,43 @@
 
 #include "scheme/common.h"
 #include "scheme/expression.h"
+#include "scheme/heap.h"
+#include "scheme/macro.h"
 #include "scheme/native_procedure.h"
+#include "scheme/platform.h"
+#include "scheme/pointer.h"
 #include "scheme/script.h"
 
 namespace scm {
+#ifdef SCM_DISABLE_HEAP
+
+#define DEFINE_NEW_OPERATOR(Name)                     \
+  auto Name::operator new(const size_t sz) -> void* { \
+    return malloc(sz);                                \
+  }
+
+#else
+
+#define DEFINE_NEW_OPERATOR(Name)                     \
+  auto Name::operator new(const size_t sz) -> void* { \
+    const auto heap = Heap::GetHeap();                \
+    ASSERT(heap);                                     \
+    const auto address = heap->TryAllocate(sz);       \
+    ASSERT(address != UNALLOCATED);                   \
+    return reinterpret_cast<void*>(address);          \
+  }
+
+#endif  // SCM_DISABLE_HEAP
+
+FOR_EACH_TYPE(DEFINE_NEW_OPERATOR)  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+#undef DEFINE_NEW_OPERATOR
+
+auto Object::raw_ptr() const -> Pointer* {
+  const auto address = GetStartingAddress() - sizeof(Pointer);
+  ASSERT(address >= UNALLOCATED);
+  return Pointer::At(address);
+}
+
 Class* Object::kClass = nullptr;
 void Object::Init() {
   ASSERT(kClass == nullptr);
@@ -45,6 +78,12 @@ void Long::Init() {
   ASSERT(kClass == nullptr);
   kClass = Class::New(Object::GetClass(), "Long");  // TODO: extend from Number class
   ASSERT(kClass);
+}
+
+auto Long::Unbox(Object* rhs) -> uint64_t {
+  if (!rhs || !rhs->IsLong())
+    throw Exception(fmt::format("expected `{}` to be a Long.", *rhs));
+  return rhs->AsLong()->Get();
 }
 
 Class* Double::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
@@ -228,6 +267,12 @@ void Pair::Init() {
   ASSERT(kClass);
 }
 
+auto Pair::VisitPointers(PointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
+
 auto Pair::Equals(Object* rhs) const -> bool {
   if (!rhs->IsPair())
     return false;
@@ -349,6 +394,12 @@ auto PrintValue(std::ostream& stream, Object* value) -> std::ostream& {
     return stream;
   }
   return stream << value->ToString();
+}
+
+auto Class::VisitPointers(PointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
 }
 
 auto Class::IsInstanceOf(Class* rhs) const -> bool {

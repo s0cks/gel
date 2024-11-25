@@ -18,6 +18,17 @@ class PointerVisitor {
   virtual auto Visit(Pointer* ptr) -> bool = 0;
 };
 
+class PointerPointerVisitor {
+  DEFINE_NON_COPYABLE_TYPE(PointerPointerVisitor);
+
+ protected:
+  PointerPointerVisitor() = default;
+
+ public:
+  virtual ~PointerPointerVisitor() = default;
+  virtual auto Visit(Pointer** ptr) -> bool = 0;
+};
+
 class PointerIterator {
   DEFINE_NON_COPYABLE_TYPE(PointerIterator);
 
@@ -33,6 +44,7 @@ class PointerIterator {
 class Pointer {
   friend class NewZone;
   friend class OldZone;
+  friend class Collector;
   DEFINE_NON_COPYABLE_TYPE(Pointer);
 
  private:
@@ -115,8 +127,18 @@ class Pointer {
   }
 
  private:
+  static inline auto New(const uword address, const Tag& tag) -> Pointer* {
+    return new ((void*)address) Pointer(tag);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  }
+
   static inline auto New(const uword address, const uword size) -> Pointer* {
-    return new ((void*)address) Pointer(Tag::New(size));  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+    return New(address, Tag::New(size));
+  }
+
+  static inline auto Copy(const uword address, const Pointer* ptr) -> Pointer* {
+    const auto new_ptr = New(address, ptr->GetTag());
+    ASSERT(new_ptr);
+    return new_ptr;
   }
 
  public:

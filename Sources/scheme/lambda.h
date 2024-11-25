@@ -9,6 +9,7 @@
 #include "scheme/common.h"
 #include "scheme/expression.h"
 #include "scheme/object.h"
+#include "scheme/pointer.h"
 #include "scheme/procedure.h"
 
 namespace scm {
@@ -20,7 +21,7 @@ namespace instr {
 class GraphEntryInstr;
 }  // namespace instr
 
-class Lambda : public Procedure {
+class Lambda : public Procedure, public Executable {
   friend class LambdaCompiler;
 
  private:
@@ -28,12 +29,6 @@ class Lambda : public Procedure {
   Symbol* name_;
   ArgumentSet args_;
   expr::Expression* body_;
-  instr::GraphEntryInstr* entry_ = nullptr;
-
-  inline void SetEntry(instr::GraphEntryInstr* entry) {
-    // ASSERT(entry && !IsCompiled());
-    entry_ = entry;
-  }
 
   void Apply() override;
 
@@ -42,6 +37,8 @@ class Lambda : public Procedure {
     name_(name),
     args_(args),
     body_(body) {}
+
+  auto VisitPointers(PointerVisitor* vis) -> bool override;
 
  public:
   ~Lambda() override = default;
@@ -90,18 +87,6 @@ class Lambda : public Procedure {
 
   auto GetNumberOfArgs() const -> uint64_t {
     return args_.size();
-  }
-
-  auto GetEntry() const -> instr::GraphEntryInstr* {
-    return entry_;
-  }
-
-  inline auto HasEntry() const -> bool {
-    return GetEntry() != nullptr;
-  }
-
-  inline auto IsCompiled() const -> bool {
-    return HasEntry();
   }
 
   auto GetType() const -> Class* override {
@@ -160,6 +145,10 @@ class LambdaCompiler {
   static inline auto Compile(Lambda* lambda, LocalScope* scope) -> bool {
     ASSERT(lambda);
     ASSERT(scope);
+#ifdef SCM_ENABLE_LAMBDA_CACHE
+    if (lambda->IsCompiled())
+      return true;
+#endif  // SCM_ENABLE_LAMBDA_CACHE
     LambdaCompiler compiler(scope);
     return compiler.CompileLambda(lambda);
   }

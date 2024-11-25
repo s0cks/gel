@@ -39,7 +39,7 @@ class Interpreter : public InstructionVisitor {
   void ExecuteInstr(Instruction* instr);
 
   auto GetCurrentStackFrame() -> StackFrame* {
-    return &stack_.top();
+    return stack_.empty() ? nullptr : &stack_.top();
   }
 
   auto HasStackFrame() const -> bool {

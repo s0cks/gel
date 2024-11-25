@@ -50,8 +50,11 @@ static inline auto GetNewZoneSize() -> uword {
   return FLAGS_new_zone_size;
 }
 
+class Heap;
+class Collector;
 class NewZone : public Zone {
   friend class Heap;
+  friend class Collector;
   DEFINE_DEFAULT_COPYABLE_TYPE(NewZone);
 
  public:
@@ -87,6 +90,10 @@ class NewZone : public Zone {
   uword semi_size_;
 
   explicit NewZone(const uword size = GetNewZoneSize(), const MemoryRegion::ProtectionMode mode = MemoryRegion::kReadOnly);
+
+  inline void SwapSpaces() {
+    std::swap(fromspace_, tospace_);
+  }
 
  public:
   ~NewZone() override = default;

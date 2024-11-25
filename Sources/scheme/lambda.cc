@@ -10,6 +10,7 @@
 #include "scheme/expression_compiler.h"
 #include "scheme/flow_graph_builder.h"
 #include "scheme/local_scope.h"
+#include "scheme/pointer.h"
 #include "scheme/runtime.h"
 
 namespace scm {
@@ -33,6 +34,12 @@ void Lambda::Apply() {
   const auto scope = runtime->GetCurrentScope();
   ASSERT(runtime);
   runtime->Call(GetEntry()->GetTarget(), scope);
+}
+
+auto Lambda::VisitPointers(PointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
 }
 
 auto Lambda::ToString() const -> std::string {

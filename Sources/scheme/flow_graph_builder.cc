@@ -52,6 +52,7 @@ static inline auto IsNativeCall(instr::Instruction* instr) -> bool {
 // }
 
 auto EffectVisitor::VisitCallProcExpr(CallProcExpr* expr) -> bool {
+  ASSERT(expr);
   ValueVisitor for_target(GetOwner());
   {
     const auto target = expr->GetTarget();
@@ -63,52 +64,6 @@ auto EffectVisitor::VisitCallProcExpr(CallProcExpr* expr) -> bool {
   }
   const auto target = for_target.GetValue();
   ASSERT(target);
-  // TOOD:
-  //  if (IsMacroCall(target)) {
-  //    const auto macro = target->AsConstantInstr()->GetValue()->AsMacro();
-  //    ASSERT(macro);
-  //    DLOG(INFO) << "calling macro: " << macro->ToString();
-
-  //   const auto& args = macro->GetArgs();
-  //   if (expr->GetNumberOfArgs() != args.size()) {
-  //     LOG(FATAL) << "not the correct number of args.";
-  //     return false;
-  //   }
-
-  //   const auto scope = LocalScope::New(GetOwner()->GetScope());
-  //   ASSERT(scope);
-
-  //   DLOG(INFO) << "args:";
-  //   auto idx = 0;
-  //   for (const auto& arg : macro->GetArgs()) {
-  //     const auto symbol = Symbol::New(arg.GetName());
-  //     const auto value = expr->GetArgAt(idx);
-  //     DLOG(INFO) << "- #" << (idx) << ": " << symbol << " - " << value->ToString();
-  //     scope->Add(LocalVariable::New(scope, symbol, value));
-  //   }
-
-  //   MacroVisitor for_macro(GetOwner(), scope);
-  //   if (!macro->GetBody()->Accept(&for_macro)) {
-  //     throw Exception(fmt::format("failed to visit `{}` body: `{}`", macro->GetSymbol()->Get(), macro->GetBody()->ToString()));
-  //   }
-
-  //   DLOG(INFO) << "appending macro body:";
-  //   auto next = for_macro.GetEntryInstr();
-  //   while (next != nullptr) {
-  //     DLOG(INFO) << "- " << next->ToString();
-  //     if (next->IsBranchInstr()) {
-  //       next = next->AsBranchInstr()->GetTrueTarget();
-  //     } else {
-  //       next = next->GetNext();
-  //     }
-  //   }
-
-  //   Append(for_macro);
-  //   // TODO: expand Macro
-  //   return true;
-  // }
-
-  ASSERT(expr);
   for (auto idx = 1; idx < expr->GetNumberOfChildren(); idx++) {
     const auto arg = expr->GetChildAt(idx);
     ASSERT(arg);
@@ -125,7 +80,7 @@ auto EffectVisitor::VisitCallProcExpr(CallProcExpr* expr) -> bool {
   }
 
   Add(InstanceOfInstr::New(target, Procedure::GetClass()));
-  ReturnDefinition(InvokeInstr::New(target));
+  ReturnDefinition(InvokeInstr::New(target, expr->GetNumberOfArgs()));
   return true;
 }
 
@@ -286,6 +241,44 @@ auto EffectVisitor::VisitImportDef(expr::ImportDef* expr) -> bool {
 auto EffectVisitor::VisitQuotedExpr(expr::QuotedExpr* expr) -> bool {
   ASSERT(expr);
   ReturnDefinition(ConstantInstr::New(expr->Get()));
+  return true;
+}
+
+auto EffectVisitor::VisitLetExpr(expr::LetExpr* expr) -> bool {
+  ASSERT(expr);
+  const auto target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
+  ASSERT(target);
+  Add(target);
+
+  {
+    // process bindings first
+    uint64_t idx = 0;
+    while (IsOpen() && (idx < expr->GetNumberOfBindings())) {
+      const auto& binding = expr->GetBindingAt(idx++);
+      ValueVisitor for_value(GetOwner());
+      if (!binding.GetValue()->Accept(&for_value)) {
+        LOG(ERROR) << "failed to visit: " << binding;
+        return false;
+      }
+      Append(for_value);
+      Add(instr::StoreVariableInstr::New(binding.GetSymbol(), for_value.GetValue()));
+    }
+  }
+
+  {
+    // process body
+    uint64_t idx = 0;
+    while (IsOpen() && (idx < expr->GetNumberOfChildren())) {
+      const auto child = expr->GetChildAt(idx++);
+      ASSERT(child);
+      EffectVisitor for_effect(GetOwner());
+      if (!child->Accept(&for_effect))
+        break;
+      Append(for_effect);
+      if (!IsOpen())
+        break;
+    }
+  }
   return true;
 }
 
@@ -482,8 +475,13 @@ auto FlowGraphBuilder::Build(Expression* expr, LocalScope* scope) -> FlowGraph* 
     return nullptr;  // TODO: free entry
   }
   const auto exit = for_effect.GetExitInstr();
-  if (exit && !exit->IsReturnInstr())
-    for_effect.Add(exit->IsDefinition() ? instr::ReturnInstr::New(exit->AsDefinition()) : instr::ReturnInstr::New());
+  ASSERT(exit);
+  if (exit && !exit->IsReturnInstr()) {
+    const auto new_exit = exit->IsDefinition() ? instr::ReturnInstr::New(exit->AsDefinition()) : instr::ReturnInstr::New();
+    ASSERT(new_exit);
+    for_effect.Add(new_exit);
+  }
+  ASSERT(for_effect.GetExitInstr() && for_effect.GetExitInstr()->IsReturnInstr());
   AppendFragment(target, for_effect);
   graph_entry->Append(target);
   graph_entry->AddDominated(target);

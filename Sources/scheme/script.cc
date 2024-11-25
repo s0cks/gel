@@ -2,12 +2,15 @@
 
 #include <units.h>
 
+#include <fstream>
+
 #include "scheme/common.h"
 #include "scheme/expression_dot.h"
 #include "scheme/flags.h"
 #include "scheme/flow_graph_builder.h"
 #include "scheme/flow_graph_dot.h"
 #include "scheme/lambda.h"
+#include "scheme/parser.h"
 
 namespace scm {
 Class* Script::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
@@ -38,6 +41,12 @@ auto Script::ToString() const -> std::string {
   ss << "scope=" << GetScope();
   ss << ")";
   return ss.str();
+}
+
+auto Script::VisitPointers(PointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
 }
 
 void ScriptCompiler::CompileScript(Script* script) {
@@ -73,5 +82,21 @@ void ScriptCompiler::CompileScript(Script* script) {
 #endif                                                                                   // SCM_DEBUG
   script->SetEntry(flow_graph->GetEntry());
   // TODO: delete flow_graph
+}
+
+auto Script::FromFile(const std::string& filename, const bool compile) -> Script* {
+  DVLOG(10) << "loading script from: " << filename;
+  std::stringstream code;
+  {
+    std::ifstream file(filename, std::ios::binary | std::ios::in);
+    LOG_IF(FATAL, !file) << "failed to load script from: " << filename;
+    code << file.rdbuf();
+    file.close();
+  }
+  const auto script = Parser::ParseScript(code);
+  ASSERT(script);
+  if (compile)
+    ScriptCompiler::Compile(script);
+  return script;
 }
 }  // namespace scm

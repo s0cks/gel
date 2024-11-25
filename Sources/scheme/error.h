@@ -11,12 +11,17 @@ class Error : public Datum {
  private:
   String* message_;
 
+ protected:
+  auto VisitPointers(PointerVisitor* vis) -> bool override;
+
  public:
   explicit Error(String* message) :
     Datum(),
     message_(message) {}
 
  public:
+  ~Error() override = default;
+
   auto GetMessage() const -> String* {
     return message_;
   }

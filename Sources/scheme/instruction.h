@@ -19,7 +19,6 @@ namespace instr {
   V(ConstantInstr)              \
   V(UnaryOpInstr)               \
   V(BinaryOpInstr)              \
-  V(ConsInstr)                  \
   V(EvalInstr)                  \
   V(StoreVariableInstr)         \
   V(LoadVariableInstr)          \
@@ -416,16 +415,22 @@ class ThrowInstr : public Instruction {
 class InvokeInstr : public Definition {
  private:
   Definition* target_;
+  uint64_t num_args_;
 
  protected:
-  explicit InvokeInstr(Definition* target) :
+  explicit InvokeInstr(Definition* target, const uint64_t num_args) :
     Definition(),
-    target_(target) {
+    target_(target),
+    num_args_(num_args) {
     ASSERT(target_);
   }
 
  public:
   ~InvokeInstr() override = default;
+
+  auto GetNumberOfArgs() const -> uint64_t {
+    return num_args_;
+  }
 
   auto GetTarget() const -> Definition* {
     return target_;
@@ -434,9 +439,9 @@ class InvokeInstr : public Definition {
   DECLARE_INSTRUCTION(InvokeInstr);
 
  public:
-  static inline auto New(Definition* target) -> InvokeInstr* {
+  static inline auto New(Definition* target, const uint64_t num_args) -> InvokeInstr* {
     ASSERT(target);
-    return new InvokeInstr(target);
+    return new InvokeInstr(target, num_args);
   }
 };
 
@@ -740,38 +745,6 @@ class GotoInstr : public Definition {
   static inline auto New(EntryInstr* target) -> GotoInstr* {
     ASSERT(target);
     return new GotoInstr(target);
-  }
-};
-
-class ConsInstr : public Definition {
- private:
-  Definition* car_;
-  Definition* cdr_;
-
- protected:
-  ConsInstr(Definition* car, Definition* cdr) :
-    Definition(),
-    car_(car),
-    cdr_(cdr) {}
-
- public:
-  ~ConsInstr() override = default;
-
-  auto GetCar() const -> Definition* {
-    return car_;
-  }
-
-  auto GetCdr() const -> Definition* {
-    return cdr_;
-  }
-
-  DECLARE_INSTRUCTION(ConsInstr);
-
- public:
-  static inline auto New(Definition* car, Definition* cdr) -> ConsInstr* {
-    ASSERT(car);
-    ASSERT(cdr);
-    return new ConsInstr(car, cdr);
   }
 };
 

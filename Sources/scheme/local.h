@@ -9,6 +9,7 @@
 
 namespace scm {
 class LocalVariable;
+class PointerPointerVisitor;
 class LocalVariableVisitor {
   DEFINE_NON_COPYABLE_TYPE(LocalVariableVisitor);
 
@@ -29,13 +30,15 @@ class LocalVariable {
   LocalScope* owner_;
   uint64_t index_;
   std::string name_;
-  Object* value_;
+  Pointer* value_ = nullptr;
 
   LocalVariable(LocalScope* owner, uint64_t index, std::string name, Object* value = nullptr) :
     owner_(owner),
     index_(index),
-    name_(std::move(name)),
-    value_(value) {}
+    name_(std::move(name)) {
+    if (value)
+      SetValue(value);
+  }
 
   void SetOwner(LocalScope* scope) {
     ASSERT(scope);
@@ -51,13 +54,15 @@ class LocalVariable {
     name_ = name;
   }
 
-  void SetConstantValue(Object* value) {
-    ASSERT(value);
-    value_ = value;
-  }
+  auto Accept(PointerVisitor* vis) -> bool;
+  auto Accept(PointerPointerVisitor* vis) -> bool;
 
  public:
   ~LocalVariable() = default;
+
+  auto ptr() const -> Pointer* {
+    return value_;
+  }
 
   auto GetOwner() const -> LocalScope* {
     return owner_;
@@ -75,17 +80,11 @@ class LocalVariable {
     return name_;
   }
 
-  auto GetValue() const -> Object* {
-    return value_;
-  }
+  auto GetValue() const -> Object*;
+  void SetValue(Object* rhs);
 
   auto HasValue() const -> bool {
     return GetValue() != nullptr;
-  }
-
-  inline void SetValue(Object* rhs) {
-    ASSERT(rhs);
-    value_ = rhs;
   }
 
 #define DEFINE_TYPE_CHECK(Name)                  \

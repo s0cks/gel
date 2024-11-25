@@ -32,17 +32,35 @@ namespace scm {
 FOR_EACH_TYPE(FORWARD_DECLARE)
 #undef FORWARD_DECLARE
 
+class Pointer;
 class Datum;
+class PointerVisitor;
 class Object {
   DEFINE_NON_COPYABLE_TYPE(Object)
  protected:
   Object() = default;
+
+  virtual auto VisitPointers(PointerVisitor* vis) -> bool {
+    ASSERT(vis);
+    // do nothing
+    return true;
+  }
 
  public:
   virtual ~Object() = default;
   virtual auto GetType() const -> Class* = 0;
   virtual auto Equals(Object* rhs) const -> bool = 0;
   virtual auto ToString() const -> std::string = 0;
+
+  auto raw_ptr() const -> Pointer*;
+
+  inline auto GetStartingAddress() const -> uword {
+    return (uword)this;
+  }
+
+  inline auto GetStartingAddressPointer() const -> void* {
+    return ((void*)GetStartingAddress());
+  }
 
   virtual auto AsDatum() -> Datum* {
     return nullptr;
@@ -77,17 +95,57 @@ class Object {
   }
 };
 
+namespace instr {
+class GraphEntryInstr;
+}
+
+class Executable {
+  DEFINE_NON_COPYABLE_TYPE(Executable);
+
+ private:
+  instr::GraphEntryInstr* entry_ = nullptr;
+
+ protected:
+  Executable() = default;
+
+  void SetEntry(instr::GraphEntryInstr* entry) {
+    ASSERT(entry);
+    entry_ = entry;
+  }
+
+ public:
+  virtual ~Executable() = default;
+
+  auto GetEntry() const -> instr::GraphEntryInstr* {
+    return entry_;
+  }
+
+  inline auto HasEntry() const -> bool {
+    return GetEntry() != nullptr;
+  }
+
+  inline auto IsCompiled() const -> bool {
+    return HasEntry();
+  }
+};
+
 static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream& {
   return stream << rhs->ToString();
 }
 
-#define DECLARE_TYPE(Name)                         \
-  DEFINE_NON_COPYABLE_TYPE(Name)                   \
- public:                                           \
-  auto Equals(Object* rhs) const -> bool override; \
-  auto ToString() const -> std::string override;   \
-  auto As##Name() -> Name* override {              \
-    return this;                                   \
+#define DECLARE_TYPE(Name)                            \
+  DEFINE_NON_COPYABLE_TYPE(Name)                      \
+ public:                                              \
+  static auto operator new(const size_t sz) -> void*; \
+  static inline void operator delete(void* ptr) {     \
+    ASSERT(ptr);                                      \
+  }                                                   \
+                                                      \
+ public:                                              \
+  auto Equals(Object* rhs) const -> bool override;    \
+  auto ToString() const -> std::string override;      \
+  auto As##Name() -> Name* override {                 \
+    return this;                                      \
   }
 
 class Class;
@@ -106,6 +164,8 @@ class Class : public Object {
     name_(name) {
     ASSERT(name_);
   }
+
+  auto VisitPointers(PointerVisitor* vis) -> bool override;
 
  public:
   ~Class() override = default;
@@ -208,7 +268,6 @@ class Bool : public Datum {
 
  private:
   static Class* kClass;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-
  public:
   static void Init();
   static auto New(const bool value) -> Bool*;
@@ -275,6 +334,12 @@ class Number : public Datum {
   }
 
  public:
+  static auto operator new(const size_t sz) -> void*;
+  static inline void operator delete(void* ptr) {
+    ASSERT(ptr);
+    // do nothing
+  }
+
   static auto New(const uint64_t rhs) -> Number*;
   static auto New(const double rhs) -> Number*;
 };
@@ -317,6 +382,8 @@ class Long : public Number {
   static inline auto New(const uintptr_t value) -> Long* {
     return new Long(value);
   }
+
+  static auto Unbox(Object* rhs) -> uint64_t;
 };
 
 class Double : public Number {
@@ -365,6 +432,8 @@ class Pair : public Datum {
   explicit Pair(Object* car = nullptr, Object* cdr = nullptr) :
     car_(car),
     cdr_(cdr) {}
+
+  auto VisitPointers(PointerVisitor* vis) -> bool override;
 
  public:
   ~Pair() override = default;
@@ -601,6 +670,16 @@ static inline void SetCdr(Object* seq, Object* value) {
   (seq->AsPair())->SetCdr(value);
 }
 }  // namespace scm
+
+namespace fmt {
+template <>
+struct formatter<scm::Symbol> : public formatter<std::string> {
+  template <typename FormatContext>
+  constexpr auto format(const scm::Symbol& value, FormatContext& ctx) const -> decltype(ctx.out()) {
+    return format_to(ctx.out(), "{}", value.Get());
+  }
+};
+}  // namespace fmt
 
 template <>
 struct fmt::formatter<scm::Object> : public fmt::formatter<std::string> {

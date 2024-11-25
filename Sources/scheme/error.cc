@@ -4,6 +4,7 @@
 
 #include "scheme/common.h"
 #include "scheme/object.h"
+#include "scheme/pointer.h"
 
 namespace scm {
 Class* Error::kClass = nullptr;
@@ -19,6 +20,12 @@ auto Error::Equals(Object* rhs) const -> bool {
   ASSERT(rhs->IsError());
   const auto other = rhs->AsError();
   return GetMessage() == other->GetMessage();
+}
+
+auto Error::VisitPointers(PointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
 }
 
 auto Error::ToString() const -> std::string {

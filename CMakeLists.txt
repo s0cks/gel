@@ -93,3 +93,13 @@ option(ENABLE_BENCHMARKS "Enable benchmarks." ON)
 if(ENABLE_BENCHMARKS)
   add_subdirectory(Benchmarks)
 endif()
+
+option(DISABLE_HEAP_ALLOCATOR "Disable the heap allocator." OFF)
+if(DISABLE_HEAP_ALLOCATOR)
+  add_compile_definitions(SCM_DISABLE_HEAP)
+endif()
+
+option(ENABLE_LAMBDA_CACHE "Enable the lambda cache" ON)
+if(ENABLE_LAMBDA_CACHE)
+  add_compile_definitions(SCM_ENABLE_LAMBDA_CACHE)
+endif()

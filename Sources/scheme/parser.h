@@ -118,6 +118,7 @@ class Parser {
   auto ParseCaseExpr() -> expr::CaseExpr*;
   auto ParseWhileExpr() -> expr::WhileExpr*;
   auto ParseCondExpr() -> CondExpr*;
+  auto ParseLetExpr() -> expr::LetExpr*;
 
   // Definitions
   auto ParseDefinition() -> expr::Definition*;

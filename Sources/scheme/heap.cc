@@ -51,7 +51,6 @@ void Heap::Init() {
   ASSERT(heap_.IsEmpty());
   heap_.Set(new Heap());
   ASSERT(heap_);
-  DLOG(INFO) << "allocated: " << *(heap_.Get());
 }
 
 #ifdef SCM_DEBUG

@@ -128,6 +128,35 @@ auto Parser::ParseCondExpr() -> CondExpr* {
   return CondExpr::New(clauses, alt);
 }
 
+auto Parser::ParseLetExpr() -> expr::LetExpr* {
+  ExpectNext(Token::kLetExpr);
+  const auto scope = PushScope();
+  // parse bindings
+  expr::BindingList bindings;
+  ExpectNext(Token::kLParen);
+  while (!PeekEq(Token::kRParen)) {
+    ExpectNext(Token::kLParen);
+    const auto symbol = ParseSymbol();
+    ASSERT(symbol);
+    if (scope->Has(symbol))
+      throw Exception(fmt::format("cannot redefine binding for: `{}`", *symbol));
+    const auto value = ParseExpression();
+    ASSERT(value);
+    bindings.emplace_back(symbol, value);
+    const auto local = LocalVariable::New(scope, symbol);
+    ASSERT(local);
+    ExpectNext(Token::kRParen);
+  }
+  ExpectNext(Token::kRParen);
+
+  // parse body
+  ExpressionList body;
+  if (!ParseExpressionList(body))
+    throw Exception("failed to parse let body");
+  PopScope();
+  return LetExpr::New(scope, bindings, body);
+}
+
 auto Parser::ParseArguments(ArgumentSet& args) -> bool {
   uint64_t num_args = 0;
   while (PeekEq(Token::kIdentifier)) {
@@ -651,6 +680,8 @@ auto Parser::NextToken() -> const Token& {
       return NextToken(Token::kWhileExpr);
     else if (ident == "defun")
       return NextToken(Token::kDefun);
+    else if (ident == "let")
+      return NextToken(Token::kLetExpr);
     return NextToken(Token::kIdentifier, ident);
   }
 
@@ -772,6 +803,9 @@ auto Parser::ParseScript() -> Script* {
           break;
         case Token::kWhileExpr:
           expr = ParseWhileExpr();
+          break;
+        case Token::kLetExpr:
+          expr = ParseLetExpr();
           break;
         default:
           Unexpected(next);

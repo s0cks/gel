@@ -7,7 +7,7 @@
 #include "scheme/local_scope.h"
 
 namespace scm {
-class Script : public Object {
+class Script : public Object, public Executable {
   friend class Parser;
   friend class ScriptCompiler;
   using LambdaList = std::vector<Lambda*>;
@@ -16,7 +16,6 @@ class Script : public Object {
   LocalScope* scope_;
   LambdaList lambdas_{};
   expr::ExpressionList body_{};
-  instr::GraphEntryInstr* entry_ = nullptr;
 
  protected:
   explicit Script(LocalScope* scope) :
@@ -31,10 +30,7 @@ class Script : public Object {
 
   void Append(Lambda* lambda);
 
-  void SetEntry(instr::GraphEntryInstr* instr) {
-    ASSERT(instr && !HasEntry());
-    entry_ = instr;
-  }
+  auto VisitPointers(PointerVisitor* vis) -> bool override;
 
  public:
   ~Script() override = default;
@@ -55,18 +51,6 @@ class Script : public Object {
     return body_.empty();
   }
 
-  auto GetEntry() const -> instr::GraphEntryInstr* {
-    return entry_;
-  }
-
-  inline auto HasEntry() const -> bool {
-    return GetEntry() != nullptr;
-  }
-
-  inline auto IsCompiled() const -> bool {
-    return !IsEmpty() && HasEntry();
-  }
-
   DECLARE_TYPE(Script);
 
  private:
@@ -83,6 +67,8 @@ class Script : public Object {
     ASSERT(kClass);
     return kClass;
   }
+
+  static auto FromFile(const std::string& filename, const bool compile = true) -> Script*;
 };
 
 class ScriptCompiler {

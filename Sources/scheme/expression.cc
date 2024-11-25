@@ -7,6 +7,7 @@
 #include <string>
 
 #include "scheme/common.h"
+#include "scheme/heap.h"
 
 namespace scm::expr {
 Class* Expression::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
@@ -15,6 +16,29 @@ void Expression::Init() {
   kClass = Class::New(Object::GetClass(), "Expression");
   ASSERT(kClass);
 }
+
+#ifdef SCM_DISABLE_HEAP
+
+#define DEFINE_NEW_OPERATOR(Name)                     \
+  auto Name::operator new(const size_t sz) -> void* { \
+    return malloc(sz);                                \
+  }
+
+#else
+
+#define DEFINE_NEW_OPERATOR(Name)                     \
+  auto Name::operator new(const size_t sz) -> void* { \
+    const auto heap = Heap::GetHeap();                \
+    ASSERT(heap);                                     \
+    const auto address = heap->TryAllocate(sz);       \
+    ASSERT(address != UNALLOCATED);                   \
+    return reinterpret_cast<void*>(address);          \
+  }
+
+#endif  // SCM_DISABLE_HEAP
+
+FOR_EACH_EXPRESSION_NODE(DEFINE_NEW_OPERATOR)  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+#undef DEFINE_NEW_OPERATOR
 
 #define DEFINE_ACCEPT(Name)                           \
   auto Name::Accept(ExpressionVisitor* vis) -> bool { \
@@ -320,5 +344,29 @@ auto WhileExpr::ToString() const -> std::string {
   ss << "body=" << GetBody();
   ss << ")";
   return ss.str();
+}
+
+auto LetExpr::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "LetExpr(";
+  ss << "scope=" << GetScope();
+  ss << ")";
+  return ss.str();
+}
+
+auto LetExpr::VisitAllBindings(ExpressionVisitor* vis) -> bool {
+  ASSERT(vis);
+  for (const auto& binding : bindings_) {
+    if (!binding.GetValue()->Accept(vis))
+      return false;
+  }
+  return true;
+}
+
+auto LetExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
+  ASSERT(vis);
+  if (!VisitAllBindings(vis))
+    return false;
+  return SequenceExpr::VisitChildren(vis);
 }
 }  // namespace scm::expr

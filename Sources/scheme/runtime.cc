@@ -165,7 +165,10 @@ auto Runtime::CreateInitScope() -> LocalScope* {
   RegisterProc<proc::list>(scope);
   RegisterProc<proc::set_car>(scope);
   RegisterProc<proc::set_cdr>(scope);
+  RegisterProc<proc::random>(scope);
+  RegisterProc<proc::rand_range>(scope);
 #ifdef SCM_DEBUG
+  RegisterProc<proc::minor_gc>(scope);
   RegisterProc<proc::frame>(scope);
   scope->Add("debug?", Bool::True());
   RegisterProc<proc::list_symbols>(scope);
@@ -258,9 +261,10 @@ auto Runtime::Eval(const std::string& expr) -> Object* {
   const auto scope = runtime->GetGlobalScope();
   const auto e = ExpressionCompiler::Compile(expr, scope);
   ASSERT(e && e->HasEntry());
-  ASSERT(!runtime->HasFrame());
+  const auto init_frame = runtime->GetCurrentFrame();
   runtime->Call(e->GetEntry()->GetTarget(), scope);
-  ASSERT(!runtime->HasFrame() || runtime->HasError());
+  const auto post_frame = runtime->GetCurrentFrame();
+  ASSERT(runtime->HasError() || (!init_frame && !post_frame) || (*init_frame) == (*post_frame));
   return runtime->Pop();
 }
 

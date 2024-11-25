@@ -3,6 +3,7 @@
 
 #include "scheme/common.h"
 #include "scheme/local.h"
+#include "scheme/pointer.h"
 
 namespace scm {
 class Symbol;
@@ -64,10 +65,12 @@ class LocalScope {
       return false;
     }
     DLOG(INFO) << (*local) << " := " << value;
-    local->SetConstantValue(value);
+    local->SetValue(value);
     return true;
   }
 
+  auto Accept(PointerVisitor* vis) -> bool;
+  auto Accept(PointerPointerVisitor* vis) -> bool;
   virtual auto VisitAllLocals(LocalVariableVisitor* vis) -> bool;
   virtual auto ToString() const -> std::string;
 

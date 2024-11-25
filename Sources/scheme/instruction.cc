@@ -133,15 +133,6 @@ auto GotoInstr::ToString() const -> std::string {
   return ss.str();
 }
 
-auto ConsInstr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "ConsInstr(";
-  ss << "car=" << GetCar()->ToString() << ", ";
-  ss << "cdr=" << GetCdr()->ToString();
-  ss << ")";
-  return ss.str();
-}
-
 auto UnaryOpInstr::ToString() const -> std::string {
   std::stringstream ss;
   ss << "UnaryOpInstr(";
@@ -185,7 +176,7 @@ auto InvokeNativeInstr::ToString() const -> std::string {
 
 auto InstanceOfInstr::ToString() const -> std::string {
   std::stringstream ss;
-  ss << "ObjectcheckInstr(";
+  ss << "InstanceOfInstr(";
   ss << "value=" << GetValue()->ToString();
   ss << ")";
   return ss.str();

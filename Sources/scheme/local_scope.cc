@@ -5,6 +5,7 @@
 #include "scheme/common.h"
 #include "scheme/local.h"
 #include "scheme/object.h"
+#include "scheme/pointer.h"
 
 namespace scm {
 auto LocalScope::Has(const std::string& name, const bool recursive) -> bool {
@@ -92,6 +93,32 @@ auto LocalScope::VisitAllLocals(LocalVariableVisitor* vis) -> bool {
   for (const auto& local : locals_) {
     if (!vis->VisitLocal(local))
       return false;
+  }
+  return true;
+}
+
+auto LocalScope::Accept(PointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  auto scope = this;
+  while (scope) {
+    for (const auto& local : scope->locals_) {
+      if (!local->Accept(vis))
+        return false;
+    }
+    scope = scope->GetParent();
+  }
+  return true;
+}
+
+auto LocalScope::Accept(PointerPointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  auto scope = this;
+  while (scope) {
+    for (const auto& local : scope->locals_) {
+      if (!local->Accept(vis))
+        return false;
+    }
+    scope = scope->GetParent();
   }
   return true;
 }

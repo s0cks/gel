@@ -5,9 +5,11 @@
 #include <fmt/format.h>
 
 #include <iostream>
+#include <random>
 #include <ranges>
 
 #include "scheme/argument.h"
+#include "scheme/collector.h"
 #include "scheme/common.h"
 #include "scheme/error.h"
 #include "scheme/local_scope.h"
@@ -40,6 +42,27 @@ NATIVE_PROCEDURE_F(print) {
   ASSERT(!args.empty());
   PrintValue(std::cout, args[0]) << std::endl;
   return true;
+}
+
+static std::random_device rand_device_{};
+static std::mt19937_64 mt(rand_device_());
+
+NATIVE_PROCEDURE_F(random) {
+  ASSERT(HasRuntime());
+  ASSERT(args.empty());
+  return ReturnValue(Long::New(mt()));
+}
+
+NATIVE_PROCEDURE_F(rand_range) {
+  ASSERT(HasRuntime());
+  const auto min = args[0];
+  if (!min->IsLong())
+    return ThrowError(fmt::format("expected min `{}` to be a Long", *min));
+  const auto max = args[1];
+  if (!max->IsLong())
+    return ThrowError(fmt::format("expected max `{}` to be a Long", *max));
+  std::uniform_int_distribution<uint64_t> distribution(Long::Unbox(min), Long::Unbox(max));
+  return ReturnValue(Long::New(distribution(mt)));
 }
 
 NATIVE_PROCEDURE_F(type) {
@@ -112,6 +135,11 @@ NATIVE_PROCEDURE_F(set_cdr) {
 }
 
 #ifdef SCM_DEBUG
+
+NATIVE_PROCEDURE_F(minor_gc) {
+  scm::MinorCollection();
+  return true;
+}
 
 NATIVE_PROCEDURE_F(frame) {
   const auto runtime = GetRuntime();
