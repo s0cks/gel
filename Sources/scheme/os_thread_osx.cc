@@ -42,14 +42,11 @@ class ThreadStartData {
 };
 
 auto SetThreadName(const ThreadId& thread, const char* name) -> bool {
-  char truncated_name[kThreadNameMaxLength];
-  snprintf(truncated_name, kThreadNameMaxLength - 1, "%s", name);  // NOLINT(cppcoreguidelines-pro-type-vararg)
-  int result = -1;
-  if ((result = pthread_setname_np(truncated_name)) != 0) {
-    LOG(WARNING) << "couldn't set thread name: " << strerror(result);
-    return false;
-  }
-  return true;
+  static std::array<char, kThreadNameMaxLength> kThreadNameBuffer{};
+  snprintf(&kThreadNameBuffer[0], kThreadNameMaxLength - 1, "%s", name);  // NOLINT(cppcoreguidelines-pro-type-vararg)
+  const pthread_status status = pthread_setname_np((const char*)&kThreadNameBuffer[0]);
+  LOG_IF(ERROR, !status) << "couldn't set thread name: " << status;
+  return status;
 }
 
 static auto HandleThread(void* pdata) -> void* {
@@ -93,16 +90,14 @@ auto Start(ThreadId* thread, const std::string& name, const ThreadHandler& func,
 
 auto Join(const ThreadId& thread) -> bool {
   std::string thread_name = GetThreadName(thread);
-
-  char return_data[kThreadMaxResultLength];
-
-  int result = -1;
-  if ((result = pthread_join(thread, (void**)&return_data)) != 0) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-    LOG(ERROR) << "couldn't join thread: " << strerror(result);
+  static std::array<char, kThreadMaxResultLength> kThreadResultBuffer{};
+  const pthread_status status =
+      pthread_join(thread, (void**)&kThreadResultBuffer[0]);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  if (!status) {
+    LOG(ERROR) << "couldn't join thread: " << status;
     return false;
   }
-
-  VLOG(3) << thread_name << " thread finished w/ result: " << std::string(return_data, kThreadMaxResultLength);
+  VLOG(3) << thread_name << " thread finished w/ result: " << std::string(&kThreadResultBuffer[0], kThreadMaxResultLength);
   return true;
 }
 
@@ -111,26 +106,22 @@ auto ThreadEquals(const ThreadId& lhs, const ThreadId& rhs) -> int {
 }
 
 auto GetThreadName(const ThreadId& thread) -> std::string {
-  char name[kThreadNameMaxLength];
-
-  int err = -1;
-  if ((err = pthread_getname_np(thread, name, kThreadNameMaxLength)) != 0) {
-    LOG(ERROR) << "cannot get name for " << thread << " thread: " << strerror(err);
-    return "unknown";
+  static std::array<char, kThreadNameMaxLength> kThreadNameBuffer{};
+  const pthread_status status = pthread_getname_np(thread, &kThreadNameBuffer[0], kThreadNameMaxLength);
+  if (!status) {
+    LOG(ERROR) << "failed to get name for thread: " << thread;
+    return {};
   }
-  return {name};
+  return {&kThreadNameBuffer[0], kThreadNameMaxLength};
 }
 
 auto SetThreadName(const ThreadId& thread, const std::string& name) -> bool {
-  char truncated_name[kThreadNameMaxLength];
-  snprintf(truncated_name, kThreadNameMaxLength - 1, "%s", name.data());  // NOLINT(cppcoreguidelines-pro-type-vararg)
-  int result = -1;
-  if ((result = pthread_setname_np(truncated_name)) != 0) {
-    LOG(WARNING) << "couldn't set thread name: " << strerror(result);
-    return false;
-  }
-  DLOG(INFO) << "set thread #" << thread << " name to: " << name;
-  return true;
+  static std::array<char, kThreadNameMaxLength> kThreadNameBuffer{};
+  snprintf(&kThreadNameBuffer[0], kThreadNameMaxLength - 1, "%s", name.data());  // NOLINT(cppcoreguidelines-pro-type-vararg)
+  const pthread_status status = pthread_setname_np(&kThreadNameBuffer[0]);
+  LOG_IF(ERROR, !status) << "couldn't set thread name: " << status;
+  DLOG_IF(INFO, status) << "set thread name to `" << std::string(&kThreadNameBuffer[0], kThreadNameMaxLength) << "`";
+  return status;
 }
 }  // namespace scm
 
