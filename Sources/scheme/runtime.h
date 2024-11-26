@@ -21,17 +21,6 @@
 namespace scm {
 DECLARE_bool(kernel);
 DECLARE_string(module_dir);
-
-namespace proc {
-class import;
-class map;
-class foreach;
-class exit;
-class format;
-class throw_exc;
-class frame;
-}  // namespace proc
-
 using Stack = std::stack<Object*>;
 
 class ExecutionStack {
@@ -91,9 +80,9 @@ class Runtime : public ExecutionStack {
   friend class proc::import;
   friend class proc::exit;
   friend class proc::format;  // TODO: remove
-  friend class proc::foreach;
-  friend class proc::map;
-  friend class proc::frame;
+#ifdef SCM_DEBUG
+  friend class proc::scm_get_frame;
+#endif  // SCM_DEBUG
   friend class Repl;
   friend class Lambda;
   friend class Interpreter;
@@ -142,6 +131,16 @@ class Runtime : public ExecutionStack {
 
   auto GetStackFrames() const -> const std::stack<StackFrame>& {
     return interpreter_.stack_;
+  }
+
+  template <class Native>
+  static inline void RegisterNative(LocalScope* scope) {
+    ASSERT(scope);
+    Native::Init();
+    const auto procedure = Native::Get();
+    ASSERT(procedure);
+    const auto symbol = procedure->GetSymbol();
+    LOG_IF(FATAL, !scope->Add(symbol, procedure)) << "failed to register: " << procedure->ToString();
   }
 
  public:

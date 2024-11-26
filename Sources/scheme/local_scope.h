@@ -15,6 +15,84 @@ class LocalScope {
   DEFINE_NON_COPYABLE_TYPE(LocalScope);
 
  private:
+  template <const bool Recursive>
+  class IteratorBase {
+    DEFINE_NON_COPYABLE_TYPE(IteratorBase);
+
+   private:
+    const LocalScope* scope_ = nullptr;
+    uword index_ = 0;
+
+   protected:
+    auto GetIndex() const -> uword {
+      return index_;
+    }
+
+    inline void IncrementIndex() {
+      index_ += 1;
+    }
+
+    void SetScope(const LocalScope* scope) {
+      ASSERT(scope);
+      scope_ = scope;
+    }
+
+    void SetIndex(const uword index) {
+      ASSERT(index >= 0);
+      index_ = index;
+    }
+
+   public:
+    explicit IteratorBase(const LocalScope* scope) {
+      SetScope(scope);
+    }
+    virtual ~IteratorBase() = default;
+
+    auto GetScope() const -> const LocalScope* {
+      return scope_;
+    }
+
+    auto IsRecursive() const -> bool {
+      return Recursive;
+    }
+
+    virtual auto HasNext() const -> bool = 0;
+    virtual auto Next() -> LocalVariable* = 0;
+  };
+
+ public:
+  class Iterator : public IteratorBase<false> {
+    DEFINE_NON_COPYABLE_TYPE(Iterator);
+
+   public:
+    explicit Iterator(const LocalScope* scope) :
+      IteratorBase<false>(scope) {}
+    ~Iterator() override = default;
+
+    auto HasNext() const -> bool override;
+    auto Next() -> LocalVariable* override;
+  };
+
+  class RecursiveIterator : public IteratorBase<true> {
+    DEFINE_NON_COPYABLE_TYPE(RecursiveIterator);
+
+   private:
+    inline void NextScope() {
+      ASSERT(GetIndex() > GetScope()->GetNumberOfLocals());
+      SetIndex(0);
+      SetScope(GetScope()->GetParent());
+    }
+
+   public:
+    explicit RecursiveIterator(const LocalScope* scope) :
+      IteratorBase<true>(scope) {}
+    ~RecursiveIterator() override = default;
+
+    auto HasNext() const -> bool override;
+    auto Next() -> LocalVariable* override;
+  };
+
+ private:
   LocalScope* parent_;
   std::vector<LocalVariable*> locals_;
 
@@ -45,6 +123,11 @@ class LocalScope {
   virtual auto Add(LocalScope* scope) -> bool;
   virtual auto Lookup(const std::string& name, LocalVariable** result, const bool recursive = true) -> bool;
   auto Lookup(const Symbol* symbol, LocalVariable** result, const bool recursive = true) -> bool;
+
+  virtual auto GetLocalAt(const uword index) const -> LocalVariable* {
+    ASSERT(index >= 0 && index <= GetNumberOfLocals());
+    return locals_[index];
+  }
 
   virtual auto IsEmpty() const -> bool {
     return locals_.empty();

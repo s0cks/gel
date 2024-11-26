@@ -1,6 +1,7 @@
 #include "scheme/local.h"
 
 #include "scheme/local_scope.h"
+#include "scheme/platform.h"
 #include "scheme/pointer.h"
 
 namespace scm {
@@ -15,7 +16,7 @@ auto LocalVariable::Accept(PointerPointerVisitor* vis) -> bool {
 }
 
 auto LocalVariable::GetValue() const -> Object* {
-  return ((Object*)ptr()->GetObjectAddressPointer());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  return ptr() ? ((Object*)ptr()->GetObjectAddressPointer()) : nullptr;  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
 }
 
 void LocalVariable::SetValue(Object* rhs) {

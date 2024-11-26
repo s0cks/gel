@@ -7,10 +7,10 @@ auto NativeProcedure::CreateClass() -> Class* {
   return Class::New(Procedure::GetClass(), "NativeProcedure");
 }
 
-auto NativeProcedure::ReturnValue(Object* rhs) const -> bool {
+auto NativeProcedure::Return(Object* rhs) const -> bool {
   ASSERT(rhs);
   GetRuntime()->Push(rhs);
-  return true;
+  return DoNothing();
 }
 
 auto NativeProcedure::Apply(const std::vector<Object*>& rhs) const -> bool {

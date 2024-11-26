@@ -1,13 +1,25 @@
 #ifndef SCM_ARRAY_H
 #define SCM_ARRAY_H
 
+#include <string>
+
 #include "scheme/common.h"
+#include "scheme/object.h"
 
 namespace scm {
 class Pointer;
-class ArrayBase {
+class ArrayBase : public Object {
+  template <typename T>
+  friend class Array;
+
+  friend class Object;
   friend class ArrayPointerIterator;
   DEFINE_NON_COPYABLE_TYPE(ArrayBase);
+
+ private:
+  static Class* kClass;
+  static void InitClass();
+  static auto CreateClass() -> Class*;
 
  protected:
   class ArrayPointerIterator {
@@ -41,45 +53,77 @@ class ArrayBase {
   };
 
  private:
-  uword length_ = 0;
-  uword capacity_ = 0;
-  uword* data_ = UNALLOCATED;
+  uword capacity_;
 
- protected:
-  ArrayBase() = default;
-
-  auto data() const -> uword* {
-    return data_;
+  inline auto GetStartingAddress() const -> uword {
+    return (uword)this;  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   }
 
-  void SetLength(const uword len) {
-    length_ = len;
+ protected:
+  explicit ArrayBase(const uword init_cap) :
+    capacity_(init_cap) {
+    memset(data(), 0, sizeof(uword) * init_cap);
+  }
+
+  auto data() const -> uword* {
+    return (uword*)(GetStartingAddress() + sizeof(ArrayBase));  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   }
 
   void SetCapacity(const uword cap) {
     capacity_ = cap;
   }
 
-  void Resize(const uword new_cap);
   auto VisitPointers(const std::function<bool(Pointer**)>& vis) -> bool;
+
+  auto GetPointerAt(const uword idx) const -> Pointer** {
+    ASSERT(idx >= 0 && idx <= GetCapacity());
+    return (Pointer**)&data()[idx];  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  }
 
  public:
   virtual ~ArrayBase() = default;
-
-  auto GetLength() const -> uword {
-    return length_;
-  }
 
   auto GetCapacity() const -> uword {
     return capacity_;
   }
 
-  inline void Clear() {
-    return SetLength(0);
+  auto IsArray() const -> bool override {
+    return true;
   }
 
-  inline auto IsEmpty() const -> bool {
-    return GetLength() == 0;
+  auto GetType() const -> Class* override {
+    return GetClass();
+  }
+
+  auto Get(const uword idx) const -> Object* {
+    ASSERT(idx >= 0 && idx <= GetCapacity());
+    const auto ptr = GetPointerAt(idx);
+    return (*ptr) ? (*ptr)->GetObjectPointer() : nullptr;
+  }
+
+  void Set(const uword idx, Object* value) {
+    ASSERT(value);
+    ASSERT(idx >= 0 && idx <= GetCapacity());
+    (*GetPointerAt(idx)) = value->raw_ptr();
+  }
+
+  auto operator[](const uword idx) const -> uword& {
+    ASSERT(idx >= 0 && idx <= GetCapacity());
+    return data()[idx];
+  }
+
+  auto Equals(Object* rhs) const -> bool override;
+  auto ToString() const -> std::string override;
+
+ public:
+  static inline auto GetClass() -> Class* {
+    ASSERT(kClass);
+    return kClass;
+  }
+
+  static auto operator new(const size_t sz, const uword capacity) -> void*;
+  static void operator delete(void* ptr) {
+    // do nothing
   }
 };
 
@@ -88,36 +132,37 @@ class Array : public ArrayBase {
   DEFINE_NON_COPYABLE_TYPE(Array<T>);
 
  protected:
-  explicit Array(const uword init_cap) :
-    ArrayBase() {
-    if (init_cap > 0)
-      Resize(init_cap);
-  }
+  Array() = default;
 
  public:
   ~Array();
-
-  auto Last() const -> T& {
-    return operator[](GetLength() - 1);
-  }
-
-  void Push(const T& rhs) {
-    Resize(GetLength() + 1);
-    Last() = rhs;
-  }
-
-  auto Pop() -> T& {
-    const auto last = Last();
-    SetLength(GetLength() - 1);
-    return last;
-  }
 
   auto operator[](const uword idx) const -> T& {
     return (T&)data()[idx];
   }
 
+  auto ToString() const -> std::string override;
+
+  friend auto operator<<(std::ostream& stream, const Array<T>& rhs) -> std::ostream& {
+    stream << "Array(";
+    stream << "capacity=" << rhs.GetCapacity() << ", ";
+    stream << "data=";
+    stream << "[";
+    for (auto idx = 0; idx < rhs.GetCapacity(); idx++) {
+      const auto& value = rhs[idx];
+      PrintValue(stream, value);
+      if (idx < (rhs.GetCapacity() - 1))
+        stream << ", ";
+    }
+    stream << "]";
+    stream << ")";
+    return stream;
+  }
+
  public:
-  static auto New(const uword init_cap) -> Array*;
+  static auto New(const uword init_cap) -> Array<T>* {
+    return ((Array<T>*)new (init_cap) ArrayBase(init_cap));
+  }
 };
 }  // namespace scm
 

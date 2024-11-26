@@ -43,7 +43,7 @@ class ThreadStartData {
 
 auto SetThreadName(const ThreadId& thread, const char* name) -> bool {
   char truncated_name[kThreadNameMaxLength];
-  snprintf(truncated_name, kThreadNameMaxLength - 1, "%s", name);
+  snprintf(truncated_name, kThreadNameMaxLength - 1, "%s", name);  // NOLINT(cppcoreguidelines-pro-type-vararg)
   int result = -1;
   if ((result = pthread_setname_np(truncated_name)) != 0) {
     LOG(WARNING) << "couldn't set thread name: " << strerror(result);
@@ -53,13 +53,12 @@ auto SetThreadName(const ThreadId& thread, const char* name) -> bool {
 }
 
 static auto HandleThread(void* pdata) -> void* {
-  auto data = (ThreadStartData*)pdata;
+  auto data = (ThreadStartData*)pdata;  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   auto& func = data->GetFunction();
   void* parameter = data->GetParameter();
 
   if (!SetThreadName(pthread_self(), data->GetName()) != 0)
-    goto exit;
-
+    goto exit;  // NOLINT(cppcoreguidelines-avoid-goto)
   func(parameter);
 exit:
   delete data;
@@ -98,7 +97,7 @@ auto Join(const ThreadId& thread) -> bool {
   char return_data[kThreadMaxResultLength];
 
   int result = -1;
-  if ((result = pthread_join(thread, (void**)&return_data)) != 0) {
+  if ((result = pthread_join(thread, (void**)&return_data)) != 0) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
     LOG(ERROR) << "couldn't join thread: " << strerror(result);
     return false;
   }
@@ -124,7 +123,7 @@ auto GetThreadName(const ThreadId& thread) -> std::string {
 
 auto SetThreadName(const ThreadId& thread, const std::string& name) -> bool {
   char truncated_name[kThreadNameMaxLength];
-  snprintf(truncated_name, kThreadNameMaxLength - 1, "%s", name.data());
+  snprintf(truncated_name, kThreadNameMaxLength - 1, "%s", name.data());  // NOLINT(cppcoreguidelines-pro-type-vararg)
   int result = -1;
   if ((result = pthread_setname_np(truncated_name)) != 0) {
     LOG(WARNING) << "couldn't set thread name: " << strerror(result);

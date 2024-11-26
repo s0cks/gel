@@ -1,8 +1,66 @@
 #include "scheme/array.h"
 
 #include "scheme/common.h"
+#include "scheme/heap.h"
 
 namespace scm {
+#ifdef SCM_DISABLE_HEAP
+
+auto ArrayBase::operator new(const size_t sz, const uword cap) -> void* {
+  return malloc(sz + sizeof(uword) * cap);
+}
+
+#else
+
+auto ArrayBase::operator new(const size_t sz, const uword cap) -> void* {
+  const auto heap = Heap::GetHeap();
+  ASSERT(heap);
+  const auto total_size = sz + sizeof(uword) * cap;
+  const auto address = heap->TryAllocate(total_size);
+  ASSERT(address != UNALLOCATED);
+  return (void*)address;  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+}
+
+#endif  // SCM_DISABLE_HEAP
+
+Class* ArrayBase::kClass = nullptr;
+void ArrayBase::InitClass() {
+  ASSERT(kClass == nullptr);
+  kClass = CreateClass();
+  ASSERT(kClass);
+}
+
+auto ArrayBase::Equals(Object* rhs) const -> bool {
+  if (!rhs || !rhs->IsArray())
+    return false;
+  const auto other = (ArrayBase*)rhs;  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  return GetCapacity() == other->GetCapacity();
+}
+
+auto ArrayBase::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "Array(";
+  ss << "capacity=" << GetCapacity() << ", ";
+  ss << "data=";
+  ss << "[";
+  for (auto idx = 0; idx < GetCapacity(); idx++) {
+    const auto value = Get(idx);
+    if (!value)
+      continue;
+    PrintValue(ss, value);
+    if (idx < (GetCapacity() - 1))
+      ss << ", ";
+  }
+  ss << "]";
+  ss << ")";
+  return ss.str();
+}
+
+auto ArrayBase::CreateClass() -> Class* {
+  ASSERT(kClass == nullptr);
+  return Class::New(Object::GetClass(), "Array");
+}
+
 auto ArrayBase::VisitPointers(const std::function<bool(Pointer**)>& vis) -> bool {
   ArrayPointerIterator iter(this);
   while (iter.HasNext()) {
@@ -13,17 +71,5 @@ auto ArrayBase::VisitPointers(const std::function<bool(Pointer**)>& vis) -> bool
     }
   }
   return true;
-}
-
-void ArrayBase::Resize(const uword cap) {
-  if (cap > GetCapacity()) {
-    const auto new_cap = RoundUpPow2(static_cast<word>(cap));
-    // NOLINTNEXTLINE(cppcoreguidelines-no-malloc,cppcoreguidelines-pro-type-cstyle-cast)
-    const auto new_data = (uword*)realloc(data_, new_cap * sizeof(uword));
-    LOG_IF(FATAL, !new_data) << "failed to resize Array to: " << new_cap;
-    data_ = new_data;
-    capacity_ = new_cap;
-  }
-  length_ = cap;
 }
 }  // namespace scm

@@ -91,6 +91,8 @@
   (eq? (type? x) "NativeProcedure"))
 (defun procedure? (x)
   (or (native-procedure? x) (lambda? x) (eq? (type? x) "Procedure")))
+(defun array? (x)
+  (eq? (type? x) "Array"))
 ; Misc
 (defun pair? (x)
   (eq? (type? x) "Pair"))
@@ -103,12 +105,32 @@
 ; foreach
 (defun apply (f seq)
   (cond (null? seq) seq
+    (array? seq)
+      (begin
+        (defun next (f seq idx)
+          (cond (> idx (- (array:length seq) 1)) '()
+            (begin
+              (f (array:get seq idx))
+              (next f seq (+ idx 1)))))
+        (next f seq 0))
     (begin
       (f (car seq))
       (apply f (cdr seq)))))
 ; map
 (defun map (f seq)
   (cond (null? seq) seq
+    (array? seq)
+      (begin
+        (define idx 0)
+        (define result '())
+        (print "iterating")
+        (while (< idx (array:length seq))
+          (define item (f (array:get seq idx)))
+          (set! result (cons item result))
+          (set! idx (+ idx 1))
+          (print (format "idx: {}" idx)))
+        (print (format "result: {}" result))
+        result) ; everything after the while doesn't get executed
     (cons (f (car seq)) (map f (cdr seq)))))
 ; filter
 (defun filter (p seq)
@@ -124,10 +146,10 @@
   (cond (null? seq) x
     (cons (car seq) (append (cdr seq) x))))
 ; reverse
-(defun _reverse (seq acc)
-  (cond (null? seq) acc
-    (_reverse (cdr seq) (cons (car seq) acc))))
 (defun reverse (seq)
+  (defun _reverse (seq acc)
+    (cond (null? seq) acc
+      (_reverse (cdr seq) (cons (car seq) acc))))
   (_reverse seq '()))
 ; nth
 (defun nth (seq n)

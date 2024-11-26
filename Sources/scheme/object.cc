@@ -6,6 +6,7 @@
 #include <string>
 #include <utility>
 
+#include "scheme/array.h"
 #include "scheme/common.h"
 #include "scheme/expression.h"
 #include "scheme/heap.h"
@@ -78,6 +79,7 @@ void Object::Init() {
   Double::InitClass();
   Pair::InitClass();
   Bool::Init();
+  ArrayBase::InitClass();
   // string-like type(s)
   String::InitClass();
   Symbol::InitClass();

@@ -246,8 +246,14 @@ auto Parser::ParseExpression() -> Expression* {
     expr = ParseUnaryExpr();
   } else if (next.IsBinaryOp()) {
     expr = ParseBinaryOpExpr();
+  } else if (next.IsLiteral()) {
+    expr = ParseListExpr();
   } else {
     switch (next.kind) {
+      case Token::kDefine: {
+        expr = ParseLocalDef();
+        break;
+      }
       // Definitions
       case Token::kMacroDef:
         expr = ParseMacroDef();
@@ -422,7 +428,7 @@ auto Parser::ParseDefunExpr() -> LocalDef* {
 }
 
 auto Parser::ParseLocalDef() -> LocalDef* {
-  ExpectNext(Token::kLocalDef);
+  ExpectNext(Token::kDefine);
   const auto symbol = ParseSymbol();
   ASSERT(symbol);
   if (GetScope()->Has(symbol)) {
@@ -729,6 +735,14 @@ auto Parser::ParseNamedLambda() -> Lambda* {
   return lambda;
 }
 
+auto Parser::ParseListExpr() -> expr::ListExpr* {
+  const auto list = expr::ListExpr::New();
+  while (!PeekEq(Token::kRParen)) {
+    list->Append(ParseExpression());
+  }
+  return list;
+}
+
 auto Parser::ParseScript() -> Script* {
   const auto scope = PushScope();
   ASSERT(scope);
@@ -749,6 +763,8 @@ auto Parser::ParseScript() -> Script* {
       expr = ParseUnaryExpr();
     } else if (next.IsBinaryOp()) {
       expr = ParseBinaryOpExpr();
+    } else if (next.IsLiteral()) {
+      expr = ParseListExpr();
     } else {
       switch (next.kind) {
         // Definitions

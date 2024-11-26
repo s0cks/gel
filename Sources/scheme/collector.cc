@@ -90,4 +90,8 @@ void MinorCollection() {
   Collector collector((*heap));
   collector.Collect();
 }
+
+void MajorCollection() {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+}
 }  // namespace scm

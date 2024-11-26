@@ -29,6 +29,7 @@
   V(CallProcExpr)                   \
   V(SetExpr)                        \
   V(LetExpr)                        \
+  V(ListExpr)                       \
   V(ThrowExpr)                      \
   V(QuotedExpr)
 
@@ -1113,6 +1114,25 @@ class LetExpr : public SequenceExpr {
     ASSERT(scope);
     ASSERT(!body.empty());  // TODO: is this assertion necessary?
     return new LetExpr(scope, bindings, body);
+  }
+};
+
+class ListExpr : public SequenceExpr {
+ private:
+ protected:
+  explicit ListExpr(const ExpressionList& values) :
+    SequenceExpr(values) {}
+
+ public:
+  ~ListExpr() override = default;
+
+  auto IsConstantExpr() const -> bool override;
+  auto EvalToConstant() const -> Object* override;
+  DECLARE_EXPRESSION(ListExpr);
+
+ public:
+  static inline auto New(const ExpressionList& values = {}) -> ListExpr* {
+    return new ListExpr(values);
   }
 };
 

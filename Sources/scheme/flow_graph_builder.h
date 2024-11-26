@@ -114,11 +114,18 @@ class EffectVisitor : public ExpressionVisitor {
     }
   }
 
+  void AddInstanceOf(instr::Definition* defn, Class* expected);
+  auto CreateCallFor(instr::Definition* defn, const uword num_args) -> instr::InvokeInstr*;
+
   inline void AddReturnExit(instr::Definition* value) {
     ASSERT(value);
     Add(ReturnInstr::New(value));
     exit_ = nullptr;
   }
+
+  auto ReturnCall(instr::InvokeInstr* defn) -> bool;
+  auto ReturnCall(Procedure* procedure, const uword num_args) -> bool;
+  auto ReturnCall(Symbol* function, const uword num_args) -> bool;
 
   void Append(const EffectVisitor& rhs) {
     if (rhs.IsEmpty())

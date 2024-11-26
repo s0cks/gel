@@ -369,4 +369,19 @@ auto LetExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
     return false;
   return SequenceExpr::VisitChildren(vis);
 }
+
+auto ListExpr::ToString() const -> std::string {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return {};
+}
+
+auto ListExpr::IsConstantExpr() const -> bool {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
+
+auto ListExpr::EvalToConstant() const -> Object* {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return nullptr;
+}
 }  // namespace scm::expr

@@ -140,7 +140,7 @@ class AllocationSection : public Section {
   }
 
   virtual auto GetAllocationPercent() const -> Percent {
-    return Percent(GetPercentageOf(GetNumberOfBytesAllocated(), GetSize()));
+    return Percent(GetNumberOfBytesAllocated(), GetSize());
   }
 
   virtual auto GetNumberOfBytesRemaining() const -> uword {
@@ -148,7 +148,7 @@ class AllocationSection : public Section {
   }
 
   virtual auto GetRemainingPercent() const -> Percent {
-    return Percent(GetPercentageOf(GetNumberOfBytesRemaining(), GetSize()));
+    return Percent(GetNumberOfBytesRemaining(), GetSize());
   }
 
   virtual auto TryAllocate(const uword size) -> uword = 0;

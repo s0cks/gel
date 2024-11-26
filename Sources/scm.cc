@@ -26,56 +26,8 @@
 
 using namespace scm;
 
-static inline auto Execute(const std::string& rhs) -> int {
-  if (FLAGS_eval) {
-    try {
-      const auto result = Runtime::Eval(rhs);
-      if (result) {
-        std::cout << "result: ";
-        PrintValue(std::cout, result) << std::endl;
-      }
-    } catch (const scm::Exception& exc) {
-      LOG(ERROR) << "failed to execute expression.";
-      std::cerr << " * expression: " << rhs << std::endl;
-      std::cerr << " * message: " << exc.GetMessage() << std::endl;
-      return EXIT_FAILURE;
-    }
-  } else if (FLAGS_dump_ast || FLAGS_dump_flow_graph) {
-    try {
-      const auto expression = ExpressionCompiler::Compile(rhs, GetRuntime()->GetGlobalScope());
-      ASSERT(expression && expression->HasEntry());
-      LOG(INFO) << "result: ";
-      LOG_IF(FATAL, !Disassembler::Disassemble(expression->GetEntry())) << "failed to disassemble: " << expression;
-    } catch (const scm::Exception& exc) {
-      LOG(ERROR) << "failed to execute expression.";
-      std::cerr << " * expression: " << rhs << std::endl;
-      std::cerr << " * message: " << exc.GetMessage() << std::endl;
-      return EXIT_FAILURE;
-    }
-  }
-  return EXIT_SUCCESS;
-}
-
-static inline auto ExecuteScript(const std::string& filename) -> int {
-  const auto script = Script::FromFile(filename);
-  ASSERT(script && script->IsCompiled());
-#ifdef SCM_DEBUG
-  const auto start_ts = Clock::now();
-#endif  // SCM_DEBUG
-
-  Object* result = nullptr;
-  try {
-    result = Runtime::Exec(script);
-  } catch (const scm::Exception& exc) {
-    result = Error::New(fmt::format("failed to execute script: {}", exc.GetMessage()));
-  }
-
-#ifdef SCM_DEBUG
-  const auto stop_ts = Clock::now();
-  const auto total_ns = std::chrono::duration_cast<std::chrono::microseconds>(stop_ts - start_ts).count();
-  LOG(INFO) << "script executed in " << units::time::microsecond_t(static_cast<double>(total_ns));
-#endif  // SCM_DEBUG
-
+static inline auto PrintTimedResult(Object* result, const Clock::duration& duration) -> int {
+  DLOG(INFO) << "finished in " << units::time::nanosecond_t(static_cast<double>(duration.count()));
   if (IsError(result)) {
     std::cout << "error: " << ToError(result)->GetMessage();
     return EXIT_FAILURE;
@@ -86,6 +38,45 @@ static inline auto ExecuteScript(const std::string& filename) -> int {
     PrintValue(std::cout, result) << std::endl;
   }
   return EXIT_SUCCESS;
+}
+
+static inline auto Execute(const std::string& expr) -> int {
+  if (FLAGS_eval) {
+    const auto [result, time] = TimedExecution<Object*>([&expr]() -> Object* {
+      try {
+        return Runtime::Eval(expr);
+      } catch (const scm::Exception& exc) {
+        return Error::New(fmt::format("failed to execute expression: {}", exc.GetMessage()));
+      }
+    });
+    return PrintTimedResult(result, time);
+  } else if (FLAGS_dump_ast || FLAGS_dump_flow_graph) {
+    try {
+      const auto expression = ExpressionCompiler::Compile(expr, GetRuntime()->GetGlobalScope());
+      ASSERT(expression && expression->HasEntry());
+      LOG(INFO) << "result: ";
+      LOG_IF(FATAL, !Disassembler::Disassemble(expression->GetEntry())) << "failed to disassemble: " << expression;
+    } catch (const scm::Exception& exc) {
+      LOG(ERROR) << "failed to execute expression.";
+      std::cerr << " * expression: " << expr << std::endl;
+      std::cerr << " * message: " << exc.GetMessage() << std::endl;
+      return EXIT_FAILURE;
+    }
+  }
+  return EXIT_SUCCESS;
+}
+
+static inline auto ExecuteScript(const std::string& filename) -> int {
+  const auto script = Script::FromFile(filename);
+  ASSERT(script && script->IsCompiled());
+  const auto [result, time] = TimedExecution<Object*>([script]() -> Object* {
+    try {
+      return Runtime::Exec(script);
+    } catch (const scm::Exception& exc) {
+      return Error::New(fmt::format("failed to execute script: {}", exc.GetMessage()));
+    }
+  });
+  return PrintTimedResult(result, time);
 }
 
 auto main(int argc, char** argv) -> int {

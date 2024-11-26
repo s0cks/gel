@@ -102,7 +102,8 @@ class LocalVariable {
 
   friend auto operator<<(std::ostream& stream, const LocalVariable& rhs) -> std::ostream& {
     stream << "LocalVariable(";
-    stream << "owner=" << rhs.GetOwner() << ", ";
+    if (rhs.HasOwner())
+      stream << "owner=" << rhs.GetOwner() << ", ";
     stream << "index=" << rhs.GetIndex() << ", ";
     stream << "name=" << rhs.GetName();
     if (rhs.HasValue())

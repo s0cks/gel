@@ -1,4 +1,2 @@
-(let ((x 10)
-      (y 20)
-      (z (* x y)))
-  (print (format "x := {}; y := {}; z := {}" x y z)))
+(let ((x (new-array 1 2 3)))
+  (print (array:get x 1)))

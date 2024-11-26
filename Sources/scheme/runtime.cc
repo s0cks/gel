@@ -146,34 +146,31 @@ auto Runtime::Import(Symbol* symbol, LocalScope* scope) -> bool {
   return Import(module);
 }
 
-template <class Proc>
-static inline void RegisterProc(LocalScope* scope, Proc* proc = new Proc()) {
-  ASSERT(scope);
-  ASSERT(proc);
-  const auto symbol = proc->GetSymbol();
-  ASSERT(symbol);
-  LOG_IF(FATAL, !scope->Add(symbol, proc)) << "failed to register: " << proc->ToString();
-}
-
 auto Runtime::CreateInitScope() -> LocalScope* {
   const auto scope = LocalScope::New();
   ASSERT(scope);
-  RegisterProc<proc::print>(scope);
-  RegisterProc<proc::type>(scope);
-  RegisterProc<proc::import>(scope);
-  RegisterProc<proc::exit>(scope);
-  RegisterProc<proc::format>(scope);
-  RegisterProc<proc::list>(scope);
-  RegisterProc<proc::set_car>(scope);
-  RegisterProc<proc::set_cdr>(scope);
-  RegisterProc<proc::random>(scope);
-  RegisterProc<proc::rand_range>(scope);
+  RegisterNative<proc::print>(scope);
+  RegisterNative<proc::type>(scope);
+  RegisterNative<proc::import>(scope);
+  RegisterNative<proc::exit>(scope);
+  RegisterNative<proc::format>(scope);
+  RegisterNative<proc::list>(scope);
+  RegisterNative<proc::set_car>(scope);
+  RegisterNative<proc::set_cdr>(scope);
+  RegisterNative<proc::random>(scope);
+  RegisterNative<proc::rand_range>(scope);
+  RegisterNative<proc::array_new>(scope);
+  RegisterNative<proc::array_get>(scope);
+  RegisterNative<proc::array_set>(scope);
+  RegisterNative<proc::array_length>(scope);
 #ifdef SCM_DEBUG
-  RegisterProc<proc::minor_gc>(scope);
-  RegisterProc<proc::frame>(scope);
-  scope->Add("debug?", Bool::True());
-  RegisterProc<proc::list_symbols>(scope);
-  RegisterProc<proc::list_classes>(scope);
+  RegisterNative<proc::scm_minor_gc>(scope);
+  RegisterNative<proc::scm_major_gc>(scope);
+  RegisterNative<proc::scm_get_frame>(scope);
+  RegisterNative<proc::scm_get_debug>(scope);
+  RegisterNative<proc::scm_get_target_triple>(scope);
+  RegisterNative<proc::scm_get_locals>(scope);
+  RegisterNative<proc::scm_get_classes>(scope);
 #endif  // SCM_DEBUG
   return scope;
 }
@@ -190,16 +187,14 @@ auto Runtime::DefineSymbol(Symbol* symbol, Object* value) -> bool {
 
 auto Runtime::LookupSymbol(Symbol* symbol, Object** result) -> bool {
   ASSERT(symbol);
-  const auto frame = GetCurrentFrame();
-  ASSERT(frame);
-  const auto locals = frame->GetLocals();
-  ASSERT(locals);
+  const auto scope = GetCurrentScope();
+  ASSERT(scope);
   LocalVariable* local = nullptr;
-  if (!locals->Lookup(symbol, &local))
+  if (!scope->Lookup(symbol, &local))
     return false;
   ASSERT(local);
   (*result) = local->GetValue();
-  return local->HasValue();
+  return true;
 }
 
 auto Runtime::StoreSymbol(Symbol* symbol, Object* value) -> bool {

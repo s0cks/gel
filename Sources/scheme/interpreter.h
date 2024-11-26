@@ -57,6 +57,7 @@ class Interpreter : public InstructionVisitor {
   }
 
   auto PushError(const std::string& message) -> bool;
+  auto PushNext(Object* rhs) -> bool;
 
   inline auto Goto(Instruction* instr) -> bool {
     SetCurrentInstr(instr);
@@ -66,8 +67,10 @@ class Interpreter : public InstructionVisitor {
   auto GetStackTop() const -> std::optional<Object*>;
 
   inline auto IsStackTopInstanceOf(Class* rhs) const -> bool {
+    ASSERT(rhs);
     const auto stack_top = GetStackTop();
-    return stack_top && (*stack_top)->GetType()->IsInstanceOf(rhs);
+    ASSERT(stack_top);
+    return (*stack_top)->GetType()->IsInstanceOf(rhs);
   }
 
  public:

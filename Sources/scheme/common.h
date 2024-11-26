@@ -75,12 +75,8 @@ class Exception : public std::exception {
   }
 };
 
-template <typename T>
-static inline auto GetPercentageOf(const T part, const T whole) -> double {
-  return (static_cast<double>(part) * 100.0) / static_cast<double>(whole);
-}
-
 static inline auto RoundUpPow2(word x) -> uword {
+  // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers)
   x = x - 1;
   x = x | (x >> 1);
   x = x | (x >> 2);
@@ -91,6 +87,7 @@ static inline auto RoundUpPow2(word x) -> uword {
   x = x | (x >> 32);
 #endif
   return x + 1;
+  // NOLINTEND(cppcoreguidelines-avoid-magic-numbers)
 }
 
 template <typename T>
@@ -99,16 +96,27 @@ static inline auto IsPow2(T x) -> bool {
 }
 
 struct Percent {
+ private:
+  template <typename T>
+  static inline constexpr auto CalculatePercentage(const T part, const T whole) -> double {
+    return (static_cast<double>(part) * 100.0) / static_cast<double>(whole);
+  }
+
+ public:
   double value;
 
   constexpr explicit Percent(const double val = 0.0) :
     value(val) {}
+  template <typename T>
+  constexpr explicit Percent(const T part, const T whole) :
+    value(CalculatePercentage(part, whole)) {}
   ~Percent() = default;
 
   friend auto operator<<(std::ostream& stream, const Percent& rhs) -> std::ostream& {
     static constexpr const auto kFormattedLength = 8;
     const auto kFormatBuffer = std::string(kFormattedLength, '\0');
     memset((void*)&kFormatBuffer[0], '\0', kFormattedLength);
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg,cppcoreguidelines-pro-type-cstyle-cast)
     snprintf((char*)&kFormatBuffer[0], kFormattedLength, "%.2f%%", rhs.value);
     return stream << kFormatBuffer;
   }
@@ -116,20 +124,16 @@ struct Percent {
   DEFINE_DEFAULT_COPYABLE_TYPE(Percent);
 };
 
-static inline auto PrettyPrintPercent(const double rhs) -> std::string {
-  static constexpr const auto kFormattedLength = 8;
-  std::string data{};
-  data.reserve(kFormattedLength);
-  snprintf(&data[0], kFormattedLength, "%.2f%%", rhs);
-  return data;
-}
-
-template <typename T>
-static inline auto PrettyPrintPercent(const T part, const T whole) -> std::string {
-  return PrettyPrintPercent(GetPercentageOf(part, whole));
-}
-
 using Clock = std::chrono::high_resolution_clock;
+
+template <typename R>
+static inline auto TimedExecution(const std::function<R()>& func) -> std::pair<R, Clock::duration> {
+  const auto start_ts = Clock::now();
+  const auto result = func();
+  const auto stop_ts = Clock::now();
+  const auto total_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(stop_ts - start_ts);
+  return std::make_pair(result, total_ns);
+}
 }  // namespace scm
 
 #endif  // SCM_COMMON_H

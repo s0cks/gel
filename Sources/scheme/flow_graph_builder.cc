@@ -8,6 +8,7 @@
 #include "scheme/lambda.h"
 #include "scheme/local.h"
 #include "scheme/native_procedure.h"
+#include "scheme/natives.h"
 #include "scheme/object.h"
 #include "scheme/procedure.h"
 #include "scheme/script.h"
@@ -42,14 +43,36 @@ static inline auto IsNativeCall(instr::Instruction* instr) -> bool {
   return target->IsNativeProcedure();
 }
 
-// static inline auto IsMacroCall(instr::Instruction* instr) -> bool {
-//   ASSERT(instr);
-//   if (!instr->IsConstantInstr())
-//     return false;
-//   const auto target = instr->AsConstantInstr()->GetValue();
-//   ASSERT(target);
-//   return target->IsMacro();
-// }
+void EffectVisitor::AddInstanceOf(instr::Definition* defn, Class* cls) {
+  ASSERT(defn);
+  return Add(instr::InstanceOfInstr::New(defn, cls));
+}
+
+auto EffectVisitor::CreateCallFor(instr::Definition* defn, const uword num_args) -> instr::InvokeInstr* {
+  ASSERT(defn);
+  ASSERT(num_args >= 0);
+  Do(defn);
+  if (IsNativeCall(defn))
+    return instr::InvokeNativeInstr::New(defn, num_args);
+  return instr::InvokeInstr::New(defn, num_args);
+}
+
+auto EffectVisitor::ReturnCall(instr::InvokeInstr* instr) -> bool {
+#ifndef SCM_RELAXED
+  AddInstanceOf(instr, instr->IsInvokeNativeInstr() ? NativeProcedure::GetClass() : Procedure::GetClass());
+#endif  // SCM_RELAXED
+  ReturnDefinition(instr);
+  return true;
+}
+
+auto EffectVisitor::ReturnCall(Procedure* target, const uword num_args) -> bool {
+  ASSERT(target);
+  return ReturnCall(CreateCallFor(instr::ConstantInstr::New(target), num_args));
+}
+
+auto EffectVisitor::ReturnCall(Symbol* symbol, const uword num_args) -> bool {
+  return ReturnCall(CreateCallFor(instr::LoadVariableInstr::New(symbol), num_args));
+}
 
 auto EffectVisitor::VisitCallProcExpr(CallProcExpr* expr) -> bool {
   ASSERT(expr);
@@ -394,6 +417,23 @@ auto EffectVisitor::VisitLocalDef(LocalDef* expr) -> bool {
   Append(for_value);
   Add(StoreVariableInstr::New(symbol, for_value.GetValue()));
   return true;
+}
+
+auto EffectVisitor::VisitListExpr(expr::ListExpr* expr) -> bool {
+  ASSERT(expr);
+  // process body
+  uword idx = 0;
+  while (IsOpen() && (idx < expr->GetNumberOfChildren())) {
+    const auto child = expr->GetChildAt(idx++);
+    ASSERT(child);
+    ValueVisitor for_value(GetOwner());
+    if (!child->Accept(&for_value))
+      break;
+    Append(for_value);
+    if (!IsOpen())
+      break;
+  }
+  return ReturnCall(scm::proc::list::Get(), idx);
 }
 
 auto EffectVisitor::VisitLiteralExpr(LiteralExpr* p) -> bool {

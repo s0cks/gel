@@ -481,30 +481,13 @@ class InvokeDynamicInstr : public Definition {
   }
 };
 
-class InvokeNativeInstr : public Definition {
- private:
-  Definition* target_;
-  uint64_t num_args_;
-
+class InvokeNativeInstr : public InvokeInstr {
  protected:
   explicit InvokeNativeInstr(Definition* target, const uint64_t num_args) :
-    Definition(),
-    target_(target),
-    num_args_(num_args) {
-    ASSERT(target_);
-    ASSERT(num_args_ >= 0);
-  }
+    InvokeInstr(target, num_args) {}
 
  public:
   ~InvokeNativeInstr() override = default;
-
-  auto GetTarget() const -> Definition* {
-    return target_;
-  }
-
-  auto GetNumberOfArgs() const -> uint64_t {
-    return num_args_;
-  }
 
   DECLARE_INSTRUCTION(InvokeNativeInstr);
 

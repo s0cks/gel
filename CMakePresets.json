@@ -40,6 +40,11 @@
           "hostOS": "macOS"
         }
       },
+      "cacheVariables": {
+        "SCM_TARGET": "aarch64-apple-darwin",
+        "CMAKE_C_COMPILER_TARGET": "aarch64-apple-darwin",
+        "CMAKE_CXX_COMPILER_TARGET": "aarch64-apple-darwin"
+      },
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",

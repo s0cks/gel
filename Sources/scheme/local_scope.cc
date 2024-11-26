@@ -8,6 +8,29 @@
 #include "scheme/pointer.h"
 
 namespace scm {
+auto LocalScope::Iterator::HasNext() const -> bool {
+  return GetIndex() < GetScope()->GetNumberOfLocals();
+}
+
+auto LocalScope::Iterator::Next() -> LocalVariable* {
+  const auto next = GetScope()->GetLocalAt(GetIndex());
+  IncrementIndex();
+  return next;
+}
+
+auto LocalScope::RecursiveIterator::HasNext() const -> bool {
+  return GetIndex() < GetScope()->GetNumberOfLocals() || GetScope()->HasParent();
+}
+
+auto LocalScope::RecursiveIterator::Next() -> LocalVariable* {
+  while ((GetScope()->IsEmpty() || GetIndex() >= GetScope()->GetNumberOfLocals()) && GetScope()->HasParent())
+    SetScope(GetScope()->GetParent());
+  ASSERT(GetIndex() <= GetScope()->GetNumberOfLocals());
+  const auto next = GetScope()->GetLocalAt(GetIndex());
+  IncrementIndex();
+  return next;
+}
+
 auto LocalScope::Has(const std::string& name, const bool recursive) -> bool {
   for (const auto& local : locals_) {
     if (local->GetName() == name)

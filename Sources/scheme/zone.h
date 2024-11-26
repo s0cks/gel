@@ -102,8 +102,16 @@ class NewZone : public Zone {
     return fromspace_;
   }
 
+  auto GetFromspacePointer() const -> void* {
+    return (void*)fromspace();  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  }
+
   auto tospace() const -> uword {
     return tospace_;
+  }
+
+  auto GetTospacePointer() const -> void* {
+    return (void*)tospace();  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   }
 
   auto semisize() const -> uword {
@@ -115,20 +123,20 @@ class NewZone : public Zone {
   auto TryAllocate(const uword size) -> uword override;
 
   auto GetAllocationPercent() const -> Percent override {
-    return Percent(GetPercentageOf(GetNumberOfBytesAllocated(), semisize()));
+    return Percent(GetNumberOfBytesAllocated(), semisize());
   }
 
   friend auto operator<<(std::ostream& stream, const NewZone& rhs) -> std::ostream& {
     using namespace units::data;
     stream << "NewZone(";
     stream << "start=" << rhs.GetStartingAddressPointer() << ", ";
-    stream << "size=" << byte_t(rhs.GetSize()) << ", ";
-    stream << "fromspace=" << ((void*)rhs.fromspace()) << ", ";
-    stream << "to=" << ((void*)rhs.tospace()) << ", ";
-    stream << "semi_size=" << byte_t(rhs.semisize()) << ", ";
-    stream << "allocated=" << byte_t(rhs.GetNumberOfBytesAllocated());
+    stream << "size=" << byte_t(static_cast<double>(rhs.GetSize())) << ", ";
+    stream << "fromspace=" << rhs.GetFromspacePointer() << ", ";
+    stream << "to=" << rhs.GetTospacePointer() << ", ";
+    stream << "semi_size=" << byte_t(static_cast<double>(rhs.semisize())) << ", ";
+    stream << "allocated=" << byte_t(static_cast<double>(rhs.GetNumberOfBytesAllocated()));
     stream << " (" << rhs.GetAllocationPercent() << "), ";
-    stream << "remaining=" << byte_t(rhs.GetNumberOfBytesRemaining());
+    stream << "remaining=" << byte_t(static_cast<double>(rhs.GetNumberOfBytesRemaining()));
     stream << " (" << rhs.GetRemainingPercent() << ")";
     stream << ")";
     return stream;
@@ -151,9 +159,9 @@ class OldZone : public Zone {
     stream << "NewZone(";
     stream << "start=" << rhs.GetStartingAddressPointer() << ", ";
     stream << "size=" << rhs.GetSize() << ", ";
-    stream << "allocated=" << byte_t(rhs.GetNumberOfBytesAllocated());
+    stream << "allocated=" << byte_t(static_cast<double>(rhs.GetNumberOfBytesAllocated()));
     stream << " (" << rhs.GetAllocationPercent() << "), ";
-    stream << "remaining=" << byte_t(rhs.GetNumberOfBytesRemaining());
+    stream << "remaining=" << byte_t(static_cast<double>(rhs.GetNumberOfBytesRemaining()));
     stream << " (" << rhs.GetRemainingPercent() << ")";
     stream << ")";
     return stream;

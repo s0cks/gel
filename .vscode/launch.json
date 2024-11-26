@@ -30,7 +30,8 @@
         "map.cl",
         "set-car.cl",
         "test-let.cl",
-        "apply-print.cl"
+        "apply-print.cl",
+        "factorial.cl"
       ],
       "default": "while.cl",
       "description": "A value that is even."
@@ -124,8 +125,6 @@
         "-colorlogtostdout",
         "--reports-dir", "${workspaceFolder}/reports",
         "--module-dir", "${workspaceFolder}/scm",
-        "--dump-ast",
-        "--dump-flow-graph",
         "-v=${input:verbose-level}"
       ],
       "cwd": "${workspaceFolder}",
@@ -133,7 +132,8 @@
         "command source ${workspaceFolder}/.lldbinit"
       ],
       "env": {
-        "TERM": "xterm-256color"
+        "TERM": "xterm-256color",
+        "SCM_HOME": "${workspaceFolder}/scm"
       }
     },
     {

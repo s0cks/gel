@@ -44,6 +44,7 @@ class Collector {
 };
 
 void MinorCollection();
+void MajorCollection();
 }  // namespace scm
 
 #endif  // SCM_COLLECTOR_H

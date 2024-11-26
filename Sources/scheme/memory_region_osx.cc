@@ -23,19 +23,19 @@ static inline auto GetError() -> std::string {
 
 MemoryRegion::MemoryRegion(const uword size, const ProtectionMode mode) :
   MemoryRegion() {
-  const auto total_size = RoundUpPow2(size);
+  const auto total_size = RoundUpPow2(static_cast<word>(size));
   const auto ptr = mmap(nullptr, total_size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
-  LOG_IF(FATAL, IsMapFailed(ptr)) << "failed to mmap MemoryRegion of " << byte_t(total_size) << ": " << GetError();
-  SetStartingAddress((uword)ptr);
+  LOG_IF(FATAL, IsMapFailed(ptr)) << "failed to mmap MemoryRegion of " << byte_t(static_cast<double>(total_size)) << ": "
+                                  << GetError();
+  SetStartingAddress((uword)ptr);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   SetSize(size);
 }
 
 void MemoryRegion::FreeRegion() {
   if (!IsAllocated())
     return;
-  int error = 0;
-  if ((error = munmap(GetStartingAddressPointer(), GetSize())) != 0)
-    LOG(FATAL) << "failed to munmap " << (*this) << ": " << GetError();
+  int error = munmap(GetStartingAddressPointer(), GetSize());
+  LOG_IF(FATAL, error != 0) << "failed to munmap " << (*this) << ": " << GetError();
   DVLOG(SCM_VLEVEL_1) << "freed " << (*this);
   SetSize(0);
   SetStartingAddress(0);
@@ -61,9 +61,8 @@ void MemoryRegion::Protect(const ProtectionMode mode) {
       break;
   }
 
-  int error = 0;
-  if ((error = mprotect(GetStartingAddressPointer(), GetSize(), protection)) != 0)
-    LOG(FATAL) << "failed to protect " << (*this) << " w/ " << mode;
+  int error = mprotect(GetStartingAddressPointer(), GetSize(), protection);
+  LOG_IF(FATAL, error != 0) << "failed to protect " << (*this) << " w/ " << mode;
   DVLOG(SCM_VLEVEL_1) << "changed " << (*this) << " protection to: " << mode;
 }
 }  // namespace scm

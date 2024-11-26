@@ -8,6 +8,7 @@
 #include "scheme/expression.h"
 #include "scheme/instruction.h"
 #include "scheme/lambda.h"
+#include "scheme/local_scope.h"
 #include "scheme/native_procedure.h"
 #include "scheme/object.h"
 #include "scheme/platform.h"
@@ -24,19 +25,25 @@ auto Interpreter::PushError(const std::string& message) -> bool {
   return true;
 }
 
+auto Interpreter::PushNext(Object* rhs) -> bool {
+  ASSERT(rhs);
+  GetRuntime()->Push(rhs);
+  return Next();
+}
+
 auto Interpreter::VisitLoadVariableInstr(LoadVariableInstr* instr) -> bool {
   ASSERT(instr);
   const auto symbol = instr->GetSymbol();
   ASSERT(symbol);
   Object* result = nullptr;
   if (!GetRuntime()->LookupSymbol(symbol, &result)) {
-    GetRuntime()->Push(Error::New(fmt::format("failed to find Symbol: `{0:s}`", symbol->Get())));
-    return Next();
+    DLOG(ERROR) << "failed to find " << symbol << " in scope: ";
+    PRINT_SCOPE(ERROR, GetRuntime()->GetCurrentScope());
+    return PushError(fmt::format("failed to find Symbol: `{0:s}`", symbol->Get()));
   }
-
-  ASSERT(result);
-  GetRuntime()->Push(result);
-  return Next();
+  if (IsNull(result))
+    return PushNext(Null());
+  return PushNext(result);
 }
 
 auto Interpreter::VisitReturnInstr(ReturnInstr* instr) -> bool {

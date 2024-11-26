@@ -29,9 +29,12 @@ namespace scm {
   V(Script)              \
   V(Error)
 
+class Object;
 #define FORWARD_DECLARE(Name) class Name;
 FOR_EACH_TYPE(FORWARD_DECLARE)
 #undef FORWARD_DECLARE
+
+using ObjectList = std::vector<Object*>;
 
 class Pointer;
 class Datum;
@@ -59,6 +62,10 @@ class Object {
   virtual auto Equals(Object* rhs) const -> bool = 0;
   virtual auto ToString() const -> std::string = 0;
 
+  auto AsObject() const -> Object* {
+    return ((Object*)this);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  }
+
   auto raw_ptr() const -> Pointer*;
 
   inline auto GetStartingAddress() const -> uword {
@@ -78,6 +85,10 @@ class Object {
   }
 
   virtual auto IsAtom() const -> bool {
+    return false;
+  }
+
+  virtual auto IsArray() const -> bool {
     return false;
   }
 
@@ -172,6 +183,7 @@ static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream
 
 class Class;
 using ClassList = std::vector<Class*>;
+
 class Class : public Object {
   friend class Object;
 
@@ -223,6 +235,39 @@ class Class : public Object {
 
   static inline auto GetAllClasses() -> const ClassList& {
     return all_;
+  }
+};
+
+class ClassListIterator {
+  DEFINE_NON_COPYABLE_TYPE(ClassListIterator);
+
+ private:
+  const ClassList& values_;  // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
+  ClassList::const_iterator iter_;
+
+ public:
+  explicit ClassListIterator(const ClassList& values = Class::GetAllClasses()) :
+    values_(values),
+    iter_(std::begin(values)) {}
+  ~ClassListIterator() = default;
+
+  auto values() const -> const ClassList& {
+    return values_;
+  }
+
+  auto iter() const -> const ClassList::const_iterator& {
+    return iter_;
+  }
+
+  auto HasNext() const -> bool {
+    return iter() != std::end(values());
+  }
+
+  auto Next() -> Class* {
+    const auto next = (*iter_);
+    ASSERT(next);
+    iter_++;
+    return next;
   }
 };
 
@@ -537,6 +582,7 @@ auto PrintValue(std::ostream& stream, Object* value) -> std::ostream&;
   static inline auto Is##Name(Object* rhs) -> bool { \
     return rhs && rhs->Is##Name();                   \
   }
+DEFINE_TYPE_PRED(Array);
 FOR_EACH_TYPE(DEFINE_TYPE_PRED)
 #undef DEFINE_TYPE_PRED
 
@@ -560,6 +606,34 @@ static inline auto BinaryAnd(Object* lhs, Object* rhs) -> Datum* {
   ASSERT(lhs && lhs->IsDatum());
   ASSERT(rhs && rhs->IsDatum());
   return lhs->AsDatum()->And(rhs->AsDatum());
+}
+
+static inline auto Cons(Object* lhs, Object* rhs) -> Datum* {
+  ASSERT(lhs);
+  ASSERT(rhs);
+  return Pair::New(lhs, rhs);
+}
+
+template <class Iter>
+static inline auto ToList(Iter& iter) -> Object* {
+  Object* result = Null();
+  while (iter.HasNext()) {
+    const auto next = iter.Next();
+    ASSERT(next);
+    result = Pair::New(next, result);
+  }
+  return result;
+}
+
+template <class Iter, typename T>
+static inline auto ToList(Iter& iter, const std::function<Object*(T)>& map) -> Object* {
+  Object* result = Null();
+  while (iter.HasNext()) {
+    const auto next = iter.Next();
+    ASSERT(next);
+    result = Pair::New(map(next), result);
+  }
+  return result;
 }
 
 static inline auto Car(Object* rhs) -> Object* {
@@ -595,6 +669,22 @@ static inline void SetCdr(Object* seq, Object* value) {
   ASSERT(seq && seq->IsPair());
   (seq->AsPair())->SetCdr(value);
 }
+
+static inline auto Stringify(const ObjectList& values, const bool brackets = true) -> std::string {
+  std::stringstream ss;
+  if (brackets)
+    ss << "[";
+  auto remaining = values.size();
+  for (const auto& value : values) {
+    PrintValue(ss, value);
+    if (--remaining > 0)
+      ss << ", ";
+  }
+  if (brackets)
+    ss << "]";
+  return ss.str();
+}
+
 }  // namespace scm
 
 namespace fmt {

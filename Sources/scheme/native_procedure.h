@@ -5,9 +5,10 @@
 #include "scheme/procedure.h"
 
 namespace scm {
+class Runtime;
 class NativeProcedure : public Procedure {
-  friend class Interpreter;
   friend class Runtime;
+  friend class Interpreter;
 
  private:
   Symbol* symbol_;
@@ -19,12 +20,21 @@ class NativeProcedure : public Procedure {
     ASSERT(symbol_);
   }
 
-  auto ReturnValue(Object* rhs) const -> bool;
+  auto Return(Object* rhs) const -> bool;
   virtual auto ApplyProcedure(const std::vector<Object*>& args) const -> bool = 0;
   virtual auto Apply(const std::vector<Object*>& args) const -> bool;
 
+  template <class T, typename... Args>
+  inline auto ReturnNew(Args... args) const -> bool {
+    return Return(T::New(args...));
+  }
+
   inline auto ThrowError(const std::string& message) const -> bool {
-    return ReturnValue(Error::New(message));
+    return Return(Error::New(message));
+  }
+
+  inline auto DoNothing() const -> bool {
+    return true;
   }
 
  public:
@@ -42,6 +52,7 @@ class NativeProcedure : public Procedure {
 };
 
 #define _DEFINE_NATIVE_PROCEDURE_TYPE(Name, Sym)                                \
+  friend class scm::Runtime;                                                    \
   DEFINE_NON_COPYABLE_TYPE(Name);                                               \
                                                                                 \
  protected:                                                                     \
@@ -50,21 +61,40 @@ class NativeProcedure : public Procedure {
  public:                                                                        \
   Name() :                                                                      \
     NativeProcedure(Symbol::New(Sym)) {}                                        \
-  ~Name() override = default;
+  ~Name() override = default;                                                   \
+                                                                                \
+ private:                                                                       \
+  static Name* instance_;                                                       \
+  static void Init();                                                           \
+                                                                                \
+ public:                                                                        \
+  static inline auto Get() -> Name* {                                           \
+    ASSERT(instance_);                                                          \
+    return instance_;                                                           \
+  }
 
 #define DEFINE_NATIVE_PROCEDURE_TYPE(Name) _DEFINE_NATIVE_PROCEDURE_TYPE(Name, #Name)
+#define _NATIVE_PROCEDURE_NAMED(Name) class Name : public NativeProcedure
 
 #define _DECLARE_NATIVE_PROCEDURE(Name, Sym)  \
-  class Name : public NativeProcedure {       \
+  _NATIVE_PROCEDURE_NAMED(Name) {             \
     _DEFINE_NATIVE_PROCEDURE_TYPE(Name, Sym); \
   };
 
 #define DECLARE_NATIVE_PROCEDURE(Name)  \
-  class Name : public NativeProcedure { \
+  _NATIVE_PROCEDURE_NAMED(Name) {       \
     DEFINE_NATIVE_PROCEDURE_TYPE(Name); \
   };
 
-#define NATIVE_PROCEDURE_F(Name) auto Name::ApplyProcedure(const std::vector<Object*>& args) const -> bool
+#define NATIVE_PROCEDURE_F(Name)   \
+  Name* Name::instance_ = nullptr; \
+  void Name::Init() {              \
+    ASSERT(instance_ == nullptr);  \
+    instance_ = new Name();        \
+    ASSERT(instance_);             \
+  }                                \
+  auto Name::ApplyProcedure(const std::vector<Object*>& args) const -> bool
+
 }  // namespace scm
 
 #endif  // SCM_NATIVE_PROCEDURE_H

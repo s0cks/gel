@@ -14,13 +14,21 @@ _DECLARE_NATIVE_PROCEDURE(type, "type?");
 _DECLARE_NATIVE_PROCEDURE(rand_range, "random:range");
 _DECLARE_NATIVE_PROCEDURE(set_car, "set-car!");
 _DECLARE_NATIVE_PROCEDURE(set_cdr, "set-cdr!");
+_DECLARE_NATIVE_PROCEDURE(array_new, "array:new");
+_DECLARE_NATIVE_PROCEDURE(array_get, "array:get");
+_DECLARE_NATIVE_PROCEDURE(array_set, "array:set");
+_DECLARE_NATIVE_PROCEDURE(array_length, "array:length");
 
 #ifdef SCM_DEBUG
-_DECLARE_NATIVE_PROCEDURE(minor_gc, "minor-gc!");
-_DECLARE_NATIVE_PROCEDURE(frame, "frame?");
-_DECLARE_NATIVE_PROCEDURE(list_symbols, "list-symbols!");
-_DECLARE_NATIVE_PROCEDURE(list_classes, "list-classes!");
+_DECLARE_NATIVE_PROCEDURE(scm_minor_gc, "scm:minor-gc!");
+_DECLARE_NATIVE_PROCEDURE(scm_major_gc, "scm:major-gc!");
+_DECLARE_NATIVE_PROCEDURE(scm_get_debug, "scm:debug?");
+_DECLARE_NATIVE_PROCEDURE(scm_get_frame, "scm:get-frame");
+_DECLARE_NATIVE_PROCEDURE(scm_get_locals, "scm:get-locals");
+_DECLARE_NATIVE_PROCEDURE(scm_get_classes, "scm:get-classes");
+_DECLARE_NATIVE_PROCEDURE(scm_get_target_triple, "scm:get-target-triple");
 #endif  // SCM_DEBUG
+
 }  // namespace scm::proc
 
 #endif  // SCM_NATIVES_H
