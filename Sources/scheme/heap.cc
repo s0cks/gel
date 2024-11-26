@@ -3,6 +3,7 @@
 #include "scheme/os_thread.h"
 #include "scheme/platform.h"
 #include "scheme/section.h"
+#include "scheme/thread_local.h"
 
 namespace scm {
 Heap::Heap() :
@@ -14,10 +15,10 @@ auto Heap::TryAllocate(const uword size) -> uword {
   uword result = UNALLOCATED;
   if (size >= kLargeObjectSize) {
     if ((result = old_zone_.TryAllocate(size)) == UNALLOCATED) {
-      LOG(ERROR) << "failed to allocate large object of " << units::data::byte_t(size);
+      LOG(ERROR) << "failed to allocate large object of " << units::data::byte_t(static_cast<double>(size));
       // TODO: major collection
       if ((result = old_zone_.TryAllocate(size)) == UNALLOCATED) {
-        LOG(FATAL) << "failed to allocate large object of " << units::data::byte_t(size);
+        LOG(FATAL) << "failed to allocate large object of " << units::data::byte_t(static_cast<double>(size));
       }
     }
     ASSERT(result != UNALLOCATED);
@@ -25,10 +26,10 @@ auto Heap::TryAllocate(const uword size) -> uword {
   }
 
   if ((result = new_zone_.TryAllocate(size)) == UNALLOCATED) {
-    LOG(ERROR) << "failed to allocate new object of " << units::data::byte_t(size);
+    LOG(ERROR) << "failed to allocate new object of " << units::data::byte_t(static_cast<double>(size));
     // TODO: minor collection
     if ((result = new_zone_.TryAllocate(size)) == UNALLOCATED) {
-      LOG(FATAL) << "failed to allocate new object of " << units::data::byte_t(size);
+      LOG(FATAL) << "failed to allocate new object of " << units::data::byte_t(static_cast<double>(size));
     }
   }
   ASSERT(result != UNALLOCATED);
@@ -59,7 +60,7 @@ using namespace units::data;
 
 void PrintHeap(Heap& heap) {
   DLOG(INFO) << "Heap:";
-  DLOG(INFO) << "  Total Size: " << byte_t(heap.GetTotalSize());
+  DLOG(INFO) << "  Total Size: " << byte_t(static_cast<double>(heap.GetTotalSize()));
   PrintNewZone(heap.GetNewZone());
   PrintOldZone(heap.GetOldZone());
 }

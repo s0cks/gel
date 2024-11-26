@@ -3,11 +3,8 @@
 #include "scheme/runtime.h"
 
 namespace scm {
-Class* NativeProcedure::kClass = nullptr;
-void NativeProcedure::Init() {
-  ASSERT(kClass == nullptr);
-  kClass = Class::New(Procedure::GetClass(), "NativeProcedure");
-  ASSERT(kClass);
+auto NativeProcedure::CreateClass() -> Class* {
+  return Class::New(Procedure::GetClass(), "NativeProcedure");
 }
 
 auto NativeProcedure::ReturnValue(Object* rhs) const -> bool {
@@ -17,8 +14,7 @@ auto NativeProcedure::ReturnValue(Object* rhs) const -> bool {
 }
 
 auto NativeProcedure::Apply(const std::vector<Object*>& rhs) const -> bool {
-  const auto result = ApplyProcedure(rhs);
-  return result;
+  return ApplyProcedure(rhs);
 }
 
 auto NativeProcedure::Equals(Object* rhs) const -> bool {

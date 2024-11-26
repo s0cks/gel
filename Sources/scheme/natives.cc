@@ -44,8 +44,8 @@ NATIVE_PROCEDURE_F(print) {
   return true;
 }
 
-static std::random_device rand_device_{};
-static std::mt19937_64 mt(rand_device_());
+static std::random_device rand_device_{};   // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+static std::mt19937_64 mt(rand_device_());  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
 NATIVE_PROCEDURE_F(random) {
   ASSERT(HasRuntime());

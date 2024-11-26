@@ -6,10 +6,7 @@
 #include "scheme/runtime.h"
 
 namespace scm {
-Class* Procedure::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-void Procedure::Init() {
-  ASSERT(kClass == nullptr);
-  kClass = Class::New(Object::GetClass(), "Procedure");
-  ASSERT(kClass);
+auto Procedure::CreateClass() -> Class* {
+  return Class::New(Object::GetClass(), "Procedure");
 }
 }  // namespace scm

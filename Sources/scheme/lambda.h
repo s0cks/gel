@@ -27,7 +27,7 @@ class Lambda : public Procedure, public Executable {
  private:
   Object* owner_ = nullptr;
   Symbol* name_;
-  ArgumentSet args_;
+  ArgumentSet args_;  // TODO: fails to copy during GC
   expr::Expression* body_;
 
   void Apply() override;
@@ -89,23 +89,9 @@ class Lambda : public Procedure, public Executable {
     return args_.size();
   }
 
-  auto GetType() const -> Class* override {
-    return GetClass();
-  }
-
   DECLARE_TYPE(Lambda);
 
- private:
-  static Class* kClass;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-
  public:
-  static void Init();
-
-  static inline auto GetClass() -> Class* {
-    ASSERT(kClass);
-    return kClass;
-  }
-
   static inline auto New(Symbol* name, const ArgumentSet& args, expr::Expression* body) -> Lambda* {
     return new Lambda(name, args, body);
   }

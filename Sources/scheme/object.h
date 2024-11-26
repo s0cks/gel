@@ -10,6 +10,7 @@
 
 #include "gmock/gmock.h"
 #include "scheme/common.h"
+#include "scheme/pointer.h"
 
 namespace scm {
 #define FOR_EACH_TYPE(V) \
@@ -46,6 +47,12 @@ class Object {
     return true;
   }
 
+  virtual auto VisitPointers(PointerPointerVisitor* vis) -> bool {
+    ASSERT(vis);
+    // do nothing
+    return true;
+  }
+
  public:
   virtual ~Object() = default;
   virtual auto GetType() const -> Class* = 0;
@@ -55,11 +62,11 @@ class Object {
   auto raw_ptr() const -> Pointer*;
 
   inline auto GetStartingAddress() const -> uword {
-    return (uword)this;
+    return (uword)this;  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   }
 
   inline auto GetStartingAddressPointer() const -> void* {
-    return ((void*)GetStartingAddress());
+    return ((void*)GetStartingAddress());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   }
 
   virtual auto AsDatum() -> Datum* {
@@ -85,6 +92,8 @@ class Object {
 #undef DEFINE_TYPE_CHECK
  private:
   static Class* kClass;
+  static auto CreateClass() -> Class*;
+  static void InitClass();
 
  public:
   static void Init();
@@ -134,15 +143,28 @@ static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream
 }
 
 #define DECLARE_TYPE(Name)                            \
+  friend class Object;                                \
   DEFINE_NON_COPYABLE_TYPE(Name)                      \
+ private:                                             \
+  static Class* kClass;                               \
+  static void InitClass();                            \
+  static auto CreateClass() -> Class*;                \
+                                                      \
  public:                                              \
   static auto operator new(const size_t sz) -> void*; \
   static inline void operator delete(void* ptr) {     \
     ASSERT(ptr);                                      \
   }                                                   \
+  static inline auto GetClass() -> Class* {           \
+    ASSERT(kClass);                                   \
+    return kClass;                                    \
+  }                                                   \
                                                       \
  public:                                              \
   auto Equals(Object* rhs) const -> bool override;    \
+  auto GetType() const -> Class* override {           \
+    return GetClass();                                \
+  }                                                   \
   auto ToString() const -> std::string override;      \
   auto As##Name() -> Name* override {                 \
     return this;                                      \
@@ -182,16 +204,11 @@ class Class : public Object {
     return name_;
   }
 
-  auto GetType() const -> Class* override {
-    return GetClass();
-  }
-
   auto IsInstanceOf(Class* rhs) const -> bool;
   DECLARE_TYPE(Class);
 
  private:
-  static Class* kClass;   // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-  static ClassList all_;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+  static ClassList all_;
 
   static inline auto New(String* name) -> Class* {
     ASSERT(name);
@@ -201,14 +218,8 @@ class Class : public Object {
   static auto New(const std::string& name) -> Class*;
 
  public:
-  static void Init();
   static auto New(Class* parent, String* name) -> Class*;
   static auto New(Class* parent, const std::string& name) -> Class*;
-
-  static inline auto GetClass() -> Class* {
-    ASSERT(kClass);
-    return kClass;
-  }
 
   static inline auto GetAllClasses() -> const ClassList& {
     return all_;
@@ -257,19 +268,15 @@ class Bool : public Datum {
     return value_;
   }
 
-  auto GetType() const -> Class* override {
-    return GetClass();
-  }
-
   auto And(Datum* rhs) const -> Datum* override;
   auto Or(Datum* rhs) const -> Datum* override;
 
   DECLARE_TYPE(Bool);
 
  private:
-  static Class* kClass;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
- public:
   static void Init();
+
+ public:
   static auto New(const bool value) -> Bool*;
 
   static inline auto NewTrue() -> Bool* {
@@ -291,17 +298,11 @@ class Bool : public Datum {
     ASSERT(rhs);
     return rhs->Get();
   }
-
-  static inline auto GetClass() -> Class* {
-    ASSERT(kClass);
-    return kClass;
-  }
 };
 
 class Number : public Datum {
   friend class Long;
   friend class Double;
-  DEFINE_NON_COPYABLE_TYPE(Number);
 
  private:
   std::variant<uint64_t, double> value_;
@@ -329,17 +330,9 @@ class Number : public Datum {
     return std::get<double>(value());
   }
 
-  auto AsNumber() -> Number* override {
-    return this;
-  }
+  DECLARE_TYPE(Number);
 
  public:
-  static auto operator new(const size_t sz) -> void*;
-  static inline void operator delete(void* ptr) {
-    ASSERT(ptr);
-    // do nothing
-  }
-
   static auto New(const uint64_t rhs) -> Number*;
   static auto New(const double rhs) -> Number*;
 };
@@ -356,10 +349,6 @@ class Long : public Number {
     return GetLong();
   }
 
-  auto GetType() const -> Class* override {
-    return GetClass();
-  }
-
   auto Add(Datum* rhs) const -> Datum* override;
   auto Sub(Datum* rhs) const -> Datum* override;
   auto Mul(Datum* rhs) const -> Datum* override;
@@ -368,17 +357,7 @@ class Long : public Number {
   auto Compare(Datum* rhs) const -> int override;
   DECLARE_TYPE(Long);
 
- private:
-  static Class* kClass;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-
  public:
-  static void Init();
-
-  static inline auto GetClass() -> Class* {
-    ASSERT(kClass);
-    return kClass;
-  }
-
   static inline auto New(const uintptr_t value) -> Long* {
     return new Long(value);
   }
@@ -398,28 +377,15 @@ class Double : public Number {
     return GetDouble();
   }
 
-  auto GetType() const -> Class* override {
-    return GetClass();
-  }
-
   auto Add(Datum* rhs) const -> Datum* override;
   auto Sub(Datum* rhs) const -> Datum* override;
   auto Mul(Datum* rhs) const -> Datum* override;
   auto Div(Datum* rhs) const -> Datum* override;
   DECLARE_TYPE(Double);
 
- private:
-  static Class* kClass;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-
  public:
-  static void Init();
   static inline auto New(const double value) -> Double* {
     return new Double(value);
-  }
-
-  static inline auto GetClass() -> Class* {
-    ASSERT(kClass);
-    return kClass;
   }
 };
 
@@ -464,29 +430,19 @@ class Pair : public Datum {
     cdr_ = rhs;
   }
 
-  auto GetType() const -> Class* override {
-    return kClass;
-  }
-
   inline auto IsEmpty() const -> bool {
     return !HasCar() && !HasCdr();
   }
 
   DECLARE_TYPE(Pair);
 
- private:
-  static Class* kClass;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-
  public:
-  static void Init();
   static auto Empty() -> Pair*;
-  static inline auto New(Object* car = nullptr, Object* cdr = nullptr) -> Pair* {
-    return new Pair(car, cdr);
+  static inline auto NewEmpty() -> Pair* {
+    return new Pair();
   }
-
-  static inline auto GetClass() -> Class* {
-    ASSERT(kClass);
-    return kClass;
+  static inline auto New(Object* car, Object* cdr) -> Pair* {
+    return new Pair(car, cdr);
   }
 };
 
@@ -523,17 +479,9 @@ class String : public StringObject {
  public:
   ~String() override = default;
 
-  auto GetType() const -> Class* override {
-    return GetClass();
-  }
-
   DECLARE_TYPE(String);
 
- private:
-  static Class* kClass;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-
  public:
-  static void Init();
   static inline auto New(const std::string& value) -> String* {
     return new String(value);
   }
@@ -541,11 +489,6 @@ class String : public StringObject {
   static inline auto Unbox(Object* rhs) -> const std::string& {
     ASSERT(rhs && rhs->IsString());
     return rhs->AsString()->Get();
-  }
-
-  static inline auto GetClass() -> Class* {
-    ASSERT(kClass);
-    return kClass;
   }
 
   static auto ValueOf(Object* rhs) -> String*;
@@ -567,23 +510,10 @@ class Symbol : public StringObject {
  public:
   ~Symbol() override = default;
 
-  auto GetType() const -> Class* override {
-    return GetClass();
-  }
-
   DECLARE_TYPE(Symbol);
 
- private:
-  static Class* kClass;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-
  public:
-  static void Init();
   static auto New(const std::string& rhs) -> Symbol*;
-
-  static inline auto GetClass() -> Class* {
-    ASSERT(kClass);
-    return kClass;
-  }
 };
 
 using SymbolList = std::vector<Symbol*>;
@@ -633,17 +563,13 @@ static inline auto BinaryAnd(Object* lhs, Object* rhs) -> Datum* {
 }
 
 static inline auto Car(Object* rhs) -> Object* {
-  ASSERT(rhs);
-  if (!IsPair(rhs))
-    return Null();  // TODO: throw error.
+  ASSERT(rhs && rhs->IsPair());
   const auto value = rhs->AsPair()->GetCar();
   return value ? value : Null();
 }
 
 static inline auto Cdr(Object* rhs) -> Object* {
-  ASSERT(rhs);
-  if (!IsPair(rhs))
-    return Null();  // TODO: throw error.
+  ASSERT(rhs && rhs->IsPair());
   const auto value = rhs->AsPair()->GetCdr();
   return value ? value : Null();
 }

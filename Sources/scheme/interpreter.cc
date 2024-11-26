@@ -14,6 +14,10 @@
 #include "scheme/runtime.h"
 
 namespace scm {
+auto Interpreter::GetStackTop() const -> std::optional<Stack::value_type> {
+  return GetRuntime()->StackTop();
+}
+
 auto Interpreter::PushError(const std::string& message) -> bool {
   ASSERT(!message.empty());
   GetRuntime()->PushError(message);
@@ -39,7 +43,16 @@ auto Interpreter::VisitReturnInstr(ReturnInstr* instr) -> bool {
   const auto frame = PopStackFrame();
   if (!frame.HasReturnAddress())
     return Next();
-  return Goto((Instruction*)frame.GetReturnAddressPointer());
+  return Goto((Instruction*)frame.GetReturnAddressPointer());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+}
+
+auto Interpreter::VisitCastInstr(CastInstr* instr) -> bool {
+  ASSERT(instr);
+  if (IsStackTopInstanceOf(instr->GetClass()))
+    return true;
+  const auto value = GetRuntime()->Pop();
+  ASSERT(value);
+  return true;
 }
 
 static inline auto Unary(const expr::UnaryOp op, Object* rhs) -> Object* {
@@ -248,7 +261,9 @@ void Interpreter::ExecuteInstr(Instruction* instr) {
 
 auto Interpreter::PushStackFrame(LocalScope* locals) -> StackFrame* {
   ASSERT(locals);
-  const auto return_address = (uword)(HasCurrentInstr() && !stack_.empty() ? GetCurrentInstr()->GetNext() : UNALLOCATED);
+  const auto has_next = HasCurrentInstr() && !stack_.empty();
+  const auto return_address =
+      (uword)(has_next ? GetCurrentInstr()->GetNext() : UNALLOCATED);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   stack_.push(StackFrame(stack_.size(), locals, return_address));
   DVLOG(1000) << "pushed: " << stack_.top();
   return &stack_.top();

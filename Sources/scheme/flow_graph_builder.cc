@@ -110,7 +110,7 @@ auto EffectVisitor::VisitCaseExpr(expr::CaseExpr* expr) -> bool {
 
     ASSERT(for_clause.GetEntryInstr() != nullptr && for_clause.GetEntryInstr()->IsEntryInstr());
     const auto target = for_clause.GetEntryInstr()->AsEntryInstr();
-    const auto cmp = instr::BinaryOpInstr::NewEquals();
+    const auto cmp = instr::BinaryOpInstr::NewEquals(for_test.GetValue(), for_test.GetValue());  // TODO: fix this
     for_test.Add(cmp);
     const auto branch = BranchInstr::New(cmp, target, join);
     for_test.Add(branch);
@@ -369,7 +369,13 @@ auto EffectVisitor::VisitUnaryExpr(expr::UnaryExpr* expr) -> bool {
     return false;
   }
   Append(for_value);
-  ReturnDefinition(instr::UnaryOpInstr::New(expr->GetOp(), for_value.GetValue()));
+  switch (expr->GetOp()) {
+    case expr::kCar:
+    case expr::kCdr:
+      Add(instr::InstanceOfInstr::New(for_value.GetValue(), Pair::GetClass()));
+    default:
+      ReturnDefinition(instr::UnaryOpInstr::New(expr->GetOp(), for_value.GetValue()));
+  }
   return true;
 }
 
@@ -428,7 +434,7 @@ auto EffectVisitor::VisitBinaryOpExpr(BinaryOpExpr* expr) -> bool {
     return false;
   Append(for_right);
 
-  ReturnDefinition(BinaryOpInstr::New(expr->GetOp()));
+  ReturnDefinition(BinaryOpInstr::New(expr->GetOp(), for_left.GetValue(), for_right.GetValue()));
   return true;
 }
 

@@ -133,31 +133,6 @@ auto SetThreadName(const ThreadId& thread, const std::string& name) -> bool {
   DLOG(INFO) << "set thread #" << thread << " name to: " << name;
   return true;
 }
-
-auto InitializeThreadLocal(ThreadLocalKey& key) -> bool {
-  int err = -1;
-  if ((err = pthread_key_create(&key, nullptr)) != 0) {  // TODO: fix make second parameter visible to caller
-    LOG(ERROR) << "failed to create ThreadLocal key: " << strerror(err);
-    return false;
-  }
-  return true;
-}
-
-auto SetCurrentThreadLocal(const ThreadLocalKey& key, const void* value) -> bool {
-  int err = -1;
-  if ((err = pthread_setspecific(key, value)) != 0) {
-    LOG(ERROR) << "couldn't set " << GetCurrentThreadName() << " ThreadLocal: " << strerror(err);
-    return false;
-  }
-  return true;
-}
-
-auto GetCurrentThreadLocal(const ThreadLocalKey& key) -> void* {
-  void* ptr = nullptr;
-  if ((ptr = pthread_getspecific(key)) != nullptr)
-    return ptr;
-  return nullptr;
-}
 }  // namespace scm
 
 #endif  // OS_IS_OSX

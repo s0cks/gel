@@ -13,11 +13,8 @@
 #include "scheme/parser.h"
 
 namespace scm {
-Class* Script::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-void Script::Init() {
-  ASSERT(kClass == nullptr);
-  kClass = Class::New(Object::GetClass(), "Script");
-  ASSERT(kClass);
+auto Script::CreateClass() -> Class* {
+  return Class::New(Object::GetClass(), "Script");
 }
 
 void Script::Append(Lambda* lambda) {

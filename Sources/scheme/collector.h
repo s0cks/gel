@@ -7,7 +7,7 @@
 #include "scheme/zone.h"
 
 namespace scm {
-class Collector : public PointerVisitor {
+class Collector {
   DEFINE_NON_COPYABLE_TYPE(Collector);
 
  private:
@@ -32,14 +32,14 @@ class Collector : public PointerVisitor {
   }
 
  protected:
-  auto Visit(Pointer* ptr) -> bool override;
   auto ProcessRoots() -> bool;
-  auto ProcessReferences(Pointer* ptr) -> bool;
-  auto CopyObject(Pointer* ptr) -> Pointer*;
+  auto ProcessFromspace() -> bool;
+  auto ProcessRoot(Pointer** ptr) -> bool;
+  auto CopyPointer(Pointer* ptr) -> Pointer*;
 
  public:
   explicit Collector(Heap& heap);
-  ~Collector() override = default;
+  virtual ~Collector() = default;
   void Collect();
 };
 

@@ -1,6 +1,8 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+#include <units.h>
 
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -54,8 +56,40 @@ static inline auto Execute(const std::string& rhs) -> int {
   return EXIT_SUCCESS;
 }
 
+static inline auto ExecuteScript(const std::string& filename) -> int {
+  const auto script = Script::FromFile(filename);
+  ASSERT(script && script->IsCompiled());
+#ifdef SCM_DEBUG
+  const auto start_ts = Clock::now();
+#endif  // SCM_DEBUG
+
+  Object* result = nullptr;
+  try {
+    result = Runtime::Exec(script);
+  } catch (const scm::Exception& exc) {
+    result = Error::New(fmt::format("failed to execute script: {}", exc.GetMessage()));
+  }
+
+#ifdef SCM_DEBUG
+  const auto stop_ts = Clock::now();
+  const auto total_ns = std::chrono::duration_cast<std::chrono::microseconds>(stop_ts - start_ts).count();
+  LOG(INFO) << "script executed in " << units::time::microsecond_t(static_cast<double>(total_ns));
+#endif  // SCM_DEBUG
+
+  if (IsError(result)) {
+    std::cout << "error: " << ToError(result)->GetMessage();
+    return EXIT_FAILURE;
+  }
+
+  if (!IsNull(result)) {
+    std::cout << "result: ";
+    PrintValue(std::cout, result) << std::endl;
+  }
+  return EXIT_SUCCESS;
+}
+
 auto main(int argc, char** argv) -> int {
-  ::google::InitGoogleLogging(argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+  ::google::InitGoogleLogging(argv[0]);
   ::google::ParseCommandLineFlags(&argc, &argv, true);
 
   Heap::Init();
@@ -63,24 +97,8 @@ auto main(int argc, char** argv) -> int {
   const auto expr = GetExpressionFlag();
   if (expr)
     return Execute((*expr));
-  if (argc >= 2) {
-    const auto filename = std::string(argv[1]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    const auto script = Script::FromFile(filename);
-    ASSERT(script && script->IsCompiled());
-    Object* result = nullptr;
-    try {
-      result = Runtime::Exec(script);
-    } catch (const scm::Exception& exc) {
-      LOG(ERROR) << "failed to execute compiled script:";
-      std::cerr << " * message: " << exc.GetMessage() << std::endl;
-      return EXIT_FAILURE;
-    }
-
-    if (!IsNull(result)) {
-      std::cout << "result: ";
-      PrintValue(std::cout, result) << std::endl;
-    }
-    return EXIT_SUCCESS;
-  }
+  if (argc >= 2)
+    return ExecuteScript(std::string(argv[1]));
+  ASSERT(argc <= 1);
   return Repl::Run();
 }

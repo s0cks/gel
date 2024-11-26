@@ -148,7 +148,6 @@ class Parser {
         return EOF;
       return NextChar();
     }
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     const auto next = chunk_[rpos_++];
     switch (next) {
       case '\n':

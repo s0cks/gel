@@ -38,22 +38,7 @@ class NativeProcedure : public Procedure {
     return true;
   }
 
-  auto GetType() const -> Class* override {
-    return GetClass();
-  }
-
   DECLARE_TYPE(NativeProcedure);
-
- private:
-  static Class* kClass;
-
- public:
-  static void Init();
-
-  static inline auto GetClass() -> Class* {
-    ASSERT(kClass);
-    return kClass;
-  }
 };
 
 #define _DEFINE_NATIVE_PROCEDURE_TYPE(Name, Sym)                                \

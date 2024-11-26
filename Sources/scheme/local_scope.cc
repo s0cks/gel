@@ -110,6 +110,32 @@ auto LocalScope::Accept(PointerVisitor* vis) -> bool {
   return true;
 }
 
+auto LocalScope::VisitLocalPointers(const std::function<bool(Pointer**)>& vis, const bool recursive) -> bool {
+  auto scope = this;
+  do {
+    for (const auto& local : scope->locals_) {
+      ASSERT(local);
+      if (!local->Accept(vis))
+        return false;
+    }
+    scope = scope->GetParent();
+  } while (scope && recursive);
+  return true;
+}
+
+auto LocalScope::VisitLocals(const std::function<bool(Pointer*)>& vis, const bool recursive) -> bool {
+  auto scope = this;
+  do {
+    for (const auto& local : scope->locals_) {
+      ASSERT(local);
+      if (!vis(local->ptr()))
+        return false;
+    }
+    scope = scope->GetParent();
+  } while (scope && recursive);
+  return true;
+}
+
 auto LocalScope::Accept(PointerPointerVisitor* vis) -> bool {
   ASSERT(vis);
   auto scope = this;

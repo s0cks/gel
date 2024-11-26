@@ -169,6 +169,13 @@ auto EffectVisitor::VisitEvalInstr(instr::EvalInstr* instr) -> bool {
   return true;
 }
 
+auto EffectVisitor::VisitCastInstr(instr::CastInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto node = Append(instr);
+  ASSERT(node);
+  return true;
+}
+
 auto EffectVisitor::VisitInvokeInstr(instr::InvokeInstr* instr) -> bool {
   ASSERT(instr);
   const auto node = Append(instr);

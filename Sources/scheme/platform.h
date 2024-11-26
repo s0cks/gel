@@ -45,6 +45,19 @@ using uword = uintptr_t;
 
 #define UNALLOCATED 0
 
+static inline auto IsUnallocated(uword address) -> bool {
+  return address == UNALLOCATED;
+}
+
+class Pointer;
+static inline auto IsUnallocated(Pointer* ptr) -> bool {
+  return IsUnallocated((uword)ptr);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+}
+
+static inline auto IsUnallocated(Pointer** ptr) -> bool {
+  return IsUnallocated((*ptr));
+}
+
 #ifdef ARCH_IS_X32
 static constexpr int kWordSizeLog2 = kInt32SizeLog2;
 #elif defined(ARCH_IS_ARM64) || defined(ARCH_IS_X64)

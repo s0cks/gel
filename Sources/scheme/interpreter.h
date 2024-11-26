@@ -63,6 +63,13 @@ class Interpreter : public InstructionVisitor {
     return true;
   }
 
+  auto GetStackTop() const -> std::optional<Object*>;
+
+  inline auto IsStackTopInstanceOf(Class* rhs) const -> bool {
+    const auto stack_top = GetStackTop();
+    return stack_top && (*stack_top)->GetType()->IsInstanceOf(rhs);
+  }
+
  public:
   ~Interpreter() = default;
 

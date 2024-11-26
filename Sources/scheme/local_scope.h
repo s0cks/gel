@@ -71,6 +71,8 @@ class LocalScope {
 
   auto Accept(PointerVisitor* vis) -> bool;
   auto Accept(PointerPointerVisitor* vis) -> bool;
+  auto VisitLocalPointers(const std::function<bool(Pointer**)>& vis, const bool recursive = true) -> bool;
+  auto VisitLocals(const std::function<bool(Pointer*)>& vis, const bool recursive = true) -> bool;
   virtual auto VisitAllLocals(LocalVariableVisitor* vis) -> bool;
   virtual auto ToString() const -> std::string;
 

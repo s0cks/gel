@@ -41,6 +41,7 @@ class PointerIterator {
   virtual auto Next() -> Pointer* = 0;
 };
 
+class Object;
 class Pointer {
   friend class NewZone;
   friend class OldZone;
@@ -66,6 +67,10 @@ class Pointer {
     return SetTag(kInvalidTag);
   }
 
+  inline auto tag() -> Tag& {
+    return tag_;
+  }
+
  public:
   ~Pointer() = default;
 
@@ -87,6 +92,15 @@ class Pointer {
 
   auto GetObjectAddressPointer() const -> void* {
     return (void*)GetObjectAddress();  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  }
+
+  inline auto GetObjectPointer() const -> Object* {
+    return ((Object*)GetObjectAddressPointer());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  }
+
+  template <class T>
+  inline auto As() const -> T* {
+    return (T*)GetObjectPointer();
   }
 
   auto GetTotalSize() const -> uword {
@@ -138,6 +152,7 @@ class Pointer {
   static inline auto Copy(const uword address, const Pointer* ptr) -> Pointer* {
     const auto new_ptr = New(address, ptr->GetTag());
     ASSERT(new_ptr);
+    memcpy(new_ptr->GetObjectAddressPointer(), ptr->GetObjectAddressPointer(), ptr->GetObjectSize());
     return new_ptr;
   }
 

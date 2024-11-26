@@ -57,6 +57,10 @@ class LocalVariable {
   auto Accept(PointerVisitor* vis) -> bool;
   auto Accept(PointerPointerVisitor* vis) -> bool;
 
+  auto Accept(const std::function<bool(Pointer**)>& vis) -> bool {
+    return vis(&value_);
+  }
+
  public:
   ~LocalVariable() = default;
 

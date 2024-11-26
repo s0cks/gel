@@ -32,7 +32,8 @@ namespace instr {
   V(BranchInstr)                \
   V(GotoInstr)                  \
   V(ThrowInstr)                 \
-  V(InstanceOfInstr)
+  V(InstanceOfInstr)            \
+  V(CastInstr)
 
 class Instruction;
 #define FORWARD_DECLARE(Name) class Name;
@@ -571,58 +572,113 @@ class EvalInstr : public Definition {
   }
 };
 
-class BinaryOpInstr : public Definition {
- private:
-  expr::BinaryOp op_;
+template <class Op>
+class TemplateOpInstr : public Definition {
+  DEFINE_NON_COPYABLE_TYPE(TemplateOpInstr);
 
-  explicit BinaryOpInstr(const expr::BinaryOp op) :
+ private:
+  Op op_;
+
+ protected:
+  explicit TemplateOpInstr(const Op op) :
     Definition(),
     op_(op) {}
+
+  void SetOp(const Op op) {
+    op_ = op;
+  }
+
+ public:
+  ~TemplateOpInstr() override = default;
+
+  auto GetOp() const -> Op {
+    return op_;
+  }
+};
+
+class BinaryOpInstr : public TemplateOpInstr<expr::BinaryOp> {
+ private:
+  Definition* left_ = nullptr;
+  Definition* right_ = nullptr;
+
+ protected:
+  explicit BinaryOpInstr(const expr::BinaryOp op, Definition* left, Definition* right) :
+    TemplateOpInstr<expr::BinaryOp>(op) {
+    SetLeft(left);
+    SetRight(right);
+  }
+
+  void SetLeft(Definition* defn) {
+    ASSERT(defn);
+    left_ = defn;
+  }
+
+  void SetRight(Definition* defn) {
+    ASSERT(defn);
+    right_ = defn;
+  }
 
  public:
   ~BinaryOpInstr() override = default;
 
-  auto GetOp() const -> expr::BinaryOp {
-    return op_;
+  auto GetLeft() const -> Definition* {
+    return left_;
   }
+
+  auto GetRight() const -> Definition* {
+    return right_;
+  }
+
+#define DEFINE_OP_CHECK(Name)                  \
+  inline auto Is##Name##Op() const -> bool {   \
+    return GetOp() == expr::BinaryOp::k##Name; \
+  }
+  FOR_EACH_BINARY_OP(DEFINE_OP_CHECK)
+#undef DEFINE_OP_CHECK
 
   DECLARE_INSTRUCTION(BinaryOpInstr);
 
  public:
-  static inline auto New(const expr::BinaryOp op) -> BinaryOpInstr* {
-    return new BinaryOpInstr(op);
+  static inline auto New(const expr::BinaryOp op, Definition* left, Definition* right) -> BinaryOpInstr* {
+    return new BinaryOpInstr(op, left, right);
   }
 
-#define DEFINE_NEW_OP(Name)                          \
-  static inline auto New##Name() -> BinaryOpInstr* { \
-    return New(expr::BinaryOp::k##Name);             \
+#define DEFINE_NEW_OP(Name)                                                             \
+  static inline auto New##Name(Definition* left, Definition* right) -> BinaryOpInstr* { \
+    return New(expr::BinaryOp::k##Name, left, right);                                   \
   }
   FOR_EACH_BINARY_OP(DEFINE_NEW_OP)
 #undef DEFINE_NEW_OP
 };
 
-class UnaryOpInstr : public Definition {
+class UnaryOpInstr : public TemplateOpInstr<expr::UnaryOp> {
  private:
-  expr::UnaryOp op_;
-  Definition* value_;
+  Definition* value_ = nullptr;
 
+ protected:
   explicit UnaryOpInstr(const expr::UnaryOp op, Definition* value) :
-    Definition(),
-    op_(op),
-    value_(value) {
-    ASSERT(value_);
+    TemplateOpInstr<expr::UnaryOp>(op) {
+    SetValue(value);
+  }
+
+  inline void SetValue(Definition* value) {
+    ASSERT(value);
+    value_ = value;
   }
 
  public:
   ~UnaryOpInstr() override = default;
 
-  auto GetOp() const -> expr::UnaryOp {
-    return op_;
-  }
-
   auto GetValue() const -> Definition* {
     return value_;
   }
+
+#define DEFINE_OP_CHECK(Name)                 \
+  inline auto Is##Name##Op() const -> bool {  \
+    return GetOp() == expr::UnaryOp::k##Name; \
+  }
+  FOR_EACH_UNARY_OP(DEFINE_OP_CHECK)
+#undef DEFINE_OP_CHECK
 
   DECLARE_INSTRUCTION(UnaryOpInstr);
 
@@ -630,6 +686,13 @@ class UnaryOpInstr : public Definition {
   static inline auto New(const expr::UnaryOp op, Definition* value) -> UnaryOpInstr* {
     return new UnaryOpInstr(op, value);
   }
+
+#define DEFINE_NEW_OP(Name)                                          \
+  static inline auto New##Name(Definition* value) -> UnaryOpInstr* { \
+    return New(expr::UnaryOp::k##Name, value);                       \
+  }
+  FOR_EACH_UNARY_OP(DEFINE_NEW_OP)
+#undef DEFINE_NEW_OP
 };
 
 class BranchInstr : public Instruction {
@@ -781,6 +844,38 @@ class InstanceOfInstr : public Instruction {
     ASSERT(value);
     ASSERT(type);
     return new InstanceOfInstr(value, type);
+  }
+};
+
+class CastInstr : public Instruction {
+ private:
+  Definition* value_;
+  Class* class_;
+
+ protected:
+  CastInstr(Definition* value, Class* cls) :
+    Instruction(),
+    value_(value),
+    class_(cls) {}
+
+ public:
+  ~CastInstr() override = default;
+
+  auto GetValue() const -> Definition* {
+    return value_;
+  }
+
+  auto GetClass() const -> Class* {
+    return class_;
+  }
+
+  DECLARE_INSTRUCTION(CastInstr);
+
+ public:
+  static inline auto New(Definition* value, Class* cls) -> CastInstr* {
+    ASSERT(value);
+    ASSERT(cls);
+    return new CastInstr(value, cls);
   }
 };
 }  // namespace instr

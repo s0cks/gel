@@ -28,11 +28,11 @@ auto NewZone::TryAllocate(const uword size) -> uword {
   ASSERT(size > 0);
   const auto total_size = (sizeof(Pointer) + size);
   if ((GetCurrentAddress() + total_size) >= (fromspace() + semisize())) {
-    LOG(WARNING) << "cannot allocate " << byte_t(total_size) << " in: " << (*this);
+    LOG(WARNING) << "cannot allocate " << byte_t(static_cast<double>(total_size)) << " in: " << (*this);
     // TODO: minor collection
   }
   if ((GetCurrentAddress() + total_size) >= (fromspace() + semisize())) {
-    LOG(FATAL) << "cannot allocate " << byte_t(total_size) << " in: " << (*this);
+    LOG(FATAL) << "cannot allocate " << byte_t(static_cast<double>(total_size)) << " in: " << (*this);
   }
   const auto ptr = Pointer::New(GetCurrentAddress(), size);
   current_ += total_size;
@@ -77,32 +77,34 @@ auto OldZone::TryAllocate(const uword size) -> uword {
 using namespace units::data;
 
 static inline auto PrettyPrintBytes(const uword num_bytes) -> std::string {
+  static constexpr const auto kScale = 1024;
+
   std::stringstream ss;
   int scale = 0;
   uword remaining = num_bytes;
-  while (remaining >= 1024) {
-    remaining /= 1024;
+  while (remaining >= kScale) {
+    remaining /= kScale;
     scale += 1;
   }
   switch (scale) {
     case 1:
-      ss << kilobyte_t(remaining);
+      ss << kilobyte_t(static_cast<double>(remaining));
       break;
     case 2:
-      ss << megabyte_t(remaining);
+      ss << megabyte_t(static_cast<double>(remaining));
       break;
     case 3:
-      ss << gigabyte_t(remaining);
+      ss << gigabyte_t(static_cast<double>(remaining));
       break;
     case 4:
-      ss << terabyte_t(remaining);
+      ss << terabyte_t(static_cast<double>(remaining));
       break;
-    case 5:
-      ss << petabyte_t(remaining);
+    case 5:  // NOLINT(cppcoreguidelines-avoid-magic-numbers)
+      ss << petabyte_t(static_cast<double>(remaining));
       break;
     case 0:
     default:
-      ss << byte_t(remaining);
+      ss << byte_t(static_cast<double>(remaining));
       break;
   }
   return ss.str();

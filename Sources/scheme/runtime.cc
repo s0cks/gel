@@ -21,6 +21,7 @@
 #include "scheme/os_thread.h"
 #include "scheme/parser.h"
 #include "scheme/procedure.h"
+#include "scheme/thread_local.h"
 #include "scheme/tracing.h"
 
 namespace scm {

@@ -80,6 +80,12 @@ auto Disassembler::VisitUnaryOpInstr(instr::UnaryOpInstr* instr) -> bool {
   return true;
 }
 
+auto Disassembler::VisitCastInstr(instr::CastInstr* instr) -> bool {
+  ASSERT(instr);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return true;
+}
+
 auto Disassembler::VisitConstantInstr(instr::ConstantInstr* instr) -> bool {
   ASSERT(instr);
   const auto value = instr->GetValue();

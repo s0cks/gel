@@ -35,10 +35,6 @@ class Script : public Object, public Executable {
  public:
   ~Script() override = default;
 
-  auto GetType() const -> Class* override {
-    return GetClass();
-  }
-
   auto GetScope() const -> LocalScope* {
     return scope_;
   }
@@ -53,19 +49,10 @@ class Script : public Object, public Executable {
 
   DECLARE_TYPE(Script);
 
- private:
-  static Class* kClass;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-
  public:
-  static void Init();
   static inline auto New(LocalScope* scope) -> Script* {
     ASSERT(scope);
     return new Script(scope);
-  }
-
-  static inline auto GetClass() -> Class* {
-    ASSERT(kClass);
-    return kClass;
   }
 
   static auto FromFile(const std::string& filename, const bool compile = true) -> Script*;

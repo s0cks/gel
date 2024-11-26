@@ -14,11 +14,8 @@
 #include "scheme/runtime.h"
 
 namespace scm {
-Class* Lambda::kClass = nullptr;
-void Lambda::Init() {
-  ASSERT(kClass == nullptr);
-  kClass = Class::New(Procedure::GetClass(), "Lambda");
-  ASSERT(kClass);
+auto Lambda::CreateClass() -> Class* {
+  return Class::New(Procedure::GetClass(), "Lambda");
 }
 
 auto Lambda::Equals(Object* rhs) const -> bool {

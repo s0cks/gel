@@ -7,7 +7,7 @@
 using namespace scm;
 
 auto main(int argc, char** argv) -> int {
-  ::google::InitGoogleLogging(argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+  ::google::InitGoogleLogging(argv[0]);
   ::testing::InitGoogleTest(&argc, argv);
   ::google::ParseCommandLineFlags(&argc, &argv, false);
   LOG(INFO) << "Running unit tests for scheme v" << scm::GetVersion() << "....";

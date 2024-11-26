@@ -268,6 +268,30 @@ class LiteralExpr : public Expression {
   V(LessThanEqual)            \
   V(Cons)
 
+template <class Op, const uword NumInputs>
+class TemplateOpExpression : public TemplateExpression<NumInputs> {
+  DEFINE_NON_COPYABLE_TYPE(TemplateOpExpression);
+
+ private:
+  Op op_;
+
+ protected:
+  explicit TemplateOpExpression(const Op op) :
+    TemplateExpression<NumInputs>(),
+    op_(op) {}
+
+  void SetOp(const Op op) {
+    op_ = op;
+  }
+
+ public:
+  ~TemplateOpExpression() override = default;
+
+  auto GetOp() const -> Op {
+    return op_;
+  }
+};
+
 enum BinaryOp : uint64_t {
 #define DEFINE_BINARY_OP(Name) k##Name,
   FOR_EACH_BINARY_OP(DEFINE_BINARY_OP)
@@ -286,27 +310,19 @@ static inline auto operator<<(std::ostream& stream, const BinaryOp& rhs) -> std:
   }
 }
 
-class BinaryOpExpr : public TemplateExpression<2> {
+class BinaryOpExpr : public TemplateOpExpression<BinaryOp, 2> {
   static constexpr const auto kLeftInput = 0;
   static constexpr const auto kRightInput = 1;
 
- private:
-  BinaryOp op_;
-
  protected:
   explicit BinaryOpExpr(const BinaryOp op, Expression* left, Expression* right) :
-    TemplateExpression<2>(),
-    op_(op) {
+    TemplateOpExpression<BinaryOp, 2>(op) {
     SetLeft(left);
     SetRight(right);
   }
 
  public:
   ~BinaryOpExpr() override = default;
-
-  auto GetOp() const -> BinaryOp {
-    return op_;
-  }
 
   auto GetLeft() const -> Expression* {
     return GetChildAt(kLeftInput);
@@ -386,22 +402,15 @@ static inline auto operator<<(std::ostream& stream, const UnaryOp& rhs) -> std::
   }
 }
 
-class UnaryExpr : public TemplateExpression<1> {
- private:
-  UnaryOp op_;
-
+class UnaryExpr : public TemplateOpExpression<UnaryOp, 1> {
  protected:
   UnaryExpr(const UnaryOp op, Expression* value) :
-    op_(op) {
+    TemplateOpExpression<UnaryOp, 1>(op) {
     SetChildAt(0, value);
   }
 
  public:
   ~UnaryExpr() override = default;
-
-  auto GetOp() const -> UnaryOp {
-    return op_;
-  }
 
   inline auto GetValue() const -> Expression* {
     return GetChildAt(0);
@@ -416,6 +425,13 @@ class UnaryExpr : public TemplateExpression<1> {
     SetChildAt(0, expr);
   }
 
+#define DEFINE_OP_CHECK(Name)                \
+  inline auto Is##Name##Op() const -> bool { \
+    return GetOp() == UnaryOp::k##Name;      \
+  }
+  FOR_EACH_UNARY_OP(DEFINE_OP_CHECK)
+#undef DEFINE_OP_CHECK
+
   DECLARE_EXPRESSION(UnaryExpr);
 
  public:
@@ -424,15 +440,13 @@ class UnaryExpr : public TemplateExpression<1> {
     return new UnaryExpr(op, value);
   }
 
-  static inline auto NewCar(Expression* value) -> UnaryExpr* {
-    ASSERT(value);
-    return New(kCar, value);
+#define DEFINE_NEW_OP(Name)                                       \
+  static inline auto New##Name(Expression* value) -> UnaryExpr* { \
+    ASSERT(value);                                                \
+    return New(UnaryOp::k##Name, value);                          \
   }
-
-  static inline auto NewCdr(Expression* value) -> UnaryExpr* {
-    ASSERT(value);
-    return New(kCdr, value);
-  }
+  FOR_EACH_UNARY_OP(DEFINE_NEW_OP)
+#undef DEFINE_NEW_OP
 };
 
 class ThrowExpr : public TemplateExpression<1> {

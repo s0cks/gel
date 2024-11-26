@@ -13,6 +13,7 @@
 #include "scheme/native_procedure.h"
 #include "scheme/platform.h"
 #include "scheme/pointer.h"
+#include "scheme/procedure.h"
 #include "scheme/script.h"
 
 namespace scm {
@@ -39,58 +40,67 @@ namespace scm {
 FOR_EACH_TYPE(DEFINE_NEW_OPERATOR)  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 #undef DEFINE_NEW_OPERATOR
 
+#define DEFINE_INIT_CLASS(Name)  \
+  Class* Name::kClass = nullptr; \
+  void Name::InitClass() {       \
+    ASSERT(kClass == nullptr);   \
+    kClass = CreateClass();      \
+    ASSERT(kClass);              \
+  }
+DEFINE_INIT_CLASS(Object);
+FOR_EACH_TYPE(DEFINE_INIT_CLASS)
+#undef DEFINE_TYPE_INIT
+
+ClassList Class::all_ = {};  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+
+auto Object::CreateClass() -> Class* {
+  return Class::New("Object");
+}
+
 auto Object::raw_ptr() const -> Pointer* {
   const auto address = GetStartingAddress() - sizeof(Pointer);
   ASSERT(address >= UNALLOCATED);
   return Pointer::At(address);
 }
 
-Class* Object::kClass = nullptr;
 void Object::Init() {
-  ASSERT(kClass == nullptr);
-  kClass = Class::New("Object");
-  ASSERT(kClass);
-  DVLOG(10) << "initializing type system....";
-  Class::Init();
-  Script::Init();
-  Procedure::Init();
-  NativeProcedure::Init();
-  Lambda::Init();
+  InitClass();
+  Class::InitClass();
+  // exec
+  Script::InitClass();
+  Procedure::InitClass();
+  Lambda::InitClass();
+  NativeProcedure::InitClass();
+  // types
+  // numeric type(s)
+  Number::InitClass();
+  Long::InitClass();
+  Double::InitClass();
+  Pair::InitClass();
   Bool::Init();
-  Long::Init();
-  Error::Init();
-  Pair::Init();
-  Double::Init();
-  Symbol::Init();
-  String::Init();
+  // string-like type(s)
+  String::InitClass();
+  Symbol::InitClass();
+  // error type(s)
+  Error::InitClass();
 }
 
-ClassList Class::all_ = {};      // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-Class* Class::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-void Class::Init() {
-  ASSERT(kClass == nullptr);
-  kClass = Class::New(Object::GetClass(), "Class");
-  ASSERT(kClass);
+auto Class::CreateClass() -> Class* {
+  return Class::New(Object::GetClass(), "Class");
 }
 
-Class* Long::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-void Long::Init() {
-  ASSERT(kClass == nullptr);
-  kClass = Class::New(Object::GetClass(), "Long");  // TODO: extend from Number class
-  ASSERT(kClass);
+auto Long::CreateClass() -> Class* {
+  return Class::New(Number::GetClass(), "Long");
+}
+
+auto Double::CreateClass() -> Class* {
+  return Class::New(Number::GetClass(), "Double");
 }
 
 auto Long::Unbox(Object* rhs) -> uint64_t {
   if (!rhs || !rhs->IsLong())
     throw Exception(fmt::format("expected `{}` to be a Long.", *rhs));
   return rhs->AsLong()->Get();
-}
-
-Class* Double::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-void Double::Init() {
-  ASSERT(kClass == nullptr);
-  kClass = Class::New(Object::GetClass(), "Double");  // TODO: extend from Number class
-  ASSERT(kClass);
 }
 
 auto Class::ToString() const -> std::string {
@@ -155,11 +165,12 @@ auto Bool::Or(Datum* rhs) const -> Datum* {
   return Box(Get() || Truth(rhs));
 }
 
-Class* Bool::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+auto Bool::CreateClass() -> Class* {
+  return Class::New(Object::GetClass(), "Bool");
+}
+
 void Bool::Init() {
-  ASSERT(kClass == nullptr);
-  kClass = Class::New(Object::GetClass(), "Bool");
-  ASSERT(kClass);
+  InitClass();
   kTrue = NewTrue();
   kFalse = NewFalse();
 }
@@ -178,12 +189,30 @@ auto Bool::False() -> Bool* {
   return kFalse;
 }
 
+auto Number::CreateClass() -> Class* {
+  return Class::New(Object::GetClass(), "Number");
+}
+
 auto Number::New(const uint64_t rhs) -> Number* {
   return Long::New(rhs);
 }
 
 auto Number::New(const double rhs) -> Number* {
   return Double::New(rhs);
+}
+
+auto Number::Equals(Object* rhs) const -> bool {
+  if (!rhs || !rhs->IsNumber())
+    return false;
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
+
+auto Number::ToString() const -> std::string {
+  std::stringstream ss;
+  ss << "Number(";
+  ss << ")";
+  return ss.str();
 }
 
 #define FOR_EACH_NUMBER_BINARY_OP(V) \
@@ -260,11 +289,8 @@ auto Double::ToString() const -> std::string {
   return ss.str();
 }
 
-Class* Pair::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-void Pair::Init() {
-  ASSERT(kClass == nullptr);
-  kClass = Class::New(Object::GetClass(), "Pair");
-  ASSERT(kClass);
+auto Pair::CreateClass() -> Class* {
+  return Class::New(Object::GetClass(), "Pair");
 }
 
 auto Pair::VisitPointers(PointerVisitor* vis) -> bool {
@@ -294,8 +320,11 @@ auto Pair::ToString() const -> std::string {
   return ss.str();
 }
 
+static Pair* kEmptyPair = nullptr;
 auto Pair::Empty() -> Pair* {
-  return new Pair();
+  if (kEmptyPair)
+    return kEmptyPair;
+  return kEmptyPair = Pair::NewEmpty();
 }
 
 auto Symbol::Equals(Object* rhs) const -> bool {
@@ -309,11 +338,8 @@ auto StringObject::Equals(const std::string& rhs) const -> bool {
   return Get().compare(rhs) == 0;
 }
 
-Class* Symbol::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-void Symbol::Init() {
-  ASSERT(kClass == nullptr);
-  kClass = Class::New(Object::GetClass(), "Symbol");
-  ASSERT(kClass);
+auto Symbol::CreateClass() -> Class* {
+  return Class::New(Object::GetClass(), "Symbol");
 }
 
 auto Symbol::ToString() const -> std::string {
@@ -329,11 +355,8 @@ auto Symbol::New(const std::string& rhs) -> Symbol* {
   return new Symbol(rhs);
 }
 
-Class* String::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-void String::Init() {
-  ASSERT(kClass == nullptr);
-  kClass = Class::New(Object::GetClass(), "String");
-  ASSERT(kClass);
+auto String::CreateClass() -> Class* {
+  return Class::New(Object::GetClass(), "String");
 }
 
 auto String::Equals(Object* rhs) const -> bool {

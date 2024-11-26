@@ -7,6 +7,7 @@
 
 namespace scm {
 class Procedure : public Object {
+  friend class Object;
   friend class Runtime;
   friend class Interpreter;
   DEFINE_NON_COPYABLE_TYPE(Procedure);
@@ -39,6 +40,8 @@ class Procedure : public Object {
 
  private:
   static Class* kClass;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+  static auto CreateClass() -> Class*;
+  static void InitClass();
 
  public:
   static auto operator new(const size_t sz) -> void*;
