@@ -71,6 +71,10 @@ static inline auto Unary(const expr::UnaryOp op, Object* rhs) -> Object* {
       return Car(rhs);
     case expr::kCdr:
       return Cdr(rhs);
+    case expr::kNull:
+      return Bool::Box(IsNull(rhs));
+    case expr::kNonnull:
+      return Bool::Box(!IsNull(rhs));
     default:
       LOG(FATAL) << "invalid UnaryOp: " << op;
       return nullptr;

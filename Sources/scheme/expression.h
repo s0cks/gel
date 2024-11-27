@@ -384,7 +384,9 @@ class BinaryOpExpr : public TemplateOpExpression<BinaryOp, 2> {
 #define FOR_EACH_UNARY_OP(V) \
   V(Not)                     \
   V(Car)                     \
-  V(Cdr)
+  V(Cdr)                     \
+  V(Nonnull)                 \
+  V(Null)
 
 enum UnaryOp : uint64_t {
 #define DEFINE_UNARY_OP(Name) k##Name,

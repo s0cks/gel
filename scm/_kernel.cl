@@ -69,11 +69,6 @@
 (defun min (a b)
   (cond (< a b) a
     b))
-; Types
-(defun null? (x)
-  (and
-    (instanceof? x 'Pair)
-    (eq? (type? x) "Null")))
 ; Numbers
 (defun long? (x)
   (instanceof? x 'Long))

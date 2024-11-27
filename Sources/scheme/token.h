@@ -131,10 +131,10 @@ struct Token {
 
   auto IsUnaryOp() const -> bool {
     switch (kind) {
-      case Kind::kNot:
-      case Kind::kCar:
-      case Kind::kCdr:
-        return true;
+#define DEFINE_OP_CHECK(Name) case Kind::k##Name:
+      FOR_EACH_UNARY_OP(DEFINE_OP_CHECK)
+#undef DEFINE_OP_CHECK
+      return true;
       default:
         return false;
     }

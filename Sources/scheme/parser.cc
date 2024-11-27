@@ -674,6 +674,10 @@ auto Parser::NextToken() -> const Token& {
       return NextToken(Token::kEquals);
     else if (ident == "instanceof?")
       return NextToken(Token::kInstanceOf);
+    else if (ident == "nonnull?")
+      return NextToken(Token::kNonnull);
+    else if (ident == "null?")
+      return NextToken(Token::kNull);
     else if (ident == "set!")
       return NextToken(Token::kSetExpr);
     else if (ident == "cond")
