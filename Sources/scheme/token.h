@@ -107,20 +107,10 @@ struct Token {
 
   auto IsBinaryOp() const -> bool {
     switch (kind) {
-      case Kind::kAdd:
-      case Kind::kSubtract:
-      case Kind::kMultiply:
-      case Kind::kDivide:
-      case Kind::kModulus:
-      case Kind::kBinaryAnd:
-      case Kind::kBinaryOr:
-      case Kind::kEquals:
-      case Kind::kCons:
-      case Kind::kLessThan:
-      case Kind::kLessThanEqual:
-      case Kind::kGreaterThan:
-      case Kind::kGreaterThanEqual:
-        return true;
+#define DEFINE_OP_CHECK(Name) case Kind::k##Name:
+      FOR_EACH_BINARY_OP(DEFINE_OP_CHECK)
+#undef DEFINE_OP_CHECK
+      return true;
       default:
         return false;
     }

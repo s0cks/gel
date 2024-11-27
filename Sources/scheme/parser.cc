@@ -95,7 +95,7 @@ auto Parser::ParseUnaryExpr() -> expr::UnaryExpr* {
   return expr::UnaryExpr::New((*op), value);
 }
 
-auto Parser::ParseBinaryOpExpr() -> BinaryOpExpr* {
+auto Parser::ParseBinaryExpr() -> BinaryOpExpr* {
   const auto op = NextToken().ToBinaryOp();
   ASSERT(op);
   auto left_expr = ParseExpression();
@@ -245,7 +245,7 @@ auto Parser::ParseExpression() -> Expression* {
   if (next.IsUnaryOp()) {
     expr = ParseUnaryExpr();
   } else if (next.IsBinaryOp()) {
-    expr = ParseBinaryOpExpr();
+    expr = ParseBinaryExpr();
   } else if (next.IsLiteral()) {
     expr = ParseListExpr();
   } else {
@@ -672,6 +672,8 @@ auto Parser::NextToken() -> const Token& {
       return NextToken(Token::kThrowExpr);
     else if (ident == "eq?")
       return NextToken(Token::kEquals);
+    else if (ident == "instanceof?")
+      return NextToken(Token::kInstanceOf);
     else if (ident == "set!")
       return NextToken(Token::kSetExpr);
     else if (ident == "cond")
@@ -762,7 +764,7 @@ auto Parser::ParseScript() -> Script* {
     if (next.IsUnaryOp()) {
       expr = ParseUnaryExpr();
     } else if (next.IsBinaryOp()) {
-      expr = ParseBinaryOpExpr();
+      expr = ParseBinaryExpr();
     } else if (next.IsLiteral()) {
       expr = ParseListExpr();
     } else {

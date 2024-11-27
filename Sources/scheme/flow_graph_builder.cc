@@ -459,8 +459,28 @@ auto EffectVisitor::VisitLiteralExpr(LiteralExpr* p) -> bool {
   return true;
 }
 
+static inline auto IsConstantSymbol(instr::Definition* defn) -> bool {
+  return defn && defn->IsConstantInstr() && defn->AsConstantInstr()->GetValue() &&
+         defn->AsConstantInstr()->GetValue()->IsSymbol();
+}
+
+static inline auto IsConstantString(instr::Definition* defn) -> bool {
+  return defn && defn->IsConstantInstr() && defn->AsConstantInstr()->GetValue() &&
+         defn->AsConstantInstr()->GetValue()->IsString();
+}
+
+static inline auto GetClassReference(instr::Definition* defn) -> Class* {
+  if (IsConstantSymbol(defn)) {
+    return Class::FindClass(ToSymbol(defn->AsConstantInstr()->GetValue()));
+  } else if (IsConstantString(defn)) {
+    return Class::FindClass(ToString(defn->AsConstantInstr()->GetValue()));
+  }
+  return nullptr;
+}
+
 auto EffectVisitor::VisitBinaryOpExpr(BinaryOpExpr* expr) -> bool {
   ASSERT(expr);
+  const auto op = expr->GetOp();
 
   ASSERT(expr->HasLeft());
   ValueVisitor for_left(GetOwner());
@@ -472,9 +492,23 @@ auto EffectVisitor::VisitBinaryOpExpr(BinaryOpExpr* expr) -> bool {
   ValueVisitor for_right(GetOwner());
   if (!expr->GetRight()->Accept(&for_right))
     return false;
-  Append(for_right);
+  if (!expr->IsInstanceOfOp())
+    Append(for_right);
 
-  ReturnDefinition(BinaryOpInstr::New(expr->GetOp(), for_left.GetValue(), for_right.GetValue()));
+  if (expr->IsInstanceOfOp()) {  // TODO: the irony of this
+    const auto cls = GetClassReference(for_right.GetValue());
+    instr::Definition* expected = nullptr;
+    if (cls) {
+      expected = instr::ConstantInstr::New(cls);
+      Do(expected);
+    } else {
+      DLOG(WARNING) << "failed to find class: " << for_right.GetValue()->ToString();
+      Append(for_right);
+      expected = for_right.GetValue();
+    }
+    Add(instr::InstanceOfInstr::New(expected, Class::GetClass()));
+  }
+  ReturnDefinition(BinaryOpInstr::New(op, for_left.GetValue(), for_right.GetValue()));
   return true;
 }
 

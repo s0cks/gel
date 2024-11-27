@@ -183,6 +183,25 @@ auto Interpreter::VisitInstanceOfInstr(InstanceOfInstr* instr) -> bool {
   return Next();
 }
 
+static inline auto InstanceOf(Class* actual, Class* expected) -> Bool* {
+  ASSERT(actual);
+  ASSERT(expected);
+  return Bool::Box(actual->IsInstanceOf(expected));
+}
+
+static inline auto InstanceOf(Datum* value, Datum* expected) -> Datum* {
+  ASSERT(value);
+  ASSERT(expected);
+  if (scm::IsSymbol(expected)) {
+    const auto cls = Class::FindClass(expected->AsSymbol());
+    if (scm::IsNull(cls))
+      return Error::New(fmt::format("failed to find class named `{}`", (*expected->AsSymbol())));
+    return InstanceOf(value->GetClass(), cls);
+  }
+  ASSERT(expected->IsClass());
+  return InstanceOf(value->GetClass(), expected->GetClass());
+}
+
 static inline auto ApplyBinaryOp(BinaryOp op, Datum* lhs, Datum* rhs) -> Datum* {
   switch (op) {
     case expr::kAdd:
@@ -211,6 +230,8 @@ static inline auto ApplyBinaryOp(BinaryOp op, Datum* lhs, Datum* rhs) -> Datum* 
       return Bool::Box(lhs->Compare(rhs) <= 0);
     case expr::kCons:
       return Pair::New(lhs, rhs);
+    case expr::kInstanceOf:
+      return InstanceOf(lhs, rhs);
     default:
       LOG(FATAL) << "invalid BinaryOp: " << op;
       return nullptr;

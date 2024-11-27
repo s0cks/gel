@@ -267,7 +267,8 @@ class LiteralExpr : public Expression {
   V(GreaterThanEqual)         \
   V(LessThan)                 \
   V(LessThanEqual)            \
-  V(Cons)
+  V(Cons)                     \
+  V(InstanceOf)
 
 template <class Op, const uword NumInputs>
 class TemplateOpExpression : public TemplateExpression<NumInputs> {

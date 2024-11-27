@@ -109,7 +109,7 @@ class Parser {
   auto ParseLiteralExpr() -> expr::LiteralExpr*;
   auto ParseBeginExpr() -> expr::BeginExpr*;
   auto ParseUnaryExpr() -> expr::UnaryExpr*;
-  auto ParseBinaryOpExpr() -> expr::BinaryOpExpr*;
+  auto ParseBinaryExpr() -> expr::BinaryOpExpr*;
   auto ParseLambdaExpr() -> expr::LambdaExpr*;
   auto ParseThrowExpr() -> expr::ThrowExpr*;
   auto ParseEvalExpr() -> expr::EvalExpr*;

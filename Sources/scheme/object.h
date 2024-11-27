@@ -181,10 +181,37 @@ static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream
     return this;                                      \
   }
 
+class Datum : public Object {
+  DEFINE_NON_COPYABLE_TYPE(Datum);
+
+ protected:
+  Datum() = default;
+
+ public:
+  ~Datum() override = default;
+
+  auto IsAtom() const -> bool override {
+    return true;
+  }
+
+  auto AsDatum() -> Datum* override {
+    return this;
+  }
+
+  virtual auto Add(Datum* rhs) const -> Datum*;
+  virtual auto Sub(Datum* rhs) const -> Datum*;
+  virtual auto Mul(Datum* rhs) const -> Datum*;
+  virtual auto Div(Datum* rhs) const -> Datum*;
+  virtual auto Mod(Datum* rhs) const -> Datum*;
+  virtual auto And(Datum* rhs) const -> Datum*;
+  virtual auto Or(Datum* rhs) const -> Datum*;
+  virtual auto Compare(Datum* rhs) const -> int;
+};
+
 class Class;
 using ClassList = std::vector<Class*>;
 
-class Class : public Object {
+class Class : public Datum {
   friend class Object;
 
  private:
@@ -193,7 +220,7 @@ class Class : public Object {
 
  protected:
   explicit Class(Class* parent, String* name) :
-    Object(),
+    Datum(),
     parent_(parent),
     name_(name) {
     ASSERT(name_);
@@ -236,6 +263,9 @@ class Class : public Object {
   static inline auto GetAllClasses() -> const ClassList& {
     return all_;
   }
+
+  static auto FindClass(String* name) -> Class*;
+  static auto FindClass(Symbol* name) -> Class*;
 };
 
 class ClassListIterator {
@@ -269,33 +299,6 @@ class ClassListIterator {
     iter_++;
     return next;
   }
-};
-
-class Datum : public Object {
-  DEFINE_NON_COPYABLE_TYPE(Datum);
-
- protected:
-  Datum() = default;
-
- public:
-  ~Datum() override = default;
-
-  auto IsAtom() const -> bool override {
-    return true;
-  }
-
-  auto AsDatum() -> Datum* override {
-    return this;
-  }
-
-  virtual auto Add(Datum* rhs) const -> Datum*;
-  virtual auto Sub(Datum* rhs) const -> Datum*;
-  virtual auto Mul(Datum* rhs) const -> Datum*;
-  virtual auto Div(Datum* rhs) const -> Datum*;
-  virtual auto Mod(Datum* rhs) const -> Datum*;
-  virtual auto And(Datum* rhs) const -> Datum*;
-  virtual auto Or(Datum* rhs) const -> Datum*;
-  virtual auto Compare(Datum* rhs) const -> int;
 };
 
 class Bool : public Datum {
@@ -593,6 +596,10 @@ FOR_EACH_TYPE(DEFINE_TYPE_PRED)
   }
 FOR_EACH_TYPE(DEFINE_TYPE_CAST)
 #undef DEFINE_TYPE_CAST
+
+static inline auto ToString(Symbol* rhs) -> String* {
+  return String::New(rhs->Get());
+}
 
 static inline auto Null() -> Object* {
   return Pair::Empty();

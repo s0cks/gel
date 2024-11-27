@@ -421,6 +421,18 @@ auto PrintValue(std::ostream& stream, Object* value) -> std::ostream& {
   return stream << value->ToString();
 }
 
+auto Class::FindClass(String* name) -> Class* {
+  for (const auto& cls : all_) {
+    if (cls->GetName()->Equals(name))
+      return cls;
+  }
+  return nullptr;
+}
+
+auto Class::FindClass(Symbol* name) -> Class* {
+  return FindClass(scm::ToString(name));
+}
+
 auto Class::VisitPointers(PointerVisitor* vis) -> bool {
   ASSERT(vis);
   NOT_IMPLEMENTED(FATAL);  // TODO: implement

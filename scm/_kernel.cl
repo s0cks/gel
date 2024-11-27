@@ -71,33 +71,33 @@
     b))
 ; Types
 (defun null? (x)
-  (eq? (type? x) "Null"))
+  (and
+    (instanceof? x 'Pair)
+    (eq? (type? x) "Null")))
 ; Numbers
 (defun long? (x)
-  (eq? (type? x) "Long"))
+  (instanceof? x 'Long))
 (defun double? (x)
-  (eq? (type? x) "Double"))
+  (instanceof? x 'Double))
 (defun number? (x)
-  (or (long? x) (double? x)))
+  (instanceof? x 'Number))
 ; Strings
 (defun string? (x)
-  (eq? (type? x) "String"))
+  (instanceof? x 'String))
 (defun symbol? (x)
-  (eq? (type? x) "Symbol"))
+  (instanceof? x 'Symbol))
 ; Procedures
 (defun lambda? (x)
-  (eq? (type? x) "Lambda"))
+  (instanceof? x 'Lambda))
 (defun native-procedure? (x)
-  (eq? (type? x) "NativeProcedure"))
+  (instanceof? x 'NativeProcedure))
 (defun procedure? (x)
-  (or (native-procedure? x) (lambda? x) (eq? (type? x) "Procedure")))
+  (instanceof? x 'Procedure))
 (defun array? (x)
-  (eq? (type? x) "Array"))
+  (instanceof? x 'Array))
 ; Misc
 (defun pair? (x)
-  (eq? (type? x) "Pair"))
-(defun module? (x)
-  (eq? (type? x) "Module"))
+  (instanceof? x 'Pair))
 ; factorial
 (defun factorial (x)
   (cond (eq? x 1) 1
