@@ -12,8 +12,6 @@ add_executable(scheme-tests
 target_include_directories(scheme-tests
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
          ${CMAKE_CURRENT_BINARY_DIR})
-target_compile_options(scheme-tests
-  PUBLIC ${SCM_CXX_FLAGS})
 target_link_libraries(scheme-tests
   PUBLIC scheme GTest::gtest GTest::gmock)
 

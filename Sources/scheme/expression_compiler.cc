@@ -35,24 +35,24 @@ class ExpressionLogger : public ExpressionVisitor {
 
 auto ExpressionCompiler::CompileExpression(Expression* expr) -> FlowGraph* {
   ASSERT(expr);
-#ifdef SCM_DEBUG
+#if defined(SCM_DEBUG) && defined(SCM_ENABLE_GV)
   if (FLAGS_dump_ast) {
     const auto dotgraph = expr::ExpressionToDot::BuildGraph("expr", expr);
     ASSERT(dotgraph);
     dotgraph->RenderPngToFilename(GetReportFilename("exec_expr_ast.png"));
   }
-#endif  // SCM_DEBUG
+#endif  // defined(SCM_DEBUG) && defined(SCM_ENABLE_GV)
 
   const auto flow_graph = FlowGraphBuilder::Build(expr, GetScope());
   ASSERT(flow_graph);
   ASSERT(flow_graph->HasEntry());
-#ifdef SCM_DEBUG
+#if defined(SCM_DEBUG) && defined(SCM_ENABLE_GV)
   if (FLAGS_dump_flow_graph) {
     const auto dotgraph = FlowGraphToDotGraph::BuildGraph("expr", flow_graph);
     ASSERT(dotgraph);
     dotgraph->RenderPngToFilename(GetReportFilename("exec_expr_flow_graph.png"));
   }
-#endif  // SCM_DEBUG
+#endif  // defined(SCM_DEBUG) && defined(SCM_ENABLE_GV)
   return flow_graph;
 }
 

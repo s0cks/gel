@@ -17,13 +17,5 @@ TEST_F(FlowGraphTest, Test_Builder) {  // NOLINT
   const auto flow_graph = FlowGraphBuilder::Build(expr, scope);
   ASSERT_TRUE(flow_graph);
   ASSERT_TRUE(flow_graph->GetEntry());
-#ifdef SCM_DEBUG
-  {
-    const auto dot_graph = FlowGraphToDotGraph::BuildGraph("FlowGraph", flow_graph);
-    ASSERT_TRUE(dot_graph);
-    ASSERT_NO_FATAL_FAILURE(dot_graph->RenderPngToFilename("/Users/tazz/Projects/scheme/flow_graph.png"));  // NOLINT
-    ASSERT_NO_FATAL_FAILURE(dot_graph->RenderToStdout());                                                   // NOLINT
-  }
-#endif  // SCM_DEBUG
 }
 }  // namespace scm

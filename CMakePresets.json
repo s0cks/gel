@@ -9,6 +9,7 @@
     {
       "name": "base",
       "hidden": true,
+      "generator": "Ninja",
       "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
         "CMAKE_MODULE_PATH": {
@@ -19,16 +20,15 @@
           "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
           "type": "FILEPATH"
         },
-        "ENABLE_TRACING": {
-          "type": "BOOL",
-          "value": "OFF"
-        },
-        "VCPKG_APPLOCAL_DEPS": "ON",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "CMAKE_C_STANDARD": "23",
+        "CMAKE_C_STANDARD": "11",
         "CMAKE_C_STANDARD_REQUIRED": "ON",
+        "CMAKE_C_COMPILER": "clang",
         "CMAKE_CXX_STANDARD": "20",
-        "CMAKE_CXX_STANDARD_REQUIRED": "ON"
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_CXX_EXTENSIONS": "OFF",
+        "VCPKG_APPLOCAL_DEPS": "ON"
       }
     },
     {
@@ -40,11 +40,6 @@
           "hostOS": "macOS"
         }
       },
-      "cacheVariables": {
-        "SCM_TARGET": "aarch64-apple-darwin",
-        "CMAKE_C_COMPILER_TARGET": "aarch64-apple-darwin",
-        "CMAKE_CXX_COMPILER_TARGET": "aarch64-apple-darwin"
-      },
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
@@ -52,32 +47,50 @@
       }
     },
     {
-      "name": "tracing",
-      "hidden": true,
+      "name": "debug",
+      "displayName": "Debug",
       "cacheVariables": {
-        "ENABLE_TRACING": {
-          "type": "BOOL",
-          "value": "ON"
+        "CMAKE_BUILD_TYPE": {
+          "value": "Debug",
+          "type": "STRING"
         }
-      }
-    },
-    {
-      "name": "clang",
-      "generator": "Ninja",
+      },
+      "environment": {
+        "BUILD_ENVIRONMENT": "dev"
+      },
       "inherits": [
         "base"
-      ],
-      "cacheVariables": {
-        "CMAKE_C_COMPILER": "clang",
-        "CMAKE_CXX_COMPILER": "clang++",
-        "CMAKE_CXX_EXTENSIONS": "OFF"
-      }
+      ]
     },
     {
-      "name": "clang-darwin-arm64",
-      "displayName": "clang (Darwin/arm64)",
+      "name": "debug-darwin-arm64",
+      "displayName": "Debug (Darwin/arm64)",
       "inherits": [
-        "clang",
+        "debug",
+        "darwin-arm64"
+      ]
+    },
+    {
+      "name": "release",
+      "displayName": "Release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": {
+          "value": "Release",
+          "type": "STRING"
+        }
+      },
+      "environment": {
+        "BUILD_ENVIRONMENT": "release"
+      },
+      "inherits": [
+        "base"
+      ]
+    },
+    {
+      "name": "release-darwin-arm64",
+      "displayName": "Release (Darwin/arm64)",
+      "inherits": [
+        "release",
         "darwin-arm64"
       ]
     }
@@ -85,49 +98,25 @@
   "buildPresets": [
     {
       "name": "debug",
-      "configuration": "Debug",
-      "environment": {
-        "BUILD_ENVIRONMENT": "dev"
-      }
+      "displayName": "Debug",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "debug-darwin-arm64",
+      "displayName": "Debug (Darwin/arm64)",
+      "configurePreset": "debug-darwin-arm64"
     },
     {
       "name": "release",
-      "configuration": "Release",
-      "environment": {
-        "BUILD_ENVIRONMENT": "release"
-      }
-    },
-    {
-      "name": "clang-debug",
-      "displayName": "Debug",
-      "configurePreset": "clang",
-      "inherits": [
-        "debug"
-      ]
-    },
-    {
-      "name": "clang-release",
       "displayName": "Release",
-      "configurePreset": "clang",
-      "inherits": [
-        "release"
-      ]
+      "configurePreset": "release",
+      "cleanFirst": true
     },
     {
-      "name": "clang-darwin-arm64-debug",
-      "displayName": "Debug",
-      "configurePreset": "clang-darwin-arm64",
-      "inherits": [
-        "debug"
-      ]
-    },
-    {
-      "name": "clang-darwin-arm64-release",
-      "displayName": "Release",
-      "configurePreset": "clang-darwin-arm64",
-      "inherits": [
-        "release"
-      ]
+      "name": "release-darwin-arm64",
+      "displayName": "Release (Darwin/arm64)",
+      "configurePreset": "release-darwin-arm64",
+      "cleanFirst": true
     }
   ]
 }

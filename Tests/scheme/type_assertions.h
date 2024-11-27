@@ -9,6 +9,7 @@
 #include "scheme/macro.h"
 #include "scheme/native_procedure.h"
 #include "scheme/object.h"
+#include "scheme/rx.h"
 #include "scheme/script.h"
 
 namespace scm {

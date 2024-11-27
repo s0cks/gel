@@ -1,6 +1,8 @@
 #ifndef SCM_GV_H
 #define SCM_GV_H
 
+#ifdef SCM_ENABLE_GV
+
 #include <fmt/format.h>
 #include <glog/logging.h>
 #include <graphviz/cgraph.h>
@@ -304,4 +306,5 @@ class GraphRenderer {
 };
 }  // namespace scm::dot
 
+#endif  // #ifdef SCM_ENABLE_GV
 #endif  // SCM_GV_H

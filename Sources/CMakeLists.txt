@@ -4,19 +4,14 @@ file(GLOB_RECURSE SCM_SOURCES
   "${CMAKE_CURRENT_SOURCE_DIR}/scheme/*.cc"
   "${CMAKE_CURRENT_BINARY_DIR}/scheme/*.h")
 
-find_package(Graphviz REQUIRED)
 find_package(Tracy CONFIG)
-
-list(APPEND SCM_LIBRARIES
-  graphviz::gvc
-  graphviz::cgraph)
-
 if(ENABLE_TRACING)
   if(NOT Tracy_FOUND)
     message(FATAL_ERROR "Tracy is required to enable tracing")
   endif()
   message(STATUS "enabling tracing w/ Tracy")
   list(APPEND SCM_LIBRARIES Tracy::TracyClient)
+  link_libraries()
 endif()
 
 add_library(scheme STATIC

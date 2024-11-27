@@ -1,4 +1,5 @@
 #include "scheme/flow_graph_dot.h"
+#ifdef SCM_ENABLE_GV
 
 #include <fmt/format.h>
 #include <glog/logging.h>
@@ -321,3 +322,5 @@ auto FlowGraphToDotGraph::Build() -> dot::Graph* {
   return dot::Graph::New(this);
 }
 }  // namespace scm
+
+#endif  // SCM_ENABLE_GV

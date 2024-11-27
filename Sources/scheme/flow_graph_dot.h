@@ -1,6 +1,8 @@
 #ifndef SCM_FLOW_GRAPH_DOT_H
 #define SCM_FLOW_GRAPH_DOT_H
 
+#ifdef SCM_ENABLE_GV
+
 #include <fmt/format.h>
 
 #include <vector>
@@ -223,4 +225,5 @@ class BlockVisitor : public EffectVisitor {
 }  // namespace dot
 }  // namespace scm
 
+#endif  // SCM_ENABLE_GV
 #endif  // SCM_FLOW_GRAPH_DOT_H

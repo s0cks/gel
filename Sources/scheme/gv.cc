@@ -1,4 +1,5 @@
 #include "scheme/gv.h"
+#ifdef SCM_ENABLE_GV
 
 #include <glog/logging.h>
 
@@ -48,3 +49,4 @@ void Graph::RenderPngToFilename(const std::string& filename) {
   LOG_IF(FATAL, result != 0) << "failed to close: " << filename;
 }
 }  // namespace scm::dot
+#endif  // SCM_ENABLE_GV

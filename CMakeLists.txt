@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.29.3})
+cmake_minimum_required(VERSION 3.5)
 include(BuildInfo)
 project(
   ${BUILD_JSON_NAME}
@@ -6,80 +6,35 @@ project(
   HOMEPAGE_URL ${BUILD_JSON_HOMEPAGE}
   LANGUAGES C CXX)
 
-list(APPEND SCM_CXX_FLAGS
-     -Wall
-     -Wno-overloaded-virtual
-     -Wno-sign-compare
-     -Wno-writable-strings # TODO: remove no-writable-strings
-     -frtti)
-
-option(WERROR "Turn warnings into errors." ON)
-if(WERROR)
-  list(APPEND SCM_CXX_FLAGS -Werror)
-endif()
-
-if(CMAKE_CXX_COMPILER_ID MATCHES "([aA]pple)?[cC]lang|GNU")
-  option(ENABLE_ADDRESS_SCANITIZER "Enable Clang AddressSanitizer" OFF)
-  if(ENABLE_ADDRESS_SCANITIZER AND CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
-    list(APPEND SCM_CXX_FLAGS -01 -fno-omit-frame-pointer -fsanitize=address)
-  endif()
-
-  option(ENABLE_UNDEFINED_SANITIZER "Enable Clang UndefinedBehaviorSanitizer"
-         OFF)
-  if(ENABLE_UNDEFINED_SANITIZER AND CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
-    list(APPEND SCM_CXX_FLAGS -fsanitize=undefined -fsanitize=integer)
-  endif()
-
-  option(ENABLE_CLANG_TIDY "Enable clang-tidy" ON)
-  if(ENABLE_CLANG_TIDY)
-    include(ClangTidy)
-    enable_clang_tidy()
-  endif()
-endif()
-
-option(ENABLE_DOXYGEN "Build documentation using Doxygen" ON)
-if(ENABLE_DOXYGEN)
-  include(Doxygen)
-endif()
-
-option(ENABLE_COVERAGE "Enable code coverage reports using gcov/lcov" OFF)
-if(ENABLE_COVERAGE)
-  include(Coverage)
-  # TODO: cleanup this logic, get it into Coverage.cmake
-  if(${CMAKE_CXX_COMPILER_ID} MATCHES "([aA]pple)?[cC]lang|GNU")
-    list(
-      APPEND
-      SCM_CXX_FLAGS
-      -O0
-      -g
-      -fprofile-instr-generate
-      -fcoverage-mapping
-      --coverage)
-  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    # TODO: implement
-  else()
-    message(FATAL_ERROR "unsupported compiler: ${CMAKE_CXX_COMPILER_ID}")
-  endif()
-endif()
+include(Options)
+# add_compile_options(
+#     -Wall
+#     -fms-extensions
+#     -Wno-deprecated
+#     -Wno-exceptions
+#     -Wno-overloaded-virtual
+#     -Wno-sign-compare
+#     -Wno-writable-strings # TODO: remove no-writable-strings
+#     -Wno-sizeof-pointer-memaccess
+#     -fPIC
+#     -frtti)
 
 find_package(Threads REQUIRED)
 find_package(glog CONFIG REQUIRED)
+set(GFLAGS_USE_TARGET_NAMESPACE ON)
 find_package(gflags CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(units CONFIG REQUIRED)
 
-if(APPLE)
-  link_directories(/opt/homebrew/lib/)
+list(APPEND SCM_LIBRARIES Threads::Threads glog::glog gflags::gflags fmt::fmt units::units)
+if(ENABLE_RX)
+  find_package(rxcpp CONFIG REQUIRED)
+  list(APPEND SCM_LIBRARIES rxcpp)
+  add_compile_definitions(SCM_ENABLE_RX)
 endif()
-link_libraries(Threads::Threads glog::glog gflags::gflags fmt::fmt units::units)
 
 if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
   add_compile_definitions(SCM_DEBUG)
-endif()
-
-option(ENABLE_TRACING "Enable Tracy tracing." OFF)
-if(ENABLE_TRACING)
-  add_compile_definitions(SCM_TRACING)
 endif()
 
 add_subdirectory(Sources)
@@ -92,14 +47,4 @@ endif()
 option(ENABLE_BENCHMARKS "Enable benchmarks." ON)
 if(ENABLE_BENCHMARKS)
   add_subdirectory(Benchmarks)
-endif()
-
-option(DISABLE_HEAP_ALLOCATOR "Disable the heap allocator." OFF)
-if(DISABLE_HEAP_ALLOCATOR)
-  add_compile_definitions(SCM_DISABLE_HEAP)
-endif()
-
-option(ENABLE_LAMBDA_CACHE "Enable the lambda cache" ON)
-if(ENABLE_LAMBDA_CACHE)
-  add_compile_definitions(SCM_ENABLE_LAMBDA_CACHE)
 endif()

@@ -9,7 +9,7 @@ if(CLANG_TIDY)
   string(REGEX MATCH "[0-9]+\.[0-9]+\.[0-9]+" CLANG_TIDY_VERSION
                "${CLANG_TIDY_VERSION}")
 
-  list(APPEND CLANG_TIDY_OPTS)
+  list(APPEND CLANG_TIDY_OPTS "-p" "${CMAKE_BINARY_DIR}")
   set(CLANG_TIDY_FILE "${CMAKE_SOURCE_DIR}/.clang-tidy")
   if(EXISTS "${CLANG_TIDY_FILE}")
     message(STATUS "found clang-tidy config: ${CLANG_TIDY_FILE}")
@@ -21,6 +21,7 @@ if(CLANG_TIDY)
   message(STATUS "found clang-tidy v${CLANG_TIDY_VERSION}: ${CLANG_TIDY}")
   message(STATUS "clang-tidy options: ${CLANG_TIDY_OPTS}")
   macro(enable_clang_tidy)
+    set(CMAKE_CXX_CLANG_TIDY_DRIVER_MODE "clang")
     set(CMAKE_CXX_CLANG_TIDY ${CLANG_TIDY} ${CLANG_TIDY_OPTS})
   endmacro()
 

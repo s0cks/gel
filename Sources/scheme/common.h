@@ -5,6 +5,7 @@
 
 #include <chrono>
 #include <cstdio>
+#include <functional>
 
 #include "scheme/platform.h"
 #ifdef SCM_DEBUG

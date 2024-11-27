@@ -43,11 +43,5 @@ TEST_F(ParserTest, Test_Parse_BeginDef1) {  // NOLINT
 TEST_F(ParserTest, Test_Parse_BeginDef2) {  // NOLINT
   const auto expr = Parser::ParseExpr("(begin (define test #t) (define test2 #f) (define x (- (+ 99 1) (* 25 2))))");
   ASSERT_TRUE(expr);
-  {
-    const auto dot_graph = ExpressionToDot::BuildGraph("expr0", expr);
-    ASSERT_TRUE(dot_graph);
-    dot_graph->RenderToStdout();
-    dot_graph->RenderPngToFilename("/Users/tazz/Projects/scheme/expr0_ast.png");
-  }
 }
 }  // namespace scm

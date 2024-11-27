@@ -1,5 +1,6 @@
 #ifndef SCM_EXPRESSION_DOT_H
 #define SCM_EXPRESSION_DOT_H
+#ifdef SCM_ENABLE_GV
 
 #include <glog/logging.h>
 
@@ -141,4 +142,5 @@ class ExpressionToDot : public dot::GraphBuilder, public ExpressionVisitor {
 using namespace expr;
 }  // namespace scm
 
+#endif  // SCM_ENABLE_GV
 #endif  // SCM_EXPRESSION_DOT_H

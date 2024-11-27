@@ -2,6 +2,7 @@
 #define SCM_STACK_FRAME_H
 
 #include <ostream>
+#include <stack>
 
 #include "scheme/common.h"
 #include "scheme/platform.h"

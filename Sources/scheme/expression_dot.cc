@@ -1,4 +1,5 @@
 #include "scheme/expression_dot.h"
+#ifdef SCM_ENABLE_GV
 
 #include <glog/logging.h>
 
@@ -448,3 +449,4 @@ auto ExpressionToDot::Build() -> dot::Graph* {
   return dot::Graph::New(this);
 }
 }  // namespace scm
+#endif  // SCM_ENABLE_GV

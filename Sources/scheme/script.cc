@@ -64,13 +64,13 @@ void ScriptCompiler::CompileScript(Script* script) {
   ASSERT(flow_graph);
   ASSERT(flow_graph->HasEntry());
 
-#ifdef SCM_DEBUG
+#if defined(SCM_DEBUG) && defined(SCM_ENABLE_GV)
   if (FLAGS_dump_flow_graph) {
     const auto dotgraph = FlowGraphToDotGraph::BuildGraph("expr", flow_graph);
     ASSERT(dotgraph);
     dotgraph->RenderPngToFilename(GetReportFilename("exec_expr_flow_graph.png"));
   }
-#endif  // SCM_DEBUG
+#endif  // defined(SCM_DEBUG) && defined(SCM_ENABLE_GV)
 
 #ifdef SCM_DEBUG
   const auto stop = Clock::now();

@@ -27,7 +27,9 @@ namespace scm {
   V(NativeProcedure)     \
   V(Pair)                \
   V(Script)              \
-  V(Error)
+  V(Error)               \
+  V(Subscription)        \
+  V(Observable)
 
 class Object;
 #define FORWARD_DECLARE(Name) class Name;

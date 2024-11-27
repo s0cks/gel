@@ -15,6 +15,7 @@
 #include "scheme/platform.h"
 #include "scheme/pointer.h"
 #include "scheme/procedure.h"
+#include "scheme/rx.h"
 #include "scheme/script.h"
 
 namespace scm {

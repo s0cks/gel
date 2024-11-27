@@ -1,0 +1,116 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 23,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_MODULE_PATH": {
+          "value": "${sourceDir}/cmake",
+          "type": "FILEPATH"
+        },
+        "CMAKE_TOOLCHAIN_FILE": {
+          "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+          "type": "FILEPATH"
+        },
+        "ENABLE_TRACING": {
+          "type": "BOOL",
+          "value": "OFF"
+        },
+        "VCPKG_APPLOCAL_DEPS": "ON",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_C_STANDARD": "11",
+        "CMAKE_C_STANDARD_REQUIRED": "ON",
+        "CMAKE_CXX_STANDARD": "20",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+        "CMAKE_CXX_EXTENSIONS": "OFF"
+      }
+    },
+    {
+      "name": "debug",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      },
+      "environment": {
+        "BUILD_ENVIRONMENT": "debug"
+      }
+    },
+    {
+      "name": "release",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      },
+      "environment": {
+        "BUILD_ENVIRONMENT": "release"
+      }
+    },
+    {
+      "name": "osx-arm64",
+      "hidden": true,
+      "vendor": {
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "intelliSenseMode": "ios-clang-arm64",
+          "hostOS": "macOS"
+        }
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "clang",
+      "generator": "Ninja",
+      "hidden": true,
+      "inherits": [
+        "base"
+      ],
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "clang-osx-arm64-dbg",
+      "displayName": "clang-osx-arm64 Debug",
+      "inherits": [
+        "clang",
+        "osx-arm64",
+        "debug"
+      ]
+    },
+    {
+      "name": "clang-osx-arm64-rel",
+      "displayName": "clang-osx-arm64 Release",
+      "inherits": [
+        "clang",
+        "osx-arm64",
+        "release"
+      ]
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "clang-osx-arm64-dbg",
+      "configurePreset": "clang-osx-arm64-dbg",
+      "displayName": "default",
+      "configuration": "Debug"
+    },
+    {
+      "name": "clang-osx-arm64-rel",
+      "configurePreset": "clang-osx-arm64-rel",
+      "displayName": "default",
+      "cleanFirst": true,
+      "configuration": "Release"
+    }
+  ]
+}

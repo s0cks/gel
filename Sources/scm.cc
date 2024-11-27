@@ -8,7 +8,6 @@
 #include <fstream>
 #include <iostream>
 
-#include "scheme/common.h"
 #include "scheme/disassembler.h"
 #include "scheme/error.h"
 #include "scheme/expression_compiler.h"
@@ -22,6 +21,7 @@
 #include "scheme/parser.h"
 #include "scheme/repl.h"
 #include "scheme/runtime.h"
+#include "scheme/rx.h"
 #include "scheme/zone.h"
 
 using namespace scm;
