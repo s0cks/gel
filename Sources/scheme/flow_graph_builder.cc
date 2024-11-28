@@ -350,12 +350,29 @@ auto EffectVisitor::CreateStoreLoad(Symbol* symbol, instr::Definition* value) ->
   return instr::LoadVariableInstr::New(symbol);
 }
 
+static inline auto IsConstantType(instr::Definition* value, Class* expected) -> bool {
+  ASSERT(value);
+  if (!value->IsConstantInstr())
+    return false;
+  const auto constant = value->AsConstantInstr();
+  ASSERT(constant);
+  return constant->GetValue()->GetType()->Equals(expected);
+}
+
+static inline auto IsConstantInstanceOf(instr::Definition* value, Class* expected) -> bool {
+  if (!value || !value->IsConstantInstr())
+    return false;
+  const auto constant = value->AsConstantInstr();
+  ASSERT(constant);
+  return constant->GetValue()->GetType()->IsInstanceOf(expected);
+}
+
+static inline auto IsConstantObservable(instr::Definition* defn) -> bool {
+  return IsConstantType(defn, Observable::GetClass());
+}
+
 auto EffectVisitor::VisitLetRxExpr(expr::LetRxExpr* expr) -> bool {
   ASSERT(expr);
-  const auto target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
-  ASSERT(target);
-  Add(target);
-
   const auto symbol = Symbol::New("observable");
   const auto scope = GetOwner()->GetScope();
   ASSERT(scope);
@@ -369,20 +386,21 @@ auto EffectVisitor::VisitLetRxExpr(expr::LetRxExpr* expr) -> bool {
     return false;
   }
   Append(for_observable);
-  const auto load = CreateStoreLoad(symbol, for_observable.GetValue());
-  ASSERT(load);
+  const auto observable = IsConstantObservable(for_observable.GetValue())
+                            ? for_observable.GetValue()
+                            : DoCastTo(for_observable.GetValue(), Observable::GetClass());
+  Add(instr::StoreVariableInstr::New(symbol, observable));
 
   // process body
   uint64_t idx = 0;
   while (IsOpen() && (idx < expr->GetNumberOfChildren())) {
     const auto oper_expr = expr->GetOperatorAt(idx++);
     ASSERT(oper_expr);
-    RxEffectVisitor for_effect(GetOwner(), load);
+    RxEffectVisitor for_effect(GetOwner(), instr::LoadVariableInstr::New(symbol));
     if (!oper_expr->Accept(&for_effect)) {
       LOG(FATAL) << "failed to visit: " << oper_expr;
       return false;
     }
-
     Append(for_effect);
     if (!IsOpen())
       break;
@@ -392,9 +410,6 @@ auto EffectVisitor::VisitLetRxExpr(expr::LetRxExpr* expr) -> bool {
 
 auto EffectVisitor::VisitLetExpr(expr::LetExpr* expr) -> bool {
   ASSERT(expr);
-  const auto target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
-  ASSERT(target);
-  Add(target);
   // process body
   uint64_t idx = 0;
   while (IsOpen() && (idx < expr->GetNumberOfChildren())) {
@@ -691,11 +706,11 @@ auto FlowGraphBuilder::Build(Script* script, LocalScope* scope) -> FlowGraph* {
       LOG(ERROR) << "failed to visit: " << expr->ToString();
       return nullptr;  // TODO: free entry
     }
-    if (--remaining == 0) {
-      const auto exit = for_effect.GetExitInstr();
-      if (exit && !exit->IsReturnInstr())
-        for_effect.Add(exit->IsDefinition() ? instr::ReturnInstr::New(exit->AsDefinition()) : instr::ReturnInstr::New());
-    }
+    // if (--remaining == 0) {
+    //   const auto exit = for_effect.GetExitInstr();
+    //   if (exit && !exit->IsReturnInstr())
+    //     for_effect.Add(exit->IsDefinition() ? instr::ReturnInstr::New(exit->AsDefinition()) : instr::ReturnInstr::New());
+    // }
     AppendFragment(target, for_effect);
   }
   graph_entry->Append(target);

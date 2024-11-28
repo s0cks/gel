@@ -119,6 +119,14 @@ class EffectVisitor : public ExpressionVisitor {
   auto CreateCallFor(instr::Definition* defn, const uword num_args) -> instr::InvokeInstr*;
   auto CreateStoreLoad(Symbol* symbol, instr::Definition* value) -> instr::Definition*;
 
+  inline auto DoCastTo(instr::Definition* defn, Class* expected) -> instr::Definition* {
+    ASSERT(defn);
+    ASSERT(expected);
+    const auto casted = instr::CastInstr::New(defn, expected);
+    Do(casted);
+    return casted;
+  }
+
   inline void AddReturnExit(instr::Definition* value) {
     ASSERT(value);
     Add(ReturnInstr::New(value));

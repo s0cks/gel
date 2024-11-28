@@ -265,10 +265,9 @@ void Runtime::Call(Lambda* lambda, const ObjectList& args) {
     ASSERT(local);
     if (!locals->Add(local))
       throw Exception("failed to add parameter local");
-    DLOG(INFO) << "added local: " << (*local);
   }
-  const auto frame = PushFrame(locals);
-  ASSERT(frame);
+  const auto start_frame = interpreter_.PushStackFrame(locals);
+  ASSERT(start_frame);
   Call(lambda->GetEntry()->GetTarget(), locals);
 }
 
@@ -286,8 +285,6 @@ void Runtime::Call(Lambda* lambda) {
     if (!locals->Add(local))
       throw Exception("failed to add parameter local");
   }
-  const auto frame = PushFrame(locals);
-  ASSERT(frame);
   Call(lambda->GetEntry()->GetTarget(), locals);
 }
 
@@ -298,11 +295,12 @@ void Runtime::Call(NativeProcedure* native, const std::vector<Object*>& args) {
   for (auto idx = 0; idx < args.size(); idx++) {
     locals->Add(Symbol::New(fmt::format("arg{}", idx)), args[idx]);
   }
-  const auto frame = PushFrame(locals);
-  ASSERT(frame);
+  const auto start_frame = interpreter_.PushStackFrame(locals);
+  ASSERT(start_frame);
   if (!native->Apply(args))
     throw Exception(fmt::format("failed to apply procedure: {}", native->ToString()));
-  PopFrame();
+  const auto last_frame = interpreter_.PopStackFrame();
+  ASSERT((*start_frame) == last_frame);
 }
 
 auto Runtime::Eval(const std::string& expr) -> Object* {
@@ -330,10 +328,12 @@ auto Runtime::Exec(Script* script) -> Object* {
       },
       runtime->GetGlobalScope());
   ASSERT(!runtime->HasFrame());
-  const auto frame = runtime->PushFrame(scope);
-  ASSERT(frame);
+  const auto start_frame = runtime->interpreter_.PushStackFrame(scope);
+  ASSERT(start_frame);
   runtime->Call(script->GetEntry()->GetTarget(), scope);
+  const auto last_frame = runtime->interpreter_.PopStackFrame();
   ASSERT(!runtime->HasFrame() || runtime->HasError());
+  ASSERT(last_frame == (*start_frame));
   return runtime->Pop();
 }
 

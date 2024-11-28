@@ -170,7 +170,7 @@ class ToStringHelperBase {
   auto ToString() const -> std::string;
 };
 
-template <typename T, const EnclosingStyle ES = kParenthesis, const ValueSeparatorStyle VS = kValueSepColon,
+template <typename T, const EnclosingStyle ES = kParenthesis, const ValueSeparatorStyle VS = kValueSepEquals,
           const FieldSeparatorStyle FS = kComma>
 class ToStringHelper : public ToStringHelperBase {
   DEFINE_NON_COPYABLE_TYPE(ToStringHelper);

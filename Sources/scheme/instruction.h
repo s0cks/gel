@@ -9,12 +9,6 @@
 #include "scheme/procedure.h"
 #include "scheme/variable.h"
 
-namespace scm {
-class EffectVisitor;
-class ClauseVisitor;
-class FlowGraphBuilder;
-
-namespace instr {
 #define FOR_EACH_INSTRUCTION(V) \
   V(ConstantInstr)              \
   V(UnaryOpInstr)               \
@@ -35,6 +29,12 @@ namespace instr {
   V(InstanceOfInstr)            \
   V(CastInstr)
 
+namespace scm {
+class EffectVisitor;
+class ClauseVisitor;
+class FlowGraphBuilder;
+
+namespace instr {
 class Instruction;
 #define FORWARD_DECLARE(Name) class Name;
 FOR_EACH_INSTRUCTION(FORWARD_DECLARE)
@@ -830,16 +830,19 @@ class InstanceOfInstr : public Instruction {
   }
 };
 
-class CastInstr : public Instruction {
+class CastInstr : public Definition {
  private:
   Definition* value_;
-  Class* class_;
+  Class* target_;
 
  protected:
-  CastInstr(Definition* value, Class* cls) :
-    Instruction(),
+  CastInstr(Definition* value, Class* target) :
+    Definition(),
     value_(value),
-    class_(cls) {}
+    target_(target) {
+    ASSERT(value_);
+    ASSERT(target_);
+  }
 
  public:
   ~CastInstr() override = default;
@@ -848,8 +851,8 @@ class CastInstr : public Instruction {
     return value_;
   }
 
-  auto GetClass() const -> Class* {
-    return class_;
+  auto GetTarget() const -> Class* {
+    return target_;
   }
 
   DECLARE_INSTRUCTION(CastInstr);

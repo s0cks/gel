@@ -183,11 +183,9 @@ auto InstanceOfInstr::ToString() const -> std::string {
 }
 
 auto CastInstr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "CastInstr(";
-  ss << "value=" << GetValue()->ToString() << ", ";
-  ss << "class=" << GetClass()->ToString();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<CastInstr> helper;
+  helper.AddField("value", GetValue());
+  helper.AddField("target", GetTarget());
+  return helper;
 }
 }  // namespace scm::instr

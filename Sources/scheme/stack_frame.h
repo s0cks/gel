@@ -59,7 +59,7 @@ class StackFrame {
     stream << "id=" << rhs.GetId() << ", ";
     if (rhs.HasReturnAddress())
       stream << "result=" << rhs.GetReturnAddressPointer() << ", ";
-    stream << "num_locals=" << rhs.GetLocals()->GetNumberOfLocals();
+    stream << "locals=" << rhs.GetLocals()->ToString();
     stream << ")";
     return stream;
   }

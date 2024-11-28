@@ -101,14 +101,6 @@ class Runtime : public ExecutionStack {
   bool executing_ = false;
   Interpreter interpreter_;
 
-  inline auto PushFrame(LocalScope* locals) -> StackFrame* {
-    return interpreter_.PushStackFrame(locals);
-  }
-
-  inline auto PopFrame() -> StackFrame {
-    return interpreter_.PopStackFrame();
-  }
-
   inline void PopN(std::vector<Object*>& result, const uword num, const bool reverse = false) {
     for (auto idx = 0; idx < num; idx++) {
       result.push_back(Pop());

@@ -628,6 +628,16 @@ class Observable : public Object {
   explicit Observable(const rx::DynamicObjectObservable& value) :
     value_(value) {}
 
+  template <typename O>
+  void Apply(O&& op) {
+    value_ = value_ | std::forward<O>(op);
+  }
+
+  template <typename S>
+  void Subscribe(S&& on_next) {
+    value_.subscribe(std::forward<S>(on_next));
+  }
+
  public:
   ~Observable() override = default;
 

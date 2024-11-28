@@ -290,26 +290,23 @@ NATIVE_PROCEDURE_F(rx_subscribe) {
   return DoNothing();
 }
 
+#define CHECK_ARG_TYPE(Index, Name, Type)                \
+  const auto Name = args[Index];                         \
+  if (!Name || !(Name->GetType()->IsInstanceOf((Type)))) \
+    return ThrowError(fmt::format("expected arg #{} ({}) `{}` to be a `{}`", Index, #Name, (*Name), ((Type)->GetName())->Get()));
+
 // (rx:map <func>)
 NATIVE_PROCEDURE_F(rx_map) {
   const auto runtime = GetRuntime();
   ASSERT(runtime);
   if (args.size() != 2)
     return ThrowError(fmt::format("expected args `{}` to be: `<observable> <func>`", Stringify(args)));
-  const auto source = args[1];
-  if (!scm::IsObservable(source))
-    return ThrowError(fmt::format("expected arg #1 `{}` to be an Observable", *source));
-  const auto on_next = args[0];
-  if (!scm::IsProcedure(on_next))
-    return ThrowError(fmt::format("expected arg 2 `{}` to be a Procedure", *on_next));
-  DLOG(INFO) << "mapping " << source << " w/ " << on_next;
-  source->AsObservable()->value_ = source->AsObservable()->value_ | rx::operators::map([](Object* value) {
-                                     DLOG(INFO) << "- " << value;
-                                     return value;
-                                   });
-  source->AsObservable()->value_.subscribe([](Object* value) {
-    DLOG(INFO) << "- " << value;
-  });
+  CHECK_ARG_TYPE(0, source, Observable::GetClass());
+  CHECK_ARG_TYPE(1, on_next, Procedure::GetClass());
+  source->AsObservable()->Apply(rx::operators::map([on_next, runtime](Object* value) {
+    runtime->Call(on_next->AsProcedure(), {value});
+    return runtime->Pop();
+  }));
   return DoNothing();
 }
 

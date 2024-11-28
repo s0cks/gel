@@ -55,11 +55,26 @@ auto Interpreter::VisitReturnInstr(ReturnInstr* instr) -> bool {
 
 auto Interpreter::VisitCastInstr(CastInstr* instr) -> bool {
   ASSERT(instr);
-  if (IsStackTopInstanceOf(instr->GetClass()))
-    return true;
+  const auto target_type = instr->GetTarget();
+  ASSERT(target_type);
+  {
+    const auto top = GetStackTop();
+    ASSERT(top);
+    if ((*top)->GetType()->Equals(target_type)) {
+      DVLOG(1000) << "skipping cast of " << (*top) << " to: " << target_type;
+      return Next();
+    }
+  }
+
   const auto value = GetRuntime()->Pop();
   ASSERT(value);
-  return true;
+  const auto current_type = value->GetType();
+  ASSERT(current_type);
+  DVLOG(1000) << "casting " << value << " to: " << target_type;
+  if (target_type->Equals(Observable::GetClass()))
+    return PushNext(Observable::New(value));
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
 }
 
 static inline auto Unary(const expr::UnaryOp op, Object* rhs) -> Object* {
