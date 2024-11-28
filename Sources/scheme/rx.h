@@ -1,50 +1,36 @@
 #ifndef SCM_RX_H
 #define SCM_RX_H
 
+#include <rpp/observables/fwd.hpp>
+#include <rpp/observers/dynamic_observer.hpp>
+#include <rpp/sources/fwd.hpp>
 #ifdef SCM_ENABLE_RX
 
-#include <rxcpp/rx.hpp>
+#include <rpp/rpp.hpp>
 
-#include "scheme/object.h"
+#define FOR_EACH_RX_TYPE(V) \
+  V(Observer)               \
+  V(Observable)
 
 namespace scm {
+class Object;
+class LocalScope;
 namespace rx {
-using rxcpp::subjects::subject;
-using namespace rxcpp;
-using error_ptr = rxcpp::util::error_ptr;
-using rxcpp::util::what;
+using namespace rpp;
+using DynamicObjectObservable = rx::dynamic_observable<Object*>;
+using DynamicObjectObserver = rx::dynamic_observer<Object*>;
+
+static inline auto empty() -> DynamicObjectObservable {
+  return source::empty<Object*>();
+}
+
+auto GetRxScope() -> LocalScope*;
 }  // namespace rx
-
-class Subscription : public Datum {
- private:
-  Subscription() = default;
-
- public:
-  ~Subscription() override = default;
-
-  DECLARE_TYPE(Subscription);
-
- public:
-  static inline auto New() -> Subscription* {
-    return new Subscription();
-  }
-};
-
-class Observable : public Datum {
- private:
-  Observable() = default;
-
- public:
-  ~Observable() override = default;
-
-  DECLARE_TYPE(Observable);
-
- public:
-  static inline auto New() -> Observable* {
-    return new Observable();
-  }
-};
 }  // namespace scm
+
+#else
+
+#define FOR_EACH_RX_TYPE(V)
 
 #endif  // SCM_ENABLE_RX
 #endif  // SCM_RX_H

@@ -94,15 +94,20 @@ class Runtime : public ExecutionStack {
   DEFINE_NON_COPYABLE_TYPE(Runtime);
 
  private:
+  LocalScope* init_scope_;
   LocalScope* scope_ = nullptr;
   std::vector<Script*> scripts_{};
   bool running_ = false;
   bool executing_ = false;
   Interpreter interpreter_;
 
-  void Call(instr::TargetEntryInstr* target, LocalScope* locals);
-  void Call(NativeProcedure* native, const std::vector<Object*>& args);
-  void Call(Lambda* lambda);
+  inline auto PushFrame(LocalScope* locals) -> StackFrame* {
+    return interpreter_.PushStackFrame(locals);
+  }
+
+  inline auto PopFrame() -> StackFrame {
+    return interpreter_.PopStackFrame();
+  }
 
   inline void PopN(std::vector<Object*>& result, const uword num, const bool reverse = false) {
     for (auto idx = 0; idx < num; idx++) {
@@ -134,18 +139,36 @@ class Runtime : public ExecutionStack {
   }
 
   template <class Native>
-  static inline void RegisterNative(LocalScope* scope) {
+  static inline auto RegisterNative(LocalScope* scope) -> std::pair<Symbol*, NativeProcedure*> {
     ASSERT(scope);
     Native::Init();
     const auto procedure = Native::Get();
     ASSERT(procedure);
     const auto symbol = procedure->GetSymbol();
     LOG_IF(FATAL, !scope->Add(symbol, procedure)) << "failed to register: " << procedure->ToString();
+    return {symbol, procedure};
   }
 
- public:
-  static auto CreateInitScope() -> LocalScope*;
-  void LoadKernelModule();  // TODO: reduce visibility
+  void Call(instr::TargetEntryInstr* target, LocalScope* locals);
+  void Call(NativeProcedure* native, const ObjectList& args);
+  void Call(Lambda* lambda);
+  void Call(Lambda* lambda, const ObjectList& args);
+
+ public:  // TODO: reduce visibility
+  void LoadKernelModule();
+  inline void Call(Procedure* procedure, const ObjectList& args) {
+    if (procedure->IsLambda()) {
+      const auto lambda = procedure->AsLambda();
+      ASSERT(lambda);
+      const auto scope = GetCurrentScope() ? GetCurrentScope() : LocalScope::New();
+      ASSERT(scope);
+      LOG_IF(FATAL, !LambdaCompiler::Compile(lambda, scope)) << "failed to compile: " << lambda->ToString();
+      return Call(procedure->AsLambda(), args);
+    } else if (procedure->IsNativeProcedure()) {
+      return Call(procedure->AsNativeProcedure(), args);
+    }
+    LOG(FATAL) << "invalid Call to " << procedure << " w/ args: " << args.size();  // TODO: fix printing args
+  }
 
  protected:
   explicit Runtime(LocalScope* init_scope = CreateInitScope());
@@ -172,7 +195,7 @@ class Runtime : public ExecutionStack {
   }
 
  public:
-  ~Runtime();
+  ~Runtime() override;
 
   auto IsRunning() const -> bool {
     return running_;
@@ -190,19 +213,23 @@ class Runtime : public ExecutionStack {
     return scope_;
   }
 
+  auto GetInitScope() const -> LocalScope* {
+    return init_scope_;
+  }
+
   auto GetCurrentScope() -> LocalScope* {
     const auto frame = GetCurrentFrame();
-    ASSERT(frame);
-    return frame->GetLocals();
+    return frame ? frame->GetLocals() : GetInitScope();
   }
 
  public:
+  static auto CreateInitScope() -> LocalScope*;
+  static auto Eval(const std::string& expr) -> Object*;
+  static auto Exec(Script* script) -> Object*;
+
   static inline auto New(LocalScope* init_scope = CreateInitScope()) -> Runtime* {
     return new Runtime(init_scope);
   }
-
-  static auto Eval(const std::string& expr) -> Object*;
-  static auto Exec(Script* script) -> Object*;
 
  public:
   static void Init();

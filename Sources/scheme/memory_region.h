@@ -44,7 +44,7 @@ class MemoryRegion : public Section {
   MemoryRegion(const uword size, const ProtectionMode mode = kNoAccess);
   explicit MemoryRegion(const Section& section) :
     Section(section) {}
-  ~MemoryRegion() = default;
+  ~MemoryRegion() override = default;
 
   virtual void FreeRegion();
   virtual void Protect(const ProtectionMode mode);

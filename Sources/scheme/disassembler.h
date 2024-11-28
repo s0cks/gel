@@ -10,7 +10,7 @@ class Disassembler : public instr::InstructionVisitor {
 
  public:
   Disassembler() = default;
-  ~Disassembler() = default;
+  ~Disassembler() override = default;
 #define DECLARE_VISIT(Name) auto Visit##Name(Name* instr) -> bool override;
   FOR_EACH_INSTRUCTION(DECLARE_VISIT)
 #undef DECLARE_VISIT

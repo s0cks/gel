@@ -3,6 +3,8 @@
 #include <sstream>
 #include <string>
 
+#include "scheme/to_string_helper.h"
+
 namespace scm::instr {
 void Instruction::Append(Instruction* instr) {
   ASSERT(instr);
@@ -151,11 +153,10 @@ auto ThrowInstr::ToString() const -> std::string {
 }
 
 auto InvokeInstr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "InvokeInstr(";
-  ss << "target=" << GetTarget()->ToString();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<InvokeInstr> helper;
+  helper.AddField("target", GetTarget());
+  helper.AddField("num_args", GetNumberOfArgs());
+  return helper;
 }
 
 auto InvokeDynamicInstr::ToString() const -> std::string {
@@ -167,11 +168,10 @@ auto InvokeDynamicInstr::ToString() const -> std::string {
 }
 
 auto InvokeNativeInstr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "InvokeNativeInstr(";
-  ss << "target=" << GetTarget()->ToString();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<InvokeNativeInstr> helper;
+  helper.AddField("target", GetTarget());
+  helper.AddField("num_args", GetNumberOfArgs());
+  return helper;
 }
 
 auto InstanceOfInstr::ToString() const -> std::string {

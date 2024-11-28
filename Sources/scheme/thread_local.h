@@ -58,7 +58,7 @@ class ThreadLocal : public ThreadLocalBase {
  public:
   explicit ThreadLocal(T* init_value = UNALLOCATED) :
     ThreadLocalBase((uword)init_value) {}
-  virtual ~ThreadLocal() = default;
+  ~ThreadLocal() override = default;
 
   virtual auto Set(const T* value) const -> bool {
     return SetAddress((uword)value);
@@ -107,7 +107,7 @@ class LazyThreadLocal : public ThreadLocal<T> {
  public:
   explicit LazyThreadLocal(const Supplier& supplier = CreateDefaultSupplier()) :
     supplier_(supplier) {}
-  virtual ~LazyThreadLocal() = default;
+  ~LazyThreadLocal() override = default;
 
   auto GetSupplier() const -> const Supplier& {
     return supplier_;
@@ -124,6 +124,10 @@ class LazyThreadLocal : public ThreadLocal<T> {
 
   operator bool() const {
     return !ThreadLocalBase::IsEmpty();
+  }
+
+  operator T*() const {
+    return Get();
   }
 
   auto operator=(const T* value) -> LazyThreadLocal<T>& {

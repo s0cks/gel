@@ -17,6 +17,7 @@
 #include "scheme/procedure.h"
 #include "scheme/rx.h"
 #include "scheme/script.h"
+#include "scheme/to_string_helper.h"
 
 namespace scm {
 #ifdef SCM_DISABLE_HEAP
@@ -56,7 +57,7 @@ FOR_EACH_TYPE(DEFINE_INIT_CLASS)
 ClassList Class::all_ = {};  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
 auto Object::CreateClass() -> Class* {
-  return Class::New("Object");
+  return Class::New(kClassName);
 }
 
 auto Object::raw_ptr() const -> Pointer* {
@@ -84,20 +85,21 @@ void Object::Init() {
   // string-like type(s)
   String::InitClass();
   Symbol::InitClass();
+  Observable::InitClass();
   // error type(s)
   Error::InitClass();
 }
 
 auto Class::CreateClass() -> Class* {
-  return Class::New(Object::GetClass(), "Class");
+  return Class::New(Object::GetClass(), kClassName);
 }
 
 auto Long::CreateClass() -> Class* {
-  return Class::New(Number::GetClass(), "Long");
+  return Class::New(Number::GetClass(), kClassName);
 }
 
 auto Double::CreateClass() -> Class* {
-  return Class::New(Number::GetClass(), "Double");
+  return Class::New(Number::GetClass(), kClassName);
 }
 
 auto Long::Unbox(Object* rhs) -> uint64_t {
@@ -107,11 +109,10 @@ auto Long::Unbox(Object* rhs) -> uint64_t {
 }
 
 auto Class::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "Class(";
-  ss << "name=" << GetName()->Get();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<Class> helper;
+  helper.AddField("name", GetName());
+  helper.AddField("parent", GetParent());
+  return helper;
 }
 
 auto Datum::Add(Datum* rhs) const -> Datum* {
@@ -169,7 +170,7 @@ auto Bool::Or(Datum* rhs) const -> Datum* {
 }
 
 auto Bool::CreateClass() -> Class* {
-  return Class::New(Object::GetClass(), "Bool");
+  return Class::New(Object::GetClass(), kClassName);
 }
 
 void Bool::Init() {
@@ -193,7 +194,7 @@ auto Bool::False() -> Bool* {
 }
 
 auto Number::CreateClass() -> Class* {
-  return Class::New(Object::GetClass(), "Number");
+  return Class::New(Object::GetClass(), kClassName);
 }
 
 auto Number::New(const uint64_t rhs) -> Number* {
@@ -212,10 +213,7 @@ auto Number::Equals(Object* rhs) const -> bool {
 }
 
 auto Number::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "Number(";
-  ss << ")";
-  return ss.str();
+  return ToStringHelper<Number>{};
 }
 
 #define FOR_EACH_NUMBER_BINARY_OP(V) \
@@ -257,11 +255,9 @@ auto Long::Equals(Object* rhs) const -> bool {
 }
 
 auto Long::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "Number(";
-  ss << "value=" << Get();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<Long> helper;
+  helper.AddField("value", Get());
+  return helper;
 }
 
 #define DEFINE_BINARY_OP(Name, Op)                                                          \
@@ -285,15 +281,13 @@ auto Double::Equals(Object* rhs) const -> bool {
 }
 
 auto Double::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "Double(";
-  ss << "value=" << Get();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<Double> helper;
+  helper.AddField("value", Get());
+  return helper;
 }
 
 auto Pair::CreateClass() -> Class* {
-  return Class::New(Object::GetClass(), "Pair");
+  return Class::New(Object::GetClass(), kClassName);
 }
 
 auto Pair::VisitPointers(PointerVisitor* vis) -> bool {
@@ -310,17 +304,10 @@ auto Pair::Equals(Object* rhs) const -> bool {
 }
 
 auto Pair::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "Pair(";
-  if (HasCar())
-    ss << "car=" << GetCar()->ToString();
-  if (HasCdr()) {
-    if (HasCar())
-      ss << ",";
-    ss << "cdr=" << GetCdr()->ToString();
-  }
-  ss << ")";
-  return ss.str();
+  ToStringHelper<Pair> helper;
+  helper.AddField("car", GetCar());
+  helper.AddField("cdr", GetCdr());
+  return helper;
 }
 
 static Pair* kEmptyPair = nullptr;
@@ -342,15 +329,13 @@ auto StringObject::Equals(const std::string& rhs) const -> bool {
 }
 
 auto Symbol::CreateClass() -> Class* {
-  return Class::New(Object::GetClass(), "Symbol");
+  return Class::New(Object::GetClass(), kClassName);
 }
 
 auto Symbol::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "Symbol(";
-  ss << "value=" << Get();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<Symbol> helper;
+  helper.AddField("value", Get());
+  return helper;
 }
 
 auto Symbol::New(const std::string& rhs) -> Symbol* {
@@ -359,7 +344,7 @@ auto Symbol::New(const std::string& rhs) -> Symbol* {
 }
 
 auto String::CreateClass() -> Class* {
-  return Class::New(Object::GetClass(), "String");
+  return Class::New(Object::GetClass(), kClassName);
 }
 
 auto String::Equals(Object* rhs) const -> bool {
@@ -372,11 +357,9 @@ auto String::Equals(Object* rhs) const -> bool {
 }
 
 auto String::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "String(";
-  ss << "value=" << Get();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<String> helper;
+  helper.AddField("value", Get());
+  return helper;
 }
 
 auto String::ValueOf(Object* rhs) -> String* {
@@ -478,4 +461,62 @@ auto Class::New(Class* parent, const std::string& name) -> Class* {
   ASSERT(!name.empty());
   return New(parent, String::New(name));
 }
+
+#ifdef SCM_ENABLE_RX
+
+auto Observable::CreateClass() -> Class* {
+  return Class::New(Object::GetClass(), kClassName);
+}
+
+auto Observable::ToString() const -> std::string {
+  return ToStringHelper<Observable>{};
+}
+
+auto Observable::Equals(Object* rhs) const -> bool {
+  ASSERT(rhs);
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
+
+auto Observable::ToObservable(Pair* list) -> rx::DynamicObjectObservable {
+  ASSERT(list);
+  return rx::source::create<Object*>([list](const auto& s) {
+    Object* cell = list;
+    while (!scm::IsNull(cell) && scm::IsPair(cell)) {
+      const auto head = scm::Car(cell);
+      ASSERT(head);
+      s.on_next(head);
+      cell = scm::Cdr(cell);
+    }
+    s.on_completed();
+  });
+}
+
+auto Observable::Empty() -> Observable* {
+  return new Observable(rx::empty());
+}
+
+auto Observable::New(Object* value) -> Observable* {
+  if (scm::IsNull(value))
+    return Empty();
+  else if (scm::IsPair(value))
+    return New(ToObservable(ToPair(value)));
+  return New(rx::source::just(value));
+}
+
+auto Observer::CreateClass() -> Class* {
+  return Class::New(Object::GetClass(), kClassName);
+}
+
+auto Observer::ToString() const -> std::string {
+  return ToStringHelper<Observer>{};
+}
+
+auto Observer::Equals(Object* rhs) const -> bool {
+  ASSERT(rhs);
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
+
+#endif  // SCM_ENABLE_RX
 }  // namespace scm

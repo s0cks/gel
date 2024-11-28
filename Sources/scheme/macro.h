@@ -14,7 +14,7 @@ class Macro : public Object {
   expr::Expression* body_;
 
  protected:
-  explicit Macro(Symbol* symbol, const ArgumentSet& args, expr::Expression* body) :
+  explicit Macro(Symbol* symbol, const ArgumentSet& args, expr::Expression* body) :  // NOLINT(modernize-pass-by-value)
     symbol_(symbol),
     args_(args),
     body_(body) {

@@ -19,6 +19,13 @@ _DECLARE_NATIVE_PROCEDURE(array_get, "array:get");
 _DECLARE_NATIVE_PROCEDURE(array_set, "array:set");
 _DECLARE_NATIVE_PROCEDURE(array_length, "array:length");
 
+#ifdef SCM_ENABLE_RX
+_DECLARE_NATIVE_PROCEDURE(rx_get_locals, "rx:get-locals");
+_DECLARE_NATIVE_PROCEDURE(rx_to_observable, "rx:to-observable");
+_DECLARE_NATIVE_PROCEDURE(rx_subscribe, "rx:subscribe");
+_DECLARE_NATIVE_PROCEDURE(rx_map, "rx:map");
+#endif  // SCM_ENABLE_RX
+
 #ifdef SCM_DEBUG
 _DECLARE_NATIVE_PROCEDURE(scm_minor_gc, "scm:minor-gc!");
 _DECLARE_NATIVE_PROCEDURE(scm_major_gc, "scm:major-gc!");

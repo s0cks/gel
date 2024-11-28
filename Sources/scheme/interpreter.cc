@@ -302,6 +302,10 @@ auto Interpreter::PushStackFrame(LocalScope* locals) -> StackFrame* {
 }
 
 auto Interpreter::PopStackFrame() -> StackFrame {
+  if (stack_.empty()) {
+    LOG(WARNING) << "stack empty";
+    return {};
+  }
   ASSERT(!stack_.empty());
   const auto frame = stack_.top();
   stack_.pop();

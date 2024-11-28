@@ -97,7 +97,7 @@ class LocalScope {
   std::vector<LocalVariable*> locals_;
 
  protected:
-  explicit LocalScope(LocalScope* parent = nullptr, const LocalList& locals = {}) :
+  explicit LocalScope(LocalScope* parent = nullptr, const LocalList& locals = {}) :  // NOLINT(modernize-pass-by-value)
     parent_(parent),
     locals_(locals) {}
 
@@ -207,7 +207,7 @@ class LocalScopePrinter : public LocalVariableVisitor {
   int indent_;
 
   auto GetIndentString() const -> std::string {
-    return std::string(indent_ * 2, ' ');
+    return std::string(indent_ * 2, ' ');  // NOLINT(modernize-return-braced-init-list)
   }
 
   inline void Indent(const int by = 1) {

@@ -8,12 +8,13 @@
 
 #include "scheme/common.h"
 #include "scheme/heap.h"
+#include "scheme/to_string_helper.h"
 
 namespace scm::expr {
 Class* Expression::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 void Expression::Init() {
   ASSERT(kClass == nullptr);
-  kClass = Class::New(Object::GetClass(), "Expression");
+  kClass = Class::New(Object::GetClass(), kClassName);
   ASSERT(kClass);
 }
 
@@ -76,11 +77,9 @@ auto SequenceExpr::VisitAllDefinitions(ExpressionVisitor* vis) -> bool {
 }
 
 auto LiteralExpr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << GetName() << "(";
-  ss << "value=" << GetValue()->ToString();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<LiteralExpr> helper;
+  helper.AddField("value", GetValue());
+  return helper;
 }
 
 auto BinaryOpExpr::IsConstantExpr() const -> bool {
@@ -120,48 +119,39 @@ auto BinaryOpExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
 }
 
 auto BinaryOpExpr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << GetName() << "(";
-  ss << "op=" << GetOp() << ", ";
-  ss << "left=" << GetLeft()->ToString() << ", ";
-  ss << "right=" << GetRight()->ToString();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<BinaryOpExpr> helper;
+  helper.AddField("op", GetOp());
+  helper.AddField("left", GetLeft());
+  helper.AddField("right", GetRight());
+  return helper;
 }
 
 auto EvalExpr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << GetName() << "(";
+  ToStringHelper<EvalExpr> helper;
   if (HasExpression())
-    ss << "expr=" << GetExpression()->ToString();
-  ss << ")";
-  return ss.str();
+    helper.AddField("expression", GetExpression());
+  return helper;
 }
 
 auto BeginExpr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << GetName() << "(";
-  ss << "num_expressions=" << GetNumberOfChildren();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<EvalExpr> helper;
+  if (!IsEmpty())
+    helper.AddField("num_expressions", GetNumberOfChildren());
+  return helper;
 }
 
 auto CallProcExpr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << GetName() << "(";
-  ss << "target=" << GetTarget()->ToString() << ", ";
-  ss << "num_args=" << GetNumberOfArgs();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<CallProcExpr> helper;
+  helper.AddField("target", GetTarget());
+  helper.AddField("num_args", GetNumberOfArgs());
+  return helper;
 }
 
 auto SetExpr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << GetName() << "(";
-  ss << "symbol=" << GetSymbol() << ", ";
-  ss << "value=" << GetValue();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<SetExpr> helper;
+  helper.AddField("symbol", GetSymbol());
+  helper.AddField("value", GetValue());
+  return helper;
 }
 
 auto CondExpr::VisitAllClauses(ExpressionVisitor* vis) -> bool {
@@ -186,12 +176,10 @@ auto CondExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
 }
 
 auto CondExpr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << GetName() << "(";
-  ss << "clauses=" << GetClauses() << ", ";
-  ss << "alternate=" << GetAlternate();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<CondExpr> helper;
+  helper.AddField("clauses", GetClauses());
+  helper.AddField("alternate", GetAlternate());
+  return helper;
 }
 
 auto LambdaExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
@@ -204,75 +192,58 @@ auto LambdaExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
 }
 
 auto LambdaExpr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << GetName() << "(";
-  ss << "args=" << GetArgs();
-  if (!IsEmpty())
-    ss << ", body=" << GetBody();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<LambdaExpr> helper;
+  helper.AddField("args", GetArgs());
+  helper.AddField("body", GetBody());
+  return helper;
 }
 
 auto ThrowExpr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << GetName() << "(";
-  ss << "value=" << GetValue()->ToString();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<ThrowExpr> helper;
+  helper.AddField("value", GetValue());
+  return helper;
 }
 
 // Definitions
 
 auto LocalDef::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << GetName() << "(";
-  ss << "symbol=" << GetSymbol() << ", ";
-  ss << "value=" << GetValue()->ToString();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<LocalDef> helper;
+  helper.AddField("symbol", GetSymbol());
+  helper.AddField("value", GetValue());
+  return helper;
 }
 
 auto ImportDef::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << GetName() << "(";
-  ss << "symbol=" << GetSymbol();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<ImportDef> helper;
+  helper.AddField("symbol", GetSymbol());
+  return helper;
 }
 
 auto MacroDef::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << GetName() << "(";
-  ss << "symbol=" << GetSymbol() << ", ";
-  ss << "body=" << GetBody()->ToString();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<MacroDef> helper;
+  helper.AddField("symbol", GetSymbol());
+  helper.AddField("body", GetBody());
+  return helper;
 }
 
 auto UnaryExpr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << GetName() << "(";
-  ss << "op=" << GetOp() << ", ";
-  ss << "value=" << GetValue()->ToString();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<UnaryExpr> helper;
+  helper.AddField("op", GetOp());
+  helper.AddField("value", GetValue());
+  return helper;
 }
 
 auto QuotedExpr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "QuotedExpr(";
-  ss << "value=" << Get();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<QuotedExpr> helper;
+  helper.AddField("value", Get());
+  return helper;
 }
 
 auto ClauseExpr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "ClauseExpr(";
-  ss << "key=" << GetKey()->ToString() << ", ";
-  ss << "actions=" << GetActions();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<ClauseExpr> helper;
+  helper.AddField("key", GetKey());
+  helper.AddField("actions", GetActions());
+  return helper;
 }
 
 auto ClauseExpr::VisitAllActions(ExpressionVisitor* vis) -> bool {
@@ -321,43 +292,60 @@ auto CaseExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
 }
 
 auto CaseExpr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "WhenExpr(";
-  ss << "key=" << GetKey()->ToString() << ", ";
-  // TODO: ss << "clauses=" << GetClauses();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<CaseExpr> helper;
+  helper.AddField("key", GetKey());
+  helper.AddField("clauses", GetClauses());
+  return helper;
 }
 
 auto WhenExpr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "WhenExpr(";
-  ss << "value=" << GetTest()->ToString() << ", ";
-  ss << "actions=" << GetActions();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<WhenExpr> helper;
+  helper.AddField("test", GetTest());
+  helper.AddField("actions", GetActions());
+  return helper;
 }
 
 auto WhileExpr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "LoopExpr(";
-  ss << "body=" << GetBody();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<WhileExpr> helper;
+  helper.AddField("test", GetTest());
+  helper.AddField("body", GetBody());
+  return helper;
+}
+
+auto Binding::ToString() const -> std::string {
+  ToStringHelper<Binding> helper;
+  helper.AddField("symbol", GetSymbol());
+  helper.AddField("value", GetValue());
+  return helper;
+}
+
+auto RxOpExpr::ToString() const -> std::string {
+  ToStringHelper<RxOpExpr> helper;
+  helper.AddField("symbol", GetSymbol());
+  helper.AddField("args", GetBody());
+  return helper;
+}
+
+auto LetRxExpr::ToString() const -> std::string {
+  ToStringHelper<LetRxExpr> helper;
+  helper.AddField("scope", GetScope());
+  helper.AddField("body", GetBody());
+  return helper;
 }
 
 auto LetExpr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "LetExpr(";
-  ss << "scope=" << GetScope();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<LetExpr> helper;
+  helper.AddField("scope", GetScope());
+  helper.AddField("binings", GetBindings());
+  helper.AddField("body", GetBody());
+  return helper;
 }
 
 auto LetExpr::VisitAllBindings(ExpressionVisitor* vis) -> bool {
   ASSERT(vis);
   for (const auto& binding : bindings_) {
-    if (!binding.GetValue()->Accept(vis))
+    ASSERT(binding);
+    if (!binding->Accept(vis))
       return false;
   }
   return true;
@@ -371,8 +359,9 @@ auto LetExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
 }
 
 auto ListExpr::ToString() const -> std::string {
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return {};
+  ToStringHelper<ListExpr> helper;
+  helper.AddField("values", GetBody());
+  return helper;
 }
 
 auto ListExpr::IsConstantExpr() const -> bool {

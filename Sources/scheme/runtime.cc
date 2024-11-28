@@ -37,8 +37,10 @@ auto GetRuntime() -> Runtime* {
 
 Runtime::Runtime(LocalScope* scope) :
   ExecutionStack(),
+  init_scope_(scope),
   scope_(scope),
   interpreter_(this) {
+  ASSERT(init_scope_);
   ASSERT(scope_);
 }
 
@@ -163,6 +165,37 @@ auto Runtime::CreateInitScope() -> LocalScope* {
   RegisterNative<proc::array_get>(scope);
   RegisterNative<proc::array_set>(scope);
   RegisterNative<proc::array_length>(scope);
+
+#ifdef SCM_ENABLE_RX
+  const auto rx_scope = rx::GetRxScope();
+  {
+    {
+      const auto [symbol, procedure] = RegisterNative<proc::rx_get_locals>(scope);
+      const auto local = LocalVariable::New(rx_scope, symbol, procedure);
+      ASSERT(local);
+      LOG_IF(FATAL, !rx_scope->Add(local)) << "failed to add rx scope value: " << local;
+    }
+    {
+      const auto [symbol, procedure] = RegisterNative<proc::rx_to_observable>(scope);
+      const auto local = LocalVariable::New(rx_scope, symbol, procedure);
+      ASSERT(local);
+      LOG_IF(FATAL, !rx_scope->Add(local)) << "failed to add rx scope value: " << local;
+    }
+    {
+      const auto [symbol, procedure] = RegisterNative<proc::rx_subscribe>(scope);
+      const auto local = LocalVariable::New(rx_scope, symbol, procedure);
+      ASSERT(local);
+      LOG_IF(FATAL, !rx_scope->Add(local)) << "failed to add rx scope value: " << local;
+    }
+    {
+      const auto [symbol, procedure] = RegisterNative<proc::rx_map>(scope);
+      const auto local = LocalVariable::New(rx_scope, symbol, procedure);
+      ASSERT(local);
+      LOG_IF(FATAL, !rx_scope->Add(local)) << "failed to add rx scope value: " << local;
+    }
+  }
+#endif  // SCM_ENABLE_RX
+
 #ifdef SCM_DEBUG
   RegisterNative<proc::scm_minor_gc>(scope);
   RegisterNative<proc::scm_major_gc>(scope);
@@ -213,9 +246,30 @@ auto Runtime::StoreSymbol(Symbol* symbol, Object* value) -> bool {
 
 void Runtime::Call(instr::TargetEntryInstr* target, LocalScope* locals) {
   ASSERT(target && target->HasNext());
-  const auto frame = interpreter_.PushStackFrame(locals);
-  ASSERT(frame);
   interpreter_.Execute(target, locals);
+}
+
+void Runtime::Call(Lambda* lambda, const ObjectList& args) {
+  ASSERT(lambda);
+  const auto locals = LocalScope::New(GetCurrentScope());
+  ASSERT(locals);
+  const auto& lambda_args = lambda->GetArgs();
+  ASSERT(lambda_args.size() == args.size());
+  auto idx = 0;
+  for (const auto& arg : std::ranges::reverse_view(lambda_args)) {
+    const auto symbol = Symbol::New(arg.GetName());
+    ASSERT(symbol);
+    const auto value = args[idx++];
+    ASSERT(value);
+    const auto local = LocalVariable::New(locals, symbol, value);
+    ASSERT(local);
+    if (!locals->Add(local))
+      throw Exception("failed to add parameter local");
+    DLOG(INFO) << "added local: " << (*local);
+  }
+  const auto frame = PushFrame(locals);
+  ASSERT(frame);
+  Call(lambda->GetEntry()->GetTarget(), locals);
 }
 
 void Runtime::Call(Lambda* lambda) {
@@ -232,7 +286,9 @@ void Runtime::Call(Lambda* lambda) {
     if (!locals->Add(local))
       throw Exception("failed to add parameter local");
   }
-  return Call(lambda->GetEntry()->GetTarget(), locals);
+  const auto frame = PushFrame(locals);
+  ASSERT(frame);
+  Call(lambda->GetEntry()->GetTarget(), locals);
 }
 
 void Runtime::Call(NativeProcedure* native, const std::vector<Object*>& args) {
@@ -242,11 +298,11 @@ void Runtime::Call(NativeProcedure* native, const std::vector<Object*>& args) {
   for (auto idx = 0; idx < args.size(); idx++) {
     locals->Add(Symbol::New(fmt::format("arg{}", idx)), args[idx]);
   }
-  const auto frame = interpreter_.PushStackFrame(locals);
+  const auto frame = PushFrame(locals);
   ASSERT(frame);
   if (!native->Apply(args))
     throw Exception(fmt::format("failed to apply procedure: {}", native->ToString()));
-  interpreter_.PopStackFrame();
+  PopFrame();
 }
 
 auto Runtime::Eval(const std::string& expr) -> Object* {
@@ -274,6 +330,8 @@ auto Runtime::Exec(Script* script) -> Object* {
       },
       runtime->GetGlobalScope());
   ASSERT(!runtime->HasFrame());
+  const auto frame = runtime->PushFrame(scope);
+  ASSERT(frame);
   runtime->Call(script->GetEntry()->GetTarget(), scope);
   ASSERT(!runtime->HasFrame() || runtime->HasError());
   return runtime->Pop();

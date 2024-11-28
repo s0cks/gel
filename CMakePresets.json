@@ -2,8 +2,8 @@
   "version": 6,
   "cmakeMinimumRequired": {
     "major": 3,
-    "minor": 23,
-    "patch": 0
+    "minor": 29,
+    "patch": 3
   },
   "configurePresets": [
     {
@@ -23,10 +23,8 @@
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_C_STANDARD": "11",
         "CMAKE_C_STANDARD_REQUIRED": "ON",
-        "CMAKE_C_COMPILER": "clang",
         "CMAKE_CXX_STANDARD": "20",
         "CMAKE_CXX_STANDARD_REQUIRED": "ON",
-        "CMAKE_CXX_COMPILER": "clang++",
         "CMAKE_CXX_EXTENSIONS": "OFF",
         "VCPKG_APPLOCAL_DEPS": "ON"
       }
@@ -34,6 +32,19 @@
     {
       "name": "darwin-arm64",
       "hidden": true,
+      "environment": {
+        "LLVM_HOME": "/opt/homebrew/opt/llvm/",
+        "PATH": "$env{LLVM_HOME}/bin:$penv{PATH}",
+        "CC": "clang",
+        "CXX": "clang++",
+        "LDFLAGS": "$penv{LDFLAGS} -L$env{LLVM_HOME}/lib",
+        "CPPFLAGS": "$penv{CPPFLAGS} -I$env{LLVM_HOME}/include"
+      },
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "arm64-osx",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      },
       "vendor": {
         "microsoft.com/VisualStudioSettings/CMake/1.0": {
           "intelliSenseMode": "ios-clang-arm64",

@@ -21,9 +21,10 @@ class Semispace : public AllocationSection {
 
    public:
     explicit Iterator(const Semispace& semispace) :
+      PointerIterator(),
       semispace_(semispace),
       current_(semispace.GetStartingAddress()) {}
-    ~Iterator() = default;
+    ~Iterator() override = default;
 
     auto HasNext() const -> bool override {
       return current_ < semispace_.GetCurrentAddress();
@@ -40,7 +41,7 @@ class Semispace : public AllocationSection {
   Semispace() = default;
   Semispace(const uword start, const uword size) :
     AllocationSection(start, size) {}
-  virtual ~Semispace() = default;
+  ~Semispace() override = default;
 
   auto TryAllocate(const uword size) -> uword override;
   auto VisitAllPointers(PointerVisitor* vis) -> bool;
@@ -59,9 +60,9 @@ class Semispace : public AllocationSection {
     stream << "Semispace(";
     stream << "start=" << rhs.GetStartingAddressPointer() << ", ";
     stream << "size=" << rhs.GetSize() << ", ";
-    stream << "num_allocated=" << byte_t(rhs.GetNumberOfBytesAllocated());
+    stream << "num_allocated=" << byte_t(static_cast<double>(rhs.GetNumberOfBytesAllocated()));
     stream << " (" << rhs.GetAllocationPercent() << "), ";
-    stream << "num_remaining=" << byte_t(rhs.GetNumberOfBytesRemaining());
+    stream << "num_remaining=" << byte_t(static_cast<double>(rhs.GetNumberOfBytesRemaining()));
     stream << " (" << rhs.GetRemainingPercent() << ")";
     stream << ")";
     return stream;

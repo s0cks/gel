@@ -1,4 +1,6 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.29.3)
+message(STATUS "path: $ENV{PATH}")
+
 include(BuildInfo)
 project(
   ${BUILD_JSON_NAME}
@@ -27,11 +29,7 @@ find_package(fmt CONFIG REQUIRED)
 find_package(units CONFIG REQUIRED)
 
 list(APPEND SCM_LIBRARIES Threads::Threads glog::glog gflags::gflags fmt::fmt units::units)
-if(ENABLE_RX)
-  find_package(rxcpp CONFIG REQUIRED)
-  list(APPEND SCM_LIBRARIES rxcpp)
-  add_compile_definitions(SCM_ENABLE_RX)
-endif()
+
 
 if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
   add_compile_definitions(SCM_DEBUG)

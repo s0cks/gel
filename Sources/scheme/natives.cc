@@ -4,9 +4,12 @@
 #include <fmt/base.h>
 #include <fmt/format.h>
 
+#include <exception>
 #include <iostream>
 #include <random>
 #include <ranges>
+#include <rpp/operators/fwd.hpp>
+#include <rpp/operators/subscribe.hpp>
 
 #include "scheme/argument.h"
 #include "scheme/array.h"
@@ -20,6 +23,7 @@
 #include "scheme/parser.h"
 #include "scheme/procedure.h"
 #include "scheme/runtime.h"
+#include "scheme/rx.h"
 #include "scheme/scheme.h"
 #include "scheme/stack_frame.h"
 
@@ -250,4 +254,65 @@ NATIVE_PROCEDURE_F(scm_get_target_triple) {
 }
 
 #endif  // SCM_DEBUG
+
+#ifdef SCM_ENABLE_RX
+
+NATIVE_PROCEDURE_F(rx_get_locals) {
+  ASSERT(HasRuntime());
+  ASSERT(args.empty());
+  LocalScope::RecursiveIterator iter(rx::GetRxScope());
+  return Return(scm::ToList<LocalScope::RecursiveIterator, LocalVariable*>(iter, [](LocalVariable* local) -> Object* {
+    return String::New(local->GetName());
+  }));
+}
+
+NATIVE_PROCEDURE_F(rx_to_observable) {
+  // TODO: handle multiple args
+  return ReturnNew<Observable>(args[0]);
+}
+
+// (rx:subscribe <observable> <on_next> <on_error?> <on_completed?>)
+NATIVE_PROCEDURE_F(rx_subscribe) {
+  const auto runtime = GetRuntime();
+  ASSERT(runtime);
+  if (args.size() < 2 || args.size() > 4)
+    return ThrowError(
+        fmt::format("expected args `{}` to be: `<observable> <on_next> <on_error?> <on_completed?>`", Stringify(args)));
+  const auto source = args[0];
+  if (!scm::IsObservable(source))
+    return ThrowError(fmt::format("expected arg #1 `{}` to be an Observable", source->ToString()));
+  const auto on_next = args[1];
+  if (!scm::IsProcedure(on_next))
+    return ThrowError(fmt::format("expected arg #2 `{}` to be a Procedure", *on_next));
+  source->AsObservable()->GetValue().subscribe([runtime, on_next](Object* next) {
+    return runtime->Call(on_next->AsProcedure(), ObjectList{next});
+  });
+  return DoNothing();
+}
+
+// (rx:map <func>)
+NATIVE_PROCEDURE_F(rx_map) {
+  const auto runtime = GetRuntime();
+  ASSERT(runtime);
+  if (args.size() != 2)
+    return ThrowError(fmt::format("expected args `{}` to be: `<observable> <func>`", Stringify(args)));
+  const auto source = args[1];
+  if (!scm::IsObservable(source))
+    return ThrowError(fmt::format("expected arg #1 `{}` to be an Observable", *source));
+  const auto on_next = args[0];
+  if (!scm::IsProcedure(on_next))
+    return ThrowError(fmt::format("expected arg 2 `{}` to be a Procedure", *on_next));
+  DLOG(INFO) << "mapping " << source << " w/ " << on_next;
+  source->AsObservable()->value_ = source->AsObservable()->value_ | rx::operators::map([](Object* value) {
+                                     DLOG(INFO) << "- " << value;
+                                     return value;
+                                   });
+  source->AsObservable()->value_.subscribe([](Object* value) {
+    DLOG(INFO) << "- " << value;
+  });
+  return DoNothing();
+}
+
+#endif  // SCM_ENABLE_RX
+
 }  // namespace scm::proc

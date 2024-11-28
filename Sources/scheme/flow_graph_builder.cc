@@ -261,9 +261,132 @@ auto EffectVisitor::VisitImportDef(expr::ImportDef* expr) -> bool {
   return false;
 }
 
+auto EffectVisitor::VisitBinding(expr::Binding* expr) -> bool {
+  ASSERT(expr);
+  const auto symbol = expr->GetSymbol();
+  ASSERT(symbol);
+  ValueVisitor for_value(GetOwner());
+  if (!expr->GetValue()->Accept(&for_value)) {
+    LOG(FATAL) << "failed to visit value for binding.";
+    return false;
+  }
+  Append(for_value);
+  Add(instr::StoreVariableInstr::New(symbol, for_value.GetValue()));
+  return true;
+}
+
 auto EffectVisitor::VisitQuotedExpr(expr::QuotedExpr* expr) -> bool {
   ASSERT(expr);
   ReturnDefinition(ConstantInstr::New(expr->Get()));
+  return true;
+}
+
+auto EffectVisitor::VisitRxOpExpr(expr::RxOpExpr* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(FATAL);
+  return false;
+}
+
+static inline auto ResolveRxOp(Symbol* symbol, LocalScope* current_scope) -> Procedure* {
+  ASSERT(symbol);
+  ASSERT(current_scope);
+  LocalVariable* local = nullptr;
+  // try rx-scope
+  {
+    const auto rx_scope = rx::GetRxScope();
+    ASSERT(rx_scope);
+    if (rx_scope->Lookup(symbol, &local)) {
+      if (local->HasValue() && local->GetValue()->IsProcedure())
+        return local->GetValue()->AsProcedure();
+    }
+  }
+  if (current_scope->Lookup(symbol, &local)) {
+    if (local->HasValue() && local->GetValue()->IsProcedure())
+      return local->GetValue()->AsProcedure();
+  }
+  return nullptr;
+}
+
+static inline auto CreateRxOpTarget(Symbol* symbol, LocalScope* scope) -> instr::Definition* {
+  const auto procedure = ResolveRxOp(symbol, scope);
+  if (procedure)
+    return instr::ConstantInstr::New(procedure);
+  return instr::LoadVariableInstr::New(symbol);
+}
+
+auto RxEffectVisitor::VisitRxOpExpr(expr::RxOpExpr* expr) -> bool {
+  ASSERT(expr);
+  Do(GetObservable());
+  uint64_t aidx = 0;
+  while (IsOpen() && (aidx < expr->GetNumberOfChildren())) {
+    const auto arg = expr->GetChildAt(aidx++);
+    ASSERT(arg);
+    ValueVisitor for_arg(GetOwner());
+    if (!arg->Accept(&for_arg)) {
+      LOG(FATAL) << "failed to visit arg for rx operator.";
+      return false;
+    }
+    Append(for_arg);
+  }
+
+  const auto call_target = CreateRxOpTarget(expr->GetSymbol(), GetOwner()->GetScope());
+  Add(call_target);
+  if (IsNativeCall(call_target)) {
+    Add(instr::InvokeNativeInstr::New(call_target, expr->GetNumberOfChildren() + 1));
+  } else {
+    Add(instr::InstanceOfInstr::New(call_target, Procedure::GetClass()));
+    Add(instr::InvokeInstr::New(call_target, expr->GetNumberOfChildren()) + 1);
+  }
+  return true;
+}
+
+static inline auto IsLoadSymbol(ValueVisitor& rhs) -> bool {
+  return rhs.HasValue() && rhs.GetValue()->IsLoadVariableInstr();
+}
+
+auto EffectVisitor::CreateStoreLoad(Symbol* symbol, instr::Definition* value) -> instr::Definition* {
+  ASSERT(value);
+  Add(instr::StoreVariableInstr::New(symbol, value));
+  return instr::LoadVariableInstr::New(symbol);
+}
+
+auto EffectVisitor::VisitLetRxExpr(expr::LetRxExpr* expr) -> bool {
+  ASSERT(expr);
+  const auto target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
+  ASSERT(target);
+  Add(target);
+
+  const auto symbol = Symbol::New("observable");
+  const auto scope = GetOwner()->GetScope();
+  ASSERT(scope);
+  const auto local = LocalVariable::New(scope, symbol);
+  ASSERT(local);
+  LOG_IF(FATAL, !scope->Add(local)) << "failed to create: " << (*local);
+
+  ValueVisitor for_observable(GetOwner());
+  if (!expr->GetObservable()->Accept(&for_observable)) {
+    LOG(FATAL) << "failed to visit observable.";
+    return false;
+  }
+  Append(for_observable);
+  const auto load = CreateStoreLoad(symbol, for_observable.GetValue());
+  ASSERT(load);
+
+  // process body
+  uint64_t idx = 0;
+  while (IsOpen() && (idx < expr->GetNumberOfChildren())) {
+    const auto oper_expr = expr->GetOperatorAt(idx++);
+    ASSERT(oper_expr);
+    RxEffectVisitor for_effect(GetOwner(), load);
+    if (!oper_expr->Accept(&for_effect)) {
+      LOG(FATAL) << "failed to visit: " << oper_expr;
+      return false;
+    }
+
+    Append(for_effect);
+    if (!IsOpen())
+      break;
+  }
   return true;
 }
 
@@ -272,35 +395,17 @@ auto EffectVisitor::VisitLetExpr(expr::LetExpr* expr) -> bool {
   const auto target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
   ASSERT(target);
   Add(target);
-
-  {
-    // process bindings first
-    uint64_t idx = 0;
-    while (IsOpen() && (idx < expr->GetNumberOfBindings())) {
-      const auto& binding = expr->GetBindingAt(idx++);
-      ValueVisitor for_value(GetOwner());
-      if (!binding.GetValue()->Accept(&for_value)) {
-        LOG(ERROR) << "failed to visit: " << binding;
-        return false;
-      }
-      Append(for_value);
-      Add(instr::StoreVariableInstr::New(binding.GetSymbol(), for_value.GetValue()));
-    }
-  }
-
-  {
-    // process body
-    uint64_t idx = 0;
-    while (IsOpen() && (idx < expr->GetNumberOfChildren())) {
-      const auto child = expr->GetChildAt(idx++);
-      ASSERT(child);
-      EffectVisitor for_effect(GetOwner());
-      if (!child->Accept(&for_effect))
-        break;
-      Append(for_effect);
-      if (!IsOpen())
-        break;
-    }
+  // process body
+  uint64_t idx = 0;
+  while (IsOpen() && (idx < expr->GetNumberOfChildren())) {
+    const auto child = expr->GetChildAt(idx++);
+    ASSERT(child);
+    EffectVisitor for_effect(GetOwner());
+    if (!child->Accept(&for_effect))
+      break;
+    Append(for_effect);
+    if (!IsOpen())
+      break;
   }
   return true;
 }

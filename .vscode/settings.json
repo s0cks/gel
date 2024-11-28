@@ -125,14 +125,11 @@
       "query": "state:closed repo:${owner}/${repository} sort:updated-desc"
     }
   ],
-  "C_Cpp.errorSquiggles": "enabledIfIncludesResolve",
   "cmake.allowUnsupportedPresetsVersions": true,
   "cmake.allowCommentsInPresetsFile": true,
   "cmake.buildTask": true,
   "cmake.generator": "Ninja",
   "cmake.ignoreCMakeListsMissing": true,
   "cmake.launchBehavior": "breakAndReuseTerminal",
-  "C_Cpp.clang_format_fallbackStyle": "file",
-  "C_Cpp.codeAnalysis.clangTidy.enabled": true,
   "clang-format.fallbackStyle": "Google"
 }

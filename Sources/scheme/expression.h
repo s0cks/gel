@@ -28,7 +28,10 @@
   V(EvalExpr)                       \
   V(CallProcExpr)                   \
   V(SetExpr)                        \
+  V(Binding)                        \
   V(LetExpr)                        \
+  V(RxOpExpr)                       \
+  V(LetRxExpr)                      \
   V(ListExpr)                       \
   V(ThrowExpr)                      \
   V(QuotedExpr)
@@ -37,6 +40,31 @@ namespace scm {
 class Parser;
 
 namespace expr {
+namespace proto {
+class HasSymbol {
+  DEFINE_NON_COPYABLE_TYPE(HasSymbol);
+
+ private:
+  Symbol* symbol_;
+
+ protected:
+  explicit HasSymbol(Symbol* symbol = nullptr) :
+    symbol_(symbol) {}
+
+  void SetSymbol(Symbol* rhs) {
+    ASSERT(rhs);
+    symbol_ = rhs;
+  }
+
+ public:
+  virtual ~HasSymbol() = default;
+
+  auto GetSymbol() const -> Symbol* {
+    return symbol_;
+  }
+};
+}  // namespace proto
+
 class Expression;
 class Definition;
 #define FORWARD_DECLARE(Name) class Name;
@@ -74,7 +102,7 @@ class Expression : public Object {  // TODO: should Expression inherit from Obje
   }
 
  public:
-  virtual ~Expression() = default;
+  ~Expression() override = default;
   virtual auto GetName() const -> const char* = 0;
   virtual auto Accept(ExpressionVisitor* vis) -> bool = 0;
 
@@ -299,6 +327,18 @@ enum BinaryOp : uint64_t {
   FOR_EACH_BINARY_OP(DEFINE_BINARY_OP)
 #undef DEFINE_BINARY_OP
 };
+
+static inline constexpr auto BinaryOpToString(const BinaryOp& rhs) -> const char* {
+  switch (rhs) {
+#define DEFINE_TO_STRING(Name) \
+  case BinaryOp::k##Name:      \
+    return #Name;
+    FOR_EACH_BINARY_OP(DEFINE_TO_STRING)
+#undef DEFINE_TO_STRING
+    default:
+      return "Invalid Binary Op";
+  }
+}
 
 static inline auto operator<<(std::ostream& stream, const BinaryOp& rhs) -> std::ostream& {
   switch (rhs) {
@@ -539,7 +579,7 @@ class SequenceExpr : public Expression {
     return children_.size();
   }
 
-  inline auto IsEmpty() const -> bool {
+  virtual auto IsEmpty() const -> bool {
     return GetNumberOfChildren() == 0;
   }
 
@@ -561,7 +601,7 @@ class SequenceExpr : public Expression {
 
   void RemoveChildAt(const uint64_t idx) override {
     ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
-    children_.erase(children_.begin() + idx);
+    children_.erase(children_.begin() + static_cast<word>(idx));
   }
 
   auto GetLastExpr() const -> Expression* {
@@ -579,7 +619,7 @@ class BeginExpr : public SequenceExpr {
     SequenceExpr(expressions) {}
 
  public:
-  ~BeginExpr() = default;
+  ~BeginExpr() override = default;
 
   DECLARE_EXPRESSION(BeginExpr);
 
@@ -597,7 +637,7 @@ class EvalExpr : public TemplateExpression<1> {
   }
 
  public:
-  ~EvalExpr() = default;
+  ~EvalExpr() override = default;
 
   auto GetExpression() const -> Expression* {
     return GetChildAt(0);
@@ -622,7 +662,7 @@ class CallProcExpr : public Expression {
   ExpressionList args_{};
 
  protected:
-  explicit CallProcExpr(Expression* target, const ExpressionList& args) :
+  explicit CallProcExpr(Expression* target, const ExpressionList& args) :  // NOLINT(modernize-pass-by-value)
     Expression(),
     args_(args) {
     SetTarget(target);
@@ -685,7 +725,7 @@ class ClauseExpr : public Expression {  // TODO: should this be a WhenExpr?
   Expression* key_;
   ExpressionList actions_;
 
-  ClauseExpr(Expression* key, const ExpressionList& actions) :
+  ClauseExpr(Expression* key, const ExpressionList& actions) :  // NOLINT(modernize-pass-by-value)
     Expression(),
     key_(key),
     actions_(actions) {
@@ -896,7 +936,7 @@ class CaseExpr : public Expression {
   Expression* key_;
   ClauseList clauses_;
 
-  explicit CaseExpr(Expression* key, const ClauseList& clauses) :
+  explicit CaseExpr(Expression* key, const ClauseList& clauses) :  // NOLINT(modernize-pass-by-value)
     Expression(),
     key_(key),
     clauses_(clauses) {}
@@ -1043,19 +1083,18 @@ class LambdaExpr : public Expression {
   }
 };
 
-class Binding {
-  DEFINE_DEFAULT_COPYABLE_TYPE(Binding);
-
+class Binding : public Expression {
  private:
   Symbol* symbol_;
   Expression* value_;
 
- public:
-  Binding() = default;
+ protected:
   Binding(Symbol* symbol, Expression* value) :
     symbol_(symbol),
     value_(value) {}
-  ~Binding() = default;
+
+ public:
+  ~Binding() override = default;
 
   auto GetSymbol() const -> Symbol* {
     return symbol_;
@@ -1065,35 +1104,114 @@ class Binding {
     return value_;
   }
 
-  friend auto operator<<(std::ostream& stream, const Binding& rhs) -> std::ostream& {
-    stream << "Binding(";
-    stream << "symbol=" << rhs.GetSymbol() << ", ";
-    stream << "value=" << rhs.GetValue();
-    stream << ")";
-    return stream;
+  DECLARE_EXPRESSION(Binding);
+
+ public:
+  static inline auto New(Symbol* symbol, Expression* value) -> Binding* {
+    return new Binding(symbol, value);
   }
 };
 
-using BindingList = std::vector<Binding>;
+using BindingList = std::vector<Binding*>;
 
-class LetExpr : public SequenceExpr {
+static inline auto operator<<(std::ostream& stream, const BindingList& rhs) -> std::ostream& {
+  stream << "[";
+  auto remaining = rhs.size();
+  for (const auto& value : rhs) {
+    ASSERT(value);
+    stream << value;
+    if (--remaining > 0)
+      stream << ", ";
+  }
+  stream << "]";
+  return stream;
+}
+
+class TemplateLetExpr : public SequenceExpr {
+  DEFINE_NON_COPYABLE_TYPE(TemplateLetExpr);
+
  private:
   LocalScope* scope_;
-  BindingList bindings_;
 
-  explicit LetExpr(LocalScope* scope, const BindingList& bindings, const ExpressionList& body) :
+ protected:
+  explicit TemplateLetExpr(LocalScope* scope, const ExpressionList& body) :
     SequenceExpr(body),
-    scope_(scope),
-    bindings_(bindings) {
-    ASSERT(scope);
+    scope_(scope) {
+    ASSERT(scope_);
   }
 
  public:
-  ~LetExpr() override = default;
+  ~TemplateLetExpr() override = default;
 
   auto GetScope() const -> LocalScope* {
     return scope_;
   }
+};
+
+class RxOpExpr : public SequenceExpr, public proto::HasSymbol {
+ protected:
+  RxOpExpr(Symbol* symbol, const ExpressionList& body) :
+    SequenceExpr(body),
+    proto::HasSymbol(symbol) {}
+
+ public:
+  ~RxOpExpr() override = default;
+
+  DECLARE_EXPRESSION(RxOpExpr);
+
+ public:
+  static inline auto New(Symbol* symbol, const ExpressionList& body = {}) -> RxOpExpr* {
+    ASSERT(symbol);
+    return new RxOpExpr(symbol, body);
+  }
+};
+
+using RxOpList = std::vector<RxOpExpr*>;
+
+class LetRxExpr : public TemplateLetExpr {
+ private:
+  Expression* observable_;
+
+ protected:
+  LetRxExpr(LocalScope* scope, Expression* observable, const RxOpList& operators) :
+    TemplateLetExpr(scope, (const ExpressionList&)operators),  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+    observable_(observable) {}
+
+ public:
+  ~LetRxExpr() override = default;
+
+  auto GetObservable() const -> Expression* {
+    return observable_;
+  }
+
+  auto GetNumberOfOperators() const -> uint64_t {
+    return GetNumberOfChildren();
+  }
+
+  auto GetOperatorAt(const uint64_t idx) const -> RxOpExpr* {
+    ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
+    return (RxOpExpr*)GetChildAt(idx);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  }
+
+  DECLARE_EXPRESSION(LetRxExpr);
+
+ public:
+  static inline auto New(LocalScope* scope, Expression* observable, const RxOpList& body = {}) -> LetRxExpr* {
+    return new LetRxExpr(scope, observable, body);
+  }
+};
+
+class LetExpr : public TemplateLetExpr {
+ private:
+  BindingList bindings_;
+
+ protected:
+  LetExpr(LocalScope* scope, const BindingList& bindings, const ExpressionList& body) :
+    TemplateLetExpr(scope, body),
+    bindings_(bindings) {}
+
+ public:
+  ~LetExpr() override = default;
 
   auto GetBindings() const -> const BindingList& {
     return bindings_;
@@ -1103,9 +1221,25 @@ class LetExpr : public SequenceExpr {
     return bindings_.size();
   }
 
-  auto GetBindingAt(const uint64_t idx) const -> const Binding& {
+  auto GetBindingAt(const uint64_t idx) const -> Binding* {
     ASSERT(idx >= 0 && idx <= GetNumberOfBindings());
     return bindings_[idx];
+  }
+
+  auto GetChildAt(const uint64_t idx) const -> Expression* override {
+    ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
+    if (idx >= GetNumberOfBindings())
+      return SequenceExpr::GetChildAt(idx - GetNumberOfBindings());
+    ASSERT(idx >= 0 && idx <= GetNumberOfBindings());
+    return GetBindingAt(idx);
+  }
+
+  inline auto HasBindings() const -> bool {
+    return GetNumberOfBindings() > 0;
+  }
+
+  auto GetNumberOfChildren() const -> uint64_t override {
+    return SequenceExpr::GetNumberOfChildren() + GetNumberOfBindings();
   }
 
   auto VisitAllBindings(ExpressionVisitor* vis) -> bool;
@@ -1113,9 +1247,8 @@ class LetExpr : public SequenceExpr {
   DECLARE_EXPRESSION(LetExpr);
 
  public:
-  static inline auto New(LocalScope* scope, const BindingList& bindings, const ExpressionList& body = {}) -> LetExpr* {
+  static inline auto New(LocalScope* scope, const BindingList& bindings = {}, const ExpressionList& body = {}) -> LetExpr* {
     ASSERT(scope);
-    ASSERT(!body.empty());  // TODO: is this assertion necessary?
     return new LetExpr(scope, bindings, body);
   }
 };
@@ -1280,7 +1413,7 @@ class MacroDef : public TemplateDefinition<1> {
   ArgumentSet args_;
 
  protected:
-  explicit MacroDef(Symbol* symbol, const ArgumentSet& args, Expression* body) :
+  explicit MacroDef(Symbol* symbol, const ArgumentSet& args, Expression* body) :  // NOLINT(modernize-pass-by-value)
     TemplateDefinition<1>(),
     symbol_(symbol),
     args_(args) {

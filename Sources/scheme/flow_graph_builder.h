@@ -68,6 +68,7 @@ class FlowGraphBuilder {
   static auto Build(Script* script, LocalScope* scope) -> FlowGraph*;
 };
 
+class ValueVisitor;
 class EffectVisitor : public ExpressionVisitor {
   friend class FlowGraphBuilder;
   DEFINE_NON_COPYABLE_TYPE(EffectVisitor);
@@ -116,6 +117,7 @@ class EffectVisitor : public ExpressionVisitor {
 
   void AddInstanceOf(instr::Definition* defn, Class* expected);
   auto CreateCallFor(instr::Definition* defn, const uword num_args) -> instr::InvokeInstr*;
+  auto CreateStoreLoad(Symbol* symbol, instr::Definition* value) -> instr::Definition*;
 
   inline void AddReturnExit(instr::Definition* value) {
     ASSERT(value);
@@ -158,6 +160,7 @@ class EffectVisitor : public ExpressionVisitor {
   }
 
   inline auto CreateReturnForExit(instr::Instruction* exit_instr) -> instr::ReturnInstr* {
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
     return exit_instr->IsDefinition() ? ReturnInstr::New((instr::Definition*)exit_instr) : ReturnInstr::New();
   }
 
@@ -228,6 +231,27 @@ class ValueVisitor : public EffectVisitor {
   inline auto HasValue() const -> bool {
     return GetValue() != nullptr;
   }
+};
+
+class RxEffectVisitor : public EffectVisitor {
+  DEFINE_NON_COPYABLE_TYPE(RxEffectVisitor);
+
+ private:
+  instr::Definition* observable_;
+
+ public:
+  RxEffectVisitor(FlowGraphBuilder* owner, instr::Definition* observable) :
+    EffectVisitor(owner),
+    observable_(observable) {
+    ASSERT(observable_);
+  }
+  ~RxEffectVisitor() override = default;
+
+  auto GetObservable() const -> instr::Definition* {
+    return observable_;
+  }
+
+  auto VisitRxOpExpr(expr::RxOpExpr* expr) -> bool override;
 };
 }  // namespace scm
 

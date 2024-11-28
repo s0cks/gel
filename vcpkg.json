@@ -7,6 +7,6 @@
     "gtest",
     "tracy",
     "units",
-    "rxcpp"
+    "reactiveplusplus"
   ]
 }

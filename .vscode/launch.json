@@ -31,7 +31,8 @@
         "set-car.cl",
         "test-let.cl",
         "apply-print.cl",
-        "factorial.cl"
+        "factorial.cl",
+        "test-observable.cl"
       ],
       "default": "while.cl",
       "description": "A value that is even."

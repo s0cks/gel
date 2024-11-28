@@ -11,7 +11,6 @@ if(ENABLE_TRACING)
   endif()
   message(STATUS "enabling tracing w/ Tracy")
   list(APPEND SCM_LIBRARIES Tracy::TracyClient)
-  link_libraries()
 endif()
 
 add_library(scheme STATIC

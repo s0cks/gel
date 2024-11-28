@@ -136,7 +136,7 @@ class Tag {
   friend auto operator<<(std::ostream& stream, const Tag& rhs) -> std::ostream& {
     stream << "Tag(";
     stream << "num_references=" << rhs.GetNumberOfReferences() << ", ";
-    stream << "size=" << units::data::byte_t(rhs.GetSize()) << ", ";
+    stream << "size=" << units::data::byte_t(static_cast<double>(rhs.GetSize())) << ", ";
     stream << "new=" << rhs.IsNew() << ", ";
     stream << "old=" << rhs.IsOld() << ", ";
     stream << "marked=" << rhs.IsMarked() << ", ";

@@ -128,6 +128,48 @@ auto Parser::ParseCondExpr() -> CondExpr* {
   return CondExpr::New(clauses, alt);
 }
 
+auto Parser::ParseRxOpExpr() -> expr::RxOpExpr* {
+  ExpectNext(Token::kLParen);
+  const auto symbol = ParseSymbol();
+  ASSERT(symbol);
+  expr::ExpressionList args;
+  if (!ParseExpressionList(args))
+    throw Exception(fmt::format("failed to parse rx-operator `{}` args", (*symbol)));
+  ExpectNext(Token::kRParen);
+  return expr::RxOpExpr::New(symbol, args);
+}
+
+auto Parser::ParseRxOpList(expr::RxOpList& operators) -> bool {
+  auto peek = PeekToken();
+  while (peek.kind != Token::kRParen && peek.kind != Token::kEndOfStream) {
+    const auto oper = ParseRxOpExpr();
+    if (!oper)
+      return false;
+    operators.push_back(oper);
+    peek = PeekToken();
+  }
+  return true;
+}
+
+auto Parser::ParseLetRxExpr() -> expr::LetRxExpr* {
+  ExpectNext(Token::kLetRxExpr);
+  const auto scope = PushScope();
+  ASSERT(scope);
+  const auto observable = ParseExpression();
+  ASSERT(observable);
+  expr::RxOpList operators;
+  if (PeekEq(Token::kRParen)) {
+    PopScope();
+    return LetRxExpr::New(scope, observable, operators);
+  }
+
+  if (!ParseRxOpList(operators))
+    throw Exception("failed to parse rx operators");
+
+  PopScope();
+  return LetRxExpr::New(scope, observable, operators);
+}
+
 auto Parser::ParseLetExpr() -> expr::LetExpr* {
   ExpectNext(Token::kLetExpr);
   const auto scope = PushScope();
@@ -142,7 +184,7 @@ auto Parser::ParseLetExpr() -> expr::LetExpr* {
       throw Exception(fmt::format("cannot redefine binding for: `{}`", *symbol));
     const auto value = ParseExpression();
     ASSERT(value);
-    bindings.emplace_back(symbol, value);
+    bindings.emplace_back(Binding::New(symbol, value));
     const auto local = LocalVariable::New(scope, symbol);
     ASSERT(local);
     ExpectNext(Token::kRParen);
@@ -295,6 +337,9 @@ auto Parser::ParseExpression() -> Expression* {
         break;
       case Token::kWhileExpr:
         expr = ParseWhileExpr();
+        break;
+      case Token::kLetRxExpr:
+        expr = ParseLetRxExpr();
         break;
       default:
         Unexpected(next);
@@ -694,6 +739,8 @@ auto Parser::NextToken() -> const Token& {
       return NextToken(Token::kDefun);
     else if (ident == "let")
       return NextToken(Token::kLetExpr);
+    else if (ident == "let:rx")
+      return NextToken(Token::kLetRxExpr);
     return NextToken(Token::kIdentifier, ident);
   }
 
@@ -828,6 +875,9 @@ auto Parser::ParseScript() -> Script* {
           break;
         case Token::kLetExpr:
           expr = ParseLetExpr();
+          break;
+        case Token::kLetRxExpr:
+          expr = ParseLetRxExpr();
           break;
         default:
           Unexpected(next);

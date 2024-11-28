@@ -870,6 +870,50 @@ using instr::InstructionVisitor;
 #define DEFINE_USE(Name) using instr::Name;
 FOR_EACH_INSTRUCTION(DEFINE_USE)
 #undef DEFINE_USE
+
+#ifdef SCM_DEBUG
+
+using Severity = google::LogSeverity;
+class InstructionLogger {
+  DEFINE_NON_COPYABLE_TYPE(InstructionLogger);
+
+ private:
+  Severity severity_;
+
+ public:
+  explicit InstructionLogger(const Severity severity) :
+    severity_(severity) {}
+  ~InstructionLogger() = default;
+
+  auto GetSeverity() const -> Severity {
+    return severity_;
+  }
+
+  inline void Visit(instr::Instruction* instr) {
+    ASSERT(instr);
+    LOG_AT_LEVEL(GetSeverity()) << instr->ToString();
+  }
+
+  inline void operator()(instr::Instruction* instr) {
+    return Visit(instr);
+  }
+
+ public:
+  template <const Severity S = google::INFO, const bool OnlyOne = false>
+  static inline void Log(instr::Instruction* instr) {
+    ASSERT(instr);
+    InstructionLogger logger(S);
+    logger.Visit(instr);
+    if (OnlyOne)
+      return;
+    InstructionIterator iter(instr->GetNext());
+    while (iter.HasNext()) {
+      logger(iter.Next());
+    }
+  }
+};
+
+#endif  // SCM_DEBUG
 }  // namespace scm
 
 #endif  // SCM_INSTRUCTION_H

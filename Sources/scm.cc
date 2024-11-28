@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <rpp/sources/fwd.hpp>
 
 #include "scheme/disassembler.h"
 #include "scheme/error.h"
@@ -82,6 +83,8 @@ static inline auto ExecuteScript(const std::string& filename) -> int {
 auto main(int argc, char** argv) -> int {
   ::google::InitGoogleLogging(argv[0]);
   ::google::ParseCommandLineFlags(&argc, &argv, true);
+
+  const auto sub = rx::source::from_iterable(std::vector<std::string>{"Hello", "World"});
 
   Heap::Init();
   Runtime::Init();

@@ -5,31 +5,41 @@
 
 #include <functional>
 #include <ostream>
+#include <rpp/observables/dynamic_observable.hpp>
 #include <string>
 #include <unordered_set>
+#include <utility>
 
 #include "gmock/gmock.h"
 #include "scheme/common.h"
 #include "scheme/pointer.h"
+#include "scheme/rx.h"
 
 namespace scm {
-#define FOR_EACH_TYPE(V) \
-  V(Class)               \
-  V(Bool)                \
-  V(Number)              \
-  V(Double)              \
-  V(Long)                \
-  V(String)              \
-  V(Symbol)              \
-  V(Macro)               \
-  V(Procedure)           \
-  V(Lambda)              \
-  V(NativeProcedure)     \
-  V(Pair)                \
-  V(Script)              \
-  V(Error)               \
-  V(Subscription)        \
-  V(Observable)
+namespace proc {
+class rx_map;
+class rx_subscribe;
+}  // namespace proc
+
+#define FOR_EACH_PRIMITIVE_TYPE(V) \
+  V(Class)                         \
+  V(Bool)                          \
+  V(Number)                        \
+  V(Double)                        \
+  V(Long)                          \
+  V(String)                        \
+  V(Symbol)                        \
+  V(Macro)                         \
+  V(Procedure)                     \
+  V(Lambda)                        \
+  V(NativeProcedure)               \
+  V(Pair)                          \
+  V(Script)                        \
+  V(Error)
+
+#define FOR_EACH_TYPE(V)     \
+  FOR_EACH_PRIMITIVE_TYPE(V) \
+  FOR_EACH_RX_TYPE(V)
 
 class Object;
 #define FORWARD_DECLARE(Name) class Name;
@@ -103,6 +113,8 @@ class Object {
   }
   FOR_EACH_TYPE(DEFINE_TYPE_CHECK)
 #undef DEFINE_TYPE_CHECK
+  static constexpr const auto kClassName = "Object";
+
  private:
   static Class* kClass;
   static auto CreateClass() -> Class*;
@@ -164,6 +176,7 @@ static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream
   static auto CreateClass() -> Class*;                \
                                                       \
  public:                                              \
+  static constexpr const auto kClassName = #Name;     \
   static auto operator new(const size_t sz) -> void*; \
   static inline void operator delete(void* ptr) {     \
     ASSERT(ptr);                                      \
@@ -503,9 +516,9 @@ class StringObject : public Datum {
   std::string value_;
 
  protected:
-  explicit StringObject(const std::string& value) :
+  explicit StringObject(std::string value) :
     Datum(),
-    value_(value) {}
+    value_(std::move(value)) {}
 
   inline void Set(const std::string& value) {
     value_ = value;
@@ -580,6 +593,63 @@ static inline auto operator<<(std::ostream& stream, const SymbolList& rhs) -> st
   stream << "]";
   return stream;
 }
+
+#ifdef SCM_ENABLE_RX
+
+class Observer : public Object {
+ private:
+  rx::DynamicObjectObserver value_;
+
+ protected:
+  explicit Observer(rx::DynamicObjectObserver value) :
+    value_(value) {}
+
+ public:
+  ~Observer() override = default;
+
+  auto Get() const -> const rx::DynamicObjectObserver& {
+    return value_;
+  }
+
+  DECLARE_TYPE(Observer);
+
+ public:
+  static inline auto New() -> Observer*;
+};
+
+class Observable : public Object {
+  friend class proc::rx_map;
+  friend class proc::rx_subscribe;
+
+ private:
+  rx::DynamicObjectObservable value_;
+
+ private:
+  explicit Observable(const rx::DynamicObjectObservable& value) :
+    value_(value) {}
+
+ public:
+  ~Observable() override = default;
+
+  auto GetValue() const -> const rx::DynamicObjectObservable& {
+    return value_;
+  }
+
+  DECLARE_TYPE(Observable);
+
+ public:
+  static inline auto New(const rx::DynamicObjectObservable& value) -> Observable* {
+    return new Observable(value);
+  }
+
+  static auto New(Object* value) -> Observable*;
+  static auto Empty() -> Observable*;
+
+ public:  //???
+  static auto ToObservable(Pair* list) -> rx::DynamicObjectObservable;
+};
+
+#endif  // SCM_ENABLE_RX
 
 auto PrintValue(std::ostream& stream, Object* value) -> std::ostream&;
 

@@ -33,7 +33,7 @@ class Lambda : public Procedure, public Executable {
   void Apply() override;
 
  protected:
-  Lambda(Symbol* name, ArgumentSet args, expr::Expression* body) :
+  Lambda(Symbol* name, ArgumentSet args, expr::Expression* body) :  // NOLINT(modernize-pass-by-value)
     name_(name),
     args_(args),
     body_(body) {}

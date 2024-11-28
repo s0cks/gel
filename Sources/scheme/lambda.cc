@@ -15,7 +15,7 @@
 
 namespace scm {
 auto Lambda::CreateClass() -> Class* {
-  return Class::New(Procedure::GetClass(), "Lambda");
+  return Class::New(Procedure::GetClass(), kClassName);
 }
 
 auto Lambda::Equals(Object* rhs) const -> bool {

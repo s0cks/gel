@@ -74,7 +74,7 @@ class Interpreter : public InstructionVisitor {
   }
 
  public:
-  ~Interpreter() = default;
+  ~Interpreter() override = default;
 
   auto GetRuntime() const -> Runtime* {
     return runtime_;

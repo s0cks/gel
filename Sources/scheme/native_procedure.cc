@@ -4,7 +4,7 @@
 
 namespace scm {
 auto NativeProcedure::CreateClass() -> Class* {
-  return Class::New(Procedure::GetClass(), "NativeProcedure");
+  return Class::New(Procedure::GetClass(), kClassName);
 }
 
 auto NativeProcedure::Return(Object* rhs) const -> bool {

@@ -38,7 +38,7 @@ class Parser {
   Token next_{};
   Token peek_{};
   std::stack<Object*> owner_stack_{};
-  Script* script_;
+  Script* script_ = nullptr;
 
   inline void SetScript(Script* script) {
     ASSERT(script);
@@ -98,6 +98,7 @@ class Parser {
   auto ParseLoadSymbol() -> LoadVariableInstr*;
   auto ParseArguments(ArgumentSet& args) -> bool;
   auto ParseExpressionList(expr::ExpressionList& expressions) -> bool;
+  auto ParseRxOpList(expr::RxOpList& operators) -> bool;
   auto ParseSymbolList(SymbolList& symbols) -> bool;
   auto ParseIdentifier(std::string& result) -> bool;
   auto ParseClauseList(expr::ClauseList& clauses) -> bool;
@@ -119,6 +120,8 @@ class Parser {
   auto ParseWhileExpr() -> expr::WhileExpr*;
   auto ParseCondExpr() -> CondExpr*;
   auto ParseLetExpr() -> expr::LetExpr*;
+  auto ParseRxOpExpr() -> expr::RxOpExpr*;
+  auto ParseLetRxExpr() -> expr::LetRxExpr*;
   auto ParseListExpr() -> expr::ListExpr*;
 
   // Definitions
@@ -132,7 +135,7 @@ class Parser {
     const auto idx = (rpos_ + offset);
     if (idx >= wpos_)
       return EOF;
-    return static_cast<char>(chunk_[idx]);
+    return static_cast<char>(chunk_[idx]);  // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
   }
 
   inline auto IsWhitespaceChar(const char c) -> bool {
@@ -149,7 +152,7 @@ class Parser {
         return EOF;
       return NextChar();
     }
-    const auto next = chunk_[rpos_++];
+    const auto next = chunk_[rpos_++];  // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
     switch (next) {
       case '\n':
         pos_.row += 1;
@@ -192,12 +195,13 @@ class Parser {
   auto NextToken() -> const Token&;
 
   inline auto GetBufferedText() const -> std::string {
-    return std::string((const char*)&buffer_[0], token_len_);
+    return {(const char*)&buffer_[0], token_len_};
   }
 
   inline auto GetRemaining() const -> std::string {
     const auto remaining_len = std::max((uint64_t)0, wpos_ - rpos_);
-    return {(const char*)&chunk_[rpos_], remaining_len};  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast, cppcoreguidelines-pro-bounds-constant-array-index)
+    return {(const char*)&chunk_[rpos_], remaining_len};
   }
 
   inline auto NextToken(const Token::Kind kind) -> const Token& {

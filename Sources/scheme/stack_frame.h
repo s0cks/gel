@@ -28,6 +28,10 @@ class StackFrame {
   }
 
  public:
+  StackFrame() :
+    id_(0),
+    locals_(nullptr),
+    return_address_(UNALLOCATED) {}
   ~StackFrame() = default;
 
   auto GetId() const -> uint64_t {

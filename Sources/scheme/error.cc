@@ -8,7 +8,7 @@
 
 namespace scm {
 auto Error::CreateClass() -> Class* {
-  return Class::New(Object::GetClass(), "Error");
+  return Class::New(Object::GetClass(), kClassName);
 }
 
 auto Error::Equals(Object* rhs) const -> bool {

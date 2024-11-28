@@ -81,7 +81,7 @@ class ArrayBase : public Object {
   }
 
  public:
-  virtual ~ArrayBase() = default;
+  ~ArrayBase() override = default;
 
   auto GetCapacity() const -> uword {
     return capacity_;
@@ -135,7 +135,7 @@ class Array : public ArrayBase {
   Array() = default;
 
  public:
-  ~Array();
+  ~Array() override;
 
   auto operator[](const uword idx) const -> T& {
     return (T&)data()[idx];

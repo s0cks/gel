@@ -2,38 +2,47 @@
 #ifdef SCM_ENABLE_RX
 
 #include "scheme/common.h"
+#include "scheme/local_scope.h"
+#include "scheme/thread_local.h"
 
-namespace scm {
+namespace scm::rx {
+static LazyThreadLocal<LocalScope> kRxScope([]() {
+  return LocalScope::New();
+});
 
-auto Observable::CreateClass() -> Class* {
-  return Class::New(Object::GetClass(), "Observable");
+auto GetRxScope() -> LocalScope* {
+  return kRxScope;
 }
 
-auto Observable::ToString() const -> std::string {
-  return "Observable()";
-}
+// auto Observable::CreateClass() -> Class* {
+//   return Class::New(Object::GetClass(), "Observable");
+// }
 
-auto Observable::Equals(Object* rhs) const -> bool {
-  if (!rhs || !rhs->IsObservable())
-    return false;
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return false;
-}
+// auto Observable::ToString() const -> std::string {
+//   return "Observable()";
+// }
 
-auto Subscription::CreateClass() -> Class* {
-  return Class::New(Object::GetClass(), "Subscription");
-}
+// auto Observable::Equals(Object* rhs) const -> bool {
+//   if (!rhs || !rhs->IsObservable())
+//     return false;
+//   NOT_IMPLEMENTED(FATAL);  // TODO: implement
+//   return false;
+// }
 
-auto Subscription::ToString() const -> std::string {
-  return "Observable()";
-}
+// auto Subscription::CreateClass() -> Class* {
+//   return Class::New(Object::GetClass(), "Subscription");
+// }
 
-auto Subscription::Equals(Object* rhs) const -> bool {
-  if (!rhs || !rhs->IsSubscription())
-    return false;
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return false;
-}
-}  // namespace scm
+// auto Subscription::ToString() const -> std::string {
+//   return "Observable()";
+// }
+
+// auto Subscription::Equals(Object* rhs) const -> bool {
+//   if (!rhs || !rhs->IsSubscription())
+//     return false;
+//   NOT_IMPLEMENTED(FATAL);  // TODO: implement
+//   return false;
+// }
+}  // namespace scm::rx
 
 #endif  // SCM_ENABLE_RX

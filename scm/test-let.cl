@@ -1,2 +1,2 @@
-(let ((x (new-array 1 2 3)))
+(let ((x (array:new 1 2 3)))
   (print (array:get x 1)))

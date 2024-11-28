@@ -70,7 +70,7 @@ class NewZone : public Zone {
       PointerIterator(),
       new_zone_(new_zone),
       current_(new_zone.GetStartingAddress()) {}  // TODO: this causes issues when semispaces get flipped from initial positions
-    ~Iterator() = default;
+    ~Iterator() override = default;
 
     auto HasNext() const -> bool override {
       return current_ < new_zone_.GetCurrentAddress();

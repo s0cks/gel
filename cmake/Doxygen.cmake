@@ -8,7 +8,7 @@ function(download_file url hash output_dir)
     SOURCE_DIR ${output_dir}
     DOWNLOAD_NO_EXTRACT ON)
   if(NOT download_${hash}_POPULATED)
-    FetchContent_Populate(download_${hash})
+    FetchContent_MakeAvailable(download_${hash})
   endif()
 endfunction()
 
