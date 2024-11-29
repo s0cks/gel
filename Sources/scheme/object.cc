@@ -2,6 +2,8 @@
 
 #include <glog/logging.h>
 
+#include <rpp/observers/fwd.hpp>
+#include <rpp/observers/observer.hpp>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -15,6 +17,7 @@
 #include "scheme/platform.h"
 #include "scheme/pointer.h"
 #include "scheme/procedure.h"
+#include "scheme/runtime.h"
 #include "scheme/rx.h"
 #include "scheme/script.h"
 #include "scheme/to_string_helper.h"
@@ -502,6 +505,27 @@ auto Observable::New(Object* value) -> Observable* {
   else if (scm::IsPair(value))
     return New(ToObservable(ToPair(value)));
   return New(rx::source::just(value));
+}
+
+static constexpr const auto kDoNothingOnError = [](std::exception_ptr) {
+  return;  // do nothing
+};
+
+template <typename... Args>
+static inline auto CallProcedure(Procedure* procedure) -> std::function<void(Args...)> {
+  ASSERT(procedure);
+  return [procedure](Args... args) {
+    return GetRuntime()->Call(procedure, ObjectList{args...});
+  };
+}
+
+auto Observer::CreateDynamicObserver(Procedure* on_next, Procedure* on_error, Procedure* on_completed)
+    -> rx::DynamicObjectObserver {
+  ASSERT(on_next);
+  const auto on_next_callback = CallProcedure<scm::Object*>(on_next);
+  const auto on_error_callback = kDoNothingOnError;  // TODO: fix
+  const auto on_completed_callback = CallProcedure(on_completed);
+  return rx::make_lambda_observer(CallProcedure<scm::Object*>(on_next), kDoNothingOnError, CallProcedure(on_completed));
 }
 
 auto Observer::CreateClass() -> Class* {

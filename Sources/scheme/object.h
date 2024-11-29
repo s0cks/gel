@@ -6,7 +6,10 @@
 #include <functional>
 #include <ostream>
 #include <rpp/observables/dynamic_observable.hpp>
+#include <rpp/observers/dynamic_observer.hpp>
+#include <rpp/observers/observer.hpp>
 #include <string>
+#include <type_traits>
 #include <unordered_set>
 #include <utility>
 
@@ -19,6 +22,7 @@ namespace scm {
 namespace proc {
 class rx_map;
 class rx_subscribe;
+class rx_buffer;
 }  // namespace proc
 
 #define FOR_EACH_PRIMITIVE_TYPE(V) \
@@ -104,12 +108,12 @@ class Object {
     return false;
   }
 
-#define DEFINE_TYPE_CHECK(Name)      \
-  virtual auto As##Name() -> Name* { \
-    return nullptr;                  \
-  }                                  \
-  auto Is##Name() -> bool {          \
-    return As##Name() != nullptr;    \
+#define DEFINE_TYPE_CHECK(Name)    \
+  virtual auto As##Name()->Name* { \
+    return nullptr;                \
+  }                                \
+  auto Is##Name()->bool {          \
+    return As##Name() != nullptr;  \
   }
   FOR_EACH_TYPE(DEFINE_TYPE_CHECK)
 #undef DEFINE_TYPE_CHECK
@@ -167,33 +171,33 @@ static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream
   return stream << rhs->ToString();
 }
 
-#define DECLARE_TYPE(Name)                            \
-  friend class Object;                                \
-  DEFINE_NON_COPYABLE_TYPE(Name)                      \
- private:                                             \
-  static Class* kClass;                               \
-  static void InitClass();                            \
-  static auto CreateClass() -> Class*;                \
-                                                      \
- public:                                              \
-  static constexpr const auto kClassName = #Name;     \
-  static auto operator new(const size_t sz) -> void*; \
-  static inline void operator delete(void* ptr) {     \
-    ASSERT(ptr);                                      \
-  }                                                   \
-  static inline auto GetClass() -> Class* {           \
-    ASSERT(kClass);                                   \
-    return kClass;                                    \
-  }                                                   \
-                                                      \
- public:                                              \
-  auto Equals(Object* rhs) const -> bool override;    \
-  auto GetType() const -> Class* override {           \
-    return GetClass();                                \
-  }                                                   \
-  auto ToString() const -> std::string override;      \
-  auto As##Name() -> Name* override {                 \
-    return this;                                      \
+#define DECLARE_TYPE(Name)                          \
+  friend class Object;                              \
+  DEFINE_NON_COPYABLE_TYPE(Name)                    \
+ private:                                           \
+  static Class* kClass;                             \
+  static void InitClass();                          \
+  static auto CreateClass() -> Class*;              \
+                                                    \
+ public:                                            \
+  static constexpr const auto kClassName = #Name;   \
+  static auto operator new(const size_t sz)->void*; \
+  static inline void operator delete(void* ptr) {   \
+    ASSERT(ptr);                                    \
+  }                                                 \
+  static inline auto GetClass() -> Class* {         \
+    ASSERT(kClass);                                 \
+    return kClass;                                  \
+  }                                                 \
+                                                    \
+ public:                                            \
+  auto Equals(Object* rhs) const -> bool override;  \
+  auto GetType() const -> Class* override {         \
+    return GetClass();                              \
+  }                                                 \
+  auto ToString() const -> std::string override;    \
+  auto As##Name()->Name* override {                 \
+    return this;                                    \
   }
 
 class Datum : public Object {
@@ -582,18 +586,6 @@ class Symbol : public StringObject {
 using SymbolList = std::vector<Symbol*>;
 using SymbolSet = std::unordered_set<Symbol*, Symbol::Comparator>;
 
-static inline auto operator<<(std::ostream& stream, const SymbolList& rhs) -> std::ostream& {
-  stream << "[";
-  auto remaining = rhs.size();
-  for (const auto& symbol : rhs) {
-    stream << symbol;
-    if (--remaining >= 1)
-      stream << ", ";
-  }
-  stream << "]";
-  return stream;
-}
-
 #ifdef SCM_ENABLE_RX
 
 class Observer : public Object {
@@ -613,11 +605,19 @@ class Observer : public Object {
 
   DECLARE_TYPE(Observer);
 
+ private:
+  static auto CreateDynamicObserver(Procedure* on_next, Procedure* on_error, Procedure* on_completed)
+      -> rx::DynamicObjectObserver;
+
  public:
-  static inline auto New() -> Observer*;
+  static inline auto New(Procedure* on_next, Procedure* on_error, Procedure* on_completed) -> Observer* {
+    ASSERT(on_next);
+    return new Observer(CreateDynamicObserver(on_next, on_error, on_completed));
+  }
 };
 
 class Observable : public Object {
+  friend class proc::rx_buffer;
   friend class proc::rx_map;
   friend class proc::rx_subscribe;
 
@@ -663,18 +663,18 @@ class Observable : public Object {
 
 auto PrintValue(std::ostream& stream, Object* value) -> std::ostream&;
 
-#define DEFINE_TYPE_PRED(Name)                       \
-  static inline auto Is##Name(Object* rhs) -> bool { \
-    return rhs && rhs->Is##Name();                   \
+#define DEFINE_TYPE_PRED(Name)                     \
+  static inline auto Is##Name(Object* rhs)->bool { \
+    return rhs && rhs->Is##Name();                 \
   }
 DEFINE_TYPE_PRED(Array);
 FOR_EACH_TYPE(DEFINE_TYPE_PRED)
 #undef DEFINE_TYPE_PRED
 
-#define DEFINE_TYPE_CAST(Name)                        \
-  static inline auto To##Name(Object* rhs) -> Name* { \
-    ASSERT(rhs&& Is##Name(rhs));                      \
-    return rhs->As##Name();                           \
+#define DEFINE_TYPE_CAST(Name)                      \
+  static inline auto To##Name(Object* rhs)->Name* { \
+    ASSERT(rhs&& Is##Name(rhs));                    \
+    return rhs->As##Name();                         \
   }
 FOR_EACH_TYPE(DEFINE_TYPE_CAST)
 #undef DEFINE_TYPE_CAST
@@ -701,6 +701,14 @@ static inline auto Cons(Object* lhs, Object* rhs) -> Datum* {
   ASSERT(lhs);
   ASSERT(rhs);
   return Pair::New(lhs, rhs);
+}
+
+static inline auto ToList(const ObjectList& values) -> Object* {
+  Object* result = Null();
+  for (const auto& next : values) {
+    result = Pair::New(next, result);
+  }
+  return result;
 }
 
 template <class Iter>
@@ -759,21 +767,37 @@ static inline void SetCdr(Object* seq, Object* value) {
   (seq->AsPair())->SetCdr(value);
 }
 
-static inline auto Stringify(const ObjectList& values, const bool brackets = true) -> std::string {
-  std::stringstream ss;
-  if (brackets)
-    ss << "[";
+template <typename T>
+struct has_to_string {
+  static const bool value = false;
+};
+
+#define DECLARE_HAS_TO_STRING(Name) \
+  template <>                       \
+  struct has_to_string<Name> {      \
+    static const bool value = true; \
+  };
+
+DECLARE_HAS_TO_STRING(Object);
+FOR_EACH_TYPE(DECLARE_HAS_TO_STRING)
+#undef DECLARE_HAS_TO_STRING
+
+template <typename T>
+static inline auto Stringify(std::ostream& stream, const std::vector<T*>& values,
+                             std::enable_if_t<scm::has_to_string<T>::value>* = nullptr) -> std::ostream& {
   auto remaining = values.size();
   for (const auto& value : values) {
-    PrintValue(ss, value);
-    if (--remaining > 0)
-      ss << ", ";
+    stream << (value)->ToString();
+    if (--remaining >= 1)
+      stream << ", ";
   }
-  if (brackets)
-    ss << "]";
-  return ss.str();
+  stream << "]";
+  return stream;
 }
 
+static inline auto operator<<(std::ostream& stream, const ObjectList& values) -> std::ostream& {
+  return Stringify(stream, values);
+}
 }  // namespace scm
 
 namespace fmt {

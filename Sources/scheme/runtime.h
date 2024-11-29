@@ -21,6 +21,8 @@
 namespace scm {
 DECLARE_bool(kernel);
 DECLARE_string(module_dir);
+DECLARE_bool(log_script_instrs);
+
 using Stack = std::stack<Object*>;
 
 class ExecutionStack {

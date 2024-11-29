@@ -142,7 +142,7 @@ NATIVE_PROCEDURE_F(array_new) {
 NATIVE_PROCEDURE_F(array_get) {
   ASSERT(HasRuntime());
   if (args.size() != 2)
-    return ThrowError(fmt::format("expected args `{}` to be: `<array> <index>`", Stringify(args)));
+    return ThrowError(fmt::format("expected args to be: `<array> <index>`"));
   NativeArgument<0, ArrayBase> array(args);
   NativeArgument<1, Long> index(args);
   if (index->Get() > array->GetCapacity())
@@ -153,7 +153,7 @@ NATIVE_PROCEDURE_F(array_get) {
 NATIVE_PROCEDURE_F(array_set) {
   ASSERT(HasRuntime());
   if (args.size() != 3)
-    return ThrowError(fmt::format("expected args `{}` to be: `<array> <index>`", Stringify(args)));
+    return ThrowError(fmt::format("expected args to be: `<array> <index>`"));
   if (!scm::IsArray(args[0]))
     return ThrowError(fmt::format("expected `{}` to be an Array", (*args[0])));
   const auto array = (ArrayBase*)args[0];  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
@@ -229,7 +229,84 @@ NATIVE_PROCEDURE_F(scm_get_target_triple) {
 
 #ifdef SCM_ENABLE_RX
 
-NATIVE_PROCEDURE_F(rx_get_locals) {
+#define NATIVE_RX_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(rx_##Name)
+
+template <typename... Args>
+static inline auto WrapPredicate(Runtime* runtime, Procedure* predicate) -> std::function<bool(Args...)> {
+  ASSERT(runtime);
+  return [runtime, predicate](Args... args) {
+    runtime->Call(predicate->AsProcedure(), {args...});
+    return scm::Truth(runtime->Pop());
+  };
+}
+
+NATIVE_RX_PROCEDURE_F(observer) {
+  NativeArgument<0, Procedure> on_next(args);
+  OptionalNativeArgument<1, Procedure> on_error(args);
+  OptionalNativeArgument<2, Procedure> on_completed(args);
+  return ReturnNew<Observer>(on_next.GetValue(), on_error.GetValue(), on_completed.GetValue());
+}
+
+NATIVE_RX_PROCEDURE_F(first) {
+  RequiredNativeArgument<0, Observable> source(args);
+  source->Apply(rx::operators::first());
+  return DoNothing();
+}
+
+NATIVE_RX_PROCEDURE_F(last) {
+  RequiredNativeArgument<0, Observable> source(args);
+  source->Apply(rx::operators::last());
+  return DoNothing();
+}
+
+NATIVE_RX_PROCEDURE_F(skip) {
+  RequiredNativeArgument<0, Observable> source(args);
+  RequiredNativeArgument<1, Long> num_values(args);
+  source->Apply(rx::operators::skip(num_values->Get()));
+  return DoNothing();
+}
+
+NATIVE_RX_PROCEDURE_F(take) {
+  RequiredNativeArgument<0, Observable> source(args);
+  RequiredNativeArgument<1, Long> num_values(args);
+  source->Apply(rx::operators::take(num_values->Get()));
+  return DoNothing();
+}
+
+NATIVE_RX_PROCEDURE_F(filter) {
+  RequiredNativeArgument<0, Observable> source(args);
+  if (!source)
+    return Throw(source.GetError());
+  RequiredNativeArgument<1, Procedure> predicate(args);
+  if (!predicate)
+    return Throw(predicate.GetError());
+  source->Apply(rx::operators::filter(WrapPredicate<scm::Object*>(GetRuntime(), predicate)));
+  return DoNothing();
+}
+
+NATIVE_RX_PROCEDURE_F(take_last) {
+  RequiredNativeArgument<0, Observable> source(args);
+  RequiredNativeArgument<1, Long> num_values(args);
+  source->Apply(rx::operators::take_last(num_values->Get()));
+  return DoNothing();
+}
+
+NATIVE_RX_PROCEDURE_F(buffer) {
+  RequiredNativeArgument<0, Observable> source(args);
+  if (!source)
+    return Throw(source.GetError());
+  RequiredNativeArgument<1, Long> bucket_size(args);
+  if (!bucket_size)
+    return Throw(bucket_size.GetError());
+  const auto buffer = rx::operators::buffer(bucket_size->Get());
+  const auto map = rx::operators::map([](ObjectList values) {
+    return scm::ToList((const ObjectList&)values);
+  });
+  source->value_ = source->value_ | buffer | map;
+  return DoNothing();
+}
+
+NATIVE_RX_PROCEDURE_F(get_operators) {
   ASSERT(HasRuntime());
   ASSERT(args.empty());
   LocalScope::RecursiveIterator iter(rx::GetRxScope());
@@ -238,7 +315,7 @@ NATIVE_PROCEDURE_F(rx_get_locals) {
   }));
 }
 
-NATIVE_PROCEDURE_F(rx_to_observable) {
+NATIVE_RX_PROCEDURE_F(observable) {
   // TODO: handle multiple args
   return ReturnNew<Observable>(args[0]);
 }
@@ -248,8 +325,7 @@ NATIVE_PROCEDURE_F(rx_subscribe) {
   const auto runtime = GetRuntime();
   ASSERT(runtime);
   if (args.size() < 2 || args.size() > 4)
-    return ThrowError(
-        fmt::format("expected args `{}` to be: `<observable> <on_next> <on_error?> <on_completed?>`", Stringify(args)));
+    return ThrowError(fmt::format("expected args to be: `<observable> <on_next> <on_error?> <on_completed?>`"));
   const auto source = args[0];
   if (!scm::IsObservable(source))
     return ThrowError(fmt::format("expected arg #1 `{}` to be an Observable", source->ToString()));
@@ -272,7 +348,7 @@ NATIVE_PROCEDURE_F(rx_map) {
   const auto runtime = GetRuntime();
   ASSERT(runtime);
   if (args.size() != 2)
-    return ThrowError(fmt::format("expected args `{}` to be: `<observable> <func>`", Stringify(args)));
+    return ThrowError(fmt::format("expected args to be: `<observable> <func>`"));
   CHECK_ARG_TYPE(0, source, Observable::GetClass());
   CHECK_ARG_TYPE(1, on_next, Procedure::GetClass());
   source->AsObservable()->Apply(rx::operators::map([on_next, runtime](Object* value) {
@@ -286,7 +362,7 @@ NATIVE_PROCEDURE_F(rx_take_while) {
   const auto runtime = GetRuntime();
   ASSERT(runtime);
   if (args.size() != 2)
-    return ThrowError(fmt::format("expected args `{}` to be: `<observable> <func>`", Stringify(args)));
+    return ThrowError(fmt::format("expected args to be: `<observable> <func>`"));
   CHECK_ARG_TYPE(0, source, Observable::GetClass());
   CHECK_ARG_TYPE(1, predicate, Procedure::GetClass());
   source->AsObservable()->Apply(rx::operators::take_while([predicate, runtime](Object* value) {

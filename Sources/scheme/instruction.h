@@ -48,7 +48,7 @@ class InstructionVisitor {
 
  public:
   virtual ~InstructionVisitor() = default;
-#define DECLARE_VISIT(Name) virtual auto Visit##Name(Name* instr) -> bool = 0;
+#define DECLARE_VISIT(Name) virtual auto Visit##Name(Name* instr)->bool = 0;
   FOR_EACH_INSTRUCTION(DECLARE_VISIT)
 #undef DECLARE_VISIT
 };
@@ -115,12 +115,12 @@ class Instruction {
     return AsDefinition() != nullptr;
   }
 
-#define DEFINE_TYPE_CHECK(Name)      \
-  virtual auto As##Name() -> Name* { \
-    return nullptr;                  \
-  }                                  \
-  auto Is##Name() -> bool {          \
-    return As##Name() != nullptr;    \
+#define DEFINE_TYPE_CHECK(Name)    \
+  virtual auto As##Name()->Name* { \
+    return nullptr;                \
+  }                                \
+  auto Is##Name()->bool {          \
+    return As##Name() != nullptr;  \
   }
   FOR_EACH_INSTRUCTION(DEFINE_TYPE_CHECK)
 #undef DEFINE_TYPE_CHECK
@@ -164,7 +164,7 @@ class InstructionIterator {
   auto GetName() const -> const char* override {         \
     return #Name;                                        \
   }                                                      \
-  auto As##Name() -> Name* override {                    \
+  auto As##Name()->Name* override {                      \
     return this;                                         \
   }
 
@@ -613,7 +613,7 @@ class BinaryOpInstr : public TemplateOpInstr<expr::BinaryOp> {
   }
 
 #define DEFINE_OP_CHECK(Name)                  \
-  inline auto Is##Name##Op() const -> bool {   \
+  inline auto Is##Name##Op() const->bool {     \
     return GetOp() == expr::BinaryOp::k##Name; \
   }
   FOR_EACH_BINARY_OP(DEFINE_OP_CHECK)
@@ -626,9 +626,9 @@ class BinaryOpInstr : public TemplateOpInstr<expr::BinaryOp> {
     return new BinaryOpInstr(op, left, right);
   }
 
-#define DEFINE_NEW_OP(Name)                                                             \
-  static inline auto New##Name(Definition* left, Definition* right) -> BinaryOpInstr* { \
-    return New(expr::BinaryOp::k##Name, left, right);                                   \
+#define DEFINE_NEW_OP(Name)                                                           \
+  static inline auto New##Name(Definition* left, Definition* right)->BinaryOpInstr* { \
+    return New(expr::BinaryOp::k##Name, left, right);                                 \
   }
   FOR_EACH_BINARY_OP(DEFINE_NEW_OP)
 #undef DEFINE_NEW_OP
@@ -657,7 +657,7 @@ class UnaryOpInstr : public TemplateOpInstr<expr::UnaryOp> {
   }
 
 #define DEFINE_OP_CHECK(Name)                 \
-  inline auto Is##Name##Op() const -> bool {  \
+  inline auto Is##Name##Op() const->bool {    \
     return GetOp() == expr::UnaryOp::k##Name; \
   }
   FOR_EACH_UNARY_OP(DEFINE_OP_CHECK)
@@ -670,9 +670,9 @@ class UnaryOpInstr : public TemplateOpInstr<expr::UnaryOp> {
     return new UnaryOpInstr(op, value);
   }
 
-#define DEFINE_NEW_OP(Name)                                          \
-  static inline auto New##Name(Definition* value) -> UnaryOpInstr* { \
-    return New(expr::UnaryOp::k##Name, value);                       \
+#define DEFINE_NEW_OP(Name)                                        \
+  static inline auto New##Name(Definition* value)->UnaryOpInstr* { \
+    return New(expr::UnaryOp::k##Name, value);                     \
   }
   FOR_EACH_UNARY_OP(DEFINE_NEW_OP)
 #undef DEFINE_NEW_OP
@@ -894,7 +894,7 @@ class InstructionLogger {
 
   inline void Visit(instr::Instruction* instr) {
     ASSERT(instr);
-    LOG_AT_LEVEL(GetSeverity()) << instr->ToString();
+    LOG_AT_LEVEL(GetSeverity()) << " - " << instr->ToString();
   }
 
   inline void operator()(instr::Instruction* instr) {

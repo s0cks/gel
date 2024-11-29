@@ -32,7 +32,8 @@
         "test-let.cl",
         "apply-print.cl",
         "factorial.cl",
-        "test-observable.cl"
+        "test-observable.cl",
+        "test-observer.cl"
       ],
       "default": "while.cl",
       "description": "A value that is even."
@@ -390,6 +391,7 @@
         "--reports-dir", "${workspaceFolder}/reports",
         "--module-dir", "${workspaceFolder}/scm",
         "-v=${input:verbose-level}",
+        "--log-script-instrs",
         "${workspaceFolder}/scm/${input:target-script}"
       ],
       "cwd": "${workspaceFolder}",

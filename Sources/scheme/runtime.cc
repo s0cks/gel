@@ -27,6 +27,7 @@
 
 namespace scm {
 DEFINE_bool(kernel, true, "Load the kernel at boot.");
+DEFINE_bool(log_script_instrs, false, "Log the Script instructions before execution");
 DEFINE_string(module_dir, "", "The directories to load modules from.");
 
 static const ThreadLocal<Runtime> runtime_;
@@ -178,9 +179,17 @@ auto Runtime::CreateInitScope() -> LocalScope* {
 
   {
     const auto rx_scope = rx::GetRxScope();
-    REGISTER_RX(to_observable);
+    REGISTER_RX(observer);
+    REGISTER_RX(observable);
     REGISTER_RX(subscribe);
+    REGISTER_RX(first);
+    REGISTER_RX(last);
     REGISTER_RX(map);
+    REGISTER_RX(take);
+    REGISTER_RX(take_last);
+    REGISTER_RX(skip);
+    REGISTER_RX(buffer);
+    REGISTER_RX(filter);
     REGISTER_RX(take_while);
   }
 
@@ -276,10 +285,9 @@ void Runtime::Call(NativeProcedure* native, const std::vector<Object*>& args) {
   const auto current_frame = GetCurrentFrame();
   const auto start_frame = interpreter_.PushStackFrame(current_frame ? current_frame->GetId() + 1 : 0, locals);
   ASSERT(start_frame);
-  if (!native->Apply(args))
-    throw Exception(fmt::format("failed to apply procedure: {}", native->ToString()));
+  LOG_IF(FATAL, !native->Apply(args)) << "failed to apply: " << native->ToString() << " with args: " << args;
   const auto last_frame = interpreter_.PopStackFrame();
-  ASSERT((*start_frame) == last_frame);
+  LOG_IF(ERROR, HasError() || (*start_frame) == last_frame) << "invalid frame state.";
 }
 
 auto Runtime::Eval(const std::string& expr) -> Object* {
@@ -307,6 +315,12 @@ auto Runtime::Exec(Script* script) -> Object* {
       },
       runtime->GetGlobalScope());
   ASSERT(!runtime->HasFrame());
+
+  if (FLAGS_log_script_instrs) {
+    LOG(INFO) << "Script instructions:";
+    InstructionLogger::Log(script->GetEntry());
+  }
+
   runtime->Call(script->GetEntry()->GetTarget(), scope);
   LOG_IF(ERROR, runtime->HasFrame() || runtime->HasError()) << "invalid runtime state.";
   return runtime->Pop();

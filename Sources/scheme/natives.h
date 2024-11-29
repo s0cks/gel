@@ -20,11 +20,32 @@ _DECLARE_NATIVE_PROCEDURE(array_set, "array:set");
 _DECLARE_NATIVE_PROCEDURE(array_length, "array:length");
 
 #ifdef SCM_ENABLE_RX
-_DECLARE_NATIVE_PROCEDURE(rx_get_locals, "rx:get-locals");
-_DECLARE_NATIVE_PROCEDURE(rx_to_observable, "rx:to-observable");
-_DECLARE_NATIVE_PROCEDURE(rx_subscribe, "rx:subscribe");
-_DECLARE_NATIVE_PROCEDURE(rx_map, "rx:map");
-_DECLARE_NATIVE_PROCEDURE(rx_take_while, "rx:take_while");
+#define _DECLARE_NATIVE_RX_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(rx_##Name, "rx:" Sym)
+#define DECLARE_NATIVE_RX_PROCEDURE(Name) _DECLARE_NATIVE_RX_PROCEDURE(Name, #Name)
+
+DECLARE_NATIVE_RX_PROCEDURE(observer);
+DECLARE_NATIVE_RX_PROCEDURE(first);
+DECLARE_NATIVE_RX_PROCEDURE(last);
+DECLARE_NATIVE_RX_PROCEDURE(skip);
+DECLARE_NATIVE_RX_PROCEDURE(take);
+DECLARE_NATIVE_RX_PROCEDURE(take_last);
+DECLARE_NATIVE_RX_PROCEDURE(filter);
+DECLARE_NATIVE_RX_PROCEDURE(reduce);
+// TODO: _DECLARE_NATIVE_RX_PROCEDURE(group_by, "group-by");
+// TODO: _DECLARE_NATIVE_RX_PROCEDURE(take_until, "take-until");
+DECLARE_NATIVE_RX_PROCEDURE(buffer);
+DECLARE_NATIVE_RX_PROCEDURE(observable);
+DECLARE_NATIVE_RX_PROCEDURE(subscribe);
+DECLARE_NATIVE_RX_PROCEDURE(map);
+_DECLARE_NATIVE_RX_PROCEDURE(take_while, "take-while");
+
+#ifdef SCM_DEBUG
+_DECLARE_NATIVE_RX_PROCEDURE(get_operators, "get-operators");
+#endif  // SCM_DEBUG
+
+#undef _DECLARE_NATIVE_RX_PROCEDURE
+#undef DECLARE_NATIVE_RX_PROCEDURE
+
 #endif  // SCM_ENABLE_RX
 
 #ifdef SCM_DEBUG
