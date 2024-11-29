@@ -290,9 +290,9 @@ NATIVE_PROCEDURE_F(rx_subscribe) {
   return DoNothing();
 }
 
-#define CHECK_ARG_TYPE(Index, Name, Type)                \
-  const auto Name = args[Index];                         \
-  if (!Name || !(Name->GetType()->IsInstanceOf((Type)))) \
+#define CHECK_ARG_TYPE(Index, Name, Type)                  \
+  const auto Name = args[Index];                           \
+  if (!(Name) || !(Name->GetType()->IsInstanceOf((Type)))) \
     return ThrowError(fmt::format("expected arg #{} ({}) `{}` to be a `{}`", Index, #Name, (*Name), ((Type)->GetName())->Get()));
 
 // (rx:map <func>)
@@ -306,6 +306,20 @@ NATIVE_PROCEDURE_F(rx_map) {
   source->AsObservable()->Apply(rx::operators::map([on_next, runtime](Object* value) {
     runtime->Call(on_next->AsProcedure(), {value});
     return runtime->Pop();
+  }));
+  return DoNothing();
+}
+
+NATIVE_PROCEDURE_F(rx_take_while) {
+  const auto runtime = GetRuntime();
+  ASSERT(runtime);
+  if (args.size() != 2)
+    return ThrowError(fmt::format("expected args `{}` to be: `<observable> <func>`", Stringify(args)));
+  CHECK_ARG_TYPE(0, source, Observable::GetClass());
+  CHECK_ARG_TYPE(1, predicate, Procedure::GetClass());
+  source->AsObservable()->Apply(rx::operators::take_while([predicate, runtime](Object* value) {
+    runtime->Call(predicate->AsProcedure(), {value});
+    return scm::Truth(runtime->Pop());
   }));
   return DoNothing();
 }

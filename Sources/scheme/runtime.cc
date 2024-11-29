@@ -13,6 +13,7 @@
 #include "scheme/expression_compiler.h"
 #include "scheme/instruction.h"
 #include "scheme/interpreter.h"
+#include "scheme/lambda.h"
 #include "scheme/local.h"
 #include "scheme/local_scope.h"
 #include "scheme/native_procedure.h"
@@ -167,33 +168,23 @@ auto Runtime::CreateInitScope() -> LocalScope* {
   RegisterNative<proc::array_length>(scope);
 
 #ifdef SCM_ENABLE_RX
-  const auto rx_scope = rx::GetRxScope();
+#define REGISTER_RX(Name)                                                              \
+  ({                                                                                   \
+    const auto [symbol, procedure] = RegisterNative<proc::rx_##Name>(scope);           \
+    const auto local = LocalVariable::New(rx_scope, symbol, procedure);                \
+    ASSERT(local);                                                                     \
+    LOG_IF(FATAL, !rx_scope->Add(local)) << "failed to add rx scope value: " << local; \
+  })
+
   {
-    {
-      const auto [symbol, procedure] = RegisterNative<proc::rx_get_locals>(scope);
-      const auto local = LocalVariable::New(rx_scope, symbol, procedure);
-      ASSERT(local);
-      LOG_IF(FATAL, !rx_scope->Add(local)) << "failed to add rx scope value: " << local;
-    }
-    {
-      const auto [symbol, procedure] = RegisterNative<proc::rx_to_observable>(scope);
-      const auto local = LocalVariable::New(rx_scope, symbol, procedure);
-      ASSERT(local);
-      LOG_IF(FATAL, !rx_scope->Add(local)) << "failed to add rx scope value: " << local;
-    }
-    {
-      const auto [symbol, procedure] = RegisterNative<proc::rx_subscribe>(scope);
-      const auto local = LocalVariable::New(rx_scope, symbol, procedure);
-      ASSERT(local);
-      LOG_IF(FATAL, !rx_scope->Add(local)) << "failed to add rx scope value: " << local;
-    }
-    {
-      const auto [symbol, procedure] = RegisterNative<proc::rx_map>(scope);
-      const auto local = LocalVariable::New(rx_scope, symbol, procedure);
-      ASSERT(local);
-      LOG_IF(FATAL, !rx_scope->Add(local)) << "failed to add rx scope value: " << local;
-    }
+    const auto rx_scope = rx::GetRxScope();
+    REGISTER_RX(to_observable);
+    REGISTER_RX(subscribe);
+    REGISTER_RX(map);
+    REGISTER_RX(take_while);
   }
+
+#undef REGISTER_RX
 #endif  // SCM_ENABLE_RX
 
 #ifdef SCM_DEBUG
@@ -253,6 +244,18 @@ void Runtime::Call(Lambda* lambda, const ObjectList& args) {
   ASSERT(lambda);
   const auto locals = LocalScope::New(GetCurrentScope());
   ASSERT(locals);
+  if (!lambda->IsCompiled()) {
+    DLOG(INFO) << "compiling lambda....";
+    if (!LambdaCompiler::Compile(lambda, locals)) {
+      LOG(FATAL) << "failed to compile: " << lambda;
+      return;
+    }
+    DLOG(INFO) << "instructions:";
+    instr::InstructionIterator iter(lambda->GetEntry());
+    while (iter.HasNext()) {
+      DLOG(INFO) << "- " << iter.Next()->ToString();
+    }
+  }
   const auto& lambda_args = lambda->GetArgs();
   ASSERT(lambda_args.size() == args.size());
   auto idx = 0;
@@ -260,25 +263,6 @@ void Runtime::Call(Lambda* lambda, const ObjectList& args) {
     const auto symbol = Symbol::New(arg.GetName());
     ASSERT(symbol);
     const auto value = args[idx++];
-    ASSERT(value);
-    const auto local = LocalVariable::New(locals, symbol, value);
-    ASSERT(local);
-    if (!locals->Add(local))
-      throw Exception("failed to add parameter local");
-  }
-  const auto start_frame = interpreter_.PushStackFrame(locals);
-  ASSERT(start_frame);
-  Call(lambda->GetEntry()->GetTarget(), locals);
-}
-
-void Runtime::Call(Lambda* lambda) {
-  ASSERT(lambda);
-  const auto locals = LocalScope::New(GetCurrentScope());
-  ASSERT(locals);
-  for (const auto& arg : std::ranges::reverse_view(lambda->GetArgs())) {
-    const auto symbol = Symbol::New(arg.GetName());
-    ASSERT(symbol);
-    const auto value = Pop();
     ASSERT(value);
     const auto local = LocalVariable::New(locals, symbol, value);
     ASSERT(local);
@@ -295,7 +279,8 @@ void Runtime::Call(NativeProcedure* native, const std::vector<Object*>& args) {
   for (auto idx = 0; idx < args.size(); idx++) {
     locals->Add(Symbol::New(fmt::format("arg{}", idx)), args[idx]);
   }
-  const auto start_frame = interpreter_.PushStackFrame(locals);
+  const auto current_frame = GetCurrentFrame();
+  const auto start_frame = interpreter_.PushStackFrame(current_frame ? current_frame->GetId() + 1 : 0, locals);
   ASSERT(start_frame);
   if (!native->Apply(args))
     throw Exception(fmt::format("failed to apply procedure: {}", native->ToString()));
@@ -328,12 +313,15 @@ auto Runtime::Exec(Script* script) -> Object* {
       },
       runtime->GetGlobalScope());
   ASSERT(!runtime->HasFrame());
-  const auto start_frame = runtime->interpreter_.PushStackFrame(scope);
-  ASSERT(start_frame);
+
+  DLOG(INFO) << "executing script, instructions:";
+  instr::InstructionIterator iter(script->GetEntry());
+  while (iter.HasNext()) {
+    DLOG(INFO) << "- " << iter.Next()->ToString();
+  }
+
   runtime->Call(script->GetEntry()->GetTarget(), scope);
-  const auto last_frame = runtime->interpreter_.PopStackFrame();
-  ASSERT(!runtime->HasFrame() || runtime->HasError());
-  ASSERT(last_frame == (*start_frame));
+  LOG_IF(ERROR, runtime->HasFrame() || runtime->HasError()) << "invalid runtime state.";
   return runtime->Pop();
 }
 

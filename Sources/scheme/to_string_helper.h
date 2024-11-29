@@ -161,7 +161,7 @@ class ToStringHelperBase {
     return fields_;
   }
 
-  void AddField(const std::string& name, const std::string& value) {
+  virtual void AddField(const std::string& name, const std::string& value) {
     ASSERT(!name.empty());
     fields_.emplace_back(name, value);
   }
@@ -204,6 +204,10 @@ class ToStringHelper : public ToStringHelperBase {
  public:
   ToStringHelper() = default;
   ~ToStringHelper() override = default;
+
+  void AddField(const std::string& name, const std::string& value) override {
+    return ToStringHelperBase::AddField(name, value);
+  }
 
   template <typename V>
   void AddField(const std::string& name, const V& value, std::enable_if_t<std::is_container<V>::value, V>) {

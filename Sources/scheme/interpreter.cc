@@ -15,6 +15,12 @@
 #include "scheme/runtime.h"
 
 namespace scm {
+Interpreter::Interpreter(Runtime* runtime) :
+  InstructionVisitor(),
+  runtime_(runtime) {
+  ASSERT(runtime);
+}
+
 auto Interpreter::GetStackTop() const -> std::optional<Stack::value_type> {
   return GetRuntime()->StackTop();
 }
@@ -48,9 +54,8 @@ auto Interpreter::VisitLoadVariableInstr(LoadVariableInstr* instr) -> bool {
 
 auto Interpreter::VisitReturnInstr(ReturnInstr* instr) -> bool {
   const auto frame = PopStackFrame();
-  if (!frame.HasReturnAddress())
-    return Next();
-  return Goto((Instruction*)frame.GetReturnAddressPointer());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  SetCurrentInstr((Instruction*)frame.GetReturnAddressPointer());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  return false;
 }
 
 auto Interpreter::VisitCastInstr(CastInstr* instr) -> bool {
@@ -123,11 +128,8 @@ auto Interpreter::VisitInvokeNativeInstr(InvokeNativeInstr* instr) -> bool {
   const auto target = GetRuntime()->Pop();
   if (!target || !target->IsNativeProcedure())
     throw Exception(fmt::format("expected {0:s} to be a NativeProcedure.", target ? target->ToString() : "null"));
-  const auto procedure = target->AsProcedure();
-  ASSERT(procedure && procedure->IsNative());
-  const auto runtime = GetRuntime();
-  ASSERT(runtime);
-  runtime->CallWithNArgs(procedure->AsNativeProcedure(), instr->GetNumberOfArgs());
+  DLOG(INFO) << "invoking:  " << target->ToString();
+  GetRuntime()->CallWithNArgs(target->AsNativeProcedure(), instr->GetNumberOfArgs());
   return Next();
 }
 
@@ -138,18 +140,10 @@ auto Interpreter::VisitInvokeInstr(InvokeInstr* instr) -> bool {
   const auto target = runtime->Pop();
   if (!IsProcedure(target))
     throw Exception(fmt::format("expected {0:s} to be a Procedure.", target ? target->ToString() : "null"));
-  const auto procedure = target->AsProcedure();
-  ASSERT(procedure);
-  if (procedure->IsLambda()) {
-    const auto lambda = procedure->AsLambda();
-    ASSERT(lambda);
-    if (!LambdaCompiler::Compile(lambda, runtime->GetCurrentScope())) {
-      LOG(FATAL) << "failed to compile: " << lambda->ToString();
-      return false;
-    }
-    runtime->Call(lambda);
-  } else if (procedure->IsNativeProcedure()) {
-    runtime->CallWithNArgs(procedure->AsNativeProcedure(), instr->GetNumberOfArgs());
+  if (target->IsLambda()) {
+    runtime->CallWithNArgs(target->AsLambda(), instr->GetNumberOfArgs());
+  } else if (target->IsNativeProcedure()) {
+    runtime->CallWithNArgs(target->AsNativeProcedure(), instr->GetNumberOfArgs());
   }
   return Next();
 }
@@ -300,19 +294,19 @@ auto Interpreter::VisitGraphEntryInstr(GraphEntryInstr* instr) -> bool {
   return Next();
 }
 
-void Interpreter::ExecuteInstr(Instruction* instr) {
+auto Interpreter::ExecuteInstr(Instruction* instr) -> bool {
   ASSERT(instr);
   DVLOG(100) << "executing " << instr->ToString();
-  LOG_IF(FATAL, !instr->Accept(this)) << "failed to execute: " << instr->ToString();
+  return instr->Accept(this);
 }
 
-auto Interpreter::PushStackFrame(LocalScope* locals) -> StackFrame* {
+auto Interpreter::PushStackFrame(const uword id, LocalScope* locals, instr::TargetEntryInstr* target) -> StackFrame* {
   ASSERT(locals);
   const auto has_next = HasCurrentInstr() && !stack_.empty();
   const auto return_address =
       (uword)(has_next ? GetCurrentInstr()->GetNext() : UNALLOCATED);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-  stack_.push(StackFrame(stack_.size(), locals, return_address));
-  DVLOG(1000) << "pushed: " << stack_.top();
+  stack_.push(StackFrame(id, target, locals, return_address));
+  DLOG(INFO) << "pushed: " << stack_.top();
   return &stack_.top();
 }
 
@@ -324,15 +318,18 @@ auto Interpreter::PopStackFrame() -> StackFrame {
   ASSERT(!stack_.empty());
   const auto frame = stack_.top();
   stack_.pop();
-  DVLOG(1000) << "popped: " << frame;
+  DLOG(INFO) << "popped: " << frame;
   return frame;
 }
 
 void Interpreter::Execute(instr::TargetEntryInstr* target, LocalScope* locals) {
-  SetCurrentInstr(target);
+  ASSERT(target);
+  ASSERT(locals);
+  DLOG(INFO) << "executing " << target->ToString();
+  PushStackFrame(target->GetBlockId(), locals, target);
+  SetCurrentInstr(target->GetNext());
   while (HasCurrentInstr()) {
-    ExecuteInstr(GetCurrentInstr());
-    if (GetRuntime()->HasError())
+    if (GetRuntime()->HasError() || !ExecuteInstr(GetCurrentInstr()))
       break;
   }
 }

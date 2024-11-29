@@ -60,17 +60,23 @@ class NativeProcedure : public Procedure {
                                                                                 \
  public:                                                                        \
   Name() :                                                                      \
-    NativeProcedure(Symbol::New(Sym)) {}                                        \
+    NativeProcedure(kSymbol) {}                                                 \
   ~Name() override = default;                                                   \
                                                                                 \
  private:                                                                       \
-  static Name* instance_;                                                       \
+  static Symbol* kSymbol;                                                       \
+  static Name* kInstance;                                                       \
   static void Init();                                                           \
                                                                                 \
  public:                                                                        \
+  static constexpr const auto kSymbolString = (Sym);                            \
   static inline auto Get() -> Name* {                                           \
-    ASSERT(instance_);                                                          \
-    return instance_;                                                           \
+    ASSERT(kInstance);                                                          \
+    return kInstance;                                                           \
+  }                                                                             \
+  static inline auto GetNativeSymbol() -> Symbol* {                             \
+    ASSERT(kSymbol);                                                            \
+    return kSymbol;                                                             \
   }
 
 #define DEFINE_NATIVE_PROCEDURE_TYPE(Name) _DEFINE_NATIVE_PROCEDURE_TYPE(Name, #Name)
@@ -86,14 +92,22 @@ class NativeProcedure : public Procedure {
     DEFINE_NATIVE_PROCEDURE_TYPE(Name); \
   };
 
-#define NATIVE_PROCEDURE_F(Name)   \
-  Name* Name::instance_ = nullptr; \
-  void Name::Init() {              \
-    ASSERT(instance_ == nullptr);  \
-    instance_ = new Name();        \
-    ASSERT(instance_);             \
-  }                                \
+#define NATIVE_PROCEDURE_F(Name)                        \
+  Name* Name::kInstance = nullptr;                      \
+  Symbol* Name::kSymbol = nullptr;                      \
+  void Name::Init() {                                   \
+    ASSERT(kInstance == nullptr && kSymbol == nullptr); \
+    kSymbol = Symbol::New(kSymbolString);               \
+    kInstance = new Name();                             \
+    ASSERT(kInstance&& kSymbol);                        \
+  }                                                     \
   auto Name::ApplyProcedure(const std::vector<Object*>& args) const -> bool
+
+template <class N>
+static inline auto IsCallToNative(Symbol* symbol) -> bool {
+  ASSERT(symbol);
+  return N::GetNativeSymbol()->Equals(symbol);
+}
 
 }  // namespace scm
 

@@ -128,7 +128,6 @@ class EffectVisitor : public ExpressionVisitor {
   }
 
   inline void AddReturnExit(instr::Definition* value) {
-    ASSERT(value);
     Add(ReturnInstr::New(value));
     exit_ = nullptr;
   }
@@ -206,6 +205,7 @@ class EffectVisitor : public ExpressionVisitor {
     return IsEmpty() || GetExitInstr() != nullptr;
   }
 
+  auto VisitScript(Script* script) -> bool;
 #define DECLARE_VISIT(Name) virtual auto Visit##Name(Name* name) -> bool override;
   FOR_EACH_EXPRESSION_NODE(DECLARE_VISIT)
 #undef DECLARE_VISIT

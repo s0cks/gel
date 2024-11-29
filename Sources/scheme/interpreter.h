@@ -18,11 +18,7 @@ class Interpreter : public InstructionVisitor {
   std::stack<StackFrame> stack_{};
 
  protected:
-  explicit Interpreter(Runtime* runtime) :
-    InstructionVisitor(),
-    runtime_(runtime) {
-    ASSERT(runtime);
-  }
+  explicit Interpreter(Runtime* runtime);
 
   inline void SetCurrentInstr(Instruction* instr) {
     current_ = instr;
@@ -36,7 +32,7 @@ class Interpreter : public InstructionVisitor {
     return GetCurrentInstr() != nullptr;
   }
 
-  void ExecuteInstr(Instruction* instr);
+  auto ExecuteInstr(Instruction* instr) -> bool;
 
   auto GetCurrentStackFrame() -> StackFrame* {
     return stack_.empty() ? nullptr : &stack_.top();
@@ -47,8 +43,8 @@ class Interpreter : public InstructionVisitor {
   }
 
   auto PopStackFrame() -> StackFrame;
-  auto PushStackFrame(LocalScope* locals) -> StackFrame*;
-  void Execute(instr::TargetEntryInstr* target, LocalScope* locals);
+  auto PushStackFrame(const uword id, LocalScope* locals, instr::TargetEntryInstr* target = nullptr) -> StackFrame*;
+  void Execute(instr::TargetEntryInstr* entry, LocalScope* locals);
 
   inline auto Next() -> bool {
     const auto next = HasCurrentInstr() ? GetCurrentInstr()->GetNext() : nullptr;

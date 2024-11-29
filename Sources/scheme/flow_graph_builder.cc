@@ -14,6 +14,48 @@
 #include "scheme/script.h"
 
 namespace scm {
+
+template <class S>
+class SeqExprIterator {
+  DEFINE_NON_COPYABLE_TYPE(SeqExprIterator<S>);
+
+ private:
+  const EffectVisitor* owner_;
+  uword index_ = 0;
+  S* seq_;
+
+ public:
+  explicit SeqExprIterator(const EffectVisitor* owner, S* seq) :
+    owner_(owner),
+    seq_(seq) {
+    ASSERT(owner_);
+    ASSERT(seq_);
+  }
+  ~SeqExprIterator() = default;
+
+  auto GetSeq() const -> S* {
+    return seq_;
+  }
+
+  auto GetOwner() const -> const EffectVisitor* {
+    return owner_;
+  }
+
+  auto HasNext() const -> bool {
+    return GetOwner()->IsOpen() && GetCurrentIndex() < GetSeq()->GetNumberOfChildren();
+  }
+
+  auto GetCurrentIndex() const -> uword {
+    return index_;
+  }
+
+  auto Next() -> std::pair<uword, expr::Expression*> {
+    const auto next = std::make_pair(index_, GetSeq()->GetChildAt(index_));
+    index_ += 1;
+    return next;
+  }
+};
+
 static inline auto AppendFragment(EntryInstr* entry, EffectVisitor& vis) -> Instruction* {
   ASSERT(entry);
   if (vis.IsEmpty())
@@ -299,6 +341,7 @@ static inline auto ResolveRxOp(Symbol* symbol, LocalScope* current_scope) -> Pro
       if (local->HasValue() && local->GetValue()->IsProcedure())
         return local->GetValue()->AsProcedure();
     }
+    DLOG(WARNING) << "failed to find rx target `" << symbol << " in scope: " << rx_scope->ToString();
   }
   if (current_scope->Lookup(symbol, &local)) {
     if (local->HasValue() && local->GetValue()->IsProcedure())
@@ -402,6 +445,12 @@ auto EffectVisitor::VisitLetRxExpr(expr::LetRxExpr* expr) -> bool {
       return false;
     }
     Append(for_effect);
+    if (idx == expr->GetNumberOfChildren()) {
+      const auto return_value = !oper_expr->IsSubscribe() ? instr::LoadVariableInstr::New(symbol)->AsDefinition()
+                                                          : instr::ConstantInstr::New(Null())->AsDefinition();
+      ASSERT(return_value);
+      ReturnDefinition(return_value);
+    }
     if (!IsOpen())
       break;
   }
@@ -426,10 +475,6 @@ auto EffectVisitor::VisitLetExpr(expr::LetExpr* expr) -> bool {
 }
 
 auto EffectVisitor::VisitBeginExpr(BeginExpr* expr) -> bool {
-  const auto target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
-  ASSERT(target);
-  Add(target);
-
   ASSERT(expr);
   uint64_t idx = 0;
   while (IsOpen() && (idx < expr->GetNumberOfChildren())) {
@@ -442,8 +487,6 @@ auto EffectVisitor::VisitBeginExpr(BeginExpr* expr) -> bool {
     if (!IsOpen())
       break;
   }
-
-  AddImplicitReturn();
   return true;
 }
 
@@ -541,19 +584,17 @@ auto EffectVisitor::VisitLocalDef(LocalDef* expr) -> bool {
 
 auto EffectVisitor::VisitListExpr(expr::ListExpr* expr) -> bool {
   ASSERT(expr);
-  // process body
-  uword idx = 0;
-  while (IsOpen() && (idx < expr->GetNumberOfChildren())) {
-    const auto child = expr->GetChildAt(idx++);
-    ASSERT(child);
+  SeqExprIterator<expr::ListExpr> iter(this, expr);
+  while (iter.HasNext()) {
+    const auto [_, child] = iter.Next();
     ValueVisitor for_value(GetOwner());
-    if (!child->Accept(&for_value))
-      break;
+    if (!child->Accept(&for_value)) {
+      LOG(ERROR) << "failed to visit: " << child;
+      return false;
+    }
     Append(for_value);
-    if (!IsOpen())
-      break;
   }
-  return ReturnCall(scm::proc::list::Get(), idx);
+  return ReturnCall(scm::proc::list::Get(), expr->GetNumberOfChildren());
 }
 
 auto EffectVisitor::VisitLiteralExpr(LiteralExpr* p) -> bool {
@@ -688,6 +729,30 @@ auto FlowGraphBuilder::Build(Expression* expr, LocalScope* scope) -> FlowGraph* 
   return new FlowGraph(graph_entry);
 }
 
+auto EffectVisitor::VisitScript(Script* script) -> bool {
+  auto index = 0;
+  const auto& body = script->GetBody();
+  while (IsOpen() && (index < body.size())) {
+    const auto expr = body[index++];
+    ValueVisitor for_value(GetOwner());
+    if (!expr->Accept(&for_value)) {
+      LOG(ERROR) << "failed to visit: " << expr->ToString();
+      return false;
+    }
+    Append(for_value);
+    if (index == body.size()) {
+      const auto return_value = for_value.HasValue() ? for_value.GetValue() : instr::ConstantInstr::New(Null());
+      ASSERT(return_value);
+      DLOG(INFO) << "adding return for: " << return_value->ToString();
+      Do(return_value);
+      AddReturnExit(return_value);
+    }
+    if (!IsOpen())
+      break;
+  }
+  return true;
+}
+
 auto FlowGraphBuilder::Build(Script* script, LocalScope* scope) -> FlowGraph* {
   ASSERT(script);
   ASSERT(scope);
@@ -698,21 +763,19 @@ auto FlowGraphBuilder::Build(Script* script, LocalScope* scope) -> FlowGraph* {
   const auto target = TargetEntryInstr::New(builder.GetNextBlockId());
   ASSERT(target);
   builder.SetCurrentBlock(target);
-  const auto& body = script->GetBody();
-  auto remaining = body.size();
-  for (const auto& expr : body) {
-    EffectVisitor for_effect(&builder);
-    if (!expr->Accept(&for_effect)) {
-      LOG(ERROR) << "failed to visit: " << expr->ToString();
-      return nullptr;  // TODO: free entry
-    }
-    // if (--remaining == 0) {
-    //   const auto exit = for_effect.GetExitInstr();
-    //   if (exit && !exit->IsReturnInstr())
-    //     for_effect.Add(exit->IsDefinition() ? instr::ReturnInstr::New(exit->AsDefinition()) : instr::ReturnInstr::New());
-    // }
-    AppendFragment(target, for_effect);
+  ValueVisitor for_effect(&builder);
+  if (!for_effect.VisitScript(script)) {
+    LOG(ERROR) << "failed to visit: " << script;
+    return nullptr;
   }
+  AppendFragment(target, for_effect);
+
+  DLOG(INFO) << "script instructions:";
+  instr::InstructionIterator iter(target);
+  while (iter.HasNext()) {
+    DLOG(INFO) << "- " << iter.Next()->ToString();
+  }
+
   graph_entry->Append(target);
   graph_entry->AddDominated(target);
   return new FlowGraph(graph_entry);

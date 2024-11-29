@@ -5,6 +5,8 @@
 #include <stack>
 
 #include "scheme/common.h"
+#include "scheme/instruction.h"
+#include "scheme/object.h"
 #include "scheme/platform.h"
 #include "scheme/procedure.h"
 
@@ -15,13 +17,24 @@ class StackFrame {
 
  private:
   uint64_t id_;
+  instr::TargetEntryInstr* target_;
   LocalScope* locals_;
   uword return_address_;
 
-  StackFrame(const uint64_t id, LocalScope* locals, const uword return_address = UNALLOCATED) :
+  StackFrame(const uword id, instr::TargetEntryInstr* target, LocalScope* locals, const uword return_address = UNALLOCATED) :
     id_(id),
+    target_(target),
     locals_(locals),
-    return_address_(return_address) {}
+    return_address_(return_address) {
+    ASSERT(locals);
+  }
+  StackFrame(uword id, LocalScope* locals, const uword return_address = UNALLOCATED) :
+    id_(id),
+    target_(nullptr),
+    locals_(locals),
+    return_address_(return_address) {
+    ASSERT(locals_);
+  }
 
   void SetReturnAddress(const uword addr) {
     ASSERT(addr > UNALLOCATED);
@@ -30,12 +43,25 @@ class StackFrame {
  public:
   StackFrame() :
     id_(0),
+    target_(nullptr),
     locals_(nullptr),
     return_address_(UNALLOCATED) {}
   ~StackFrame() = default;
 
-  auto GetId() const -> uint64_t {
+  auto GetId() const -> uword {
     return id_;
+  }
+
+  auto GetTarget() const -> instr::TargetEntryInstr* {
+    return target_;
+  }
+
+  inline auto HasTarget() const -> bool {
+    return GetTarget() != nullptr;
+  }
+
+  inline auto IsNativeFrame() const -> bool {
+    return GetTarget() == nullptr;
   }
 
   auto GetLocals() const -> LocalScope* {
@@ -54,11 +80,15 @@ class StackFrame {
     return GetReturnAddress() != UNALLOCATED;
   }
 
+  inline auto GetReturnInstr() const -> instr::Instruction* {
+    return ((instr::Instruction*)GetReturnAddressPointer());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  }
+
   friend auto operator<<(std::ostream& stream, const StackFrame& rhs) -> std::ostream& {
     stream << "StackFrame(";
-    stream << "id=" << rhs.GetId() << ", ";
+    stream << "target=" << rhs.GetTarget() << ", ";
     if (rhs.HasReturnAddress())
-      stream << "result=" << rhs.GetReturnAddressPointer() << ", ";
+      stream << "result=" << rhs.GetReturnInstr()->ToString() << ", ";
     stream << "locals=" << rhs.GetLocals()->ToString();
     stream << ")";
     return stream;

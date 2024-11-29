@@ -109,6 +109,15 @@ class Runtime : public ExecutionStack {
       std::ranges::reverse(std::begin(result), std::end(result));
   }
 
+  inline void CallWithNArgs(Lambda* lambda, const uword num_args) {
+    ASSERT(lambda);
+    ASSERT(num_args >= 0);
+    std::vector<Object*> args{};
+    PopN(args, num_args, true);
+    ASSERT(num_args == args.size());
+    return Call(lambda, args);
+  }
+
   inline void CallWithNArgs(NativeProcedure* native, const uword num_args) {
     ASSERT(native);
     ASSERT(num_args >= 0);
@@ -143,18 +152,12 @@ class Runtime : public ExecutionStack {
 
   void Call(instr::TargetEntryInstr* target, LocalScope* locals);
   void Call(NativeProcedure* native, const ObjectList& args);
-  void Call(Lambda* lambda);
   void Call(Lambda* lambda, const ObjectList& args);
 
  public:  // TODO: reduce visibility
   void LoadKernelModule();
   inline void Call(Procedure* procedure, const ObjectList& args) {
     if (procedure->IsLambda()) {
-      const auto lambda = procedure->AsLambda();
-      ASSERT(lambda);
-      const auto scope = GetCurrentScope() ? GetCurrentScope() : LocalScope::New();
-      ASSERT(scope);
-      LOG_IF(FATAL, !LambdaCompiler::Compile(lambda, scope)) << "failed to compile: " << lambda->ToString();
       return Call(procedure->AsLambda(), args);
     } else if (procedure->IsNativeProcedure()) {
       return Call(procedure->AsNativeProcedure(), args);

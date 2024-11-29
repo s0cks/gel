@@ -8,6 +8,8 @@
 
 #include "scheme/common.h"
 #include "scheme/heap.h"
+#include "scheme/natives.h"
+#include "scheme/object.h"
 #include "scheme/to_string_helper.h"
 
 namespace scm::expr {
@@ -326,11 +328,22 @@ auto RxOpExpr::ToString() const -> std::string {
   return helper;
 }
 
+auto RxOpExpr::IsSubscribe() const -> bool {
+  return IsCallToNative<proc::rx_subscribe>(GetSymbol());
+}
+
 auto LetRxExpr::ToString() const -> std::string {
   ToStringHelper<LetRxExpr> helper;
   helper.AddField("scope", GetScope());
   helper.AddField("body", GetBody());
   return helper;
+}
+
+auto LetRxExpr::HasSubscribe() const -> bool {
+  const auto last = GetLastOp();
+  if (!last)
+    return last;
+  return last->IsSubscribe();
 }
 
 auto LetExpr::ToString() const -> std::string {

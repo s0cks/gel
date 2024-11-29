@@ -1157,6 +1157,7 @@ class RxOpExpr : public SequenceExpr, public proto::HasSymbol {
  public:
   ~RxOpExpr() override = default;
 
+  auto IsSubscribe() const -> bool;
   DECLARE_EXPRESSION(RxOpExpr);
 
  public:
@@ -1193,6 +1194,13 @@ class LetRxExpr : public TemplateLetExpr {
     return (RxOpExpr*)GetChildAt(idx);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   }
 
+  inline auto GetLastOp() const -> RxOpExpr* {
+    if (IsEmpty())
+      return nullptr;
+    return (RxOpExpr*)GetLastExpr();  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  }
+
+  auto HasSubscribe() const -> bool;
   DECLARE_EXPRESSION(LetRxExpr);
 
  public:

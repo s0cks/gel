@@ -24,6 +24,7 @@ _DECLARE_NATIVE_PROCEDURE(rx_get_locals, "rx:get-locals");
 _DECLARE_NATIVE_PROCEDURE(rx_to_observable, "rx:to-observable");
 _DECLARE_NATIVE_PROCEDURE(rx_subscribe, "rx:subscribe");
 _DECLARE_NATIVE_PROCEDURE(rx_map, "rx:map");
+_DECLARE_NATIVE_PROCEDURE(rx_take_while, "rx:take_while");
 #endif  // SCM_ENABLE_RX
 
 #ifdef SCM_DEBUG
