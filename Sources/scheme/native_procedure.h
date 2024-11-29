@@ -1,6 +1,7 @@
 #ifndef SCM_NATIVE_PROCEDURE_H
 #define SCM_NATIVE_PROCEDURE_H
 
+#include "scheme/common.h"
 #include "scheme/error.h"
 #include "scheme/procedure.h"
 
@@ -101,13 +102,76 @@ class NativeProcedure : public Procedure {
     kInstance = new Name();                             \
     ASSERT(kInstance&& kSymbol);                        \
   }                                                     \
-  auto Name::ApplyProcedure(const std::vector<Object*>& args) const -> bool
+  auto Name::ApplyProcedure(const ObjectList& args) const -> bool
 
 template <class N>
 static inline auto IsCallToNative(Symbol* symbol) -> bool {
   ASSERT(symbol);
   return N::GetNativeSymbol()->Equals(symbol);
 }
+
+template <const uword Index, class T = Object, const bool Required = true>
+class NativeArgument {
+  DEFINE_NON_COPYABLE_TYPE(NativeArgument);
+
+ private:
+  T* value_ = nullptr;
+
+  void SetValue(T* rhs) {
+    ASSERT(rhs);
+    value_ = rhs;
+  }
+
+ public:
+  explicit NativeArgument(const ObjectList& args) {
+    if (Index < 0 || Index > args.size()) {
+      if (Required)
+        throw Exception("");
+      return;
+    }
+    const auto value = args[0];
+    if (!value || !value->GetType()->IsInstanceOf(T::GetClass()))
+      throw Exception("");
+    SetValue((T*)value);
+  }
+  ~NativeArgument() = default;
+
+  auto GetValue() const -> T* {
+    return value_;
+  }
+
+  inline auto HasValue() const -> bool {
+    return GetValue() != nullptr;
+  }
+
+  auto GetIndex() const -> uword {
+    return Index;
+  }
+
+  auto IsRequired() const -> bool {
+    return Required;
+  }
+
+  auto IsOptional() const -> bool {
+    return !Required;
+  }
+
+  auto GetType() const -> Class* {
+    return T::GetClass();
+  }
+
+  operator bool() const {
+    return IsRequired() ? HasValue() : true;
+  }
+
+  operator T*() const {
+    return GetValue();
+  }
+
+  auto operator->() -> T* {
+    return GetValue();
+  }
+};
 
 }  // namespace scm
 

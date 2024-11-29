@@ -13,7 +13,7 @@ auto NativeProcedure::Return(Object* rhs) const -> bool {
   return DoNothing();
 }
 
-auto NativeProcedure::Apply(const std::vector<Object*>& rhs) const -> bool {
+auto NativeProcedure::Apply(const ObjectList& rhs) const -> bool {
   return ApplyProcedure(rhs);
 }
 

@@ -62,21 +62,16 @@ NATIVE_PROCEDURE_F(random) {
 
 NATIVE_PROCEDURE_F(rand_range) {
   ASSERT(HasRuntime());
-  const auto min = args[0];
-  if (!min->IsLong())
-    return ThrowError(fmt::format("expected min `{}` to be a Long", *min));
-  const auto max = args[1];
-  if (!max->IsLong())
-    return ThrowError(fmt::format("expected max `{}` to be a Long", *max));
+  NativeArgument<0, Long> min(args);
+  NativeArgument<1, Long> max(args);
   std::uniform_int_distribution<uint64_t> distribution(Long::Unbox(min), Long::Unbox(max));
   return ReturnNew<Long>(distribution(mt));
 }
 
 NATIVE_PROCEDURE_F(type) {
   ASSERT(!args.empty());
-  const auto value = args[0];
-  ASSERT(value);
-  if (value->IsPair() && value->AsPair()->IsEmpty())
+  NativeArgument<0> value(args);
+  if (scm::IsNull(value))
     return ReturnNew<String>("Null");
   return Return(value->GetType()->GetName());
 }
@@ -99,11 +94,8 @@ NATIVE_PROCEDURE_F(list) {
 NATIVE_PROCEDURE_F(format) {
   ASSERT(GetRuntime());
   ASSERT(args.size() >= 1);
-  const auto format = args[0];
-  ASSERT(format);
-  if (!format->IsString())
-    return ThrowError(fmt::format("expected {} to be a String.", *format));
-  const auto& fmt_val = format->AsString()->Get();
+  NativeArgument<0, String> format(args);
+  const auto& fmt_val = format->Get();
   ASSERT(!fmt_val.empty());
   fmt::dynamic_format_arg_store<fmt::format_context> fmt_args{};
   std::for_each(std::begin(args) + 1, std::end(args), [&fmt_args](Object* arg) {
@@ -116,12 +108,8 @@ NATIVE_PROCEDURE_F(format) {
 
 // (set-car! <seq> <value>)
 NATIVE_PROCEDURE_F(set_car) {
-  const auto& seq = args[0];
-  ASSERT(seq);
-  if (!seq->IsPair())
-    return ThrowError(fmt::format("expected {} to be a Pair.", (*seq)));
-  const auto& value = args[1];
-  ASSERT(value);
+  NativeArgument<0, Pair> seq(args);
+  NativeArgument<1> value(args);
   if (!value->IsDatum())
     return ThrowError(fmt::format("expected {} to be a Datum.", (*value)));
   SetCar(seq, value);
@@ -129,12 +117,8 @@ NATIVE_PROCEDURE_F(set_car) {
 }
 
 NATIVE_PROCEDURE_F(set_cdr) {
-  const auto& seq = args[0];
-  ASSERT(seq);
-  if (!seq->IsPair())
-    return ThrowError(fmt::format("expected {} to be a Pair.", (*seq)));
-  const auto& value = args[1];
-  ASSERT(value);
+  NativeArgument<0, Pair> seq(args);
+  NativeArgument<1> value(args);
   if (!value->IsDatum())
     return ThrowError(fmt::format("expected {} to be a Datum.", (*value)));
   SetCdr(seq, value);
@@ -146,29 +130,24 @@ NATIVE_PROCEDURE_F(array_new) {
   if (args.empty())
     return ThrowError(fmt::format("expected args to not be empty"));
   const auto length = args.size();
-  const auto value = Array<Object*>::New(length);
-  ASSERT(value);
+  const auto result = Array<Object*>::New(length);
+  ASSERT(result);
   for (auto idx = 0; idx < length; idx++) {
     ASSERT(args[idx]);
-    value->Set(idx, args[idx]);
+    result->Set(idx, args[idx]);
   }
-  return Return(value);
+  return Return(result);
 }
 
 NATIVE_PROCEDURE_F(array_get) {
   ASSERT(HasRuntime());
   if (args.size() != 2)
     return ThrowError(fmt::format("expected args `{}` to be: `<array> <index>`", Stringify(args)));
-  if (!scm::IsArray(args[0]))
-    return ThrowError(fmt::format("expected `{}` to be an Array", (*args[0])));
-  const auto array = (ArrayBase*)args[0];  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-  ASSERT(array);
-  if (!scm::IsLong(args[1]))
-    return ThrowError(fmt::format("expected `{}` to be a Long.", (*args[1])));
-  const auto index = Long::Unbox(args[1]);
-  if (index > array->GetCapacity())
-    return ThrowError(fmt::format("index `{}` is out of bounds for `{}`", index, (const scm::Object&)*array));
-  return Return(array->Get(index));
+  NativeArgument<0, ArrayBase> array(args);
+  NativeArgument<1, Long> index(args);
+  if (index->Get() > array->GetCapacity())
+    return ThrowError(fmt::format("index `{}` is out of bounds for `{}`", index->Get(), (const scm::Object&)*array));
+  return Return(array->Get(index->Get()));
 }
 
 NATIVE_PROCEDURE_F(array_set) {
@@ -190,12 +169,7 @@ NATIVE_PROCEDURE_F(array_set) {
 
 NATIVE_PROCEDURE_F(array_length) {
   ASSERT(HasRuntime());
-  if (args.size() != 1)
-    return ThrowError(fmt::format("expected args `{}` to be: `<array>`", Stringify(args)));
-  if (!scm::IsArray(args[0]))
-    return ThrowError(fmt::format("expected `{}` to be an Array", (*args[0])));
-  const auto array = (ArrayBase*)args[0];  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-  ASSERT(array);
+  NativeArgument<0, ArrayBase> array(args);
   return ReturnNew<Long>(array->GetCapacity());
 }
 
@@ -233,9 +207,7 @@ NATIVE_PROCEDURE_F(scm_get_frame) {
 NATIVE_PROCEDURE_F(scm_get_locals) {
   ASSERT(HasRuntime());
   ASSERT(args.empty());
-  const auto frame = GetRuntime()->GetCurrentFrame();
-  ASSERT(frame);
-  LocalScope::RecursiveIterator iter(frame->GetLocals());
+  LocalScope::RecursiveIterator iter(GetRuntime()->GetCurrentFrame()->GetLocals());
   return Return(scm::ToList<LocalScope::RecursiveIterator, LocalVariable*>(iter, [](LocalVariable* local) -> Object* {
     return String::New(local->GetName());
   }));

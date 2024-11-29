@@ -128,7 +128,6 @@ auto Interpreter::VisitInvokeNativeInstr(InvokeNativeInstr* instr) -> bool {
   const auto target = GetRuntime()->Pop();
   if (!target || !target->IsNativeProcedure())
     throw Exception(fmt::format("expected {0:s} to be a NativeProcedure.", target ? target->ToString() : "null"));
-  DLOG(INFO) << "invoking:  " << target->ToString();
   GetRuntime()->CallWithNArgs(target->AsNativeProcedure(), instr->GetNumberOfArgs());
   return Next();
 }
@@ -306,7 +305,7 @@ auto Interpreter::PushStackFrame(const uword id, LocalScope* locals, instr::Targ
   const auto return_address =
       (uword)(has_next ? GetCurrentInstr()->GetNext() : UNALLOCATED);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   stack_.push(StackFrame(id, target, locals, return_address));
-  DLOG(INFO) << "pushed: " << stack_.top();
+  DVLOG(1000) << "pushed: " << stack_.top();
   return &stack_.top();
 }
 
@@ -318,14 +317,14 @@ auto Interpreter::PopStackFrame() -> StackFrame {
   ASSERT(!stack_.empty());
   const auto frame = stack_.top();
   stack_.pop();
-  DLOG(INFO) << "popped: " << frame;
+  DVLOG(1000) << "popped: " << frame;
   return frame;
 }
 
 void Interpreter::Execute(instr::TargetEntryInstr* target, LocalScope* locals) {
   ASSERT(target);
   ASSERT(locals);
-  DLOG(INFO) << "executing " << target->ToString();
+  DVLOG(1000) << "executing " << target->ToString();
   PushStackFrame(target->GetBlockId(), locals, target);
   SetCurrentInstr(target->GetNext());
   while (HasCurrentInstr()) {

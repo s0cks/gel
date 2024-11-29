@@ -743,7 +743,6 @@ auto EffectVisitor::VisitScript(Script* script) -> bool {
     if (index == body.size()) {
       const auto return_value = for_value.HasValue() ? for_value.GetValue() : instr::ConstantInstr::New(Null());
       ASSERT(return_value);
-      DLOG(INFO) << "adding return for: " << return_value->ToString();
       Do(return_value);
       AddReturnExit(return_value);
     }
@@ -769,13 +768,6 @@ auto FlowGraphBuilder::Build(Script* script, LocalScope* scope) -> FlowGraph* {
     return nullptr;
   }
   AppendFragment(target, for_effect);
-
-  DLOG(INFO) << "script instructions:";
-  instr::InstructionIterator iter(target);
-  while (iter.HasNext()) {
-    DLOG(INFO) << "- " << iter.Next()->ToString();
-  }
-
   graph_entry->Append(target);
   graph_entry->AddDominated(target);
   return new FlowGraph(graph_entry);

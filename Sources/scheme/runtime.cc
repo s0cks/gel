@@ -245,15 +245,9 @@ void Runtime::Call(Lambda* lambda, const ObjectList& args) {
   const auto locals = LocalScope::New(GetCurrentScope());
   ASSERT(locals);
   if (!lambda->IsCompiled()) {
-    DLOG(INFO) << "compiling lambda....";
     if (!LambdaCompiler::Compile(lambda, locals)) {
       LOG(FATAL) << "failed to compile: " << lambda;
       return;
-    }
-    DLOG(INFO) << "instructions:";
-    instr::InstructionIterator iter(lambda->GetEntry());
-    while (iter.HasNext()) {
-      DLOG(INFO) << "- " << iter.Next()->ToString();
     }
   }
   const auto& lambda_args = lambda->GetArgs();
@@ -313,13 +307,6 @@ auto Runtime::Exec(Script* script) -> Object* {
       },
       runtime->GetGlobalScope());
   ASSERT(!runtime->HasFrame());
-
-  DLOG(INFO) << "executing script, instructions:";
-  instr::InstructionIterator iter(script->GetEntry());
-  while (iter.HasNext()) {
-    DLOG(INFO) << "- " << iter.Next()->ToString();
-  }
-
   runtime->Call(script->GetEntry()->GetTarget(), scope);
   LOG_IF(ERROR, runtime->HasFrame() || runtime->HasError()) << "invalid runtime state.";
   return runtime->Pop();
