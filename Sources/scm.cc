@@ -17,6 +17,7 @@
 #include "scheme/flow_graph_builder.h"
 #include "scheme/flow_graph_dot.h"
 #include "scheme/heap.h"
+#include "scheme/instruction.h"
 #include "scheme/local_scope.h"
 #include "scheme/object.h"
 #include "scheme/parser.h"
@@ -69,15 +70,28 @@ static inline auto Execute(const std::string& expr) -> int {
 
 static inline auto ExecuteScript(const std::string& filename) -> int {
   const auto script = Script::FromFile(filename);
-  ASSERT(script && script->IsCompiled());
-  const auto [result, time] = TimedExecution<Object*>([script]() -> Object* {
-    try {
-      return Runtime::Exec(script);
-    } catch (const scm::Exception& exc) {
-      return Error::New(fmt::format("failed to execute script: {}", exc.GetMessage()));
+  ASSERT(script);
+  if (FLAGS_dump_ast) {
+    // TODO: implement
+  }
+  if (FLAGS_dump_flow_graph) {
+    DLOG(INFO) << "Script instructions:";
+    instr::InstructionIterator iter(script);
+    while (iter.HasNext()) {
+      DLOG(INFO) << "- " << iter.Next()->ToString();
     }
-  });
-  return PrintTimedResult(result, time);
+  }
+  if (FLAGS_eval) {
+    const auto [result, time] = TimedExecution<Object*>([script]() -> Object* {
+      try {
+        return Runtime::Exec(script);
+      } catch (const scm::Exception& exc) {
+        return Error::New(fmt::format("failed to execute script: {}", exc.GetMessage()));
+      }
+    });
+    return PrintTimedResult(result, time);
+  }
+  return EXIT_SUCCESS;
 }
 
 auto main(int argc, char** argv) -> int {

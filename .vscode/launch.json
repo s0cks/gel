@@ -391,7 +391,7 @@
         "--reports-dir", "${workspaceFolder}/reports",
         "--module-dir", "${workspaceFolder}/scm",
         "-v=${input:verbose-level}",
-        "--log-script-instrs",
+        "--dump-flow-graph",
         "${workspaceFolder}/scm/${input:target-script}"
       ],
       "cwd": "${workspaceFolder}",

@@ -2,11 +2,13 @@
 #define SCM_INSTRUCTION_H
 
 #include <string>
+#include <type_traits>
 
 #include "scheme/common.h"
 #include "scheme/expression.h"
 #include "scheme/lambda.h"
 #include "scheme/procedure.h"
+#include "scheme/type_traits.h"
 #include "scheme/variable.h"
 
 #define FOR_EACH_INSTRUCTION(V) \
@@ -143,6 +145,13 @@ class InstructionIterator {
  public:
   explicit InstructionIterator(Instruction* start) :
     current_(start) {}
+  template <class E>
+  explicit InstructionIterator(E* executable, std::enable_if_t<scm::is_executable<E>::value>* = nullptr) :
+    current_(nullptr) {
+    ASSERT(executable);
+    current_ = executable->GetEntry();
+    ASSERT(current_);
+  }
   ~InstructionIterator() = default;
 
   auto HasNext() const -> bool {
