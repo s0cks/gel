@@ -38,6 +38,11 @@ DECLARE_NATIVE_RX_PROCEDURE(observable);
 DECLARE_NATIVE_RX_PROCEDURE(subscribe);
 DECLARE_NATIVE_RX_PROCEDURE(map);
 _DECLARE_NATIVE_RX_PROCEDURE(take_while, "take-while");
+_DECLARE_NATIVE_RX_PROCEDURE(publish_subject, "publish-subject");
+_DECLARE_NATIVE_RX_PROCEDURE(replay_subject, "replay-subject");
+DECLARE_NATIVE_RX_PROCEDURE(publish);
+DECLARE_NATIVE_RX_PROCEDURE(complete);
+_DECLARE_NATIVE_RX_PROCEDURE(publish_error, "publish-error");
 
 #ifdef SCM_DEBUG
 _DECLARE_NATIVE_RX_PROCEDURE(get_operators, "get-operators");

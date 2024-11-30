@@ -249,8 +249,6 @@ static inline auto ApplyBinaryOp(BinaryOp op, Datum* lhs, Datum* rhs) -> Datum* 
       return Bool::Box(lhs->Compare(rhs) <= 0);
     case expr::kCons:
       return Pair::New(lhs, rhs);
-    case expr::kInstanceOf:
-      return InstanceOf(lhs, rhs);
     default:
       LOG(FATAL) << "invalid BinaryOp: " << op;
       return nullptr;

@@ -34,7 +34,8 @@
         "factorial.cl",
         "test-observable.cl",
         "test-observer.cl",
-        "test-print.cl"
+        "test-print.cl",
+        "test-publish-subject.cl"
       ],
       "default": "while.cl",
       "description": "A value that is even."

@@ -417,7 +417,7 @@ static inline auto IsConstantObservable(instr::Definition* defn) -> bool {
 auto EffectVisitor::VisitLetRxExpr(expr::LetRxExpr* expr) -> bool {
   ASSERT(expr);
   const auto symbol = Symbol::New("observable");
-  const auto scope = GetOwner()->GetScope();
+  const auto scope = LocalScope::New(GetOwner()->GetScope());
   ASSERT(scope);
   const auto local = LocalVariable::New(scope, symbol);
   ASSERT(local);
@@ -659,24 +659,15 @@ auto EffectVisitor::VisitBinaryOpExpr(BinaryOpExpr* expr) -> bool {
   ValueVisitor for_right(GetOwner());
   if (!expr->GetRight()->Accept(&for_right))
     return false;
-  if (!expr->IsInstanceOfOp())
-    Append(for_right);
-
-  if (expr->IsInstanceOfOp()) {  // TODO: the irony of this
-    const auto cls = GetClassReference(for_right.GetValue());
-    instr::Definition* expected = nullptr;
-    if (cls) {
-      expected = instr::ConstantInstr::New(cls);
-      Do(expected);
-    } else {
-      DLOG(WARNING) << "failed to find class: " << for_right.GetValue()->ToString();
-      Append(for_right);
-      expected = for_right.GetValue();
-    }
-    Add(instr::InstanceOfInstr::New(expected, Class::GetClass()));
-  }
+  Append(for_right);
   ReturnDefinition(BinaryOpInstr::New(op, for_left.GetValue(), for_right.GetValue()));
   return true;
+}
+
+auto EffectVisitor::VisitInstanceOfExpr(expr::InstanceOfExpr* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
 }
 
 auto EffectVisitor::VisitThrowExpr(expr::ThrowExpr* expr) -> bool {

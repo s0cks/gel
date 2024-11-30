@@ -34,7 +34,8 @@
   V(LetRxExpr)                      \
   V(ListExpr)                       \
   V(ThrowExpr)                      \
-  V(QuotedExpr)
+  V(QuotedExpr)                     \
+  V(InstanceOfExpr)
 
 namespace scm {
 class Parser;
@@ -1285,6 +1286,38 @@ class ListExpr : public SequenceExpr {
  public:
   static inline auto New(const ExpressionList& values = {}) -> ListExpr* {
     return new ListExpr(values);
+  }
+};
+
+class InstanceOfExpr : public TemplateExpression<2> {
+ protected:
+  InstanceOfExpr() = default;
+  InstanceOfExpr(Expression* expected, Expression* actual) :
+    TemplateExpression<2>() {
+    ASSERT(expected);
+    SetChildAt(0, expected);
+    ASSERT(actual);
+    SetChildAt(1, actual);
+  }
+
+ public:
+  ~InstanceOfExpr() override = default;
+
+  inline auto GetExpected() const -> Expression* {
+    return GetChildAt(0);
+  }
+
+  inline auto GetActual() const -> Expression* {
+    return GetChildAt(1);
+  }
+
+  auto IsConstantExpr() const -> bool override;
+  auto EvalToConstant() const -> Object* override;
+  DECLARE_EXPRESSION(InstanceOfExpr);
+
+ public:
+  static inline auto New(Expression* expected, Expression* actual) -> InstanceOfExpr* {
+    return new InstanceOfExpr(expected, actual);
   }
 };
 

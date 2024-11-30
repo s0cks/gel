@@ -59,4 +59,14 @@ class Error : public Datum {
 };
 }  // namespace scm
 
+namespace fmt {
+template <>
+struct formatter<scm::Error> : public formatter<std::string> {
+  template <typename FormatContext>
+  constexpr auto format(const scm::Error& value, FormatContext& ctx) const -> decltype(ctx.out()) {
+    return format_to(ctx.out(), "{}", value.GetMessage()->Get());
+  }
+};
+}  // namespace fmt
+
 #endif  // SCM_ERROR_H

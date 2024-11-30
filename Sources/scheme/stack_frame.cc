@@ -37,7 +37,11 @@ StackFrameGuardBase::~StackFrameGuardBase() {
     exit_ = std::optional<StackFrame>(*(runtime->GetCurrentFrame()));
   if ((!enter_ && !exit_) || (enter_ == exit_))
     return;
-  LOG(ERROR) << "Error: Invalid frame state after executing target";
+  if (runtime->HasError()) {
+    LOG(ERROR) << "Error: " << runtime->GetError();
+  } else {
+    LOG(ERROR) << "Error: Invalid frame state after executing target";
+  }
   LOG(ERROR) << "";
   if (enter_) {
     LOG(ERROR) << "Enter Frame: ";

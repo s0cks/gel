@@ -56,6 +56,11 @@ class ExecutionStack {
     return stack_.size();
   }
 
+  auto GetError() const -> Error* {
+    ASSERT(HasError());
+    return stack_.top()->AsError();
+  }
+
   inline auto HasError() const -> bool {
     if (stack_.empty())
       return false;

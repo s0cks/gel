@@ -88,9 +88,16 @@ void Object::Init() {
   // string-like type(s)
   String::InitClass();
   Symbol::InitClass();
-  Observable::InitClass();
   // error type(s)
   Error::InitClass();
+#ifdef SCM_ENABLE_RX
+  // observables
+  Observable::InitClass();
+  // subjects
+  Subject::InitClass();
+  ReplaySubject::InitClass();
+  PublishSubject::InitClass();
+#endif  // SCM_ENABLE_RX
 }
 
 auto Class::CreateClass() -> Class* {
@@ -504,6 +511,8 @@ auto Observable::New(Object* value) -> Observable* {
     return Empty();
   else if (scm::IsPair(value))
     return New(ToObservable(ToPair(value)));
+  else if (scm::IsSubject(value))
+    return value->AsSubject()->ToObservable();
   return New(rx::source::just(value));
 }
 
@@ -540,6 +549,43 @@ auto Observer::Equals(Object* rhs) const -> bool {
   ASSERT(rhs);
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
   return false;
+}
+
+auto Subject::CreateClass() -> Class* {
+  ASSERT(kClass == nullptr);
+  return Class::New(Object::GetClass(), kClassName);
+}
+
+auto Subject::ToString() const -> std::string {
+  return ToStringHelper<Subject>{};
+}
+
+auto PublishSubject::ToString() const -> std::string {
+  return ToStringHelper<PublishSubject>{};
+}
+
+auto PublishSubject::Equals(Object* rhs) const -> bool {
+  ASSERT(rhs);
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
+
+auto PublishSubject::CreateClass() -> Class* {
+  return Class::New(Subject::GetClass(), "PublishSubject");
+}
+
+auto ReplaySubject::ToString() const -> std::string {
+  return ToStringHelper<ReplaySubject>{};
+}
+
+auto ReplaySubject::Equals(Object* rhs) const -> bool {
+  ASSERT(rhs);
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
+
+auto ReplaySubject::CreateClass() -> Class* {
+  return Class::New(Subject::GetClass(), "ReplaySubject");
 }
 
 #endif  // SCM_ENABLE_RX

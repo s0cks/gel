@@ -306,36 +306,64 @@ NATIVE_RX_PROCEDURE_F(buffer) {
   return DoNothing();
 }
 
-NATIVE_RX_PROCEDURE_F(get_operators) {
-  ASSERT(HasRuntime());
-  ASSERT(args.empty());
-  LocalScope::RecursiveIterator iter(rx::GetRxScope());
-  return Return(scm::ToList<LocalScope::RecursiveIterator, LocalVariable*>(iter, [](LocalVariable* local) -> Object* {
-    return String::New(local->GetName());
-  }));
-}
-
 NATIVE_RX_PROCEDURE_F(observable) {
   // TODO: handle multiple args
   return ReturnNew<Observable>(args[0]);
 }
 
-// (rx:subscribe <observable> <on_next> <on_error?> <on_completed?>)
-NATIVE_PROCEDURE_F(rx_subscribe) {
+static constexpr const auto kDoNothingOnCompleted = []() {
+  // do nothing
+};
+static constexpr const auto kDoNothingOnError = [](std::exception_ptr error) {
+  // do nothing
+};
+
+static inline auto CallOnNext(Runtime* runtime, Procedure* procedure) -> std::function<void(Object*)> {
+  return [runtime, procedure](Object* next) {
+    return runtime->Call(procedure, ObjectList{next});
+  };
+}
+
+static inline auto CallOnError(Runtime* runtime, Procedure* procedure) -> std::function<void(std::exception_ptr)> {
+  return [runtime, procedure](std::exception_ptr error) {
+    try {
+      std::rethrow_exception(error);
+    } catch (std::exception exc) {
+      LOG(ERROR) << "exception: " << exc.what();
+    }
+    NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  };
+}
+
+static inline auto CallOnCompleted(Runtime* runtime, Procedure* procedure) -> std::function<void()> {
+  return [runtime, procedure]() {
+    return runtime->Call(procedure, {});
+  };
+}
+
+NATIVE_RX_PROCEDURE_F(subscribe) {
   const auto runtime = GetRuntime();
   ASSERT(runtime);
-  if (args.size() < 2 || args.size() > 4)
-    return ThrowError(fmt::format("expected args to be: `<observable> <on_next> <on_error?> <on_completed?>`"));
-  const auto source = args[0];
-  if (!scm::IsObservable(source))
-    return ThrowError(fmt::format("expected arg #1 `{}` to be an Observable", source->ToString()));
-  const auto on_next = args[1];
-  if (!scm::IsProcedure(on_next))
-    return ThrowError(fmt::format("expected arg #2 `{}` to be a Procedure", *on_next));
-  source->AsObservable()->GetValue().subscribe([runtime, on_next](Object* next) {
-    return runtime->Call(on_next->AsProcedure(), ObjectList{next});
-  });
-  return DoNothing();
+  NativeArgument<0> source(args);
+  if (!source)
+    return Throw(source.GetError());
+  NativeArgument<1, Procedure> on_next_arg(args);
+  if (!on_next_arg)
+    return Throw(on_next_arg.GetError());
+  OptionalNativeArgument<2, Procedure> on_error_arg(args);
+  OptionalNativeArgument<3, Procedure> on_completed_arg(args);
+  const auto on_next = CallOnNext(runtime, on_next_arg);
+  const auto on_error = on_error_arg && on_error_arg.HasValue() ? CallOnError(runtime, on_error_arg) : kDoNothingOnError;
+  const auto on_completed =
+      on_completed_arg && on_completed_arg.HasValue() ? CallOnCompleted(runtime, on_completed_arg) : kDoNothingOnCompleted;
+  if (source.GetValue()->IsSubject()) {
+    (source.GetValue())->AsSubject()->Subscribe(on_next, on_error, on_completed);
+    return DoNothing();
+  } else if (source.GetValue()->IsObservable()) {
+    (source.GetValue()->AsObservable())->GetValue().subscribe(on_next, on_error, on_completed);
+    return DoNothing();
+  }
+  return ThrowError("not implemented");
 }
 
 #define CHECK_ARG_TYPE(Index, Name, Type)                  \
@@ -344,7 +372,7 @@ NATIVE_PROCEDURE_F(rx_subscribe) {
     return ThrowError(fmt::format("expected arg #{} ({}) `{}` to be a `{}`", Index, #Name, (*Name), ((Type)->GetName())->Get()));
 
 // (rx:map <func>)
-NATIVE_PROCEDURE_F(rx_map) {
+NATIVE_RX_PROCEDURE_F(map) {
   const auto runtime = GetRuntime();
   ASSERT(runtime);
   if (args.size() != 2)
@@ -358,7 +386,41 @@ NATIVE_PROCEDURE_F(rx_map) {
   return DoNothing();
 }
 
-NATIVE_PROCEDURE_F(rx_take_while) {
+NATIVE_RX_PROCEDURE_F(publish) {
+  NativeArgument<0, Subject> subject(args);
+  if (!subject)
+    return Throw(subject.GetError());
+  NativeArgument<1> value(args);
+  if (!value)
+    return Throw(value.GetError());
+  subject->AsSubject()->Publish(value);
+  return DoNothing();
+}
+
+NATIVE_RX_PROCEDURE_F(complete) {
+  NativeArgument<0, Subject> subject(args);
+  if (!subject)
+    return Throw(subject.GetError());
+  subject->AsSubject()->Complete();
+  return DoNothing();
+}
+
+NATIVE_RX_PROCEDURE_F(publish_error) {
+  NativeArgument<0, Subject> subject(args);
+  if (!subject)
+    return Throw(subject.GetError());
+  NativeArgument<1, Error> value(args);
+  if (!value)
+    return Throw(value.GetError());
+  try {
+    throw Exception(value->GetMessage()->Get());
+  } catch (const Exception& exc) {
+    subject->AsSubject()->OnError(std::current_exception());
+  }
+  return DoNothing();
+}
+
+NATIVE_RX_PROCEDURE_F(take_while) {
   const auto runtime = GetRuntime();
   ASSERT(runtime);
   if (args.size() != 2)
@@ -372,6 +434,28 @@ NATIVE_PROCEDURE_F(rx_take_while) {
   return DoNothing();
 }
 
+NATIVE_RX_PROCEDURE_F(replay_subject) {
+  if (!args.empty())
+    return ThrowError(fmt::format("expected args to be empty."));
+  return ReturnNew<ReplaySubject>();
+}
+
+NATIVE_RX_PROCEDURE_F(publish_subject) {
+  if (!args.empty())
+    return ThrowError(fmt::format("expected args to be empty."));
+  return ReturnNew<PublishSubject>();
+}
+
+#ifdef SCM_DEBUG
+NATIVE_RX_PROCEDURE_F(get_operators) {
+  ASSERT(HasRuntime());
+  ASSERT(args.empty());
+  LocalScope::RecursiveIterator iter(rx::GetRxScope());
+  return Return(scm::ToList<LocalScope::RecursiveIterator, LocalVariable*>(iter, [](LocalVariable* local) -> Object* {
+    return String::New(local->GetName());
+  }));
+}
+#endif  // SCM_DEBUG
 #endif  // SCM_ENABLE_RX
 
 }  // namespace scm::proc

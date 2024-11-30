@@ -354,6 +354,23 @@ auto LetExpr::ToString() const -> std::string {
   return helper;
 }
 
+auto InstanceOfExpr::ToString() const -> std::string {
+  ToStringHelper<InstanceOfExpr> helper;
+  helper.AddField("expected", GetExpected());
+  helper.AddField("actual", GetActual());
+  return helper;
+}
+
+auto InstanceOfExpr::EvalToConstant() const -> Object* {
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return nullptr;
+}
+
+auto InstanceOfExpr::IsConstantExpr() const -> bool {
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return false;
+}
+
 auto LetExpr::VisitAllBindings(ExpressionVisitor* vis) -> bool {
   ASSERT(vis);
   for (const auto& binding : bindings_) {

@@ -177,6 +177,11 @@ auto Runtime::CreateInitScope() -> LocalScope* {
     REGISTER_RX(buffer);
     REGISTER_RX(filter);
     REGISTER_RX(take_while);
+    REGISTER_RX(replay_subject);
+    REGISTER_RX(publish_subject);
+    REGISTER_RX(publish);
+    REGISTER_RX(complete);
+    REGISTER_RX(publish_error);
   }
 
 #undef REGISTER_RX
@@ -267,7 +272,6 @@ void Runtime::Call(NativeProcedure* native, const ObjectList& args) {
   interpreter_.PushStackFrame(native, locals);
   LOG_IF(FATAL, !native->Apply(args)) << "failed to apply: " << native->ToString() << " with args: " << args;
   interpreter_.PopStackFrame();
-  LOG_IF(FATAL, HasError()) << "error calling native `" << native->ToString() << "` with args: " << args;
 }
 
 void Runtime::Call(Script* script) {
