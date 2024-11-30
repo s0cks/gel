@@ -4,7 +4,9 @@
 #include <fmt/format.h>
 
 #include <functional>
+#include <numeric>
 #include <ostream>
+#include <ranges>
 #include <rpp/observables/dynamic_observable.hpp>
 #include <rpp/observers/dynamic_observer.hpp>
 #include <rpp/observers/observer.hpp>
@@ -693,6 +695,18 @@ static inline auto ToList(Iter& iter) -> Object* {
     const auto next = iter.Next();
     ASSERT(next);
     result = Pair::New(next, result);
+  }
+  return result;
+}
+
+static inline auto ListFromRange(const uint64_t from, const uint64_t to) -> scm::Object* {
+  auto first = std::min(from, to);
+  auto last = std::max(from, to);
+  Object* result = Null();
+  for (auto idx = last; idx >= first; idx--) {
+    result = Pair::New(Long::New(idx), result);
+    if (idx == 0)
+      break;
   }
   return result;
 }

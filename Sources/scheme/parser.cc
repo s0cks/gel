@@ -585,6 +585,18 @@ auto Parser::NextToken() -> const Token& {
     case ')':
       Advance();
       return NextToken(Token::kRParen);
+    case '.': {
+      Advance();
+      if (PeekChar() == '.') {
+        Advance();
+        if (PeekChar() == '.') {
+          Advance();
+          return NextToken(Token::kRange);
+        }
+        return NextToken(Token::kInvalid);
+      }
+      return NextToken(Token::kDot);
+    }
     case '+':
       Advance();
       return NextToken(Token::kAdd);
@@ -788,8 +800,27 @@ auto Parser::ParseNamedLambda() -> Lambda* {
   return lambda;
 }
 
-auto Parser::ParseListExpr() -> expr::ListExpr* {
+static inline auto IsLiteralLong(Expression* expr) -> bool {
+  if (!expr || !expr->IsLiteralExpr())
+    return false;
+  const auto literal = expr->AsLiteralExpr();
+  ASSERT(literal);
+  return literal->HasValue() && literal->GetValue()->IsLong();
+}
+
+auto Parser::ParseListExpr() -> expr::Expression* {
+  const auto first = ParseExpression();
+  if (PeekEq(Token::kRange)) {
+    NextToken();
+    LOG_IF(FATAL, !IsLiteralLong(first)) << "expected " << first << " to be a literal Long.";
+    const auto end = ParseExpression();
+    LOG_IF(FATAL, !IsLiteralLong(end)) << "expected " << end << " to be a literal Long.";
+    const auto from = first->AsLiteralExpr()->GetValue()->AsLong()->Get();
+    const auto to = end->AsLiteralExpr()->GetValue()->AsLong()->Get();
+    return expr::LiteralExpr::New(scm::ListFromRange(from, to));
+  }
   const auto list = expr::ListExpr::New();
+  list->Append(first);
   while (!PeekEq(Token::kRParen)) {
     list->Append(ParseExpression());
   }

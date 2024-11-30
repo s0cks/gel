@@ -122,7 +122,7 @@ class Parser {
   auto ParseLetExpr() -> expr::LetExpr*;
   auto ParseRxOpExpr() -> expr::RxOpExpr*;
   auto ParseLetRxExpr() -> expr::LetRxExpr*;
-  auto ParseListExpr() -> expr::ListExpr*;
+  auto ParseListExpr() -> expr::Expression*;
 
   // Definitions
   auto ParseDefinition() -> expr::Definition*;

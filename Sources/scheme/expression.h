@@ -251,18 +251,22 @@ static inline auto operator<<(std::ostream& stream, const ExpressionList& rhs) -
 
 class LiteralExpr : public Expression {
  private:
-  Datum* value_;
+  Object* value_;
 
  protected:
-  explicit LiteralExpr(Datum* value) :
+  explicit LiteralExpr(Object* value) :
     Expression(),
     value_(value) {}
 
  public:
   ~LiteralExpr() override = default;
 
-  auto GetValue() const -> Datum* {
+  auto GetValue() const -> Object* {
     return value_;
+  }
+
+  inline auto HasValue() const -> bool {
+    return GetValue() != nullptr;
   }
 
   auto IsConstantExpr() const -> bool override {
@@ -276,7 +280,7 @@ class LiteralExpr : public Expression {
   DECLARE_EXPRESSION(LiteralExpr);
 
  public:
-  static inline auto New(Datum* value) -> LiteralExpr* {
+  static inline auto New(Object* value) -> LiteralExpr* {
     ASSERT(value);
     return new LiteralExpr(value);
   }

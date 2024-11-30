@@ -38,6 +38,8 @@ struct Position {
   V(Defun)                    \
   V(LParen)                   \
   V(RParen)                   \
+  V(Dot)                      \
+  V(Range)                    \
   V(Identifier)               \
   V(LiteralNumber)            \
   V(LiteralDouble)            \
