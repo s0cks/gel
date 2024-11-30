@@ -80,7 +80,7 @@ class ExpressionVisitor {
  protected:
   ExpressionVisitor() = default;
 
-#define DEFINE_VISIT(Name) virtual auto Visit##Name(Name* expr) -> bool = 0;
+#define DEFINE_VISIT(Name) virtual auto Visit##Name(Name* expr)->bool = 0;
   FOR_EACH_EXPRESSION_NODE(DEFINE_VISIT)
 #undef DEFINE_VISIT
  public:
@@ -156,12 +156,12 @@ class Expression : public Object {  // TODO: should Expression inherit from Obje
     return false;
   }
 
-#define DEFINE_TYPE_CHECK(Name)      \
-  virtual auto As##Name() -> Name* { \
-    return nullptr;                  \
-  }                                  \
-  auto Is##Name() -> bool {          \
-    return As##Name() != nullptr;    \
+#define DEFINE_TYPE_CHECK(Name)    \
+  virtual auto As##Name()->Name* { \
+    return nullptr;                \
+  }                                \
+  auto Is##Name()->bool {          \
+    return As##Name() != nullptr;  \
   }
   FOR_EACH_EXPRESSION_NODE(DEFINE_TYPE_CHECK)
 #undef DEFINE_TYPE_CHECK
@@ -234,7 +234,7 @@ static inline auto operator<<(std::ostream& stream, const ExpressionList& rhs) -
   DEFINE_NON_COPYABLE_TYPE(Name);                       \
                                                         \
  public:                                                \
-  static auto operator new(const size_t sz) -> void*;   \
+  static auto operator new(const size_t sz)->void*;     \
   static inline void operator delete(void* ptr) {       \
     ASSERT(ptr);                                        \
   }                                                     \
@@ -245,7 +245,7 @@ static inline auto operator<<(std::ostream& stream, const ExpressionList& rhs) -
   auto GetName() const -> const char* override {        \
     return #Name;                                       \
   }                                                     \
-  auto As##Name() -> Name* override {                   \
+  auto As##Name()->Name* override {                     \
     return this;                                        \
   }
 
@@ -392,9 +392,9 @@ class BinaryOpExpr : public TemplateOpExpression<BinaryOp, 2> {
     SetChildAt(kRightInput, value);
   }
 
-#define DEFINE_OP_CHECK(Name)                \
-  inline auto Is##Name##Op() const -> bool { \
-    return GetOp() == BinaryOp::k##Name;     \
+#define DEFINE_OP_CHECK(Name)              \
+  inline auto Is##Name##Op() const->bool { \
+    return GetOp() == BinaryOp::k##Name;   \
   }
   FOR_EACH_BINARY_OP(DEFINE_OP_CHECK)
 #undef DEFINE_OP_CHECK
@@ -411,11 +411,11 @@ class BinaryOpExpr : public TemplateOpExpression<BinaryOp, 2> {
     return new BinaryOpExpr(op, left, right);
   }
 
-#define DEFINE_NEW_OP(Name)                                                         \
-  static inline auto New##Name(Expression* lhs, Expression* rhs) -> BinaryOpExpr* { \
-    ASSERT(lhs);                                                                    \
-    ASSERT(rhs);                                                                    \
-    return New(BinaryOp::k##Name, lhs, rhs);                                        \
+#define DEFINE_NEW_OP(Name)                                                       \
+  static inline auto New##Name(Expression* lhs, Expression* rhs)->BinaryOpExpr* { \
+    ASSERT(lhs);                                                                  \
+    ASSERT(rhs);                                                                  \
+    return New(BinaryOp::k##Name, lhs, rhs);                                      \
   }
   FOR_EACH_BINARY_OP(DEFINE_NEW_OP)
 #undef DEFINE_NEW_OP
@@ -469,9 +469,9 @@ class UnaryExpr : public TemplateOpExpression<UnaryOp, 1> {
     SetChildAt(0, expr);
   }
 
-#define DEFINE_OP_CHECK(Name)                \
-  inline auto Is##Name##Op() const -> bool { \
-    return GetOp() == UnaryOp::k##Name;      \
+#define DEFINE_OP_CHECK(Name)              \
+  inline auto Is##Name##Op() const->bool { \
+    return GetOp() == UnaryOp::k##Name;    \
   }
   FOR_EACH_UNARY_OP(DEFINE_OP_CHECK)
 #undef DEFINE_OP_CHECK
@@ -484,10 +484,10 @@ class UnaryExpr : public TemplateOpExpression<UnaryOp, 1> {
     return new UnaryExpr(op, value);
   }
 
-#define DEFINE_NEW_OP(Name)                                       \
-  static inline auto New##Name(Expression* value) -> UnaryExpr* { \
-    ASSERT(value);                                                \
-    return New(UnaryOp::k##Name, value);                          \
+#define DEFINE_NEW_OP(Name)                                     \
+  static inline auto New##Name(Expression* value)->UnaryExpr* { \
+    ASSERT(value);                                              \
+    return New(UnaryOp::k##Name, value);                        \
   }
   FOR_EACH_UNARY_OP(DEFINE_NEW_OP)
 #undef DEFINE_NEW_OP
@@ -1198,6 +1198,10 @@ class LetRxExpr : public TemplateLetExpr {
     if (IsEmpty())
       return nullptr;
     return (RxOpExpr*)GetLastExpr();  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  }
+
+  auto IsConstantExpr() const -> bool override {
+    return false;
   }
 
   auto HasSubscribe() const -> bool;

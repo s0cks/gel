@@ -4,6 +4,15 @@
 #include "scheme/rx.h"
 
 namespace scm {
+namespace expr {
+class Expression;
+}
+
+namespace instr {
+class Instruction;
+class Definition;
+}  // namespace instr
+
 #define FOR_EACH_PRIMITIVE_TYPE(V) \
   V(Class)                         \
   V(Bool)                          \

@@ -25,14 +25,6 @@ auto Lambda::Equals(Object* rhs) const -> bool {
   return false;
 }
 
-void Lambda::Apply() {
-  LOG_IF(FATAL, IsEmpty()) << "cannot compile Lambda w/ empty body.";
-  const auto runtime = GetRuntime();
-  const auto scope = runtime->GetCurrentScope();
-  ASSERT(runtime);
-  runtime->Call(GetEntry()->GetTarget(), scope);
-}
-
 auto Lambda::VisitPointers(PointerVisitor* vis) -> bool {
   ASSERT(vis);
   NOT_IMPLEMENTED(FATAL);  // TODO: implement

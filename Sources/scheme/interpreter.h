@@ -1,10 +1,13 @@
 #ifndef SCM_INTERPRETER_H
 #define SCM_INTERPRETER_H
 
+#include <type_traits>
+
 #include "scheme/common.h"
 #include "scheme/instruction.h"
 #include "scheme/platform.h"
 #include "scheme/stack_frame.h"
+#include "scheme/type_traits.h"
 
 namespace scm {
 class Runtime;
@@ -43,8 +46,21 @@ class Interpreter : public InstructionVisitor {
   }
 
   auto PopStackFrame() -> StackFrame;
-  auto PushStackFrame(const uword id, LocalScope* locals, instr::TargetEntryInstr* target = nullptr) -> StackFrame*;
-  void Execute(instr::TargetEntryInstr* entry, LocalScope* locals);
+  auto PushStackFrame(instr::TargetEntryInstr* target, LocalScope* locals) -> StackFrame*;
+  auto PushStackFrame(NativeProcedure* native, LocalScope* locals) -> StackFrame*;
+
+  void Run();
+
+  template <typename E>
+  void Execute(E* executable, LocalScope* locals, std::enable_if_t<scm::is_executable<E>::value>* = nullptr) {
+    ASSERT(executable && executable->IsCompiled());
+    ASSERT(locals);
+    DVLOG(1000) << "executing " << executable << " with locals: " << locals;
+    const auto target = executable->GetEntry()->GetTarget();
+    PushStackFrame(target, locals);
+    SetCurrentInstr(target->GetNext());
+    Run();
+  }
 
   inline auto Next() -> bool {
     const auto next = HasCurrentInstr() ? GetCurrentInstr()->GetNext() : nullptr;
@@ -76,7 +92,7 @@ class Interpreter : public InstructionVisitor {
     return runtime_;
   }
 
-#define DECLARE_VISIT(Name) auto Visit##Name(Name* instr) -> bool override;
+#define DECLARE_VISIT(Name) auto Visit##Name(Name* instr)->bool override;
   FOR_EACH_INSTRUCTION(DECLARE_VISIT)
 #undef DECLARE_VISIT
 };

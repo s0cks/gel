@@ -90,7 +90,7 @@ class Parser {
       Unexpected(rhs, next);
   }
 
-  auto ParseLocalVariable() -> LocalVariable*;
+  auto ParseLocalVariable(LocalVariable** local, expr::Expression** value) -> bool;
   auto ParseNamedLambda() -> Lambda*;
 
   // Misc

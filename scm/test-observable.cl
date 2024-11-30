@@ -1,5 +1,2 @@
-(let:rx (1 2 3 4 5 6)
-  (rx:take-while (lambda (x) (< x 4)))
-  (rx:map sq)
-  (rx:filter even?)
+(let:rx '()
   (rx:subscribe print))

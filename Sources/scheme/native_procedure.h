@@ -3,6 +3,7 @@
 
 #include "scheme/common.h"
 #include "scheme/error.h"
+#include "scheme/instruction.h"
 #include "scheme/procedure.h"
 
 namespace scm {
@@ -22,8 +23,7 @@ class NativeProcedure : public Procedure {
   }
 
   auto Return(Object* rhs) const -> bool;
-  virtual auto ApplyProcedure(const std::vector<Object*>& args) const -> bool = 0;
-  virtual auto Apply(const std::vector<Object*>& args) const -> bool;
+  virtual auto Apply(const ObjectList& args) const -> bool = 0;
 
   template <class T, typename... Args>
   inline auto ReturnNew(Args... args) const -> bool {
@@ -32,6 +32,7 @@ class NativeProcedure : public Procedure {
 
   inline auto Throw(Error* error) const -> bool {
     ASSERT(error);
+    LOG(ERROR) << "error: " << error->ToString();
     return Return(error);
   }
 
@@ -54,35 +55,39 @@ class NativeProcedure : public Procedure {
     return true;
   }
 
+  auto GetEntry() const -> instr::TargetEntryInstr* {
+    return nullptr;  // TODO: remove this stupid function
+  }
+
   DECLARE_TYPE(NativeProcedure);
 };
 
-#define _DEFINE_NATIVE_PROCEDURE_TYPE(Name, Sym)                                \
-  friend class scm::Runtime;                                                    \
-  DEFINE_NON_COPYABLE_TYPE(Name);                                               \
-                                                                                \
- protected:                                                                     \
-  auto ApplyProcedure(const std::vector<Object*>& args) const -> bool override; \
-                                                                                \
- public:                                                                        \
-  Name() :                                                                      \
-    NativeProcedure(kSymbol) {}                                                 \
-  ~Name() override = default;                                                   \
-                                                                                \
- private:                                                                       \
-  static Symbol* kSymbol;                                                       \
-  static Name* kInstance;                                                       \
-  static void Init();                                                           \
-                                                                                \
- public:                                                                        \
-  static constexpr const auto kSymbolString = (Sym);                            \
-  static inline auto Get() -> Name* {                                           \
-    ASSERT(kInstance);                                                          \
-    return kInstance;                                                           \
-  }                                                                             \
-  static inline auto GetNativeSymbol() -> Symbol* {                             \
-    ASSERT(kSymbol);                                                            \
-    return kSymbol;                                                             \
+#define _DEFINE_NATIVE_PROCEDURE_TYPE(Name, Sym)             \
+  friend class scm::Runtime;                                 \
+  DEFINE_NON_COPYABLE_TYPE(Name);                            \
+                                                             \
+ protected:                                                  \
+  auto Apply(const ObjectList& args) const -> bool override; \
+                                                             \
+ public:                                                     \
+  Name() :                                                   \
+    NativeProcedure(kSymbol) {}                              \
+  ~Name() override = default;                                \
+                                                             \
+ private:                                                    \
+  static Symbol* kSymbol;                                    \
+  static Name* kInstance;                                    \
+  static void Init();                                        \
+                                                             \
+ public:                                                     \
+  static constexpr const auto kSymbolString = (Sym);         \
+  static inline auto Get() -> Name* {                        \
+    ASSERT(kInstance);                                       \
+    return kInstance;                                        \
+  }                                                          \
+  static inline auto GetNativeSymbol() -> Symbol* {          \
+    ASSERT(kSymbol);                                         \
+    return kSymbol;                                          \
   }
 
 #define DEFINE_NATIVE_PROCEDURE_TYPE(Name) _DEFINE_NATIVE_PROCEDURE_TYPE(Name, #Name)
@@ -107,7 +112,7 @@ class NativeProcedure : public Procedure {
     kInstance = new Name();                             \
     ASSERT(kInstance&& kSymbol);                        \
   }                                                     \
-  auto Name::ApplyProcedure(const ObjectList& args) const -> bool
+  auto Name::Apply(const ObjectList& args) const -> bool
 
 template <class N>
 static inline auto IsCallToNative(Symbol* symbol) -> bool {

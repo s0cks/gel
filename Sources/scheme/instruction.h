@@ -923,6 +923,12 @@ class InstructionLogger {
       logger(iter.Next());
     }
   }
+
+  template <class E, const Severity S = google::INFO, const bool OnlyOne = false>
+  static inline void Log(E* executable, std::enable_if_t<scm::is_executable<E>::value>* = nullptr) {
+    ASSERT(executable);
+    return Log<S, OnlyOne>(executable->GetEntry());
+  }
 };
 
 #endif  // SCM_DEBUG

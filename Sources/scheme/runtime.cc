@@ -22,6 +22,7 @@
 #include "scheme/os_thread.h"
 #include "scheme/parser.h"
 #include "scheme/procedure.h"
+#include "scheme/stack_frame.h"
 #include "scheme/thread_local.h"
 #include "scheme/tracing.h"
 
@@ -122,21 +123,6 @@ auto Runtime::Import(Script* script) -> bool {
   scope_->Add(scope);
   scripts_.push_back(script);
   return true;
-}
-
-auto Runtime::Apply(Procedure* proc, const std::vector<Object*>& args) -> Object* {
-  const auto stack_size = GetStackSize();
-  if (proc->IsProcedure()) {
-    for (const auto& arg : args) {
-      Push(arg);
-    }
-    proc->Apply();
-  } else if (proc->IsNativeProcedure()) {
-    if (!proc->AsNativeProcedure()->Apply(args))
-      return Error::New("cannot invoke procedure");
-  }
-  const auto result = GetStackSize() > stack_size ? Pop() : nullptr;
-  return result;
 }
 
 auto Runtime::Import(Symbol* symbol, LocalScope* scope) -> bool {
@@ -244,11 +230,6 @@ auto Runtime::StoreSymbol(Symbol* symbol, Object* value) -> bool {
   return true;
 }
 
-void Runtime::Call(instr::TargetEntryInstr* target, LocalScope* locals) {
-  ASSERT(target && target->HasNext());
-  interpreter_.Execute(target, locals);
-}
-
 void Runtime::Call(Lambda* lambda, const ObjectList& args) {
   ASSERT(lambda);
   const auto locals = LocalScope::New(GetCurrentScope());
@@ -269,25 +250,30 @@ void Runtime::Call(Lambda* lambda, const ObjectList& args) {
     ASSERT(value);
     const auto local = LocalVariable::New(locals, symbol, value);
     ASSERT(local);
-    if (!locals->Add(local))
-      throw Exception("failed to add parameter local");
+    LOG_IF(FATAL, !locals->Add(local)) << "failed to add parameter local";
   }
-  Call(lambda->GetEntry()->GetTarget(), locals);
+  StackFrameGuard<Lambda> stack_guard(lambda);
+  interpreter_.Execute(lambda, locals);
 }
 
-void Runtime::Call(NativeProcedure* native, const std::vector<Object*>& args) {
+void Runtime::Call(NativeProcedure* native, const ObjectList& args) {
   ASSERT(native);
   const auto locals = LocalScope::New(GetCurrentScope());
   ASSERT(locals);
   for (auto idx = 0; idx < args.size(); idx++) {
     locals->Add(Symbol::New(fmt::format("arg{}", idx)), args[idx]);
   }
-  const auto current_frame = GetCurrentFrame();
-  const auto start_frame = interpreter_.PushStackFrame(current_frame ? current_frame->GetId() + 1 : 0, locals);
-  ASSERT(start_frame);
+  StackFrameGuard<NativeProcedure> guard(native);
+  interpreter_.PushStackFrame(native, locals);
   LOG_IF(FATAL, !native->Apply(args)) << "failed to apply: " << native->ToString() << " with args: " << args;
-  const auto last_frame = interpreter_.PopStackFrame();
-  LOG_IF(ERROR, HasError() || (*start_frame) == last_frame) << "invalid frame state.";
+  interpreter_.PopStackFrame();
+  LOG_IF(FATAL, HasError()) << "error calling native `" << native->ToString() << "` with args: " << args;
+}
+
+void Runtime::Call(Script* script) {
+  ASSERT(script && script->IsCompiled());
+  StackFrameGuard<Script> stack_guard(script);
+  interpreter_.Execute(script, LocalScope::Union({script->GetScope()}, GetInitScope()));
 }
 
 auto Runtime::Eval(const std::string& expr) -> Object* {
@@ -299,7 +285,7 @@ auto Runtime::Eval(const std::string& expr) -> Object* {
   const auto e = ExpressionCompiler::Compile(expr, scope);
   ASSERT(e && e->HasEntry());
   const auto init_frame = runtime->GetCurrentFrame();
-  runtime->Call(e->GetEntry()->GetTarget(), scope);
+  // TODO: runtime->Call(e->GetEntry()->GetTarget(), scope);
   const auto post_frame = runtime->GetCurrentFrame();
   ASSERT(runtime->HasError() || (!init_frame && !post_frame) || (*init_frame) == (*post_frame));
   return runtime->Pop();
@@ -309,21 +295,11 @@ auto Runtime::Exec(Script* script) -> Object* {
   ASSERT(script && script->IsCompiled());
   const auto runtime = GetRuntime();
   ASSERT(runtime);
-  const auto scope = LocalScope::Union(
-      {
-          script->GetScope(),
-      },
-      runtime->GetGlobalScope());
-  ASSERT(!runtime->HasFrame());
-
   if (FLAGS_log_script_instrs) {
     LOG(INFO) << "Script instructions:";
     InstructionLogger::Log(script->GetEntry());
   }
-
-  runtime->Call(script->GetEntry()->GetTarget(), scope);
-  LOG_IF(ERROR, runtime->HasFrame() || runtime->HasError()) << "invalid runtime state.";
-  return runtime->Pop();
+  return GetRuntime()->CallPop(script);
 }
 
 void Runtime::Init() {

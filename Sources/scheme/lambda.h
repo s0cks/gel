@@ -30,8 +30,6 @@ class Lambda : public Procedure, public Executable {
   ArgumentSet args_;  // TODO: fails to copy during GC
   expr::Expression* body_;
 
-  void Apply() override;
-
  protected:
   Lambda(Symbol* name, ArgumentSet args, expr::Expression* body) :  // NOLINT(modernize-pass-by-value)
     name_(name),

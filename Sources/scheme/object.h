@@ -18,6 +18,7 @@
 #include "scheme/pointer.h"
 #include "scheme/rx.h"
 #include "scheme/type.h"
+#include "scheme/type_traits.h"
 
 namespace scm {
 namespace proc {
@@ -742,21 +743,6 @@ static inline void SetCdr(Object* seq, Object* value) {
 }
 
 template <typename T>
-struct has_to_string {
-  static const bool value = false;
-};
-
-#define DECLARE_HAS_TO_STRING(Name) \
-  template <>                       \
-  struct has_to_string<Name> {      \
-    static const bool value = true; \
-  };
-
-DECLARE_HAS_TO_STRING(Object);
-FOR_EACH_TYPE(DECLARE_HAS_TO_STRING)
-#undef DECLARE_HAS_TO_STRING
-
-template <typename T>
 static inline auto Stringify(std::ostream& stream, const std::vector<T*>& values,
                              std::enable_if_t<scm::has_to_string<T>::value>* = nullptr) -> std::ostream& {
   auto remaining = values.size();
@@ -782,14 +768,38 @@ struct formatter<scm::Symbol> : public formatter<std::string> {
     return format_to(ctx.out(), "{}", value.Get());
   }
 };
-}  // namespace fmt
 
 template <>
-struct fmt::formatter<scm::Object> : public fmt::formatter<std::string> {
+struct formatter<scm::String> : public formatter<std::string> {
   template <typename FormatContext>
-  constexpr auto format(const scm::Object& value, FormatContext& ctx) const -> decltype(ctx.out()) {
-    return fmt::format_to(ctx.out(), "{}", value.ToString());
+  constexpr auto format(const scm::String& value, FormatContext& ctx) const -> decltype(ctx.out()) {
+    return format_to(ctx.out(), "\"{}\"", value.Get());
   }
 };
+
+template <>
+struct formatter<scm::Long> : public formatter<std::string> {
+  template <typename FormatContext>
+  constexpr auto format(const scm::Long& value, FormatContext& ctx) const -> decltype(ctx.out()) {
+    return format_to(ctx.out(), "{}", value.Get());
+  }
+};
+
+template <>
+struct formatter<scm::Double> : public formatter<std::string> {
+  template <typename FormatContext>
+  constexpr auto format(const scm::Double& value, FormatContext& ctx) const -> decltype(ctx.out()) {
+    return format_to(ctx.out(), "{}", value.Get());
+  }
+};
+
+template <>
+struct formatter<scm::Object> : public formatter<std::string> {
+  template <typename FormatContext>
+  constexpr auto format(const scm::Object& value, FormatContext& ctx) const -> decltype(ctx.out()) {
+    return format_to(ctx.out(), "{}", value.ToString());
+  }
+};
+}  // namespace fmt
 
 #endif  // SCM_OBJECT_H

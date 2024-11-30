@@ -584,6 +584,10 @@ auto EffectVisitor::VisitLocalDef(LocalDef* expr) -> bool {
 
 auto EffectVisitor::VisitListExpr(expr::ListExpr* expr) -> bool {
   ASSERT(expr);
+  if (expr->IsConstantExpr()) {
+    ReturnDefinition(instr::ConstantInstr::New(expr->EvalToConstant()));
+    return true;
+  }
   SeqExprIterator<expr::ListExpr> iter(this, expr);
   while (iter.HasNext()) {
     const auto [_, child] = iter.Next();
@@ -593,6 +597,8 @@ auto EffectVisitor::VisitListExpr(expr::ListExpr* expr) -> bool {
       return false;
     }
     Append(for_value);
+    const auto value = for_value.GetValue();
+    ASSERT(value);
   }
   return ReturnCall(scm::proc::list::Get(), expr->GetNumberOfChildren());
 }
@@ -734,6 +740,7 @@ auto EffectVisitor::VisitScript(Script* script) -> bool {
   const auto& body = script->GetBody();
   while (IsOpen() && (index < body.size())) {
     const auto expr = body[index++];
+    ASSERT(expr);
     ValueVisitor for_value(GetOwner());
     if (!expr->Accept(&for_value)) {
       LOG(ERROR) << "failed to visit: " << expr->ToString();

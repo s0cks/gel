@@ -3,21 +3,29 @@
 
 #include <ostream>
 #include <stack>
+#include <type_traits>
+#include <variant>
 
 #include "scheme/common.h"
 #include "scheme/instruction.h"
+#include "scheme/native_procedure.h"
 #include "scheme/object.h"
 #include "scheme/platform.h"
 #include "scheme/procedure.h"
+#include "scheme/type_traits.h"
+#include "scheme/util.h"
 
 namespace scm {
 class StackFrame {
   friend class Interpreter;
   DEFINE_DEFAULT_COPYABLE_TYPE(StackFrame);
 
+ public:
+  using TargetVariant = std::variant<instr::TargetEntryInstr*, NativeProcedure*>;
+
  private:
   uint64_t id_;
-  instr::TargetEntryInstr* target_;
+  TargetVariant target_;
   LocalScope* locals_;
   uword return_address_;
 
@@ -28,9 +36,9 @@ class StackFrame {
     return_address_(return_address) {
     ASSERT(locals);
   }
-  StackFrame(uword id, LocalScope* locals, const uword return_address = UNALLOCATED) :
+  StackFrame(uword id, NativeProcedure* target, LocalScope* locals, const uword return_address = UNALLOCATED) :
     id_(id),
-    target_(nullptr),
+    target_(target),
     locals_(locals),
     return_address_(return_address) {
     ASSERT(locals_);
@@ -43,7 +51,7 @@ class StackFrame {
  public:
   StackFrame() :
     id_(0),
-    target_(nullptr),
+    target_(),
     locals_(nullptr),
     return_address_(UNALLOCATED) {}
   ~StackFrame() = default;
@@ -52,16 +60,26 @@ class StackFrame {
     return id_;
   }
 
-  auto GetTarget() const -> instr::TargetEntryInstr* {
+  auto GetTarget() const -> const TargetVariant& {
     return target_;
   }
 
-  inline auto HasTarget() const -> bool {
-    return GetTarget() != nullptr;
+  inline auto IsTargetEntryInstr() const -> bool {
+    return std::holds_alternative<instr::TargetEntryInstr*>(GetTarget());
+  }
+
+  auto GetTargetAsTargetEntryInstr() const -> instr::TargetEntryInstr* {
+    ASSERT(IsTargetEntryInstr());
+    return std::get<instr::TargetEntryInstr*>(GetTarget());
   }
 
   inline auto IsNativeFrame() const -> bool {
-    return GetTarget() == nullptr;
+    return std::holds_alternative<NativeProcedure*>(GetTarget());
+  }
+
+  auto GetTargetAsNativeProcedure() const -> NativeProcedure* {
+    ASSERT(IsNativeFrame());
+    return std::get<NativeProcedure*>(GetTarget());
   }
 
   auto GetLocals() const -> LocalScope* {
@@ -84,14 +102,9 @@ class StackFrame {
     return ((instr::Instruction*)GetReturnAddressPointer());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   }
 
+  auto ToString() const -> std::string;
   friend auto operator<<(std::ostream& stream, const StackFrame& rhs) -> std::ostream& {
-    stream << "StackFrame(";
-    stream << "target=" << rhs.GetTarget() << ", ";
-    if (rhs.HasReturnAddress())
-      stream << "result=" << rhs.GetReturnInstr()->ToString() << ", ";
-    stream << "locals=" << rhs.GetLocals()->ToString();
-    stream << ")";
-    return stream;
+    return stream << rhs.ToString();
   }
 
   auto operator==(const StackFrame& rhs) const -> bool {
@@ -120,6 +133,82 @@ class StackFrameIterator {
     return next;
   }
 };
+
+class StackFrameLogger : public PrettyLogger {
+  using Severity = google::LogSeverity;
+  DEFINE_NON_COPYABLE_TYPE(StackFrameLogger);
+
+ private:
+  bool recursive_;
+
+ public:
+  explicit StackFrameLogger(const char* file, const int line, const Severity severity, const int indent, const bool recursive) :
+    PrettyLogger(file, line, severity, indent),
+    recursive_(recursive) {}
+  ~StackFrameLogger() override = default;
+
+  auto IsRecursive() const -> bool {
+    return recursive_;
+  }
+
+  void Visit(const StackFrame& frame);
+
+ public:
+  template <const Severity S = google::INFO, const int Indent = 0, const bool IsRecursive = true>
+  static inline void LogStackFrame(const char* file, const int line, const StackFrame& frame) {
+    StackFrameLogger logger(file, line, S, Indent, IsRecursive);
+    return logger.Visit(frame);
+  }
+};
+
+class StackFrameGuardBase {
+  DEFINE_NON_COPYABLE_TYPE(StackFrameGuardBase);
+
+ public:
+  using TargetInfoCallback = std::function<void()>;
+
+ private:
+  std::optional<StackFrame> enter_{};
+  std::optional<StackFrame> exit_{};
+  TargetInfoCallback target_info_;
+
+ public:
+  StackFrameGuardBase(TargetInfoCallback target_info);
+  virtual ~StackFrameGuardBase();
+};
+
+template <typename T, typename = typename std::enable_if_t<scm::is_executable<T>::value && scm::has_to_string<T>::value>>
+class StackFrameGuard : public StackFrameGuardBase {
+  DEFINE_NON_COPYABLE_TYPE(StackFrameGuard);
+
+ private:
+  T* target_;
+
+  static inline auto PrintTargetInfo(T* target) -> TargetInfoCallback {
+    ASSERT(target);
+    return [target]() {
+      ASSERT(target);
+      LOG(ERROR) << "Target: " << ((void*)target) << " ; " << target->ToString();
+      if (!target->IsNativeProcedure()) {
+        LOG(ERROR) << "Target Instructions:";
+        InstructionLogger::Log(target);
+      }
+    };
+  }
+
+ public:
+  explicit StackFrameGuard(T* target) :
+    StackFrameGuardBase(PrintTargetInfo(target)),
+    target_(target) {
+    ASSERT(target_);
+  }
+  ~StackFrameGuard() override = default;
+
+  auto GetTarget() const -> T* {
+    return target_;
+  }
+};
+
 }  // namespace scm
 
 #endif  // SCM_STACK_FRAME_H

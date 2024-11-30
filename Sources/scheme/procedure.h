@@ -15,10 +15,6 @@ class Procedure : public Object {
  protected:
   Procedure() = default;
 
-  virtual void Apply() {
-    // do nothing
-  }
-
  public:
   ~Procedure() override = default;
 

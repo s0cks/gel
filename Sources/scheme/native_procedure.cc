@@ -13,10 +13,6 @@ auto NativeProcedure::Return(Object* rhs) const -> bool {
   return DoNothing();
 }
 
-auto NativeProcedure::Apply(const ObjectList& rhs) const -> bool {
-  return ApplyProcedure(rhs);
-}
-
 auto NativeProcedure::Equals(Object* rhs) const -> bool {
   if (!rhs || !rhs->IsNativeProcedure())
     return false;

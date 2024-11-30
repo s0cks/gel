@@ -378,12 +378,27 @@ auto ListExpr::ToString() const -> std::string {
 }
 
 auto ListExpr::IsConstantExpr() const -> bool {
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return false;
+  if (IsEmpty())
+    return true;
+  for (auto idx = 0; idx < GetNumberOfChildren(); idx++) {
+    const auto child = GetChildAt(idx);
+    ASSERT(child);
+    if (!child->IsConstantExpr())
+      return false;
+  }
+  return true;
 }
 
 auto ListExpr::EvalToConstant() const -> Object* {
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return nullptr;
+  ASSERT(IsConstantExpr());
+  if (IsEmpty())
+    return Pair::Empty();
+  Object* value = Pair::Empty();
+  for (auto idx = GetNumberOfChildren(); idx > 0; idx--) {
+    const auto child = GetChildAt(idx - 1);
+    ASSERT(child && child->IsConstantExpr());
+    value = scm::Cons(child->EvalToConstant(), value);
+  }
+  return value;
 }
 }  // namespace scm::expr

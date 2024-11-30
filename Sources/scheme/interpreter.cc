@@ -54,7 +54,12 @@ auto Interpreter::VisitLoadVariableInstr(LoadVariableInstr* instr) -> bool {
 
 auto Interpreter::VisitReturnInstr(ReturnInstr* instr) -> bool {
   const auto frame = PopStackFrame();
-  SetCurrentInstr((Instruction*)frame.GetReturnAddressPointer());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  if (frame.HasReturnAddress()) {
+    SetCurrentInstr((Instruction*)frame.GetReturnAddress());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+    return false;
+  }
+  DLOG_IF(INFO, instr->HasNext()) << "next after return: " << instr->GetNext()->ToString();
+  SetCurrentInstr(instr->GetNext());
   return false;
 }
 
@@ -129,6 +134,8 @@ auto Interpreter::VisitInvokeNativeInstr(InvokeNativeInstr* instr) -> bool {
   if (!target || !target->IsNativeProcedure())
     throw Exception(fmt::format("expected {0:s} to be a NativeProcedure.", target ? target->ToString() : "null"));
   GetRuntime()->CallWithNArgs(target->AsNativeProcedure(), instr->GetNumberOfArgs());
+  DVLOG(1000) << "current instr: " << GetCurrentInstr()->ToString();
+  DVLOG(1000) << "next instr: " << GetCurrentInstr()->GetNext()->ToString();
   return Next();
 }
 
@@ -299,13 +306,34 @@ auto Interpreter::ExecuteInstr(Instruction* instr) -> bool {
   return instr->Accept(this);
 }
 
-auto Interpreter::PushStackFrame(const uword id, LocalScope* locals, instr::TargetEntryInstr* target) -> StackFrame* {
+auto Interpreter::PushStackFrame(instr::TargetEntryInstr* target, LocalScope* locals) -> StackFrame* {
   ASSERT(locals);
-  const auto has_next = HasCurrentInstr() && !stack_.empty();
-  const auto return_address =
-      (uword)(has_next ? GetCurrentInstr()->GetNext() : UNALLOCATED);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-  stack_.push(StackFrame(id, target, locals, return_address));
+  const auto frame_id = HasStackFrame() ? GetCurrentStackFrame()->GetId() + 1 : 1;
+  uword return_address = UNALLOCATED;
+  if (HasCurrentInstr())
+    return_address = (uword)GetCurrentInstr();  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  LOG_IF(FATAL, return_address == UNALLOCATED && frame_id != 1) << "return address empty";
+  stack_.push(StackFrame(frame_id, target, locals, return_address));
   DVLOG(1000) << "pushed: " << stack_.top();
+  return &stack_.top();
+}
+
+void Interpreter::Run() {
+  while (HasCurrentInstr() && !GetRuntime()->HasError()) {
+    if (GetRuntime()->HasError() || !ExecuteInstr(GetCurrentInstr()))
+      break;
+  }
+}
+
+auto Interpreter::PushStackFrame(NativeProcedure* native, LocalScope* locals) -> StackFrame* {
+  ASSERT(locals);
+  const auto frame_id = HasStackFrame() ? GetCurrentStackFrame()->GetId() + 1 : 1;
+  uword return_address = UNALLOCATED;
+  if (HasCurrentInstr())
+    return_address = (uword)GetCurrentInstr();  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  stack_.push(StackFrame(frame_id, native, locals, return_address));
+  DVLOG(1000) << "pushed: " << stack_.top();
+  LOG_IF(FATAL, return_address == UNALLOCATED && frame_id != 1) << "return address empty";
   return &stack_.top();
 }
 
@@ -319,17 +347,5 @@ auto Interpreter::PopStackFrame() -> StackFrame {
   stack_.pop();
   DVLOG(1000) << "popped: " << frame;
   return frame;
-}
-
-void Interpreter::Execute(instr::TargetEntryInstr* target, LocalScope* locals) {
-  ASSERT(target);
-  ASSERT(locals);
-  DVLOG(1000) << "executing " << target->ToString();
-  PushStackFrame(target->GetBlockId(), locals, target);
-  SetCurrentInstr(target->GetNext());
-  while (HasCurrentInstr()) {
-    if (GetRuntime()->HasError() || !ExecuteInstr(GetCurrentInstr()))
-      break;
-  }
 }
 }  // namespace scm

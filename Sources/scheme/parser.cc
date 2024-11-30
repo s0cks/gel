@@ -747,18 +747,18 @@ auto Parser::NextToken() -> const Token& {
   return NextToken(Token::kInvalid, GetRemaining());
 }
 
-auto Parser::ParseLocalVariable() -> LocalVariable* {
+auto Parser::ParseLocalVariable(LocalVariable** local, expr::Expression** value) -> bool {
   ExpectNext(Token::kDefine);
   const auto symbol = ParseSymbol();
   ASSERT(symbol);
-  const auto value = ParseExpression();
+  (*value) = ParseExpression();
   ASSERT(value);
-  const auto local = LocalVariable::New(GetScope(), symbol, value->IsConstantExpr() ? value->EvalToConstant() : nullptr);
+  (*local) = LocalVariable::New(GetScope(), symbol, (*value)->IsConstantExpr() ? (*value)->EvalToConstant() : nullptr);
   ASSERT(local);
   // TODO: store value if not constant
-  if (!GetScope()->Add(local))
-    throw Exception(fmt::format("failed to add LocalVariable: {}", local->GetName()));
-  return local;
+  if (!GetScope()->Add((*local)))
+    throw Exception(fmt::format("failed to add LocalVariable: {}", (*local)->GetName()));
+  return true;
 }
 
 auto Parser::ParseNamedLambda() -> Lambda* {
@@ -822,8 +822,17 @@ auto Parser::ParseScript() -> Script* {
       switch (next.kind) {
         // Definitions
         case Token::kDefine: {
-          const auto local = ParseLocalVariable();
+          LocalVariable* local = nullptr;
+          expr::Expression* value = nullptr;
+          if (!ParseLocalVariable(&local, &value)) {
+            LOG(FATAL) << "failed to parse local variable";
+            break;
+          }
           ASSERT(local);
+          ASSERT(value);
+          if (!value->IsConstantExpr()) {
+            expr = LocalDef::New(Symbol::New(local->GetName()), value);
+          }
           break;
         }
         case Token::kDefun: {

@@ -152,9 +152,15 @@ class Runtime : public ExecutionStack {
     return {symbol, procedure};
   }
 
-  void Call(instr::TargetEntryInstr* target, LocalScope* locals);
   void Call(NativeProcedure* native, const ObjectList& args);
   void Call(Lambda* lambda, const ObjectList& args);
+  void Call(Script* script);
+
+  inline auto CallPop(Script* script) -> Object* {
+    ASSERT(script);
+    Call(script);
+    return Pop();
+  }
 
  public:  // TODO: reduce visibility
   void LoadKernelModule();
@@ -172,7 +178,6 @@ class Runtime : public ExecutionStack {
   auto StoreSymbol(Symbol* symbol, Object* value) -> bool;
   auto DefineSymbol(Symbol* symbol, Object* value) -> bool;
   auto LookupSymbol(Symbol* symbol, Object** result) -> bool;
-  auto Apply(Procedure* proc, const std::vector<Object*>& args) -> Object*;
   auto Import(Script* module) -> bool;
   auto Import(Symbol* symbol, LocalScope* scope) -> bool;
 
