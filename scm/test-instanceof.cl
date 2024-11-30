@@ -1,1 +1,8 @@
 (print (#String? 10))
+(print (#String? '()))
+(print (#String? 'Hello))
+(print (#String? "Hello World"))
+(print (#Long? 10))
+(print (#Number? 10))
+(print (#Procedure? print))
+(print (#Procedure? (lambda (x) (print x))))

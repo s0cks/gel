@@ -1290,26 +1290,35 @@ class ListExpr : public SequenceExpr {
   }
 };
 
-class InstanceOfExpr : public TemplateExpression<2> {
+class InstanceOfExpr : public TemplateExpression<1> {
+  static constexpr const auto kValueIndex = 0;
+
+ private:
+  Class* target_;
+
  protected:
-  InstanceOfExpr() = default;
-  InstanceOfExpr(Expression* expected, Expression* actual) :
-    TemplateExpression<2>() {
-    ASSERT(expected);
-    SetChildAt(0, expected);
-    ASSERT(actual);
-    SetChildAt(1, actual);
+  InstanceOfExpr(Class* target, Expression* value) :
+    TemplateExpression<1>(),
+    target_(target) {
+    ASSERT(target_);
+    ASSERT(value);
+    SetValue(value);
+  }
+
+  inline void SetValue(Expression* rhs) {
+    ASSERT(rhs);
+    SetChildAt(kValueIndex, rhs);
   }
 
  public:
   ~InstanceOfExpr() override = default;
 
-  inline auto GetExpected() const -> Expression* {
-    return GetChildAt(0);
+  auto GetTarget() const -> Class* {
+    return target_;
   }
 
-  inline auto GetActual() const -> Expression* {
-    return GetChildAt(1);
+  auto GetValue() const -> Expression* {
+    return GetChildAt(kValueIndex);
   }
 
   auto IsConstantExpr() const -> bool override;
@@ -1317,27 +1326,26 @@ class InstanceOfExpr : public TemplateExpression<2> {
   DECLARE_EXPRESSION(InstanceOfExpr);
 
  public:
-  static inline auto New(Expression* expected, Expression* actual) -> InstanceOfExpr* {
-    return new InstanceOfExpr(expected, actual);
+  static inline auto New(Class* target, Expression* value) -> InstanceOfExpr* {
+    ASSERT(target);
+    ASSERT(value);
+    return new InstanceOfExpr(target, value);
   }
 };
 
-class CastExpr : public TemplateExpression<2> {
-  static constexpr const auto kTargetTypeIndex = 0;
-  static constexpr const auto kValueIndex = 1;
+class CastExpr : public TemplateExpression<1> {
+  static constexpr const auto kValueIndex = 0;
+
+ private:
+  Class* target_;
 
  protected:
   CastExpr(Class* cls, Expression* value) :
-    TemplateExpression<2>() {
-    ASSERT(cls);
+    TemplateExpression(),
+    target_(cls) {
+    ASSERT(target_);
     ASSERT(value);
-    SetTargetType(cls);
     SetValue(value);
-  }
-
-  void SetTargetType(Class* cls) {
-    ASSERT(cls && !HasChildAt(kTargetTypeIndex));
-    SetChildAt(kTargetTypeIndex, LiteralExpr::New(cls));
   }
 
   inline void SetValue(Expression* expr) {
@@ -1349,8 +1357,7 @@ class CastExpr : public TemplateExpression<2> {
   ~CastExpr() override = default;
 
   auto GetTargetType() const -> Class* {
-    ASSERT(HasChildAt(kTargetTypeIndex));
-    return GetChildAt(kTargetTypeIndex)->AsLiteralExpr()->GetValue()->AsClass();
+    return target_;
   }
 
   inline auto GetValue() const -> Expression* {

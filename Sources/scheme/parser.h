@@ -124,6 +124,7 @@ class Parser {
   auto ParseRxOpExpr() -> expr::RxOpExpr*;
   auto ParseLetRxExpr() -> expr::LetRxExpr*;
   auto ParseListExpr() -> expr::Expression*;
+  auto ParseInstanceOfExpr() -> expr::InstanceOfExpr*;
   auto ParseCastExpr() -> expr::CastExpr*;
 
   // Definitions

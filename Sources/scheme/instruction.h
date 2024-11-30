@@ -803,22 +803,25 @@ class GotoInstr : public Definition {
   }
 };
 
-class InstanceOfInstr : public Instruction {
+class InstanceOfInstr : public Definition {
  public:
   using Predicate = std::function<bool(Object*)>;
 
  private:
   Definition* value_;
   Class* type_;
+  bool strict_;
 
- public:
-  explicit InstanceOfInstr(Definition* value, Class* type) :
-    Instruction(),
+  explicit InstanceOfInstr(Definition* value, Class* type, const bool strict) :
+    Definition(),
     value_(value),
-    type_(type) {
+    type_(type),
+    strict_(strict) {
     ASSERT(value_);
     ASSERT(type_);
   }
+
+ public:
   ~InstanceOfInstr() override = default;
 
   auto GetValue() const -> Definition* {
@@ -829,13 +832,23 @@ class InstanceOfInstr : public Instruction {
     return type_;
   }
 
+  auto IsStrict() const -> bool {
+    return strict_;
+  }
+
   DECLARE_INSTRUCTION(InstanceOfInstr);
 
  public:
-  static inline auto New(Definition* value, Class* type) -> InstanceOfInstr* {
+  static inline auto New(Definition* value, Class* type, const bool strict = true) -> InstanceOfInstr* {
     ASSERT(value);
     ASSERT(type);
-    return new InstanceOfInstr(value, type);
+    return new InstanceOfInstr(value, type, strict);
+  }
+
+  static inline auto NewStrict(Definition* value, Class* cls) -> InstanceOfInstr* {
+    ASSERT(value);
+    ASSERT(cls);
+    return New(value, cls, true);
   }
 };
 

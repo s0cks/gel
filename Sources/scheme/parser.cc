@@ -344,6 +344,9 @@ auto Parser::ParseExpression() -> Expression* {
       case Token::kCastExpr:
         expr = ParseCastExpr();
         break;
+      case Token::kInstanceOfExpr:
+        expr = ParseInstanceOfExpr();
+        break;
       default:
         Unexpected(next);
         return nullptr;
@@ -636,6 +639,16 @@ auto Parser::NextToken() -> const Token& {
           Advance(2);
           return NextToken(Token::kLiteralTrue);
       }
+      if (IsValidIdentifierChar(PeekChar(1))) {
+        Advance();
+        token_len_ = 0;
+        while (IsValidIdentifierChar(PeekChar(), token_len_ == 0) && PeekChar() != '?') {
+          buffer_[token_len_++] = NextChar();
+        }
+        LOG_IF(FATAL, PeekChar() != '?') << "expected `?` not: " << NextToken();
+        Advance();
+        return NextToken(Token::kInstanceOfExpr, GetBufferedText());
+      }
       Advance();
       return NextToken(Token::kHash, '#');
     }
@@ -782,6 +795,18 @@ auto Parser::ParseCastExpr() -> expr::CastExpr* {
     return nullptr;
   }
   return expr::CastExpr::New(cls, ParseExpression());
+}
+
+auto Parser::ParseInstanceOfExpr() -> expr::InstanceOfExpr* {
+  const auto token = ExpectNext(Token::kInstanceOfExpr);
+  ASSERT(!token.text.empty());
+  const auto symbol = Symbol::New(token.text);
+  const auto cls = Class::FindClass(symbol);
+  if (!cls) {
+    LOG(FATAL) << "cannot create cast, failed to find type: " << symbol;
+    return nullptr;
+  }
+  return expr::InstanceOfExpr::New(cls, ParseExpression());
 }
 
 auto Parser::ParseLocalVariable(LocalVariable** local, expr::Expression** value) -> bool {
@@ -946,6 +971,9 @@ auto Parser::ParseScript() -> Script* {
           break;
         case Token::kCastExpr:
           expr = ParseCastExpr();
+          break;
+        case Token::kInstanceOfExpr:
+          expr = ParseInstanceOfExpr();
           break;
         default:
           Unexpected(next);

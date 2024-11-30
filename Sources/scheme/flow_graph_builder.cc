@@ -684,8 +684,14 @@ auto EffectVisitor::VisitBinaryOpExpr(BinaryOpExpr* expr) -> bool {
 
 auto EffectVisitor::VisitInstanceOfExpr(expr::InstanceOfExpr* expr) -> bool {
   ASSERT(expr);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return false;
+  ValueVisitor for_value(GetOwner());
+  if (!expr->GetValue()->Accept(&for_value)) {
+    LOG(FATAL) << "failed to visit value: " << expr->GetValue()->ToString();
+    return false;
+  }
+  Append(for_value);
+  ReturnDefinition(instr::InstanceOfInstr::New(for_value.GetValue(), expr->GetTarget(), false));
+  return true;
 }
 
 auto EffectVisitor::VisitThrowExpr(expr::ThrowExpr* expr) -> bool {

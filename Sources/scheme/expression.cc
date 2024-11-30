@@ -356,8 +356,8 @@ auto LetExpr::ToString() const -> std::string {
 
 auto InstanceOfExpr::ToString() const -> std::string {
   ToStringHelper<InstanceOfExpr> helper;
-  helper.AddField("expected", GetExpected());
-  helper.AddField("actual", GetActual());
+  helper.AddField("target", GetTarget());
+  helper.AddField("value", GetValue());
   return helper;
 }
 

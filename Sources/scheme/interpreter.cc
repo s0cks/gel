@@ -196,11 +196,25 @@ auto Interpreter::VisitInstanceOfInstr(InstanceOfInstr* instr) -> bool {
   ASSERT(instr);
   const auto type = instr->GetType();
   ASSERT(type);
-  const auto stack_top = GetRuntime()->StackTop();
-  if (!stack_top)
-    return PushError(fmt::format("stack top is null, expected: {}", type->GetName()->Get()));
-  if (!(*stack_top)->GetType()->IsInstanceOf(instr->GetType()))
-    return PushError(fmt::format("unexpected stack top: {}, expected: {}", (*stack_top)->ToString(), type->GetName()->Get()));
+  const auto runtime = GetRuntime();
+  ASSERT(runtime);
+  const auto stack_top = runtime->StackTop();
+  if (!stack_top) {
+    if (!instr->IsStrict())
+      return PushError(fmt::format("stack top is null, expected: {}", type->GetName()->Get()));
+    runtime->Pop();
+    return PushNext(Bool::False());
+  }
+  if (!(*stack_top)->GetType()->IsInstanceOf(instr->GetType())) {
+    if (instr->IsStrict())
+      return PushError(fmt::format("unexpected stack top: {}, expected: {}", (*stack_top)->ToString(), type->GetName()->Get()));
+    runtime->Pop();
+    return PushNext(Bool::False());
+  }
+  if (!instr->IsStrict()) {
+    runtime->Pop();
+    return PushNext(Bool::True());
+  }
   return Next();
 }
 
