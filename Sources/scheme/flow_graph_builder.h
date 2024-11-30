@@ -118,6 +118,7 @@ class EffectVisitor : public ExpressionVisitor {
   void AddInstanceOf(instr::Definition* defn, Class* expected);
   auto CreateCallFor(instr::Definition* defn, const uword num_args) -> instr::InvokeInstr*;
   auto CreateStoreLoad(Symbol* symbol, instr::Definition* value) -> instr::Definition*;
+  auto CreateCastTo(instr::Definition* value, Class* target) -> instr::Definition*;
 
   inline auto DoCastTo(instr::Definition* defn, Class* expected) -> instr::Definition* {
     ASSERT(defn);
@@ -206,7 +207,7 @@ class EffectVisitor : public ExpressionVisitor {
   }
 
   auto VisitScript(Script* script) -> bool;
-#define DECLARE_VISIT(Name) virtual auto Visit##Name(Name* name) -> bool override;
+#define DECLARE_VISIT(Name) virtual auto Visit##Name(Name* name)->bool override;
   FOR_EACH_EXPRESSION_NODE(DECLARE_VISIT)
 #undef DECLARE_VISIT
 };

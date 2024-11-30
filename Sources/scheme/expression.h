@@ -35,7 +35,8 @@
   V(ListExpr)                       \
   V(ThrowExpr)                      \
   V(QuotedExpr)                     \
-  V(InstanceOfExpr)
+  V(InstanceOfExpr)                 \
+  V(CastExpr)
 
 namespace scm {
 class Parser;
@@ -1318,6 +1319,51 @@ class InstanceOfExpr : public TemplateExpression<2> {
  public:
   static inline auto New(Expression* expected, Expression* actual) -> InstanceOfExpr* {
     return new InstanceOfExpr(expected, actual);
+  }
+};
+
+class CastExpr : public TemplateExpression<2> {
+  static constexpr const auto kTargetTypeIndex = 0;
+  static constexpr const auto kValueIndex = 1;
+
+ protected:
+  CastExpr(Class* cls, Expression* value) :
+    TemplateExpression<2>() {
+    ASSERT(cls);
+    ASSERT(value);
+    SetTargetType(cls);
+    SetValue(value);
+  }
+
+  void SetTargetType(Class* cls) {
+    ASSERT(cls && !HasChildAt(kTargetTypeIndex));
+    SetChildAt(kTargetTypeIndex, LiteralExpr::New(cls));
+  }
+
+  inline void SetValue(Expression* expr) {
+    ASSERT(expr && !HasChildAt(kValueIndex));
+    SetChildAt(kValueIndex, expr);
+  }
+
+ public:
+  ~CastExpr() override = default;
+
+  auto GetTargetType() const -> Class* {
+    ASSERT(HasChildAt(kTargetTypeIndex));
+    return GetChildAt(kTargetTypeIndex)->AsLiteralExpr()->GetValue()->AsClass();
+  }
+
+  inline auto GetValue() const -> Expression* {
+    return GetChildAt(kValueIndex);
+  }
+
+  DECLARE_EXPRESSION(CastExpr);
+
+ public:
+  static inline auto New(Class* cls, Expression* value) -> CastExpr* {
+    ASSERT(cls);
+    ASSERT(value);
+    return new CastExpr(cls, value);
   }
 };
 

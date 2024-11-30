@@ -35,7 +35,9 @@
         "test-observable.cl",
         "test-observer.cl",
         "test-print.cl",
-        "test-publish-subject.cl"
+        "test-publish-subject.cl",
+        "test-cast.cl",
+        "test-instanceof.cl"
       ],
       "default": "while.cl",
       "description": "A value that is even."

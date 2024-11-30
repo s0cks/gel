@@ -474,6 +474,24 @@ auto EffectVisitor::VisitLetExpr(expr::LetExpr* expr) -> bool {
   return true;
 }
 
+auto EffectVisitor::CreateCastTo(instr::Definition* value, Class* target) -> instr::Definition* {
+  ASSERT(value);
+  ASSERT(target);
+  return instr::CastInstr::New(value, target);
+}
+
+auto EffectVisitor::VisitCastExpr(expr::CastExpr* expr) -> bool {
+  ASSERT(expr);
+  ValueVisitor for_value(GetOwner());
+  if (!expr->GetValue()->Accept(&for_value)) {
+    LOG(FATAL) << "failed to visit: " << expr->ToString();
+    return false;
+  }
+  Append(for_value);
+  ReturnDefinition(CreateCastTo(for_value.GetValue(), expr->GetTargetType()));
+  return true;
+}
+
 auto EffectVisitor::VisitBeginExpr(BeginExpr* expr) -> bool {
   ASSERT(expr);
   uint64_t idx = 0;

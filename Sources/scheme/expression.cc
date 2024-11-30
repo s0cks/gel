@@ -406,6 +406,13 @@ auto ListExpr::IsConstantExpr() const -> bool {
   return true;
 }
 
+auto CastExpr::ToString() const -> std::string {
+  ToStringHelper<CastExpr> helper;
+  helper.AddField("target", GetTargetType());
+  helper.AddField("value", GetValue());
+  return helper;
+}
+
 auto ListExpr::EvalToConstant() const -> Object* {
   ASSERT(IsConstantExpr());
   if (IsEmpty())

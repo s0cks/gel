@@ -65,13 +65,13 @@ auto Interpreter::VisitReturnInstr(ReturnInstr* instr) -> bool {
 
 auto Interpreter::VisitCastInstr(CastInstr* instr) -> bool {
   ASSERT(instr);
-  const auto target_type = instr->GetTarget();
-  ASSERT(target_type);
+  const auto target = instr->GetTarget();
+  ASSERT(target);
   {
     const auto top = GetStackTop();
     ASSERT(top);
-    if ((*top)->GetType()->Equals(target_type)) {
-      DVLOG(1000) << "skipping cast of " << (*top) << " to: " << target_type;
+    if ((*top)->GetType()->Equals(target)) {
+      DVLOG(1000) << "skipping cast of " << (*top) << " to: " << target;
       return Next();
     }
   }
@@ -80,11 +80,13 @@ auto Interpreter::VisitCastInstr(CastInstr* instr) -> bool {
   ASSERT(value);
   const auto current_type = value->GetType();
   ASSERT(current_type);
-  DVLOG(1000) << "casting " << value << " to: " << target_type;
-  if (target_type->Equals(Observable::GetClass()))
+  DVLOG(1000) << "casting " << value << " to: " << target;
+  if (target->Is<Observable>()) {
     return PushNext(Observable::New(value));
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return false;
+  } else if (target->Is<String>()) {
+    return PushNext(String::ValueOf(value));
+  }
+  return PushError(fmt::format("Cannot cast `{}` to {}", (*value), (*target->GetName())));
 }
 
 static inline auto Unary(const expr::UnaryOp op, Object* rhs) -> Object* {
@@ -249,6 +251,8 @@ static inline auto ApplyBinaryOp(BinaryOp op, Datum* lhs, Datum* rhs) -> Datum* 
       return Bool::Box(lhs->Compare(rhs) <= 0);
     case expr::kCons:
       return Pair::New(lhs, rhs);
+    case expr::kInstanceOf:
+      return Bool::Box(lhs->GetType()->IsInstanceOf(rhs->GetType()));
     default:
       LOG(FATAL) << "invalid BinaryOp: " << op;
       return nullptr;

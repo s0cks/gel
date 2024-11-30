@@ -84,10 +84,11 @@ class Parser {
     return peek.kind == rhs;
   }
 
-  inline void ExpectNext(const Token::Kind rhs) {
+  inline auto ExpectNext(const Token::Kind rhs) -> const Token& {
     const auto& next = NextToken();
     if (next.kind != rhs)
       Unexpected(rhs, next);
+    return next;
   }
 
   auto ParseLocalVariable(LocalVariable** local, expr::Expression** value) -> bool;
@@ -123,6 +124,7 @@ class Parser {
   auto ParseRxOpExpr() -> expr::RxOpExpr*;
   auto ParseLetRxExpr() -> expr::LetRxExpr*;
   auto ParseListExpr() -> expr::Expression*;
+  auto ParseCastExpr() -> expr::CastExpr*;
 
   // Definitions
   auto ParseDefinition() -> expr::Definition*;

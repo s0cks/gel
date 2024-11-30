@@ -341,6 +341,9 @@ auto Parser::ParseExpression() -> Expression* {
       case Token::kLetRxExpr:
         expr = ParseLetRxExpr();
         break;
+      case Token::kCastExpr:
+        expr = ParseCastExpr();
+        break;
       default:
         Unexpected(next);
         return nullptr;
@@ -666,6 +669,16 @@ auto Parser::NextToken() -> const Token& {
     }
     case EOF:
       return NextToken(Token::kEndOfStream);
+    case ':':
+      if (PeekChar(1) == '-' && PeekChar(2) == '>') {
+        Advance(3);
+        token_len_ = 0;
+        while (IsValidIdentifierChar(PeekChar(), token_len_ == 0)) {
+          buffer_[token_len_++] = NextChar();
+        }
+        return NextToken(Token::kCastExpr, GetBufferedText());
+      }
+      break;
   }
 
   if (IsDoubleQuote(next)) {
@@ -757,6 +770,18 @@ auto Parser::NextToken() -> const Token& {
   }
 
   return NextToken(Token::kInvalid, GetRemaining());
+}
+
+auto Parser::ParseCastExpr() -> expr::CastExpr* {
+  const auto token = ExpectNext(Token::kCastExpr);
+  ASSERT(!token.text.empty());
+  const auto symbol = Symbol::New(token.text);
+  const auto cls = Class::FindClass(symbol);
+  if (!cls) {
+    LOG(FATAL) << "cannot create cast, failed to find type: " << symbol;
+    return nullptr;
+  }
+  return expr::CastExpr::New(cls, ParseExpression());
 }
 
 auto Parser::ParseLocalVariable(LocalVariable** local, expr::Expression** value) -> bool {
@@ -918,6 +943,9 @@ auto Parser::ParseScript() -> Script* {
           break;
         case Token::kLetRxExpr:
           expr = ParseLetRxExpr();
+          break;
+        case Token::kCastExpr:
+          expr = ParseCastExpr();
           break;
         default:
           Unexpected(next);

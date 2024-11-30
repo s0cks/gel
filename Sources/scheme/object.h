@@ -240,6 +240,11 @@ class Class : public Datum {
     return name_;
   }
 
+  template <class T>
+  inline auto Is() const -> bool {
+    return Equals(T::GetClass());
+  }
+
   auto IsInstanceOf(Class* rhs) const -> bool;
   DECLARE_TYPE(Class);
 

@@ -1,0 +1,11 @@
+(print (:->String 10))
+(let ((s (rx:publish-subject)))
+  (let:rx (:->Observable s)
+    (rx:filter
+      (lambda (x)
+        (even? x)))
+    (rx:map sq)
+    (rx:subscribe print))
+  (rx:publish s "Hello World")
+  (rx:publish s 2)
+  (rx:complete s))
