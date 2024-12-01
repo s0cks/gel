@@ -29,7 +29,8 @@
   V(GotoInstr)                  \
   V(ThrowInstr)                 \
   V(InstanceOfInstr)            \
-  V(CastInstr)
+  V(CastInstr)                  \
+  V(NewInstr)
 
 namespace scm {
 class EffectVisitor;
@@ -884,6 +885,38 @@ class CastInstr : public Definition {
     ASSERT(value);
     ASSERT(cls);
     return new CastInstr(value, cls);
+  }
+};
+
+class NewInstr : public Definition {
+ private:
+  Class* target_;
+  uword num_args_;
+
+ protected:
+  NewInstr(Class* target, const uword num_args) :
+    target_(target),
+    num_args_(num_args) {
+    ASSERT(target_);
+  }
+
+ public:
+  ~NewInstr() override = default;
+
+  auto GetTarget() const -> Class* {
+    return target_;
+  }
+
+  auto GetNumberOfArgs() const -> uword {
+    return num_args_;
+  }
+
+  DECLARE_INSTRUCTION(NewInstr);
+
+ public:
+  static inline auto New(Class* target, const uword num_args) -> NewInstr* {
+    ASSERT(target);
+    return new NewInstr(target, num_args);
   }
 };
 }  // namespace instr

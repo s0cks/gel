@@ -40,6 +40,10 @@ class Procedure : public Object {
   static void InitClass();
 
  public:
+  static inline auto New(const ObjectList& args) -> Procedure* {
+    NOT_IMPLEMENTED(FATAL);
+  }
+
   static auto operator new(const size_t sz) -> void*;
   static inline void operator delete(void* ptr) {
     ASSERT(ptr);

@@ -7,7 +7,7 @@
     (rx:filter string?)
     (rx:subscribe
       (lambda (next)
-        (print (format "next: {}" next)))
+        (print (format "found a String: {}" next)))
       (lambda (error)
         (print (format "error: {}" error)))
       (lambda ()
@@ -19,16 +19,13 @@
         (list x (sq x))))
     (rx:subscribe
       (lambda (next)
-        (print (format "found a number: {}, heres the sq: {}" (car next) (cadr next))))))
-  ; print each even number
-  (let:rx numbers
-    (rx:filter even?)
-    (rx:subscribe
-      (lambda (next)
-        (print (format "found an even number: {}" next)))))
+        (print (format "found a Number: {}, heres the sq: {}" (car next) (cadr next)))
+        (when (even? (car next))
+          (print (format "found an even Number: {}" (car next)))))))
   ; publish some values to the topic
   (let:rx topic
     (rx:publish 11) ; publish an odd number
     (rx:publish "Hello World") ; publish a string
     (rx:publish 10) ; publish an even number
+    (rx:publish (new:Error "This is an error")) ; publish an Error
     (rx:complete))) ; complete the topic/observable

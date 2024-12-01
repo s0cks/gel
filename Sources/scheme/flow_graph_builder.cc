@@ -380,8 +380,19 @@ auto EffectVisitor::VisitBinding(expr::Binding* expr) -> bool {
 
 auto EffectVisitor::VisitNewExpr(expr::NewExpr* expr) -> bool {
   ASSERT(expr);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return false;
+  uint64_t aidx = 0;
+  while (IsOpen() && (aidx < expr->GetNumberOfChildren())) {
+    const auto arg = expr->GetChildAt(aidx++);
+    ASSERT(arg);
+    ValueVisitor for_arg(GetOwner());
+    if (!arg->Accept(&for_arg)) {
+      LOG(FATAL) << "failed to visit arg for rx operator.";
+      return false;
+    }
+    Append(for_arg);
+  }
+  ReturnDefinition(instr::NewInstr::New(expr->GetTargetClass(), expr->GetNumberOfChildren()));
+  return true;
 }
 
 auto EffectVisitor::VisitQuotedExpr(expr::QuotedExpr* expr) -> bool {

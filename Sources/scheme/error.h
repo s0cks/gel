@@ -53,8 +53,8 @@ class Error : public Datum {
   }
 
   static inline auto New(Object* rhs) -> Error* {
-    ASSERT(rhs && rhs->IsString());
-    return New(rhs->AsString());
+    ASSERT(rhs);
+    return New(String::ValueOf(rhs));
   }
 };
 }  // namespace scm

@@ -9,10 +9,12 @@
 #include "scheme/instruction.h"
 #include "scheme/lambda.h"
 #include "scheme/local_scope.h"
+#include "scheme/macro.h"
 #include "scheme/native_procedure.h"
 #include "scheme/object.h"
 #include "scheme/platform.h"
 #include "scheme/runtime.h"
+#include "scheme/script.h"
 
 namespace scm {
 Interpreter::Interpreter(Runtime* runtime) :
@@ -60,6 +62,22 @@ auto Interpreter::VisitReturnInstr(ReturnInstr* instr) -> bool {
   }
   DLOG_IF(INFO, instr->HasNext()) << "next after return: " << instr->GetNext()->ToString();
   SetCurrentInstr(instr->GetNext());
+  return false;
+}
+
+auto Interpreter::VisitNewInstr(NewInstr* instr) -> bool {
+  ASSERT(instr);
+  const auto type = instr->GetTarget();
+  ASSERT(type);
+  const auto runtime = GetRuntime();
+  ASSERT(runtime);
+  ObjectList args;
+  runtime->PopN(args, instr->GetNumberOfArgs());
+#define DEFINE_NEW_TYPE(Name) \
+  if (type->Is<Name>())       \
+    return PushNext(Name::New(args));
+  FOR_EACH_TYPE(DEFINE_NEW_TYPE)
+#undef DEFINE_NEW_TYPE
   return false;
 }
 
@@ -337,8 +355,8 @@ auto Interpreter::PushStackFrame(instr::TargetEntryInstr* target, LocalScope* lo
 }
 
 void Interpreter::Run() {
-  while (HasCurrentInstr() && !GetRuntime()->HasError()) {
-    if (GetRuntime()->HasError() || !ExecuteInstr(GetCurrentInstr()))
+  while (HasCurrentInstr()) {
+    if (!ExecuteInstr(GetCurrentInstr()))
       break;
   }
 }

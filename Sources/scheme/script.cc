@@ -13,6 +13,10 @@
 #include "scheme/parser.h"
 
 namespace scm {
+auto Script::New(const ObjectList& args) -> Script* {
+  NOT_IMPLEMENTED(FATAL);
+}
+
 auto Script::CreateClass() -> Class* {
   return Class::New(Object::GetClass(), "Script");
 }

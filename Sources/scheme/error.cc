@@ -5,6 +5,7 @@
 #include "scheme/common.h"
 #include "scheme/object.h"
 #include "scheme/pointer.h"
+#include "scheme/to_string_helper.h"
 
 namespace scm {
 auto Error::CreateClass() -> Class* {
@@ -29,11 +30,15 @@ auto Error::VisitPointers(PointerPointerVisitor* vis) -> bool {
   return vis->Visit(raw_ptr());
 }
 
+auto Error::New(const ObjectList& args) -> Error* {
+  if (args.empty())
+    return new Error(String::New());
+  return New(args[0]);
+}
+
 auto Error::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "Error(";
-  ss << "message=" << GetMessage();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<Error> helper;
+  helper.AddField("message", GetMessage()->Get());
+  return helper;
 }
 }  // namespace scm

@@ -6,8 +6,13 @@
 #include "scheme/expression.h"
 #include "scheme/local.h"
 #include "scheme/local_scope.h"
+#include "scheme/type.h"
 
 namespace scm {
+auto Macro::New(const ObjectList& args) -> Macro* {
+  NOT_IMPLEMENTED(FATAL);
+}
+
 auto Macro::CreateClass() -> Class* {
   return Class::New(Object::GetClass(), "Macro");
 }

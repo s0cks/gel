@@ -328,10 +328,10 @@ static inline auto CallOnError(Runtime* runtime, Procedure* procedure) -> std::f
   return [runtime, procedure](std::exception_ptr error) {
     try {
       std::rethrow_exception(error);
-    } catch (std::exception exc) {
-      LOG(ERROR) << "exception: " << exc.what();
+    } catch (const Exception& exc) {
+      const auto error = Error::New(exc.what());
+      return runtime->Call(procedure, {error});
     }
-    NOT_IMPLEMENTED(FATAL);  // TODO: implement
   };
 }
 
@@ -391,8 +391,6 @@ NATIVE_RX_PROCEDURE_F(publish) {
   if (!subject)
     return Throw(subject.GetError());
   NativeArgument<1> value(args);
-  if (!value)
-    return Throw(value.GetError());
   subject->AsSubject()->Publish(value);
   return DoNothing();
 }

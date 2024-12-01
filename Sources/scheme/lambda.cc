@@ -12,6 +12,7 @@
 #include "scheme/local_scope.h"
 #include "scheme/pointer.h"
 #include "scheme/runtime.h"
+#include "scheme/type.h"
 
 namespace scm {
 auto Lambda::CreateClass() -> Class* {
@@ -29,6 +30,10 @@ auto Lambda::VisitPointers(PointerVisitor* vis) -> bool {
   ASSERT(vis);
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
   return false;
+}
+
+auto Lambda::New(const ObjectList& args) -> Lambda* {
+  NOT_IMPLEMENTED(FATAL);
 }
 
 auto Lambda::ToString() const -> std::string {

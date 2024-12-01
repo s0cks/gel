@@ -1,8 +1,14 @@
 #include "scheme/native_procedure.h"
 
+#include "scheme/common.h"
 #include "scheme/runtime.h"
+#include "scheme/type.h"
 
 namespace scm {
+auto NativeProcedure::New(const ObjectList& args) -> NativeProcedure* {
+  NOT_IMPLEMENTED(FATAL);
+}
+
 auto NativeProcedure::CreateClass() -> Class* {
   return Class::New(Procedure::GetClass(), kClassName);
 }

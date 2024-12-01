@@ -22,6 +22,12 @@ void Instruction::Append(Instruction* instr) {
 FOR_EACH_INSTRUCTION(DEFINE_ACCEPT)
 #undef DEFINE_ACCEPT
 
+auto NewInstr::ToString() const -> std::string {
+  ToStringHelper<NewInstr> helper;
+  helper.AddField("target", GetTarget());
+  return helper;
+}
+
 auto LoadVariableInstr::ToString() const -> std::string {
   std::stringstream ss;
   ss << "LoadVariableInstr(";

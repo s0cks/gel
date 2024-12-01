@@ -2,8 +2,10 @@
 
 #include <glog/logging.h>
 
+#include <exception>
 #include <rpp/observers/fwd.hpp>
 #include <rpp/observers/observer.hpp>
+#include <rpp/sources/fwd.hpp>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -85,6 +87,7 @@ void Object::Init() {
   Pair::InitClass();
   Bool::Init();
   ArrayBase::InitClass();
+  Macro::InitClass();
   // string-like type(s)
   String::InitClass();
   Symbol::InitClass();
@@ -93,6 +96,8 @@ void Object::Init() {
 #ifdef SCM_ENABLE_RX
   // observables
   Observable::InitClass();
+  // observers
+  Observer::InitClass();
   // subjects
   Subject::InitClass();
   ReplaySubject::InitClass();
@@ -104,12 +109,24 @@ auto Class::CreateClass() -> Class* {
   return Class::New(Object::GetClass(), kClassName);
 }
 
+auto Class::New(const ObjectList& args) -> Class* {
+  NOT_IMPLEMENTED(FATAL);
+}
+
 auto Long::CreateClass() -> Class* {
   return Class::New(Number::GetClass(), kClassName);
 }
 
+auto Long::New(const ObjectList& args) -> Long* {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+}
+
 auto Double::CreateClass() -> Class* {
   return Class::New(Number::GetClass(), kClassName);
+}
+
+auto Double::New(const ObjectList& args) -> Double* {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
 }
 
 auto Long::Unbox(Object* rhs) -> uint64_t {
@@ -167,6 +184,10 @@ auto Bool::Equals(Object* rhs) const -> bool {
   return Get() == rhs->AsBool()->Get();
 }
 
+auto Bool::New(const ObjectList& args) -> Bool* {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+}
+
 auto Bool::ToString() const -> std::string {
   return Get() ? "#T" : "#F";
 }
@@ -205,6 +226,10 @@ auto Bool::False() -> Bool* {
 
 auto Number::CreateClass() -> Class* {
   return Class::New(Object::GetClass(), kClassName);
+}
+
+auto Number::New(const ObjectList& args) -> Number* {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
 }
 
 auto Number::New(const uint64_t rhs) -> Number* {
@@ -296,6 +321,12 @@ auto Double::ToString() const -> std::string {
   return helper;
 }
 
+auto Pair::New(const ObjectList& args) -> Pair* {
+  if (args.empty())
+    return Pair::Empty();
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+}
+
 auto Pair::CreateClass() -> Class* {
   return Class::New(Object::GetClass(), kClassName);
 }
@@ -342,6 +373,10 @@ auto Symbol::CreateClass() -> Class* {
   return Class::New(Object::GetClass(), kClassName);
 }
 
+auto Symbol::New(const ObjectList& args) -> Symbol* {
+  NOT_IMPLEMENTED(FATAL);
+}
+
 auto Symbol::ToString() const -> std::string {
   ToStringHelper<Symbol> helper;
   helper.AddField("value", Get());
@@ -351,6 +386,12 @@ auto Symbol::ToString() const -> std::string {
 auto Symbol::New(const std::string& rhs) -> Symbol* {
   ASSERT(!rhs.empty());
   return new Symbol(rhs);
+}
+
+auto String::New() -> String* {
+  static auto kEmptyString = new String();
+  ASSERT(kEmptyString);
+  return kEmptyString;
 }
 
 auto String::CreateClass() -> Class* {
@@ -366,6 +407,14 @@ auto String::Equals(Object* rhs) const -> bool {
   return Get() == other->Get();
 }
 
+auto String::New(const ObjectList& args) -> String* {
+  if (args.empty() || scm::IsNull(args[0]))
+    return New();
+  if (args[0]->IsString())
+    return String::New(args[0]->AsString()->Get());
+  return ValueOf(args[0]);
+}
+
 auto String::ToString() const -> std::string {
   ToStringHelper<String> helper;
   helper.AddField("value", Get());
@@ -373,6 +422,10 @@ auto String::ToString() const -> std::string {
 }
 
 auto String::ValueOf(Object* rhs) -> String* {
+  if (rhs->IsString())
+    return rhs->AsString();
+  else if (rhs->IsSymbol())
+    return String::New(rhs->AsSymbol()->Get());
   std::stringstream ss;
   if (rhs->IsBool()) {
     ss << (Bool::Unbox(rhs->AsBool()) ? "#t" : "#f");
@@ -516,6 +569,12 @@ auto Observable::New(Object* value) -> Observable* {
   return New(rx::source::just(value));
 }
 
+auto Observable::New(const ObjectList& args) -> Observable* {
+  if (args.empty() || scm::IsNull(args[0]))
+    return Empty();
+  return New(args[0]);
+}
+
 static constexpr const auto kDoNothingOnError = [](std::exception_ptr) {
   return;  // do nothing
 };
@@ -551,6 +610,15 @@ auto Observer::Equals(Object* rhs) const -> bool {
   return false;
 }
 
+auto Observer::New(const ObjectList& args) -> Observer* {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+}
+
+auto Subject::to_exception_ptr(Error* error) -> std::exception_ptr {
+  ASSERT(error && !error->GetMessage()->Get().empty());
+  return std::make_exception_ptr(Exception(String::Unbox(error->GetMessage())));
+}
+
 auto Subject::CreateClass() -> Class* {
   ASSERT(kClass == nullptr);
   return Class::New(Object::GetClass(), kClassName);
@@ -558,6 +626,15 @@ auto Subject::CreateClass() -> Class* {
 
 auto Subject::ToString() const -> std::string {
   return ToStringHelper<Subject>{};
+}
+
+auto Subject::New(const ObjectList& args) -> Subject* {
+  NOT_IMPLEMENTED(FATAL);
+}
+
+auto PublishSubject::New(const ObjectList& args) -> PublishSubject* {
+  ASSERT(args.empty());
+  return New();
 }
 
 auto PublishSubject::ToString() const -> std::string {
@@ -572,6 +649,11 @@ auto PublishSubject::Equals(Object* rhs) const -> bool {
 
 auto PublishSubject::CreateClass() -> Class* {
   return Class::New(Subject::GetClass(), "PublishSubject");
+}
+
+auto ReplaySubject::New(const ObjectList& args) -> ReplaySubject* {
+  ASSERT(args.empty());
+  return New();
 }
 
 auto ReplaySubject::ToString() const -> std::string {

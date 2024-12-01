@@ -158,6 +158,7 @@ static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream
   static auto CreateClass() -> Class*;              \
                                                     \
  public:                                            \
+  static auto New(const ObjectList& args) -> Name*; \
   static constexpr const auto kClassName = #Name;   \
   static auto operator new(const size_t sz)->void*; \
   static inline void operator delete(void* ptr) {   \
@@ -508,6 +509,7 @@ class StringObject : public Datum {
   std::string value_;
 
  protected:
+  StringObject() = default;
   explicit StringObject(std::string value) :
     Datum(),
     value_(std::move(value)) {}
@@ -528,6 +530,7 @@ class StringObject : public Datum {
 
 class String : public StringObject {
  protected:
+  String() = default;
   explicit String(const std::string& value) :
     StringObject(value) {}
 
@@ -537,10 +540,10 @@ class String : public StringObject {
   DECLARE_TYPE(String);
 
  public:
+  static auto New() -> String*;
   static inline auto New(const std::string& value) -> String* {
     return new String(value);
   }
-
   static inline auto Unbox(Object* rhs) -> const std::string& {
     ASSERT(rhs && rhs->IsString());
     return rhs->AsString()->Get();
@@ -654,6 +657,8 @@ class Subject : public Object {
  protected:
   Subject() = default;
 
+  auto to_exception_ptr(Error* error) -> std::exception_ptr;
+
  public:
   ~Subject() override = default;
 
@@ -685,6 +690,7 @@ class Subject : public Object {
   static void InitClass();
 
  public:
+  static auto New(const ObjectList& args) -> Subject*;
   static auto operator new(const size_t sz) -> void*;
   static inline void operator delete(void* ptr) {
     ASSERT(ptr);
@@ -724,7 +730,11 @@ class TemplateSubject : public Subject {
 
   void Publish(Object* value) override {
     ASSERT(value);
-    get().get_observer().on_next(value);
+    if (value->IsError()) {
+      return get().get_observer().on_error(to_exception_ptr(value->AsError()));
+    } else {
+      return get().get_observer().on_next(value);
+    }
   }
 
   void Complete() override {

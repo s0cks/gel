@@ -303,6 +303,9 @@ auto Parser::ParseExpression() -> Expression* {
       case Token::kDefun:
         expr = ParseDefunExpr();
         break;
+      case Token::kNewExpr:
+        expr = ParseNewExpr();
+        break;
       // Expressions
       case Token::kBeginExpr:
         expr = ParseBeginExpr();
@@ -476,6 +479,18 @@ auto Parser::ParseDefunExpr() -> LocalDef* {
   }
   PopScope();
   return LocalDef::New(symbol, LambdaExpr::New(args, body));
+}
+
+auto Parser::ParseNewExpr() -> expr::NewExpr* {
+  const auto new_expr_token = ExpectNext(Token::kNewExpr);
+  const auto symbol = Symbol::New(new_expr_token.text);
+  ASSERT(symbol);
+  const auto cls = Class::FindClass(symbol);
+  LOG_IF(FATAL, !cls) << "failed to find class named: " << symbol;
+  expr::ExpressionList args;
+  LOG_IF(FATAL, !ParseExpressionList(args)) << "failed to parse new expression args for type: " << cls;
+  LOG_IF(FATAL, !PeekEq(Token::kRParen)) << "expected `)`";
+  return expr::NewExpr::New(cls, args);
 }
 
 auto Parser::ParseLocalDef() -> LocalDef* {
@@ -692,6 +707,19 @@ auto Parser::NextToken() -> const Token& {
         return NextToken(Token::kCastExpr, GetBufferedText());
       }
       break;
+    case 'n': {
+      if (PeekChar(1) == 'e' && PeekChar(2) == 'w') {
+        Advance(3);
+        LOG_IF(FATAL, PeekChar() != ':') << "expected char `:` not: " << NextToken();
+        NextChar();
+        token_len_ = 0;
+        while (IsValidIdentifierChar(PeekChar(), token_len_ == 0)) {
+          buffer_[token_len_++] = NextChar();
+        }
+        return NextToken(Token::kNewExpr, GetBufferedText());
+      }
+      break;
+    }
   }
 
   if (IsDoubleQuote(next)) {

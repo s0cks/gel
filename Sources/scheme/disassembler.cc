@@ -11,6 +11,12 @@ auto Disassembler::VisitGraphEntryInstr(instr::GraphEntryInstr* instr) -> bool {
   return target && target->Accept(this);
 }
 
+auto Disassembler::VisitNewInstr(instr::NewInstr* instr) -> bool {
+  ASSERT(instr);
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
+
 auto Disassembler::VisitTargetEntryInstr(instr::TargetEntryInstr* instr) -> bool {
   ASSERT(instr);
   instr::InstructionIterator iter(instr->GetNext());

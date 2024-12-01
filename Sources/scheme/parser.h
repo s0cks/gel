@@ -126,6 +126,7 @@ class Parser {
   auto ParseListExpr() -> expr::Expression*;
   auto ParseInstanceOfExpr() -> expr::InstanceOfExpr*;
   auto ParseCastExpr() -> expr::CastExpr*;
+  auto ParseNewExpr() -> expr::NewExpr*;
 
   // Definitions
   auto ParseDefinition() -> expr::Definition*;
