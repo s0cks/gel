@@ -70,7 +70,7 @@ auto Interpreter::VisitCastInstr(CastInstr* instr) -> bool {
   {
     const auto top = GetStackTop();
     ASSERT(top);
-    if ((*top)->GetType()->Equals(target)) {
+    if ((*top)->GetType()->IsInstanceOf(target)) {
       DVLOG(1000) << "skipping cast of " << (*top) << " to: " << target;
       return Next();
     }
@@ -85,6 +85,8 @@ auto Interpreter::VisitCastInstr(CastInstr* instr) -> bool {
     return PushNext(Observable::New(value));
   } else if (target->Is<String>()) {
     return PushNext(String::ValueOf(value));
+  } else if (target->Is<Subject>()) {
+    return PushNext(ToSubject(value));
   }
   return PushError(fmt::format("Cannot cast `{}` to {}", (*value), (*target->GetName())));
 }

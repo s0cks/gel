@@ -245,6 +245,11 @@ class Class : public Datum {
     return Equals(T::GetClass());
   }
 
+  template <class T>
+  inline auto IsInstance() const -> bool {
+    return IsInstanceOf(T::GetClass());
+  }
+
   auto IsInstanceOf(Class* rhs) const -> bool;
   DECLARE_TYPE(Class);
 
@@ -685,7 +690,6 @@ class Subject : public Object {
     ASSERT(ptr);
   }
 
- public:
   static inline auto GetClass() -> Class* {
     ASSERT(kClass);
     return kClass;

@@ -6,6 +6,7 @@
 #include "scheme/local.h"
 #include "scheme/object.h"
 #include "scheme/pointer.h"
+#include "scheme/to_string_helper.h"
 
 namespace scm {
 auto LocalScope::Iterator::HasNext() const -> bool {
@@ -101,14 +102,10 @@ static inline auto operator<<(std::ostream& stream, const std::vector<LocalVaria
 }
 
 auto LocalScope::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "LocalScope(";
-  ss << "locals=" << locals_;
-  if (HasParent()) {
-    ss << ", parent=" << GetParent();
-  }
-  ss << ")";
-  return ss.str();
+  ToStringHelper<LocalScope> helper;
+  helper.AddField("locals", locals_);
+  helper.AddField("parent", GetParent());
+  return helper;
 }
 
 auto LocalScope::VisitAllLocals(LocalVariableVisitor* vis) -> bool {

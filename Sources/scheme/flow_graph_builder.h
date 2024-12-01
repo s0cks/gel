@@ -44,6 +44,23 @@ class FlowGraphBuilder {
     return next;
   }
 
+  inline auto PushScope() -> LocalScope* {
+    const auto new_scope = LocalScope::New(GetScope());
+    SetScope(new_scope);
+    return new_scope;
+  }
+
+  inline auto PushScope(const std::vector<LocalScope*>& scopes) -> LocalScope* {
+    const auto new_scope = LocalScope::Union(scopes, GetScope());
+    SetScope(new_scope);
+    return new_scope;
+  }
+
+  inline void PopScope() {
+    ASSERT(HasScope());
+    SetScope(GetScope()->GetParent());
+  }
+
  public:
   explicit FlowGraphBuilder(LocalScope* scope) :
     scope_(scope) {
@@ -53,6 +70,10 @@ class FlowGraphBuilder {
 
   auto GetScope() const -> LocalScope* {
     return scope_;
+  }
+
+  inline auto HasScope() const -> bool {
+    return GetScope() != nullptr;
   }
 
   auto GetGraphEntry() const -> GraphEntryInstr* {

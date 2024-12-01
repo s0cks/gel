@@ -71,28 +71,28 @@
     b))
 ; Numbers
 (defun long? (x)
-  (instanceof? x 'Long))
+  (#Long? x))
 (defun double? (x)
-  (instanceof? x 'Double))
+  (#Double? x))
 (defun number? (x)
-  (instanceof? x 'Number))
+  (#Number? x))
 ; Strings
 (defun string? (x)
-  (instanceof? x 'String))
+  (#String? x))
 (defun symbol? (x)
-  (instanceof? x 'Symbol))
+  (#Symbol? x))
 ; Procedures
 (defun lambda? (x)
-  (instanceof? x 'Lambda))
+  (#Lambda? x))
 (defun native-procedure? (x)
-  (instanceof? x 'NativeProcedure))
+  (#NativeProcedure? x))
 (defun procedure? (x)
-  (instanceof? x 'Procedure))
+  (#Procedure? x))
 (defun array? (x)
-  (instanceof? x 'Array))
+  (#Array? x))
 ; Misc
 (defun pair? (x)
-  (instanceof? x 'Pair))
+  (#Pair? x))
 ; factorial
 (defun factorial (x)
   (cond (eq? x 1) 1

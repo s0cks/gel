@@ -1163,6 +1163,7 @@ class RxOpExpr : public SequenceExpr, public proto::HasSymbol {
  public:
   ~RxOpExpr() override = default;
 
+  auto IsComplete() const -> bool;
   auto IsSubscribe() const -> bool;
   DECLARE_EXPRESSION(RxOpExpr);
 
@@ -1177,18 +1178,18 @@ using RxOpList = std::vector<RxOpExpr*>;
 
 class LetRxExpr : public TemplateLetExpr {
  private:
-  Expression* observable_;
+  Expression* source_;
 
  protected:
   LetRxExpr(LocalScope* scope, Expression* observable, const RxOpList& operators) :
     TemplateLetExpr(scope, (const ExpressionList&)operators),  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-    observable_(observable) {}
+    source_(observable) {}
 
  public:
   ~LetRxExpr() override = default;
 
-  auto GetObservable() const -> Expression* {
-    return observable_;
+  auto GetSource() const -> Expression* {
+    return source_;
   }
 
   auto GetNumberOfOperators() const -> uint64_t {
@@ -1211,11 +1212,12 @@ class LetRxExpr : public TemplateLetExpr {
   }
 
   auto HasSubscribe() const -> bool;
+  auto HasComplete() const -> bool;
   DECLARE_EXPRESSION(LetRxExpr);
 
  public:
-  static inline auto New(LocalScope* scope, Expression* observable, const RxOpList& body = {}) -> LetRxExpr* {
-    return new LetRxExpr(scope, observable, body);
+  static inline auto New(LocalScope* scope, Expression* source, const RxOpList& body = {}) -> LetRxExpr* {
+    return new LetRxExpr(scope, source, body);
   }
 };
 

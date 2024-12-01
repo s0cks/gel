@@ -11,6 +11,7 @@
 #include "scheme/natives.h"
 #include "scheme/object.h"
 #include "scheme/procedure.h"
+#include "scheme/rx.h"
 #include "scheme/script.h"
 
 namespace scm {
@@ -303,17 +304,77 @@ auto EffectVisitor::VisitImportDef(expr::ImportDef* expr) -> bool {
   return false;
 }
 
+static inline auto IsLiteralSymbol(expr::LiteralExpr* expr, Symbol* value) -> bool {
+  return expr && expr->HasValue() && expr->GetValue()->IsSymbol() && expr->GetValue()->AsSymbol()->Equals(value);
+}
+
+static inline auto IsCallSymbol(expr::CallProcExpr* expr, Symbol* value) -> bool {
+  ASSERT(expr);
+  if (!expr->IsCallProcExpr())
+    return false;
+  const auto target = expr->AsCallProcExpr()->GetTarget();
+  ASSERT(target);
+  if (!target->IsLiteralExpr())
+    return false;
+  return IsLiteralSymbol(target->AsLiteralExpr(), value);
+}
+
+template <class N>
+static inline auto IsCallNativeSymbol(expr::CallProcExpr* expr) -> bool {
+  ASSERT(expr);
+  return IsCallSymbol(expr, N::GetNativeSymbol());
+}
+
+static inline auto IsInvokePublishSubject(expr::Expression* expr) -> bool {
+  if (!expr || !expr->IsCallProcExpr())
+    return false;
+  return IsCallNativeSymbol<proc::rx_publish_subject>(expr->AsCallProcExpr());
+}
+
+static inline auto IsInvokeReplaySubject(expr::Expression* expr) -> bool {
+  if (!expr || !expr->IsCallProcExpr())
+    return false;
+  return IsCallSymbol(expr->AsCallProcExpr(), proc::rx_replay_subject::GetNativeSymbol());
+}
+
 auto EffectVisitor::VisitBinding(expr::Binding* expr) -> bool {
   ASSERT(expr);
+  const auto scope = GetOwner()->GetScope();
   const auto symbol = expr->GetSymbol();
   ASSERT(symbol);
-  ValueVisitor for_value(GetOwner());
-  if (!expr->GetValue()->Accept(&for_value)) {
-    LOG(FATAL) << "failed to visit value for binding.";
+  LocalVariable* local = nullptr;
+  instr::Definition* defn = nullptr;
+  if (IsInvokePublishSubject(expr->GetValue())) {
+    const auto value = PublishSubject::New();
+    ASSERT(value);
+    local = LocalVariable::New(scope, symbol, value);
+    ASSERT(local);
+    defn = instr::ConstantInstr::New(value);
+    Add(defn);
+  } else if (IsInvokeReplaySubject(expr->GetValue())) {
+    const auto value = ReplaySubject::New();
+    ASSERT(value);
+    local = LocalVariable::New(scope, symbol, value);
+    ASSERT(local);
+    defn = instr::ConstantInstr::New(value);
+    Add(defn);
+  } else {
+    ValueVisitor for_value(GetOwner());
+    if (!expr->GetValue()->Accept(&for_value)) {
+      LOG(FATAL) << "failed to visit value for binding.";
+      return false;
+    }
+    Append(for_value);
+    local = LocalVariable::New(scope, symbol);
+    ASSERT(local);
+    defn = for_value.GetValue();
+  }
+  ASSERT(local);
+  if (!scope->Add(local)) {
+    LOG(FATAL) << "failed to add " << local << " to scope.";
     return false;
   }
-  Append(for_value);
-  Add(instr::StoreVariableInstr::New(symbol, for_value.GetValue()));
+  Add(instr::StoreVariableInstr::New(symbol, defn));
   return true;
 }
 
@@ -393,46 +454,114 @@ auto EffectVisitor::CreateStoreLoad(Symbol* symbol, instr::Definition* value) ->
   return instr::LoadVariableInstr::New(symbol);
 }
 
-static inline auto IsConstantType(instr::Definition* value, Class* expected) -> bool {
-  ASSERT(value);
-  if (!value->IsConstantInstr())
-    return false;
-  const auto constant = value->AsConstantInstr();
-  ASSERT(constant);
-  return constant->GetValue()->GetType()->Equals(expected);
+// static inline auto IsConstantType(instr::Definition* value, Class* expected) -> bool {
+//   ASSERT(value);
+//   if (!value->IsConstantInstr())
+//     return false;
+//   const auto constant = value->AsConstantInstr();
+//   ASSERT(constant);
+//   return constant->GetValue()->GetType()->Equals(expected);
+// }
+
+// static inline auto IsConstantInstanceOf(instr::Definition* value, Class* expected) -> bool {
+//   if (!value || !value->IsConstantInstr())
+//     return false;
+//   const auto constant = value->AsConstantInstr();
+//   ASSERT(constant);
+//   return constant->GetValue()->GetType()->IsInstanceOf(expected);
+// }
+
+// static inline auto IsCastTo(instr::Definition* value, Class* expected) -> bool {
+//   if (!value || !value->IsCastInstr())
+//     return false;
+//   const auto cast = value->AsCastInstr();
+//   return cast->GetTarget()->Equals(expected);
+// }
+
+// static inline auto IsCastToInstanceOf(instr::Definition* value, Class* expected) -> bool {
+//   if (!value || !value->IsCastInstr())
+//     return false;
+//   const auto cast = value->AsCastInstr();
+//   return cast->GetTarget()->IsInstanceOf(expected);
+// }
+
+// static inline auto IsObservableSource(instr::Definition* defn) -> bool {
+//   return IsConstantType(defn, Observable::GetClass()) || IsCastTo(defn, Observable::GetClass());
+// }
+
+// static inline auto IsSubjectSource(instr::Definition* defn) -> bool {
+//   return IsConstantInstanceOf(defn, Subject::GetClass()) || IsCastToInstanceOf(defn, Subject::GetClass());
+// }
+
+static inline auto IsObservableSource(LocalScope* scope, expr::Expression* expr) -> bool {
+  ASSERT(expr);
+  if (expr->IsLiteralExpr() && expr->AsLiteralExpr()->HasValue()) {
+    const auto literal = expr->AsLiteralExpr()->GetValue();
+    ASSERT(literal);
+    if (literal->IsSymbol()) {
+      // load symbol
+      LocalVariable* local = nullptr;
+      if (!scope->Lookup(literal->AsSymbol(), &local)) {
+        DLOG(WARNING) << "cannot find local: " << literal->AsSymbol();
+        return false;
+      }
+      return local != nullptr;
+    } else if (literal->IsObservable()) {
+      return true;
+    }
+  } else if (expr->IsCastExpr()) {
+    return expr->AsCastExpr()->GetTargetType()->Is<Observable>();
+  }
+  return false;
 }
 
-static inline auto IsConstantInstanceOf(instr::Definition* value, Class* expected) -> bool {
-  if (!value || !value->IsConstantInstr())
-    return false;
-  const auto constant = value->AsConstantInstr();
-  ASSERT(constant);
-  return constant->GetValue()->GetType()->IsInstanceOf(expected);
-}
-
-static inline auto IsConstantObservable(instr::Definition* defn) -> bool {
-  return IsConstantType(defn, Observable::GetClass());
+static inline auto IsSubjectSource(LocalScope* scope, expr::Expression* expr) -> bool {
+  ASSERT(expr);
+  if (expr->IsLiteralExpr() && expr->AsLiteralExpr()->HasValue()) {
+    const auto literal = expr->AsLiteralExpr()->GetValue();
+    ASSERT(literal);
+    if (literal->IsSymbol()) {
+      // load symbol
+      LocalVariable* local = nullptr;
+      if (!scope->Lookup(literal->AsSymbol(), &local)) {
+        DLOG(WARNING) << "cannot find value for local: " << literal->AsSymbol();
+        return false;
+      }
+      return local != nullptr;
+    } else if (literal->IsSubject()) {
+      return true;
+    }
+  } else if (expr->IsCastExpr()) {
+    return expr->AsCastExpr()->GetTargetType()->IsInstance<Subject>();
+  }
+  return false;
 }
 
 auto EffectVisitor::VisitLetRxExpr(expr::LetRxExpr* expr) -> bool {
   ASSERT(expr);
-  const auto symbol = Symbol::New("observable");
-  const auto scope = LocalScope::New(GetOwner()->GetScope());
+  const auto scope = GetOwner()->PushScope({rx::GetRxScope()});
   ASSERT(scope);
+  Symbol* symbol = nullptr;
+  if (IsObservableSource(scope, expr->GetSource())) {
+    symbol = Symbol::New("observable");
+  } else if (IsSubjectSource(scope, expr->GetSource())) {
+    symbol = Symbol::New("subject");
+  }
+  ASSERT(symbol);
   const auto local = LocalVariable::New(scope, symbol);
   ASSERT(local);
   LOG_IF(FATAL, !scope->Add(local)) << "failed to create: " << (*local);
-
-  ValueVisitor for_observable(GetOwner());
-  if (!expr->GetObservable()->Accept(&for_observable)) {
+  ValueVisitor for_source(GetOwner());
+  if (!expr->GetSource()->Accept(&for_source)) {
     LOG(FATAL) << "failed to visit observable.";
     return false;
   }
-  Append(for_observable);
-  const auto observable = IsConstantObservable(for_observable.GetValue())
-                            ? for_observable.GetValue()
-                            : DoCastTo(for_observable.GetValue(), Observable::GetClass());
-  Add(instr::StoreVariableInstr::New(symbol, observable));
+  Append(for_source);
+  if (IsObservableSource(scope, expr->GetSource()) || IsSubjectSource(scope, expr->GetSource())) {
+    Add(instr::StoreVariableInstr::New(symbol, for_source.GetValue()));
+  } else {
+    Add(instr::StoreVariableInstr::New(symbol, DoCastTo(for_source.GetValue(), Observable::GetClass())));
+  }
 
   // process body
   uint64_t idx = 0;
@@ -446,19 +575,26 @@ auto EffectVisitor::VisitLetRxExpr(expr::LetRxExpr* expr) -> bool {
     }
     Append(for_effect);
     if (idx == expr->GetNumberOfChildren()) {
-      const auto return_value = !oper_expr->IsSubscribe() ? instr::LoadVariableInstr::New(symbol)->AsDefinition()
-                                                          : instr::ConstantInstr::New(Null())->AsDefinition();
+      instr::Definition* return_value = nullptr;
+      if (!oper_expr->IsSubscribe() && !oper_expr->IsComplete()) {
+        return_value = instr::LoadVariableInstr::New(symbol);
+      } else {
+        return_value = instr::ConstantInstr::New(Null())->AsDefinition();
+      }
       ASSERT(return_value);
       ReturnDefinition(return_value);
     }
     if (!IsOpen())
       break;
   }
+  GetOwner()->PopScope();
   return true;
 }
 
 auto EffectVisitor::VisitLetExpr(expr::LetExpr* expr) -> bool {
   ASSERT(expr);
+  const auto new_scope = GetOwner()->PushScope();
+  ASSERT(new_scope);
   // process body
   uint64_t idx = 0;
   while (IsOpen() && (idx < expr->GetNumberOfChildren())) {
@@ -471,6 +607,7 @@ auto EffectVisitor::VisitLetExpr(expr::LetExpr* expr) -> bool {
     if (!IsOpen())
       break;
   }
+  GetOwner()->PopScope();
   return true;
 }
 

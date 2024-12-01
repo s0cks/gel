@@ -332,9 +332,14 @@ auto RxOpExpr::IsSubscribe() const -> bool {
   return IsCallToNative<proc::rx_subscribe>(GetSymbol());
 }
 
+auto RxOpExpr::IsComplete() const -> bool {
+  return IsCallToNative<proc::rx_complete>(GetSymbol());
+}
+
 auto LetRxExpr::ToString() const -> std::string {
   ToStringHelper<LetRxExpr> helper;
   helper.AddField("scope", GetScope());
+  helper.AddField("source", GetSource());
   helper.AddField("body", GetBody());
   return helper;
 }
@@ -344,6 +349,13 @@ auto LetRxExpr::HasSubscribe() const -> bool {
   if (!last)
     return last;
   return last->IsSubscribe();
+}
+
+auto LetRxExpr::HasComplete() const -> bool {
+  const auto last = GetLastOp();
+  if (!last)
+    return last;
+  return last->IsComplete();
 }
 
 auto LetExpr::ToString() const -> std::string {

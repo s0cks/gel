@@ -232,7 +232,7 @@ class Parser {
 
   inline auto AdvanceUntil(const char expected) -> uint64_t {
     uint64_t advanced = 0;
-    while (PeekChar() != expected) {
+    while (PeekChar() != expected && PeekChar() != '\0' && PeekChar() != EOF) {
       NextChar();
       advanced++;
     }
