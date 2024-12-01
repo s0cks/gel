@@ -1,4 +1,4 @@
-# scheme
+# gel
 
 <!-- START doctoc -->
 <!-- END doctoc -->
@@ -17,7 +17,7 @@ You can build by doing the following:
 
 ```bash
 # git clone
-cd scheme/
+cd gel/
 vcpkg install
 mkdir build/ && cd build/
 cmake --build --preset XXX .. # debug, release, etc. See CMakePresets.json
@@ -26,19 +26,16 @@ cmake --build --preset XXX .. # debug, release, etc. See CMakePresets.json
 Check whether or not the build was successful:
 
 ```bash
-./scheme --version
+./gel --version
 ```
-
 
 ## Packages
 
-
-- [object Object]
-
-- [object Object]
-
-- [object Object]
-
-- [object Object]
-
-- [object Object]
+- benchmark
+- fmt
+- gflags
+- glog
+- gtest
+- tracy
+- units
+- reactiveplusplus
