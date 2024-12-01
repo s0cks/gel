@@ -378,6 +378,12 @@ auto EffectVisitor::VisitBinding(expr::Binding* expr) -> bool {
   return true;
 }
 
+auto EffectVisitor::VisitNewExpr(expr::NewExpr* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
+
 auto EffectVisitor::VisitQuotedExpr(expr::QuotedExpr* expr) -> bool {
   ASSERT(expr);
   ReturnDefinition(ConstantInstr::New(expr->Get()));

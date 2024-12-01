@@ -437,4 +437,20 @@ auto ListExpr::EvalToConstant() const -> Object* {
   }
   return value;
 }
+
+auto NewExpr::ToString() const -> std::string {
+  ToStringHelper<NewExpr> helper;
+  helper.AddField("target", GetTargetClass());
+  helper.AddField("args", GetArgs());
+  return helper;
+}
+
+auto NewExpr::VisitArgs(ExpressionVisitor* vis) -> bool {
+  ASSERT(vis);
+  for (const auto& arg : args_) {
+    if (!arg->Accept(vis))
+      return false;
+  }
+  return true;
+}
 }  // namespace scm::expr

@@ -36,7 +36,8 @@
   V(ThrowExpr)                      \
   V(QuotedExpr)                     \
   V(InstanceOfExpr)                 \
-  V(CastExpr)
+  V(CastExpr)                       \
+  V(NewExpr)
 
 namespace scm {
 class Parser;
@@ -1373,6 +1374,51 @@ class CastExpr : public TemplateExpression<1> {
     ASSERT(cls);
     ASSERT(value);
     return new CastExpr(cls, value);
+  }
+};
+
+class NewExpr : public Expression {
+ private:
+  Class* target_;
+  ExpressionList args_;
+
+ protected:
+  NewExpr(Class* target, const ExpressionList& args) :
+    target_(target),
+    args_(args) {}
+
+ public:
+  ~NewExpr() override = default;
+
+  auto GetTargetClass() const -> Class* {
+    return target_;
+  }
+
+  auto GetArgs() const -> const ExpressionList& {
+    return args_;
+  }
+
+  auto GetNumberOfChildren() const -> uint64_t override {
+    return args_.size();
+  }
+
+  auto GetChildAt(const uint64_t idx) const -> Expression* override {
+    ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
+    return args_[idx];
+  }
+
+  auto VisitArgs(ExpressionVisitor* vis) -> bool;
+
+  auto VisitChildren(ExpressionVisitor* vis) -> bool override {
+    ASSERT(vis);
+    return VisitArgs(vis);
+  }
+
+  DECLARE_EXPRESSION(NewExpr);
+
+ public:
+  static inline auto New(Class* target, const ExpressionList& args) -> NewExpr* {
+    return new NewExpr(target, args);
   }
 };
 

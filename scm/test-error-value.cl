@@ -1,0 +1,1 @@
+(print (new:Error "Hello World"))
