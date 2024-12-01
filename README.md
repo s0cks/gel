@@ -18,6 +18,26 @@ see [gel/](gel/).
   (print z))
 ```
 
+Run:
+
+```bash
+gelrt \
+  -logtostdout \
+  -colorlogtostdout \
+  --module-dir ./gel \
+  gel/test-let.cl
+```
+
+Output:
+
+```text
+I20241201 14:45:34.007459 0x1f49cf240 runtime.cc:324] runtime initialized in 0.001 s
+(1, (2, (3, ())))
+(1, (2, (3, ())))
+(1, (3, (3, ())))
+I20241201 14:45:34.008189 0x1f49cf240 main.cc:32] finished in 6.6834e-05 s
+```
+
 ### rx Example
 
 ```lisp
@@ -52,6 +72,28 @@ see [gel/](gel/).
     (rx:publish 10) ; publish an even number
     (rx:publish (new:Error "This is an error")) ; publish an Error
     (rx:complete))) ; complete the topic/observable
+```
+
+Run:
+
+```bash
+gelrt \
+  -logtostdout \
+  -colorlogtostdout \
+  --module-dir ./gel \
+  gel/test-publish-subject.cl
+```
+
+Output:
+
+```text
+I20241201 14:46:10.984060 0x1f49cf240 runtime.cc:324] runtime initialized in 0.001 s
+"found a Number: 11, heres the sq: 121"
+"found a String: Hello World"
+"found a Number: 10, heres the sq: 100"
+"found an even Number: 10"
+"error: gel::Error(message=This is an error)"
+I20241201 14:46:10.985326 0x1f49cf240 main.cc:32] finished in 0.000483333 s
 ```
 
 ## Building
