@@ -1,16 +1,16 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
-#include "scheme/object.h"
-#include "scheme/scheme.h"
+#include "gel/gel.h"
+#include "gel/object.h"
 
-using namespace scm;
+using namespace gel;
 
 auto main(int argc, char** argv) -> int {
   ::google::InitGoogleLogging(argv[0]);
   ::testing::InitGoogleTest(&argc, argv);
   ::google::ParseCommandLineFlags(&argc, &argv, false);
-  LOG(INFO) << "Running unit tests for scheme v" << scm::GetVersion() << "....";
+  LOG(INFO) << "Running unit tests for scheme v" << gel::GetVersion() << "....";
   Object::Init();
   return RUN_ALL_TESTS();
 }

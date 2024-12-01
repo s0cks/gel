@@ -33,7 +33,7 @@
       "name": "darwin-arm64",
       "hidden": true,
       "environment": {
-        "LLVM_HOME": "/opt/homebrew/opt/llvm/",
+        "LLVM_HOME": "/opt/homebrew/opt/llvm",
         "PATH": "$env{LLVM_HOME}/bin:$penv{PATH}",
         "CC": "clang",
         "CXX": "clang++",

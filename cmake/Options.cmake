@@ -6,30 +6,30 @@ endif()
 option(ENABLE_RX "Compile w/ rx" ON)
 if(ENABLE_RX)
   find_package(RPP CONFIG REQUIRED)
-  list(APPEND SCM_LIBRARIES RPP::rpp)
-  add_compile_definitions(SCM_ENABLE_RX)
+  list(APPEND GEL_LIBRARIES RPP::rpp)
+  add_compile_definitions(GEL_ENABLE_RX)
 endif()
 
 option(ENABLE_GRAPHVIZ "Compile w/ Graphviz" OFF)
 if(ENABLE_GRAPHVIZ)
   find_package(Graphviz REQUIRED)
-  list(APPEND SCM_LIBRARIES graphviz::gvc graphviz::cgraph)
-  add_compile_definitions(SCM_ENABLE_GV)
+  list(APPEND GEL_LIBRARIES graphviz::gvc graphviz::cgraph)
+  add_compile_definitions(GEL_ENABLE_GV)
 endif()
 
 option(DISABLE_HEAP_ALLOCATOR "Disable the heap allocator." OFF)
 if(DISABLE_HEAP_ALLOCATOR)
-  add_compile_definitions(SCM_DISABLE_HEAP)
+  add_compile_definitions(GEL_DISABLE_HEAP)
 endif()
 
 option(ENABLE_LAMBDA_CACHE "Enable the lambda cache" ON)
 if(ENABLE_LAMBDA_CACHE)
-  add_compile_definitions(SCM_ENABLE_LAMBDA_CACHE)
+  add_compile_definitions(GEL_ENABLE_LAMBDA_CACHE)
 endif()
 
 option(ENABLE_TRACING "Enable Tracy tracing." OFF)
 if(ENABLE_TRACING)
-  add_compile_definitions(SCM_TRACING)
+  add_compile_definitions(GEL_TRACING)
 endif()
 
 option(ENABLE_CLANG_TIDY "Enable clang-tidy" ON)
@@ -50,7 +50,7 @@ if(ENABLE_COVERAGE)
   if(${CMAKE_CXX_COMPILER_ID} MATCHES "([aA]pple)?[cC]lang|GNU")
     list(
       APPEND
-      SCM_CXX_FLAGS
+      GEL_CXX_FLAGS
       -O0
       -g
       -fprofile-instr-generate
@@ -66,12 +66,12 @@ endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "([aA]pple)?[cC]lang|GNU")
   option(ENABLE_ADDRESS_SCANITIZER "Enable Clang AddressSanitizer" OFF)
   if(ENABLE_ADDRESS_SCANITIZER AND CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
-    list(APPEND SCM_CXX_FLAGS -01 -fno-omit-frame-pointer -fsanitize=address)
+    list(APPEND GEL_CXX_FLAGS -01 -fno-omit-frame-pointer -fsanitize=address)
   endif()
 
   option(ENABLE_UNDEFINED_SANITIZER "Enable Clang UndefinedBehaviorSanitizer"
          OFF)
   if(ENABLE_UNDEFINED_SANITIZER AND CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
-    list(APPEND SCM_CXX_FLAGS -fsanitize=undefined -fsanitize=integer)
+    list(APPEND GEL_CXX_FLAGS -fsanitize=undefined -fsanitize=integer)
   endif()
 endif()

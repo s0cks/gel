@@ -28,11 +28,11 @@ find_package(gflags CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(units CONFIG REQUIRED)
 
-list(APPEND SCM_LIBRARIES Threads::Threads glog::glog gflags::gflags fmt::fmt units::units)
+list(APPEND GEL_LIBRARIES Threads::Threads glog::glog gflags::gflags fmt::fmt units::units)
 
 
 if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
-  add_compile_definitions(SCM_DEBUG)
+  add_compile_definitions(GEL_DEBUG)
 endif()
 
 add_subdirectory(Sources)

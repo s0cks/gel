@@ -1,0 +1,4 @@
+#ifndef GEL_COMPACTOR_H
+#define GEL_COMPACTOR_H
+
+#endif  // GEL_COMPACTOR_H

@@ -2,7 +2,7 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
-#include "scheme/scheme.h"
+#include "gel/gel.h"
 
 auto main(int argc, char** argv) -> int {
   ::google::ParseCommandLineFlags(&argc, &argv, true);

@@ -2,19 +2,19 @@ enable_testing()
 
 find_package(GTest CONFIG REQUIRED)
 
-file(GLOB_RECURSE SCHEME_TEST_SOURCES
+file(GLOB_RECURSE GEL_TEST_SOURCES
   "${CMAKE_CURRENT_SOURCE_DIR}/**/*.h"
   "${CMAKE_CURRENT_SOURCE_DIR}/**/*.cc")
 
-add_executable(scheme-tests
+add_executable(gel-tests
   main.cc
-  ${SCHEME_TEST_SOURCES})
-target_include_directories(scheme-tests
+  ${GEL_TEST_SOURCES})
+target_include_directories(gel-tests
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
          ${CMAKE_CURRENT_BINARY_DIR})
-target_link_libraries(scheme-tests
-  PUBLIC scheme GTest::gtest GTest::gmock)
+target_link_libraries(gel-tests
+  PUBLIC gelle GTest::gtest GTest::gmock)
 
 if(ENABLE_COVERAGE)
-  create_coverage_target(scheme-tests ${SCHEME_TEST_SOURCES})
+  create_coverage_target(gel-tests ${SCHEME_TEST_SOURCES})
 endif()

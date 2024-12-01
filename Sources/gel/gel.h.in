@@ -1,0 +1,21 @@
+#ifndef GEL_H
+#define GEL_H
+
+#include <gflags/gflags.h>
+
+#include <string>
+
+// clang-format off
+#define GEL_VERSION_MAJOR       @PROJECT_VERSION_MAJOR@
+#define GEL_VERSION_MINOR       @PROJECT_VERSION_MINOR@
+#define GEL_VERSION_PATCH       @PROJECT_VERSION_PATCH@
+#define GEL_GIT_BRANCH          "@PROJECT_GIT_BRANCH@"
+#define GEL_GIT_COMMIT_HASH     "@PROJECT_GIT_COMMIT_HASH@"
+#define GEL_TARGET_TRIPLE       "@GEL_TARGET@"
+// clang-format on
+
+namespace gel {
+auto GetVersion() -> std::string;
+}
+
+#endif  // GEL_H
