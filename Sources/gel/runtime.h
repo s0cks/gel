@@ -19,8 +19,6 @@
 #include "gel/stack_frame.h"
 
 namespace gel {
-DECLARE_bool(kernel);
-DECLARE_string(module_dir);
 DECLARE_bool(log_script_instrs);
 
 using Stack = std::stack<Object*>;
@@ -189,6 +187,8 @@ class Runtime : public ExecutionStack {
   inline auto Import(const std::string& name, LocalScope* scope) -> bool {
     return Import(Symbol::New(name), scope);
   }
+
+  auto LoadModule(const std::string& name) -> Module*;
 
   // Stack
   inline void PushError(Error* error) {

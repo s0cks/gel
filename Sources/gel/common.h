@@ -5,6 +5,7 @@
 
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <functional>
 
 #include "gel/platform.h"
@@ -135,6 +136,48 @@ static inline auto TimedExecution(const std::function<R()>& func) -> std::pair<R
   const auto total_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(stop_ts - start_ts);
   return std::make_pair(result, total_ns);
 }
+
+class EnvironmentVariable {
+  DEFINE_DEFAULT_COPYABLE_TYPE(EnvironmentVariable);
+
+ private:
+  std::string name_;
+
+ public:
+  explicit EnvironmentVariable(const std::string& name) :
+    name_(name) {}
+  ~EnvironmentVariable() = default;
+
+  auto name() const -> const std::string& {
+    return name_;
+  }
+
+  auto exists() const -> bool {
+    return getenv(name_.data()) != nullptr;
+  }
+
+  auto value() const -> std::optional<std::string> {
+    const auto value = getenv(name_.data());
+    return value ? std::optional<std::string>{{value}} : std::nullopt;
+  }
+
+  operator bool() const {
+    return exists();
+  }
+
+  friend auto operator<<(std::ostream& stream, const EnvironmentVariable& rhs) -> std::ostream& {
+    // TODO: use ToStringHelper
+    stream << "EnvironmentVariable(";
+    stream << "name=" << rhs.name();
+    const auto value = rhs.value();
+    if (value)
+      stream << "value=" << (*value);
+    stream << ")";
+    return stream;
+  }
+};
+
+auto GetHomeEnvVar() -> const EnvironmentVariable&;
 }  // namespace gel
 
 #endif  // GEL_COMMON_H

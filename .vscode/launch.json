@@ -70,6 +70,7 @@
       "default": "0",
       "options": [
         "0",
+        "1",
         "10",
         "100",
         "1000",
@@ -412,15 +413,16 @@
       "args": [
         "-logtostdout",
         "-colorlogtostdout",
-        "--reports-dir", "${workspaceFolder}/reports",
-        "--module-dir", "${workspaceFolder}/gel",
         "-v=${input:verbose-level}",
-        "${workspaceFolder}/gel/${input:target-script}"
+        "${workspaceFolder}/scripts/${input:target-script}"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [
         "command source ${workspaceFolder}/.lldbinit"
-      ]
+      ],
+      "env": {
+        "GEL_HOME": "${workspaceFolder}/gel"
+      }
     },
     {
       "name": "Run Script (No Eval)",
@@ -430,16 +432,17 @@
       "args": [
         "-logtostdout",
         "-colorlogtostdout",
-        "--reports-dir", "${workspaceFolder}/reports",
-        "--module-dir", "${workspaceFolder}/gel",
         "-v=${input:verbose-level}",
         "--eval=false",
-        "${workspaceFolder}/gel/${input:target-script}"
+        "${workspaceFolder}/scripts/${input:target-script}"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [
         "command source ${workspaceFolder}/.lldbinit"
-      ]
+      ],
+      "env": {
+        "GEL_HOME": "${workspaceFolder}/gel"
+      }
     },
     {
       "name": "Run Script (No Kernel)",
@@ -449,16 +452,17 @@
       "args": [
         "-logtostdout",
         "-colorlogtostdout",
-        "--reports-dir", "${workspaceFolder}/reports",
-        "--module-dir", "${workspaceFolder}/gel",
         "-v=${input:verbose-level}",
-        "${workspaceFolder}/gel/${input:target-script}",
+        "${workspaceFolder}/scripts/${input:target-script}",
         "--nokernel"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [
         "command source ${workspaceFolder}/.lldbinit"
-      ]
+      ],
+      "env": {
+        "GEL_HOME": "${workspaceFolder}/gel"
+      }
     },
   ]
 }

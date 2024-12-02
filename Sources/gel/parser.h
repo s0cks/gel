@@ -329,7 +329,7 @@ class Parser {
     ASSERT(code.good());
     ASSERT(scope);
     Parser parser(code, scope);
-    const auto slashpos = filename.find_last_of('/');
+    const auto slashpos = filename.find_last_of('/') + 1;
     const auto dotpos = filename.find_first_of('.', slashpos);
     const auto total_length = (dotpos - slashpos);
     const auto name = filename.substr(slashpos, total_length);

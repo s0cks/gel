@@ -145,6 +145,7 @@ auto main(int argc, char** argv) -> int {
   ::google::ParseCommandLineFlags(&argc, &argv, true);
   Heap::Init();
   Runtime::Init();
+  VLOG(1) << "${GEL_HOME} := " << GetHomeEnvVar();
   const auto expr = GetExpressionFlag();
   if (expr)
     return Execute((*expr));

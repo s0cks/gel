@@ -30,9 +30,13 @@
 namespace gel {
 DEFINE_bool(kernel, true, "Load the kernel at boot.");
 DEFINE_bool(log_script_instrs, false, "Log the Script instructions before execution");
-DEFINE_string(module_dir, "", "The directories to load modules from.");
 
 static const ThreadLocal<Runtime> runtime_;
+static const EnvironmentVariable kHomeVar("GEL_HOME");
+
+auto GetHomeEnvVar() -> const EnvironmentVariable& {
+  return kHomeVar;
+}
 
 auto GetRuntime() -> Runtime* {
   ASSERT(runtime_);
@@ -55,14 +59,36 @@ Runtime::~Runtime() {
   }
 }
 
+namespace fs = std::filesystem;
+
 void Runtime::LoadKernelModule() {
   ASSERT(FLAGS_kernel);
-  DVLOG(10) << "loading kernel module....";
-  LOG_IF(FATAL, !Import("_kernel", GetGlobalScope())) << "failed to import kernel module.";
-  LOG_IF(FATAL, !Import("rx", GetGlobalScope())) << "failed to import rx module.";
+  const auto home = kHomeVar.value();
+  if (!home) {
+    LOG(WARNING) << "${GEL_HOME} environment variable not set, skipping loading kernel.";
+    return;
+  }
+  const auto kernel = LoadModule("_kernel");
+  LOG_IF(FATAL, !kernel) << "failed to load the _kernel Module.";
+  LOG_IF(FATAL, !GetGlobalScope()->Add(kernel->GetScope())) << "failed to import the _kernel Module.";
+  for (const auto& entry : fs::directory_iterator((*home))) {
+    if (fs::is_regular_file(entry)) {
+      const auto& path = entry.path().string();
+      const auto slashpos = path.find_last_of('/') + 1;
+      const auto dotpos = path.find_first_of('.', slashpos);
+      const auto total_length = (dotpos - slashpos);
+      const auto module_name = path.substr(slashpos, total_length);
+      if (module_name == "_kernel")
+        continue;
+      DVLOG(10) << "loading the `" << module_name << "` Module....";
+      const auto m = LoadModule(module_name);
+      LOG_IF(ERROR, !m) << "failed to load the `" << module_name << "` Module.";
+      DVLOG(1) << m << " loaded!";
+    }
+  }
 }
 
-static inline auto FileExists(const std::string& filename) -> bool {
+static inline auto FileExists(const std::string& filename) -> bool {  // TODO: remove this
   std::ifstream file(filename);
   return file.good();
 }
@@ -71,10 +97,13 @@ class RuntimeModuleResolver {
   DEFINE_NON_COPYABLE_TYPE(RuntimeModuleResolver);
 
  private:
+  std::string home_;
   LocalScope* scope_;
 
-  explicit RuntimeModuleResolver(LocalScope* scope) :
+  explicit RuntimeModuleResolver(const std::string& home, LocalScope* scope) :
+    home_(home),
     scope_(scope) {
+    ASSERT(!home.empty());
     ASSERT(scope_);
   }
 
@@ -87,8 +116,7 @@ class RuntimeModuleResolver {
 
   auto ResolveModule(Symbol* symbol) -> Module* {
     ASSERT(symbol);
-    ASSERT(!FLAGS_module_dir.empty());
-    const auto module_filename = fmt::format("{0:s}/{1:s}.cl", FLAGS_module_dir, symbol->Get());
+    const auto module_filename = fmt::format("{0:s}/{1:s}.cl", home_, symbol->Get());
     if (!FileExists(module_filename)) {
       LOG(FATAL) << "cannot load module " << symbol << " from: " << module_filename;
       return nullptr;
@@ -98,9 +126,9 @@ class RuntimeModuleResolver {
   }
 
  public:
-  static inline auto Resolve(Symbol* symbol, LocalScope* scope) -> Module* {
+  static inline auto Resolve(const std::string& home, Symbol* symbol, LocalScope* scope) -> Module* {
     ASSERT(symbol);
-    RuntimeModuleResolver resolver(scope);
+    RuntimeModuleResolver resolver(home, scope);
     return resolver.ResolveModule(symbol);
   }
 };
@@ -110,13 +138,18 @@ auto Runtime::Import(Module* m) -> bool {
   return scope_->Add(m->GetScope());
 }
 
+auto Runtime::LoadModule(const std::string& name) -> Module* {
+  ASSERT(!name.empty());
+  const auto home = kHomeVar.value();
+  LOG_IF(FATAL, !home) << "no $" << kHomeVar.name() << " variable set in environment.";
+  return RuntimeModuleResolver::Resolve(home.value(), Symbol::New(name), GetGlobalScope());
+}
+
 auto Runtime::Import(Symbol* symbol, LocalScope* scope) -> bool {
   ASSERT(symbol);
-  if (FLAGS_module_dir.empty()) {
-    LOG(ERROR) << "cannot import module " << symbol << ", no module dir specified.";
-    return true;
-  }
-  const auto module = RuntimeModuleResolver::Resolve(symbol, scope);
+  const auto home = kHomeVar.value();
+  LOG_IF(FATAL, !home) << "no $" << kHomeVar.name() << " variable set in environment.";
+  const auto module = RuntimeModuleResolver::Resolve(home.value(), symbol, scope);
   ASSERT(module);
   return Import(module);
 }
