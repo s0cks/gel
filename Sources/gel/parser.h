@@ -91,10 +91,10 @@ class Parser {
     return next;
   }
 
-  auto ParseLocalVariable(LocalVariable** local, expr::Expression** value) -> bool;
-  auto ParseNamedLambda() -> Lambda*;
+  auto ParseLambda(const Token::Kind kind) -> Lambda*;
 
-  // Misc
+  auto ParseLocalVariable(LocalVariable** local, expr::Expression** value) -> bool;
+  auto ParseLiteralString() -> String*;
   auto ParseSymbol() -> Symbol*;
   auto ParseLoadSymbol() -> LoadVariableInstr*;
   auto ParseArguments(ArgumentSet& args) -> bool;
@@ -119,7 +119,7 @@ class Parser {
   auto ParseWhenExpr() -> expr::WhenExpr*;
   auto ParseCaseExpr() -> expr::CaseExpr*;
   auto ParseWhileExpr() -> expr::WhileExpr*;
-  auto ParseCondExpr() -> CondExpr*;
+  auto ParseCondExpr() -> expr::CondExpr*;
   auto ParseLetExpr() -> expr::LetExpr*;
   auto ParseRxOpExpr() -> expr::RxOpExpr*;
   auto ParseLetRxExpr() -> expr::LetRxExpr*;

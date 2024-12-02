@@ -27,6 +27,7 @@ class Lambda : public Procedure, public Executable {
  private:
   Object* owner_ = nullptr;
   Symbol* name_;
+  String* docstring_ = nullptr;
   ArgumentSet args_;  // TODO: fails to copy during GC
   expr::Expression* body_;
 
@@ -65,6 +66,19 @@ class Lambda : public Procedure, public Executable {
   void SetName(Symbol* rhs) {
     ASSERT(rhs);
     name_ = rhs;
+  }
+
+  auto GetDocstring() const -> String* {
+    return docstring_;
+  }
+
+  inline auto HasDocstring() const -> bool {
+    return GetDocstring() != nullptr;
+  }
+
+  void SetDocstring(String* rhs) {
+    ASSERT(rhs);
+    docstring_ = rhs;
   }
 
   auto GetArgs() const -> const ArgumentSet& {

@@ -153,6 +153,7 @@ auto Runtime::CreateInitScope() -> LocalScope* {
   RegisterNative<proc::array_get>(scope);
   RegisterNative<proc::array_set>(scope);
   RegisterNative<proc::array_length>(scope);
+  RegisterNative<proc::gel_docs>(scope);
 
 #ifdef GEL_ENABLE_RX
 #define REGISTER_RX(Name)                                                              \

@@ -525,6 +525,10 @@ class StringObject : public Datum {
     return value_;
   }
 
+  inline auto IsEmpty() const -> bool {
+    return value_.empty();
+  }
+
   auto Equals(const std::string& rhs) const -> bool;
 };
 
@@ -549,6 +553,7 @@ class String : public StringObject {
     return rhs->AsString()->Get();
   }
 
+  static auto Empty() -> String*;
   static auto ValueOf(Object* rhs) -> String*;
 };
 

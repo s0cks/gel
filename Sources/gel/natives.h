@@ -4,6 +4,7 @@
 #include "gel/native_procedure.h"
 
 namespace gel::proc {
+_DECLARE_NATIVE_PROCEDURE(gel_docs, "gel:docs?");
 DECLARE_NATIVE_PROCEDURE(print);
 DECLARE_NATIVE_PROCEDURE(import);
 DECLARE_NATIVE_PROCEDURE(exit);

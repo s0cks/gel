@@ -29,6 +29,14 @@ void Parser::PopScope() {
   SetScope(new_scope);
 }
 
+auto Parser::ParseLiteralString() -> String* {
+  const auto next = ExpectNext(Token::kLiteralString);
+  ASSERT(next.kind == Token::kLiteralString);
+  if (next.text.empty())
+    return nullptr;
+  return String::New(next.text);
+}
+
 auto Parser::ParseSymbol() -> Symbol* {
   const auto& next = NextToken();
   LOG_IF(FATAL, next.kind != Token::kIdentifier) << "unexpected: " << next << ", expected: " << Token::kIdentifier;
@@ -851,30 +859,46 @@ auto Parser::ParseLocalVariable(LocalVariable** local, expr::Expression** value)
   return true;
 }
 
-auto Parser::ParseNamedLambda() -> Lambda* {
-  ExpectNext(Token::kDefun);
+auto Parser::ParseLambda(const Token::Kind kind) -> Lambda* {
+  ExpectNext(kind);
   // name
-  const auto name = ParseSymbol();
-  ASSERT(name);
-  LOG_IF(WARNING, GetScope()->Has(name)) << "redefining: " << name;
+  Symbol* name = nullptr;
+  if (PeekEq(Token::kIdentifier)) {
+    name = ParseSymbol();
+    ASSERT(name);
+  }
   // arguments
-  ExpectNext(Token::kLParen);
   ArgumentSet args;
+  ExpectNext(Token::kLParen);
   if (!ParseArguments(args))
     throw Exception("failed to parse ArgumentSet");
   ExpectNext(Token::kRParen);
-  // body TODO: allow (<expression list>)
-  PushScope();
+  // docstring
+  String* docs = nullptr;
+  if (PeekEq(Token::kLiteralString)) {
+    docs = ParseLiteralString();
+    ASSERT(docs);
+  }
+  // body
   ExpressionList body;
+  PushScope();
   if (!ParseExpressionList(body)) {
     LOG(FATAL) << "failed to parse lambda body.";
     return nullptr;
   }
   PopScope();
-
   const auto lambda = Lambda::New(args, body);
   ASSERT(lambda);
-  lambda->SetName(name);
+  if (name)
+    lambda->SetName(name);
+  DLOG_IF(WARNING, name && GetScope()->Has(name)) << "redefining: " << name;
+  if (docs) {
+    if (body.empty()) {
+      body.push_back(expr::LiteralExpr::New(docs));
+    } else {
+      lambda->SetDocstring(docs);
+    }
+  }
   return lambda;
 }
 
@@ -945,7 +969,7 @@ auto Parser::ParseScript() -> Script* {
           break;
         }
         case Token::kDefun: {
-          const auto lambda = ParseNamedLambda();
+          const auto lambda = ParseLambda(Token::kDefun);
           ASSERT(lambda && lambda->HasName());
           const auto local = LocalVariable::New(GetScope(), lambda->GetName(), lambda);
           ASSERT(local);

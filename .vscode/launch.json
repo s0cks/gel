@@ -38,7 +38,8 @@
         "test-publish-subject.cl",
         "test-cast.cl",
         "test-instanceof.cl",
-        "test-new.cl"
+        "test-new.cl",
+        "test-docstring.cl"
       ],
       "default": "while.cl",
       "description": "A value that is even."

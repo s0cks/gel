@@ -28,6 +28,18 @@
 #include "gel/stack_frame.h"
 
 namespace gel::proc {
+NATIVE_PROCEDURE_F(gel_docs) {
+  if (args.empty())
+    return DoNothing();
+  OptionalNativeArgument<0, Lambda> lambda(args);
+  if (!lambda)
+    return Throw(lambda.GetError());
+  if (!lambda->HasDocstring())
+    return Return(String::Empty());
+  ASSERT(lambda->HasDocstring() && !lambda->GetDocstring()->IsEmpty());
+  return Return(lambda->GetDocstring());
+}
+
 NATIVE_PROCEDURE_F(import) {
   ASSERT(!args.empty());
   const auto arg = args[0];

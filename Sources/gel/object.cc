@@ -421,6 +421,12 @@ auto String::ToString() const -> std::string {
   return helper;
 }
 
+auto String::Empty() -> String* {
+  static String* kEmpty = String::New();
+  ASSERT(kEmpty);
+  return kEmpty;
+}
+
 auto String::ValueOf(Object* rhs) -> String* {
   if (rhs->IsString())
     return rhs->AsString();

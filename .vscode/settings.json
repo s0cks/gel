@@ -131,5 +131,6 @@
   "cmake.generator": "Ninja",
   "cmake.ignoreCMakeListsMissing": true,
   "cmake.launchBehavior": "breakAndReuseTerminal",
-  "clang-format.fallbackStyle": "Google"
+  "clang-format.fallbackStyle": "Google",
+  "bookmarks.saveBookmarksInProject": true
 }
