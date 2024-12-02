@@ -1,26 +1,26 @@
 (ns rx
   ;; Observables
-  (defnative map [observable func]
+  (defnative map [o f]
     "Map a value in an observable to another value.")
-  (defnative filter [observable predicate]
-    "Filter an observable using a supplied predicate.")
-  (defnative first [observable]
-    "")
-  (defnative last [observable]
-    "")
-  (defnative skip [observable num]
-    "")
-  (defnative take [observable num]
-    "")
-  (defnative take-while [observable predicate]
-    "")
-  (defnative buffer [observable]
-    "")
+  (defnative filter [o p]
+    "Filter Observable [o] using the supplied Predicate [p].")
+  (defnative first [o]
+    "Return the first value in Observable [o].")
+  (defnative last [o]
+    "Return the last value in Observable [o].")
+  (defnative skip [o n]
+    "Skip [n] values in Observable [o].")
+  (defnative take [o n]
+    "Take [n] values from Observable [o].")
+  (defnative take-while [o p]
+    "Take values from Observable [o] while Predicate [p].")
+  (defnative buffer [o n]
+    "Buffer [n] values from Observable [o] into a list.")
   ;; Subjects
-  (defnative publish [subject valueOrError]
-    "")
-  (defnative complete [subject]
-    "")
+  (defnative publish [s next]
+    "Publish the [next] value to Subject [s].")
+  (defnative complete [s]
+    "Complete Subject [s].")
   ;; Misc
-  (defnative subscribe [observableOrSubject]
-    ""))
+  (defnative subscribe [source on_next on_error? on_complete?]
+    "Subscribe to an Observable or Subject [source] using the supplied [on_next] and optional [on_error] & [on_complete]."))

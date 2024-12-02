@@ -1,10 +1,10 @@
 (let ((topic (rx:publish-subject)) ; create a topic
       (numbers ; create an observable from the topic that is for only numbers
         (let:rx (:->Observable topic)
-          (rx:filter number?))))
+          (rx:filter (fn [x] (#Number? x))))))
   ; print each string, any errors and when the topic is completed
   (let:rx (:->Observable topic)
-    (rx:filter string?)
+    (rx:filter (fn [x] (#String? x)))
     (rx:subscribe
       (fn [next]
         (print (format "found a String: {}" next)))
