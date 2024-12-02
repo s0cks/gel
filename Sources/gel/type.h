@@ -27,7 +27,8 @@ class Definition;
   V(NativeProcedure)               \
   V(Pair)                          \
   V(Script)                        \
-  V(Error)
+  V(Error)                         \
+  V(Namespace)
 
 #define FOR_EACH_TYPE(V)     \
   FOR_EACH_PRIMITIVE_TYPE(V) \

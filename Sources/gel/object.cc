@@ -15,6 +15,7 @@
 #include "gel/expression.h"
 #include "gel/heap.h"
 #include "gel/macro.h"
+#include "gel/namespace.h"
 #include "gel/native_procedure.h"
 #include "gel/platform.h"
 #include "gel/pointer.h"
