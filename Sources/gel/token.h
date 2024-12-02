@@ -30,6 +30,7 @@ struct Position {
   FOR_EACH_BINARY_OP(V)       \
   FOR_EACH_UNARY_OP(V)        \
   V(DefNamespace)             \
+  V(DefNative)                \
   V(Define)                   \
   V(Defun)                    \
   V(Comment)                  \

@@ -59,6 +59,7 @@ void Runtime::LoadKernelModule() {
   ASSERT(FLAGS_kernel);
   DVLOG(10) << "loading kernel module....";
   LOG_IF(FATAL, !Import("_kernel", GetGlobalScope())) << "failed to import kernel module.";
+  LOG_IF(FATAL, !Import("rx", GetGlobalScope())) << "failed to import rx module.";
 }
 
 static inline auto FileExists(const std::string& filename) -> bool {
@@ -106,8 +107,7 @@ class RuntimeModuleResolver {
 
 auto Runtime::Import(Module* m) -> bool {
   ASSERT(m);
-  scope_->Add(m->GetScope());
-  return true;
+  return scope_->Add(m->GetScope());
 }
 
 auto Runtime::Import(Symbol* symbol, LocalScope* scope) -> bool {
@@ -141,13 +141,7 @@ auto Runtime::CreateInitScope() -> LocalScope* {
   RegisterNative<proc::gel_docs>(scope);
 
 #ifdef GEL_ENABLE_RX
-#define REGISTER_RX(Name)                                                              \
-  ({                                                                                   \
-    const auto [symbol, procedure] = RegisterNative<proc::rx_##Name>(scope);           \
-    const auto local = LocalVariable::New(rx_scope, symbol, procedure);                \
-    ASSERT(local);                                                                     \
-    LOG_IF(FATAL, !rx_scope->Add(local)) << "failed to add rx scope value: " << local; \
-  })
+#define REGISTER_RX(Name) RegisterNative<proc::rx_##Name>(rx_scope);
 
   {
     const auto rx_scope = rx::GetRxScope();
@@ -181,6 +175,7 @@ auto Runtime::CreateInitScope() -> LocalScope* {
   RegisterNative<proc::gel_get_target_triple>(scope);
   RegisterNative<proc::gel_get_locals>(scope);
   RegisterNative<proc::gel_get_classes>(scope);
+  RegisterNative<proc::gel_get_natives>(scope);
 #endif  // GEL_DEBUG
   return scope;
 }
@@ -273,16 +268,14 @@ auto Runtime::Eval(const std::string& expr) -> Object* {
   ASSERT(runtime);
   const auto scope = runtime->GetGlobalScope();
   const auto e = ExpressionCompiler::Compile(expr, scope);
-  ASSERT(e && e->HasEntry());
-  const auto init_frame = runtime->GetCurrentFrame();
-  // TODO: runtime->Call(e->GetEntry()->GetTarget(), scope);
-  const auto post_frame = runtime->GetCurrentFrame();
-  ASSERT(runtime->HasError() || (!init_frame && !post_frame) || (*init_frame) == (*post_frame));
-  return runtime->Pop();
+  ASSERT(e);
+  return nullptr;  // TODO: implement
 }
 
 auto Runtime::Exec(Script* script) -> Object* {
-  ASSERT(script && script->IsCompiled());
+  ASSERT(script);
+  if (!script->HasEntry())
+    return Null();
   const auto runtime = GetRuntime();
   ASSERT(runtime);
   if (FLAGS_log_script_instrs) {

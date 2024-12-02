@@ -6,6 +6,7 @@
 #include <type_traits>
 #include <variant>
 
+#include "gel/argument.h"
 #include "gel/common.h"
 #include "gel/error.h"
 #include "gel/instruction.h"
@@ -13,12 +14,17 @@
 
 namespace gel {
 class Runtime;
+class NativeProcedure;
+using NativeProcedureList = std::vector<NativeProcedure*>;
 class NativeProcedure : public Procedure {
+  friend class Parser;
   friend class Runtime;
   friend class Interpreter;
 
  private:
   Symbol* symbol_;
+  ArgumentSet args_{};
+  String* docs_ = nullptr;
 
  protected:
   explicit NativeProcedure(Symbol* symbol) :
@@ -49,6 +55,15 @@ class NativeProcedure : public Procedure {
     return true;
   }
 
+  void SetArgs(const ArgumentSet& args) {
+    args_ = args;
+  }
+
+  void SetDocs(String* rhs) {
+    ASSERT(rhs);
+    docs_ = rhs;
+  }
+
  public:
   ~NativeProcedure() override = default;
 
@@ -64,7 +79,33 @@ class NativeProcedure : public Procedure {
     return nullptr;  // TODO: remove this stupid function
   }
 
+  auto GetArgs() const -> const ArgumentSet& {
+    return args_;
+  }
+
+  auto GetDocs() const -> String* {
+    return docs_;
+  }
+
+  inline auto HasDocs() const -> bool {
+    return GetDocs() != nullptr;
+  }
+
   DECLARE_TYPE(NativeProcedure);
+
+ private:
+  static NativeProcedureList all_;
+
+ protected:
+  static void Register(NativeProcedure* native);
+
+ public:
+  static auto Find(const std::string& name) -> NativeProcedure*;
+  static auto Find(Symbol* symbol) -> NativeProcedure*;
+
+  static inline auto GetAll() -> const NativeProcedureList& {
+    return all_;
+  }
 };
 
 #define _DEFINE_NATIVE_PROCEDURE_TYPE(Name, Sym)             \
@@ -115,6 +156,7 @@ class NativeProcedure : public Procedure {
     ASSERT(kInstance == nullptr && kSymbol == nullptr); \
     kSymbol = Symbol::New(kSymbolString);               \
     kInstance = new Name();                             \
+    NativeProcedure::Register(kInstance);               \
     ASSERT(kInstance&& kSymbol);                        \
   }                                                     \
   auto Name::Apply(const ObjectList& args) const -> bool

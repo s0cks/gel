@@ -31,13 +31,19 @@ namespace gel::proc {
 NATIVE_PROCEDURE_F(gel_docs) {
   if (args.empty())
     return DoNothing();
-  OptionalNativeArgument<0, Lambda> lambda(args);
-  if (!lambda)
-    return Throw(lambda.GetError());
-  if (!lambda->HasDocstring())
-    return Return(String::Empty());
-  ASSERT(lambda->HasDocstring() && !lambda->GetDocstring()->IsEmpty());
-  return Return(lambda->GetDocstring());
+  OptionalNativeArgument<0, Procedure> func(args);
+  if (!func)
+    return Throw(func.GetError());
+  if (func->IsLambda()) {
+    if (!func->AsLambda()->HasDocstring())
+      return Return(String::Empty());
+    return Return(func->AsLambda()->GetDocstring());
+  } else if (func->IsNativeProcedure()) {
+    if (!func->AsNativeProcedure()->HasDocs())
+      return Return(String::Empty());
+    return Return(func->AsNativeProcedure()->GetDocs());
+  }
+  return ThrowError(fmt::format("`{}` is not a Procedure", func->ToString()));
 }
 
 NATIVE_PROCEDURE_F(import) {
@@ -235,6 +241,17 @@ NATIVE_PROCEDURE_F(gel_get_classes) {
 NATIVE_PROCEDURE_F(gel_get_target_triple) {
   ASSERT(HasRuntime());
   return ReturnNew<String>(GEL_TARGET_TRIPLE);
+}
+
+NATIVE_PROCEDURE_F(gel_get_natives) {
+  ASSERT(HasRuntime());
+  ASSERT(args.empty());
+  const auto& natives = NativeProcedure::GetAll();
+  Object* result = Null();
+  for (const auto& native : natives) {
+    result = Pair::New(String::ValueOf(native->GetSymbol()), result);
+  }
+  return Return(result);
 }
 
 #endif  // GEL_DEBUG

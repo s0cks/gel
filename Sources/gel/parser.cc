@@ -9,6 +9,7 @@
 #include "gel/local.h"
 #include "gel/local_scope.h"
 #include "gel/module.h"
+#include "gel/native_procedure.h"
 #include "gel/object.h"
 #include "gel/token.h"
 
@@ -34,7 +35,7 @@ auto Parser::ParseLiteralString() -> String* {
   const auto next = ExpectNext(Token::kLiteralString);
   ASSERT(next.kind == Token::kLiteralString);
   if (next.text.empty())
-    return nullptr;
+    return String::Empty();
   return String::New(next.text);
 }
 
@@ -818,6 +819,8 @@ auto Parser::NextToken() -> const Token& {
       return NextToken(Token::kLetExpr);
     else if (ident == "let:rx")
       return NextToken(Token::kLetRxExpr);
+    else if (ident == "defnative")
+      return NextToken(Token::kDefNative);
     return NextToken(Token::kIdentifier, ident);
   }
 
@@ -885,6 +888,29 @@ auto Parser::ParseNamespace() -> Namespace* {
         const auto lambda = ParseLambda(Token::kDefun);
         ASSERT(lambda && lambda->HasName());
         LOG_IF(FATAL, !scope->Add(lambda->GetName(), lambda)) << "failed to add " << lambda << " to scope.";
+        break;
+      }
+      case Token::kDefNative: {
+        ExpectNext(Token::kDefNative);
+        const auto symbol = GetNamespace()->Prefix(ParseSymbol());
+        ASSERT(symbol);
+        const auto native = NativeProcedure::Find(symbol);
+        LOG_IF(FATAL, !native) << "failed to find native named: " << symbol;
+        LOG_IF(FATAL, !scope->Add(symbol, native)) << "failed to add " << native << " to scope.";
+        // arguments
+        ArgumentSet args;
+        ExpectNext(Token::kLParen);
+        if (!ParseArguments(args))
+          throw Exception("failed to parse ArgumentSet");
+        native->SetArgs(args);
+        ExpectNext(Token::kRParen);
+        // docstring
+        String* docs = nullptr;
+        if (PeekEq(Token::kLiteralString)) {
+          docs = ParseLiteralString();
+          ASSERT(docs);
+        }
+        native->SetDocs(docs);
         break;
       }
       default:

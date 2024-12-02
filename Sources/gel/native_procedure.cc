@@ -5,6 +5,34 @@
 #include "gel/type.h"
 
 namespace gel {
+NativeProcedureList NativeProcedure::all_{};
+
+void NativeProcedure::Register(NativeProcedure* native) {
+  ASSERT(native);
+  all_.push_back(native);
+}
+
+auto NativeProcedure::Find(const std::string& name) -> NativeProcedure* {
+  ASSERT(!name.empty());
+  for (const auto& native : all_) {
+    ASSERT(native);
+    const auto symbol = native->GetSymbol()->Get();
+    if (name == symbol)
+      return native;
+  }
+  return nullptr;
+}
+
+auto NativeProcedure::Find(Symbol* symbol) -> NativeProcedure* {
+  ASSERT(symbol);
+  for (const auto& native : all_) {
+    ASSERT(native);
+    if (native->GetSymbol()->Equals(symbol))
+      return native;
+  }
+  return nullptr;
+}
+
 auto NativeProcedure::New(const ObjectList& args) -> NativeProcedure* {
   NOT_IMPLEMENTED(FATAL);
 }
