@@ -4,6 +4,8 @@
 #include "gel/type.h"
 
 namespace gel {
+class FlowGraph;
+
 #define DECLARE_TRAIT(Name)                    \
   template <typename T>                        \
   struct Name {                                \
@@ -23,6 +25,15 @@ DECLARE_IS_EXECUTABLE(Lambda);
 DECLARE_IS_EXECUTABLE(Procedure);
 DECLARE_IS_EXECUTABLE(NativeProcedure);
 #undef DECLARE_IS_EXECUTABLE
+
+DECLARE_TRAIT(has_entry);
+#define DECLARE_HAS_ENTRY(Name) DECLARE_HAS_TRAIT(has_entry, Name)
+DECLARE_HAS_ENTRY(Script);
+DECLARE_HAS_ENTRY(Lambda);
+DECLARE_HAS_ENTRY(Procedure);
+DECLARE_HAS_ENTRY(FlowGraph);
+DECLARE_HAS_ENTRY(NativeProcedure);
+#undef DECLARE_HAS_ENTRY
 
 DECLARE_TRAIT(is_iterable);
 #define DECLARE_IS_ITERABLE(Name) DECLARE_HAS_TRAIT(is_iterable, Name)

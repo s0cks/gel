@@ -9,6 +9,7 @@
 #include <iostream>
 #include <rpp/sources/fwd.hpp>
 
+#include "gel/common.h"
 #include "gel/error.h"
 #include "gel/expression_compiler.h"
 #include "gel/expression_dot.h"
@@ -23,40 +24,73 @@
 #include "gel/repl.h"
 #include "gel/runtime.h"
 #include "gel/rx.h"
+#include "gel/type_traits.h"
 #include "gel/zone.h"
 
 using namespace gel;
 
-static inline auto PrintTimedResult(Object* result, const Clock::duration& duration) -> int {
-  DLOG(INFO) << "finished in " << units::time::nanosecond_t(static_cast<double>(duration.count()));
-  if (IsError(result)) {
-    std::cout << "error: " << ToError(result)->GetMessage();
-    return EXIT_FAILURE;
+struct TimedResult {
+  DEFINE_DEFAULT_COPYABLE_TYPE(TimedResult);
+
+ public:
+  gel::Object* result;
+  Clock::duration duration;
+
+  TimedResult() = default;
+  TimedResult(gel::Object* r, const Clock::duration& d) :
+    result(r),
+    duration(d) {}
+  TimedResult(const std::pair<gel::Object*, Clock::duration>& value) :
+    result(value.first),
+    duration(value.second) {}
+  ~TimedResult() = default;
+
+  auto IsError() const -> bool {
+    return gel::IsError(result);
   }
 
-  if (!IsNull(result)) {
-    std::cout << "result: ";
-    PrintValue(std::cout, result) << std::endl;
+  auto IsNull() const -> bool {
+    return gel::IsNull(result);
   }
-  return EXIT_SUCCESS;
+
+  operator bool() const {
+    return !IsError();
+  }
+
+  friend auto operator<<(std::ostream& stream, const TimedResult& rhs) -> std::ostream& {
+    const auto& result = rhs.result;
+    const auto& duration = rhs.duration;
+    DLOG(INFO) << "finished in " << units::time::nanosecond_t(static_cast<double>(duration.count()));
+    if (gel::IsNull(result))
+      return stream;
+    if (gel::IsError(result))
+      return stream << "error: " << ToError(result)->GetMessage();
+    ASSERT(!gel::IsNull(result));
+    stream << "result: ";
+    PrintValue(stream, result) << std::endl;
+    return stream;
+  }
+};
+
+template <class E, const Severity S = google::INFO>
+static inline void DumpFlowGraph(E* value, std::enable_if_t<has_entry<E>::value>* = nullptr) {
+  if (!FLAGS_dump_flow_graph)
+    return;
+  LOG_AT_LEVEL(S) << value << " Instructions:";
+  InstructionLogger::Log<S>(value->GetEntry());
 }
 
+// TODO: cleanup
 static inline auto Execute(const std::string& expr) -> int {
-  if (FLAGS_eval) {
-    const auto [result, time] = TimedExecution<Object*>([&expr]() -> Object* {
-      try {
-        return Runtime::Eval(expr);
-      } catch (const gel::Exception& exc) {
-        return Error::New(fmt::format("failed to execute expression: {}", exc.GetMessage()));
-      }
-    });
-    return PrintTimedResult(result, time);
-  } else if (FLAGS_dump_ast || FLAGS_dump_flow_graph) {
+  if (FLAGS_dump_ast) {
+    // TODO: implement
+  }
+
+  if (FLAGS_dump_ast) {
     try {
-      const auto expression = ExpressionCompiler::Compile(expr, GetRuntime()->GetGlobalScope());
-      ASSERT(expression && expression->HasEntry());
-      LOG(INFO) << "result: ";
-      InstructionLogger::Log(expression->GetEntry());
+      const auto flow_graph = ExpressionCompiler::Compile(expr, GetRuntime()->GetGlobalScope());
+      ASSERT(flow_graph && flow_graph->HasEntry());
+      DumpFlowGraph(flow_graph);
     } catch (const gel::Exception& exc) {
       LOG(ERROR) << "failed to execute expression.";
       std::cerr << " * expression: " << expr << std::endl;
@@ -64,6 +98,21 @@ static inline auto Execute(const std::string& expr) -> int {
       return EXIT_FAILURE;
     }
   }
+
+  if (!FLAGS_eval)
+    return EXIT_SUCCESS;
+  const TimedResult result = TimedExecution<Object*>([&expr]() -> Object* {
+    try {
+      return Runtime::Eval(expr);
+    } catch (const gel::Exception& exc) {
+      return Error::New(fmt::format("failed to execute expression: {}", exc.GetMessage()));
+    }
+  });
+  if (!result) {
+    std::cerr << result;
+    return EXIT_FAILURE;
+  }
+  std::cout << result;
   return EXIT_SUCCESS;
 }
 
@@ -73,23 +122,21 @@ static inline auto ExecuteScript(const std::string& filename) -> int {
   if (FLAGS_dump_ast) {
     // TODO: implement
   }
-  if (FLAGS_dump_flow_graph) {
-    DLOG(INFO) << "Script instructions:";
-    instr::InstructionIterator iter(script);
-    while (iter.HasNext()) {
-      DLOG(INFO) << "- " << iter.Next()->ToString();
+  DumpFlowGraph(script);
+  if (!FLAGS_eval)
+    return EXIT_SUCCESS;
+  const TimedResult result = TimedExecution<Object*>([script]() -> Object* {
+    try {
+      return Runtime::Exec(script);
+    } catch (const gel::Exception& exc) {
+      return Error::New(fmt::format("failed to execute script: {}", exc.GetMessage()));
     }
+  });
+  if (!result) {
+    std::cerr << result;
+    return EXIT_FAILURE;
   }
-  if (FLAGS_eval) {
-    const auto [result, time] = TimedExecution<Object*>([script]() -> Object* {
-      try {
-        return Runtime::Exec(script);
-      } catch (const gel::Exception& exc) {
-        return Error::New(fmt::format("failed to execute script: {}", exc.GetMessage()));
-      }
-    });
-    return PrintTimedResult(result, time);
-  }
+  std::cout << result;
   return EXIT_SUCCESS;
 }
 
