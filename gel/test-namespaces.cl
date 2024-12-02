@@ -12,4 +12,5 @@
     "Prints the sq of the supplied value."
     (cond (not (number? x)) '()
       (print (sq x)))))
+(test_with_no_docs:print_sq 10)
 (test_with_docs:print_sq 10)

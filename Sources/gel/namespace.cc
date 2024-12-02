@@ -4,9 +4,6 @@
 
 namespace gel {
 NamespaceList Namespace::namespaces_{};
-void Namespace::Init() {
-  InitClass();
-}
 
 auto Namespace::Get(const std::string& name) -> Namespace* {
   ASSERT(!name.empty());
@@ -42,7 +39,7 @@ auto Namespace::HasPrefix(Symbol* rhs) const -> bool {
 }
 
 auto Namespace::Prefix(Symbol* rhs) const -> Symbol* {
-  if (HasPrefix(rhs))
+  if (HasPrefix(rhs) || IsKernelNamespace())
     return rhs;
   return Symbol::New(fmt::format("{0:s}:{1:s}", GetName()->Get(), rhs->Get()));
 }

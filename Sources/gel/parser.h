@@ -3,6 +3,7 @@
 
 #include <glog/logging.h>
 
+#include <fstream>
 #include <istream>
 #include <ostream>
 #include <utility>
@@ -291,6 +292,7 @@ class Parser {
 
   auto ParseExpression() -> Expression*;
   auto ParseScript() -> Script*;
+  auto ParseModule(const std::string& name) -> Module*;
 
  public:
   static inline auto ParseExpr(std::istream& stream, LocalScope* scope = LocalScope::New()) -> expr::Expression* {
@@ -313,6 +315,25 @@ class Parser {
     ASSERT(scope);
     Parser parser(stream, scope);
     return parser.ParseScript();
+  }
+
+  static inline auto ParseModuleFrom(const std::string& filename,
+                                     LocalScope* scope = LocalScope::New(GetRuntime()->GetGlobalScope())) -> Module* {
+    std::stringstream code;
+    {
+      std::ifstream file(filename, std::ios::binary | std::ios::in);
+      LOG_IF(FATAL, !file) << "failed to load module from: " << filename;
+      code << file.rdbuf();
+      file.close();
+    }
+    ASSERT(code.good());
+    ASSERT(scope);
+    Parser parser(code, scope);
+    const auto slashpos = filename.find_last_of('/');
+    const auto dotpos = filename.find_first_of('.', slashpos);
+    const auto total_length = (dotpos - slashpos);
+    const auto name = filename.substr(slashpos, total_length);
+    return parser.ParseModule(name);
   }
 };
 }  // namespace gel

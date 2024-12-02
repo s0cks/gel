@@ -4,6 +4,8 @@
 #include "gel/to_string_helper.h"
 
 namespace gel {
+ModuleList Module::modules_{};
+
 auto Module::ToString() const -> std::string {
   ToStringHelper<Module> helper;
   helper.AddField("name", GetName());

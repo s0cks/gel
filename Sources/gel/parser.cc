@@ -8,6 +8,7 @@
 #include "gel/instruction.h"
 #include "gel/local.h"
 #include "gel/local_scope.h"
+#include "gel/module.h"
 #include "gel/object.h"
 #include "gel/token.h"
 
@@ -894,7 +895,6 @@ auto Parser::ParseNamespace() -> Namespace* {
   }
   ClearNamespace();
   SetScope(parent_scope);
-  DLOG(INFO) << "parsed: " << ns;
   return ns;
 }
 
@@ -969,6 +969,32 @@ auto Parser::ParseListExpr() -> expr::Expression* {
     list->Append(ParseExpression());
   }
   return list;
+}
+
+auto Parser::ParseModule(const std::string& name) -> Module* {
+  const auto scope = PushScope();
+  ASSERT(scope);
+  const auto new_module = Module::New(String::New(name), scope);
+  ASSERT(new_module);
+  while (!PeekEq(Token::kEndOfStream)) {
+    ExpectNext(Token::kLParen);
+    const auto next = PeekToken();
+    switch (next.kind) {
+      case Token::kDefNamespace: {
+        const auto ns = ParseNamespace();
+        ASSERT(ns);
+        LOG_IF(FATAL, !scope->Add(Symbol::New(ns->GetName()->Get()), ns)) << "failed to add " << ns << " to scope.";
+        LOG_IF(FATAL, !scope->Add(ns->GetScope())) << "failed to add " << ns << " to scope.";
+        break;
+      }
+      default:
+        Unexpected(next);
+        return nullptr;
+    }
+    ExpectNext(Token::kRParen);
+  }
+  PopScope();
+  return new_module;
 }
 
 auto Parser::ParseScript() -> Script* {

@@ -41,6 +41,11 @@ class Namespace : public Object {
     owner_ = rhs;
   }
 
+  // TODO: remove this function
+  inline auto IsKernelNamespace() const -> bool {
+    return name_->Get() == "_kernel";
+  }
+
  public:
   ~Namespace() override = default;
 
@@ -68,7 +73,6 @@ class Namespace : public Object {
   static NamespaceList namespaces_;
 
  public:
-  static void Init();
   static inline auto New(String* name, LocalScope* scope) -> Namespace* {
     ASSERT(name);
     ASSERT(scope);

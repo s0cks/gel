@@ -56,8 +56,9 @@
     (cdr (cdr (cdr (car xs)))))
   (defun cddddr (xs)
     (cdr (cdr (cdr (cdr xs)))))
-  (define PI 3.14159)
-  ; (define TAU (* 2 PI))
+  ;;TODO:
+  ;; - (define PI 3.14159)
+  ;; - (define TAU (* 2 PI))
   (defun sq (x)
     (* x x))
   (defun zero? (x)

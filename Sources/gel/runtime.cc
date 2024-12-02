@@ -16,6 +16,7 @@
 #include "gel/lambda.h"
 #include "gel/local.h"
 #include "gel/local_scope.h"
+#include "gel/module.h"
 #include "gel/native_procedure.h"
 #include "gel/natives.h"
 #include "gel/object.h"
@@ -65,35 +66,25 @@ static inline auto FileExists(const std::string& filename) -> bool {
   return file.good();
 }
 
-class ScriptResolver {
-  DEFINE_NON_COPYABLE_TYPE(ScriptResolver);
-
- protected:
-  ScriptResolver() = default;
-
- public:
-  virtual ~ScriptResolver() = default;
-  virtual auto ResolveScript(Symbol* symbol) -> Script* = 0;
-};
-class RuntimeScriptResolver : public ScriptResolver {
-  DEFINE_NON_COPYABLE_TYPE(RuntimeScriptResolver);
+class RuntimeModuleResolver {
+  DEFINE_NON_COPYABLE_TYPE(RuntimeModuleResolver);
 
  private:
   LocalScope* scope_;
 
-  explicit RuntimeScriptResolver(LocalScope* scope) :
+  explicit RuntimeModuleResolver(LocalScope* scope) :
     scope_(scope) {
     ASSERT(scope_);
   }
 
  public:
-  ~RuntimeScriptResolver() override = default;
+  ~RuntimeModuleResolver() = default;
 
   auto GetScope() const -> LocalScope* {
     return scope_;
   }
 
-  auto ResolveScript(Symbol* symbol) -> Script* override {
+  auto ResolveModule(Symbol* symbol) -> Module* {
     ASSERT(symbol);
     ASSERT(!FLAGS_module_dir.empty());
     const auto module_filename = fmt::format("{0:s}/{1:s}.cl", FLAGS_module_dir, symbol->Get());
@@ -102,26 +93,20 @@ class RuntimeScriptResolver : public ScriptResolver {
       return nullptr;
     }
     DVLOG(10) << "importing module " << symbol << " from: " << module_filename;
-
-    std::ifstream file(module_filename, std::ios::in | std::ios::binary);
-    ASSERT(file.good());
-    return Parser::ParseScript(file, GetScope());
+    return Parser::ParseModuleFrom(module_filename, GetScope());
   }
 
  public:
-  static inline auto Resolve(Symbol* symbol, LocalScope* scope) -> Script* {
+  static inline auto Resolve(Symbol* symbol, LocalScope* scope) -> Module* {
     ASSERT(symbol);
-    RuntimeScriptResolver resolver(scope);
-    return resolver.ResolveScript(symbol);
+    RuntimeModuleResolver resolver(scope);
+    return resolver.ResolveModule(symbol);
   }
 };
 
-auto Runtime::Import(Script* script) -> bool {
-  ASSERT(script);
-  const auto scope = script->GetScope();
-  ASSERT(scope);
-  scope_->Add(scope);
-  scripts_.push_back(script);
+auto Runtime::Import(Module* m) -> bool {
+  ASSERT(m);
+  scope_->Add(m->GetScope());
   return true;
 }
 
@@ -131,7 +116,7 @@ auto Runtime::Import(Symbol* symbol, LocalScope* scope) -> bool {
     LOG(ERROR) << "cannot import module " << symbol << ", no module dir specified.";
     return true;
   }
-  const auto module = RuntimeScriptResolver::Resolve(symbol, scope);
+  const auto module = RuntimeModuleResolver::Resolve(symbol, scope);
   ASSERT(module);
   return Import(module);
 }

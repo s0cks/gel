@@ -183,7 +183,7 @@ class Runtime : public ExecutionStack {
   auto StoreSymbol(Symbol* symbol, Object* value) -> bool;
   auto DefineSymbol(Symbol* symbol, Object* value) -> bool;
   auto LookupSymbol(Symbol* symbol, Object** result) -> bool;
-  auto Import(Script* module) -> bool;
+  auto Import(Module* module) -> bool;
   auto Import(Symbol* symbol, LocalScope* scope) -> bool;
 
   inline auto Import(const std::string& name, LocalScope* scope) -> bool {

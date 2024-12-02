@@ -76,8 +76,8 @@ auto Object::raw_ptr() const -> Pointer* {
 void Object::Init() {
   InitClass();
   Class::InitClass();
-  Namespace::Init();
-  Module::Init();
+  Namespace::InitClass();
+  Module::InitClass();
   // exec
   Script::InitClass();
   Procedure::InitClass();
