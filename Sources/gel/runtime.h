@@ -169,7 +169,7 @@ class Runtime : public ExecutionStack {
 
  public:  // TODO: reduce visibility
   void LoadKernelModule();
-  inline void Call(Procedure* procedure, const ObjectList& args) {
+  inline void Call(Procedure* procedure, const ObjectList& args = {}) {
     if (procedure->IsLambda()) {
       return Call(procedure->AsLambda(), args);
     } else if (procedure->IsNativeProcedure()) {

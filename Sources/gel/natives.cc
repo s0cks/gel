@@ -243,15 +243,6 @@ NATIVE_PROCEDURE_F(gel_get_target_triple) {
 
 #define NATIVE_RX_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(rx_##Name)
 
-template <typename... Args>
-static inline auto WrapPredicate(Runtime* runtime, Procedure* predicate) -> std::function<bool(Args...)> {
-  ASSERT(runtime);
-  return [runtime, predicate](Args... args) {
-    runtime->Call(predicate->AsProcedure(), {args...});
-    return gel::Truth(runtime->Pop());
-  };
-}
-
 NATIVE_RX_PROCEDURE_F(observer) {
   NativeArgument<0, Procedure> on_next(args);
   OptionalNativeArgument<1, Procedure> on_error(args);
@@ -292,7 +283,7 @@ NATIVE_RX_PROCEDURE_F(filter) {
   RequiredNativeArgument<1, Procedure> predicate(args);
   if (!predicate)
     return Throw(predicate.GetError());
-  source->Apply(rx::operators::filter(WrapPredicate<gel::Object*>(GetRuntime(), predicate)));
+  source->Apply(rx::operators::filter(rx::CallPredicate(GetRuntime(), predicate)));
   return DoNothing();
 }
 
@@ -323,51 +314,31 @@ NATIVE_RX_PROCEDURE_F(observable) {
   return ReturnNew<Observable>(args[0]);
 }
 
-static constexpr const auto kDoNothingOnCompleted = []() {
-  // do nothing
-};
-static constexpr const auto kDoNothingOnError = [](std::exception_ptr error) {
-  // do nothing
-};
-
-static inline auto CallOnNext(Runtime* runtime, Procedure* procedure) -> std::function<void(Object*)> {
-  return [runtime, procedure](Object* next) {
-    return runtime->Call(procedure, ObjectList{next});
-  };
-}
-
-static inline auto CallOnError(Runtime* runtime, Procedure* procedure) -> std::function<void(std::exception_ptr)> {
-  return [runtime, procedure](std::exception_ptr error) {
-    try {
-      std::rethrow_exception(error);
-    } catch (const Exception& exc) {
-      const auto error = Error::New(exc.what());
-      return runtime->Call(procedure, {error});
-    }
-  };
-}
-
-static inline auto CallOnCompleted(Runtime* runtime, Procedure* procedure) -> std::function<void()> {
-  return [runtime, procedure]() {
-    return runtime->Call(procedure, {});
-  };
-}
-
 NATIVE_RX_PROCEDURE_F(subscribe) {
   const auto runtime = GetRuntime();
   ASSERT(runtime);
   NativeArgument<0> source(args);
   if (!source)
     return Throw(source.GetError());
-  NativeArgument<1, Procedure> on_next_arg(args);
+  NativeArgument<1> on_next_arg(args);
   if (!on_next_arg)
     return Throw(on_next_arg.GetError());
+  if (on_next_arg->IsObserver()) {
+    if (source.GetValue()->IsSubject()) {
+      (source.GetValue())->AsSubject()->Subscribe(on_next_arg->AsObserver());
+      return DoNothing();
+    } else if (source.GetValue()->IsObservable()) {
+      (source.GetValue()->AsObservable())->Subscribe(on_next_arg->AsObserver());
+      return DoNothing();
+    }
+  }
+  if (!on_next_arg->IsProcedure())
+    return ThrowError(fmt::format("expected on_next arg `{}` to be a Procedure", (*on_next_arg)));
   OptionalNativeArgument<2, Procedure> on_error_arg(args);
   OptionalNativeArgument<3, Procedure> on_completed_arg(args);
-  const auto on_next = CallOnNext(runtime, on_next_arg);
-  const auto on_error = on_error_arg && on_error_arg.HasValue() ? CallOnError(runtime, on_error_arg) : kDoNothingOnError;
-  const auto on_completed =
-      on_completed_arg && on_completed_arg.HasValue() ? CallOnCompleted(runtime, on_completed_arg) : kDoNothingOnCompleted;
+  const auto on_next = rx::CallOnNext(runtime, on_next_arg->AsProcedure());
+  const auto on_error = rx::CallOnError(runtime, on_error_arg);
+  const auto on_completed = rx::CallOnComplete(runtime, on_completed_arg);
   if (source.GetValue()->IsSubject()) {
     (source.GetValue())->AsSubject()->Subscribe(on_next, on_error, on_completed);
     return DoNothing();
@@ -389,12 +360,13 @@ NATIVE_RX_PROCEDURE_F(map) {
   ASSERT(runtime);
   if (args.size() != 2)
     return ThrowError(fmt::format("expected args to be: `<observable> <func>`"));
-  CHECK_ARG_TYPE(0, source, Observable::GetClass());
-  CHECK_ARG_TYPE(1, on_next, Procedure::GetClass());
-  source->AsObservable()->Apply(rx::operators::map([on_next, runtime](Object* value) {
-    runtime->Call(on_next->AsProcedure(), {value});
-    return runtime->Pop();
-  }));
+  NativeArgument<0, Observable> source(args);
+  if (!source)
+    return Throw(source.GetError());
+  NativeArgument<1, Procedure> func(args);
+  if (!source)
+    return Throw(source.GetError());
+  source->AsObservable()->Apply(rx::map(runtime, func));
   return DoNothing();
 }
 

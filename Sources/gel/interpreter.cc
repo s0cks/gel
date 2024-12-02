@@ -72,7 +72,7 @@ auto Interpreter::VisitNewInstr(NewInstr* instr) -> bool {
   const auto runtime = GetRuntime();
   ASSERT(runtime);
   ObjectList args;
-  runtime->PopN(args, instr->GetNumberOfArgs());
+  runtime->PopN(args, instr->GetNumberOfArgs(), true);
 #define DEFINE_NEW_TYPE(Name) \
   if (type->Is<Name>())       \
     return PushNext(Name::New(args));

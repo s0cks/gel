@@ -558,12 +558,7 @@ auto EffectVisitor::VisitLetRxExpr(expr::LetRxExpr* expr) -> bool {
   ASSERT(expr);
   const auto scope = GetOwner()->PushScope({rx::GetRxScope()});
   ASSERT(scope);
-  Symbol* symbol = nullptr;
-  if (IsObservableSource(scope, expr->GetSource())) {
-    symbol = Symbol::New("observable");
-  } else if (IsSubjectSource(scope, expr->GetSource())) {
-    symbol = Symbol::New("subject");
-  }
+  Symbol* symbol = Symbol::New(".");
   ASSERT(symbol);
   const auto local = LocalVariable::New(scope, symbol);
   ASSERT(local);
