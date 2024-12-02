@@ -386,6 +386,23 @@
       ]
     },
     {
+      "name": "Run All Benchmarks",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/Benchmarks/gel-benchmarks",
+      "args": [
+        "-logtostdout",
+        "-colorlogtostdout",
+        "--reports-dir", "${workspaceFolder}/reports",
+        "--module-dir", "${workspaceFolder}/gel",
+        "-v=${input:verbose-level}"
+      ],
+      "cwd": "${workspaceFolder}",
+      "initCommands": [
+        "command source ${workspaceFolder}/.lldbinit"
+      ]
+    },
+    {
       "name": "Run Script",
       "type": "lldb",
       "request": "launch",

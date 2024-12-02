@@ -9,7 +9,6 @@
 #include <iostream>
 #include <rpp/sources/fwd.hpp>
 
-#include "gel/disassembler.h"
 #include "gel/error.h"
 #include "gel/expression_compiler.h"
 #include "gel/expression_dot.h"
@@ -57,7 +56,7 @@ static inline auto Execute(const std::string& expr) -> int {
       const auto expression = ExpressionCompiler::Compile(expr, GetRuntime()->GetGlobalScope());
       ASSERT(expression && expression->HasEntry());
       LOG(INFO) << "result: ";
-      LOG_IF(FATAL, !Disassembler::Disassemble(expression->GetEntry())) << "failed to disassemble: " << expression;
+      InstructionLogger::Log(expression->GetEntry());
     } catch (const gel::Exception& exc) {
       LOG(ERROR) << "failed to execute expression.";
       std::cerr << " * expression: " << expr << std::endl;
@@ -97,9 +96,6 @@ static inline auto ExecuteScript(const std::string& filename) -> int {
 auto main(int argc, char** argv) -> int {
   ::google::InitGoogleLogging(argv[0]);
   ::google::ParseCommandLineFlags(&argc, &argv, true);
-
-  const auto sub = rx::source::from_iterable(std::vector<std::string>{"Hello", "World"});
-
   Heap::Init();
   Runtime::Init();
   const auto expr = GetExpressionFlag();
