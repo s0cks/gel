@@ -5,4 +5,4 @@
 (print (#Long? 10))
 (print (#Number? 10))
 (print (#Procedure? print))
-(print (#Procedure? (lambda (x) (print x))))
+(print (#Procedure? (fn (x) (print x))))

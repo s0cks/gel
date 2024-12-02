@@ -35,12 +35,47 @@ NATIVE_PROCEDURE_F(gel_docs) {
   if (!func)
     return Throw(func.GetError());
   if (func->IsLambda()) {
-    if (!func->AsLambda()->HasDocstring())
-      return Return(String::Empty());
-    return Return(func->AsLambda()->GetDocstring());
+    const auto lambda = func->AsLambda();
+    std::stringstream ss;
+    if (lambda->HasName())
+      ss << lambda->GetName()->Get();
+    ss << std::endl;
+    ss << "([";
+    const auto& args = lambda->GetArgs();
+    if (!args.empty()) {
+      auto remaining = args.size();
+      for (const auto& arg : args) {
+        ss << arg.GetName();
+        if (remaining > 1)
+          ss << ", ";
+      }
+    }
+    ss << "])";
+    ss << std::endl;
+    ss << "  ";
+    if (lambda->HasDocstring())
+      ss << lambda->GetDocstring()->Get();
+    return ReturnNew<String>(ss.str());
   } else if (func->IsNativeProcedure()) {
-    if (!func->AsNativeProcedure()->HasDocs())
-      return Return(String::Empty());
+    const auto native = func->AsNativeProcedure();
+    std::stringstream ss;
+    ss << native->GetSymbol()->Get() << std::endl;
+    ss << "([";
+    const auto& args = native->GetArgs();
+    if (!args.empty()) {
+      auto remaining = args.size();
+      for (const auto& arg : args) {
+        ss << arg.GetName();
+        if (remaining > 1)
+          ss << ", ";
+      }
+    }
+    ss << "])";
+    ss << std::endl;
+    ss << "  ";
+    if (native->HasDocs())
+      ss << native->GetDocs()->Get();
+    return ReturnNew<String>(ss.str());
     return Return(func->AsNativeProcedure()->GetDocs());
   }
   return ThrowError(fmt::format("`{}` is not a Procedure", func->ToString()));

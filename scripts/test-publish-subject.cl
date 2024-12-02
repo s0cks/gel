@@ -6,19 +6,19 @@
   (let:rx (:->Observable topic)
     (rx:filter string?)
     (rx:subscribe
-      (lambda (next)
+      (fn [next]
         (print (format "found a String: {}" next)))
-      (lambda (error)
+      (fn [error]
         (print (format "error: {}" error)))
-      (lambda ()
+      (fn []
         (print "completed!"))))
   ; for each number print it and the value squared
   (let:rx numbers
     (rx:map
-      (lambda (x)
+      (fn [x]
         (list x (sq x))))
     (rx:subscribe
-      (lambda (next)
+      (fn [next]
         (print (format "found a Number: {}, heres the sq: {}" (car next) (cadr next)))
         (when (even? (car next))
           (print (format "found an even Number: {}" (car next)))))))

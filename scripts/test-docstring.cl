@@ -1,13 +1,13 @@
-(defun add_one_with_docs (x)
+(defn add_one_with_docs [x]
   "Adds one to the supplied value and returns it"
   (+ x 1))
-(defun empty ())
-(defun empty_with_string ()
+(defn empty [])
+(defn empty_with_string []
   "Hello World")
-(defun empty_with_string_and_docs ()
+(defn empty_with_string_and_docs []
   "Returns 'Hello World'"
   "Hello World")
-(defun add_none (x) x)
+(defn add_none [x] x)
 (print (gel:docs? add_one_with_docs))
 (print (gel:docs? empty))
 (print (gel:docs? empty_with_string))

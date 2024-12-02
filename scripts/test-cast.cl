@@ -1,12 +1,12 @@
-(defun print_with_type (x)
+(defn print_with_type [x]
   (print (format "{} ; {}" x  (type? x))))
 (let ((s (rx:publish-subject)))
   (rx:subscribe
     s
-    (lambda (x) x)
-    (lambda (err)
+    (fn [x] x)
+    (fn [err]
       (print (format "error: {}" err)))
-    (lambda ()
+    (fn []
       (print "completed")))
   (let:rx (:->Observable s)
     (rx:filter even?)
@@ -14,7 +14,7 @@
     (rx:subscribe print_with_type))
   (let:rx (:->Observable s)
     (rx:filter
-      (lambda (x)
+      (fn [x]
         (#String? x)))
     (rx:subscribe print_with_type))
   (rx:publish s "Hello World")

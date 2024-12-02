@@ -1,5 +1,5 @@
-(define test #f)
-(defun test-only (func)
+(def test #f)
+(defn test-only [func]
   (when test
     (func)))
-(test-only (lambda () (print "Hello World")))
+(test-only (fn [] (print "Hello World")))

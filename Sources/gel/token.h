@@ -29,10 +29,11 @@ struct Position {
   FOR_EACH_EXPRESSION_NODE(V) \
   FOR_EACH_BINARY_OP(V)       \
   FOR_EACH_UNARY_OP(V)        \
+  V(Fn)                       \
   V(DefNamespace)             \
   V(DefNative)                \
-  V(Define)                   \
-  V(Defun)                    \
+  V(Def)                      \
+  V(Defn)                     \
   V(Comment)                  \
   V(Hash)                     \
   V(Quote)                    \
@@ -43,6 +44,8 @@ struct Position {
   V(Dot)                      \
   V(Range)                    \
   V(Identifier)               \
+  V(LBracket)                 \
+  V(RBracket)                 \
   V(LiteralNumber)            \
   V(LiteralDouble)            \
   V(LiteralLong)              \

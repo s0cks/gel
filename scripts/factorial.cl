@@ -1,2 +1,2 @@
-(define x 7)
+(def x 7)
 (print (format "{}! equals {}" x (factorial x)))

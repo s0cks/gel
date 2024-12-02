@@ -1,10 +1,10 @@
 
 (let ((observer (new:Observer
-                  (lambda (next)
+                  (fn [next]
                     (print (format "next: {}" next)))
-                  (lambda (error)
+                  (fn [error]
                     (print (format "error: {}" error)))
-                  (lambda ()
+                  (fn []
                     (print "completed")))))
   (let:rx (1 ... 10)
     (rx:filter even?)

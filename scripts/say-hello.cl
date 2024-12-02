@@ -1,5 +1,4 @@
-(define y 5)
-(defun say-hello (name)
+(defn say-hello [name]
   (print (format "Hello {}" name)))
 (say-hello "Tazz")
-(print (gel:get-locals))
+(print (gel:docs? factorial))
