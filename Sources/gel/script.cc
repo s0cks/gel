@@ -10,6 +10,7 @@
 #include "gel/flow_graph_builder.h"
 #include "gel/flow_graph_dot.h"
 #include "gel/lambda.h"
+#include "gel/namespace.h"
 #include "gel/parser.h"
 
 namespace gel {
@@ -25,6 +26,12 @@ void Script::Append(Lambda* lambda) {
   ASSERT(lambda);
   lambdas_.push_back(lambda);
   lambda->SetOwner(this);
+}
+
+void Script::Append(Namespace* ns) {
+  ASSERT(ns);
+  namespaces_.push_back(ns);
+  ns->SetOwner(this);
 }
 
 auto Script::Equals(Object* rhs) const -> bool {

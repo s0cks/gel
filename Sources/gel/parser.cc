@@ -755,7 +755,9 @@ auto Parser::NextToken() -> const Token& {
       buffer_[token_len_++] = NextChar();
     }
     const auto ident = GetBufferedText();
-    if (ident == "define")
+    if (ident == "ns")
+      return NextToken(Token::kDefNamespace);
+    else if (ident == "define")
       return NextToken(Token::kDefine);
     else if (ident == "defmacro")
       return NextToken(Token::kMacroDef);
@@ -859,12 +861,52 @@ auto Parser::ParseLocalVariable(LocalVariable** local, expr::Expression** value)
   return true;
 }
 
+auto Parser::ParseNamespace() -> Namespace* {
+  ExpectNext(Token::kDefNamespace);
+  const auto name = ParseSymbol();
+  ASSERT(name);
+  const auto parent_scope = GetScope();
+  const auto scope = LocalScope::New();
+  ASSERT(scope);
+  const auto ns = Namespace::New(String::New(name->Get()), scope);
+  ASSERT(ns);
+  SetNamespace(ns);
+  if (PeekEq(Token::kLiteralString)) {
+    const auto docstring = ParseLiteralString();
+    ASSERT(docstring);
+    ns->SetDocs(docstring);
+  }
+  while (!PeekEq(Token::kRParen)) {
+    ExpectNext(Token::kLParen);
+    const auto next = PeekToken();
+    switch (next.kind) {
+      case Token::kDefun: {
+        const auto lambda = ParseLambda(Token::kDefun);
+        ASSERT(lambda && lambda->HasName());
+        LOG_IF(FATAL, !scope->Add(lambda->GetName(), lambda)) << "failed to add " << lambda << " to scope.";
+        break;
+      }
+      default:
+        Unexpected(next);
+        return nullptr;
+    }
+    ExpectNext(Token::kRParen);
+  }
+  ClearNamespace();
+  SetScope(parent_scope);
+  DLOG(INFO) << "parsed: " << ns;
+  return ns;
+}
+
 auto Parser::ParseLambda(const Token::Kind kind) -> Lambda* {
   ExpectNext(kind);
   // name
   Symbol* name = nullptr;
   if (PeekEq(Token::kIdentifier)) {
     name = ParseSymbol();
+    ASSERT(name);
+    if (InNamespace())
+      name = GetNamespace()->Prefix(name);
     ASSERT(name);
   }
   // arguments
@@ -953,6 +995,12 @@ auto Parser::ParseScript() -> Script* {
       expr = ParseListExpr();
     } else {
       switch (next.kind) {
+        case Token::kDefNamespace: {
+          const auto ns = ParseNamespace();
+          ASSERT(ns);
+          script->Append(ns);
+          break;
+        }
         // Definitions
         case Token::kDefine: {
           LocalVariable* local = nullptr;

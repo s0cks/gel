@@ -103,8 +103,10 @@ static inline auto operator<<(std::ostream& stream, const std::vector<LocalVaria
 
 auto LocalScope::ToString() const -> std::string {
   ToStringHelper<LocalScope> helper;
-  helper.AddField("locals", locals_);
-  helper.AddField("parent", GetParent());
+  if (!IsEmpty())
+    helper.AddField("locals", locals_);
+  if (HasParent())
+    helper.AddField("parent", GetParent());
   return helper;
 }
 

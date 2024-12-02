@@ -12,6 +12,7 @@
 #include "gel/instruction.h"
 #include "gel/lambda.h"
 #include "gel/local_scope.h"
+#include "gel/namespace.h"
 #include "gel/runtime.h"
 #include "gel/script.h"
 #include "gel/token.h"
@@ -39,10 +40,20 @@ class Parser {
   Token peek_{};
   std::stack<Object*> owner_stack_{};
   Script* script_ = nullptr;
+  Namespace* namespace_ = nullptr;
 
   inline void SetScript(Script* script) {
     ASSERT(script);
     script_ = script;
+  }
+
+  inline void SetNamespace(Namespace* ns) {
+    ASSERT(ns);
+    namespace_ = ns;
+  }
+
+  inline void ClearNamespace() {
+    namespace_ = nullptr;
   }
 
  protected:
@@ -53,6 +64,14 @@ class Parser {
 
   inline auto GetScope() const -> LocalScope* {
     return scope_;
+  }
+
+  inline auto GetNamespace() const -> Namespace* {
+    return namespace_;
+  }
+
+  inline auto InNamespace() const -> bool {
+    return GetNamespace() != nullptr;
   }
 
   // Definitions
@@ -92,6 +111,7 @@ class Parser {
   }
 
   auto ParseLambda(const Token::Kind kind) -> Lambda*;
+  auto ParseNamespace() -> Namespace*;
 
   auto ParseLocalVariable(LocalVariable** local, expr::Expression** value) -> bool;
   auto ParseLiteralString() -> String*;

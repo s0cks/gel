@@ -18,9 +18,23 @@ auto Namespace::Equals(Object* rhs) const -> bool {
   return GetName()->Equals(rhs->AsNamespace()->GetName());
 }
 
+auto Namespace::HasPrefix(Symbol* rhs) const -> bool {
+  ASSERT(rhs);
+  const auto& s = rhs->Get();
+  const auto& n = GetName()->Get();
+  return s.starts_with(n + ":");
+}
+
+auto Namespace::Prefix(Symbol* rhs) const -> Symbol* {
+  if (HasPrefix(rhs))
+    return rhs;
+  return Symbol::New(fmt::format("{0:s}:{1:s}", GetName()->Get(), rhs->Get()));
+}
+
 auto Namespace::ToString() const -> std::string {
   ToStringHelper<Namespace> helper;
   helper.AddField("name", GetName()->Get());
+  helper.AddField("scope", GetScope());
   return helper;
 }
 }  // namespace gel

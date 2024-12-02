@@ -1,6 +1,8 @@
 #ifndef GEL_TYPE_TRAITS_H
 #define GEL_TYPE_TRAITS_H
 
+#include <type_traits>
+
 #include "gel/type.h"
 
 namespace gel {
@@ -57,6 +59,15 @@ DECLARE_HAS_TO_STRING(instr::Instruction);
 DECLARE_HAS_TO_STRING(instr::Definition);
 FOR_EACH_TYPE(DECLARE_HAS_TO_STRING)
 #undef DECLARE_HAS_TO_STRING
+
+DECLARE_TRAIT(has_docs);
+#define DECLARE_HAS_DOCS(Name) DECLARE_HAS_TRAIT(has_docs, Name);
+DECLARE_HAS_DOCS(Lambda);
+DECLARE_HAS_DOCS(Namespace);
+#undef DECLARE_HAS_DOCS
+
+template <class T>
+auto GetDocs(T* value, std::enable_if_t<has_docs<T>::value>* = nullptr) -> String*;
 
 #undef DECLARE_HAS_TRAIT
 #undef DECLARE_TRAIT

@@ -5,6 +5,7 @@
 #include "gel/expression.h"
 #include "gel/lambda.h"
 #include "gel/local_scope.h"
+#include "gel/namespace.h"
 
 namespace gel {
 class Script : public Object, public Executable {
@@ -15,6 +16,7 @@ class Script : public Object, public Executable {
  private:
   LocalScope* scope_;
   LambdaList lambdas_{};
+  NamespaceList namespaces_{};
   expr::ExpressionList body_{};
 
  protected:
@@ -29,6 +31,7 @@ class Script : public Object, public Executable {
   }
 
   void Append(Lambda* lambda);
+  void Append(Namespace* ns);
 
   auto VisitPointers(PointerVisitor* vis) -> bool override;
 

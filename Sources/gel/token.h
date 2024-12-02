@@ -29,13 +29,14 @@ struct Position {
   FOR_EACH_EXPRESSION_NODE(V) \
   FOR_EACH_BINARY_OP(V)       \
   FOR_EACH_UNARY_OP(V)        \
+  V(DefNamespace)             \
   V(Define)                   \
+  V(Defun)                    \
   V(Comment)                  \
   V(Hash)                     \
   V(Quote)                    \
   V(DoubleQuote)              \
   V(Cond)                     \
-  V(Defun)                    \
   V(LParen)                   \
   V(RParen)                   \
   V(Dot)                      \

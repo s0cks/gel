@@ -39,7 +39,8 @@
         "test-cast.cl",
         "test-instanceof.cl",
         "test-new.cl",
-        "test-docstring.cl"
+        "test-docstring.cl",
+        "test-namespaces.cl"
       ],
       "default": "while.cl",
       "description": "A value that is even."
@@ -414,6 +415,25 @@
         "--reports-dir", "${workspaceFolder}/reports",
         "--module-dir", "${workspaceFolder}/gel",
         "-v=${input:verbose-level}",
+        "${workspaceFolder}/gel/${input:target-script}"
+      ],
+      "cwd": "${workspaceFolder}",
+      "initCommands": [
+        "command source ${workspaceFolder}/.lldbinit"
+      ]
+    },
+    {
+      "name": "Run Script (No Eval)",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/Sources/gelrt",
+      "args": [
+        "-logtostdout",
+        "-colorlogtostdout",
+        "--reports-dir", "${workspaceFolder}/reports",
+        "--module-dir", "${workspaceFolder}/gel",
+        "-v=${input:verbose-level}",
+        "--eval=false",
         "${workspaceFolder}/gel/${input:target-script}"
       ],
       "cwd": "${workspaceFolder}",
