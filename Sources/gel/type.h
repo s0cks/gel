@@ -28,7 +28,8 @@ class Definition;
   V(Pair)                          \
   V(Script)                        \
   V(Error)                         \
-  V(Namespace)
+  V(Namespace)                     \
+  V(Module)
 
 #define FOR_EACH_TYPE(V)     \
   FOR_EACH_PRIMITIVE_TYPE(V) \

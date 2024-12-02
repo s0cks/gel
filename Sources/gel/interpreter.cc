@@ -10,6 +10,7 @@
 #include "gel/lambda.h"
 #include "gel/local_scope.h"
 #include "gel/macro.h"
+#include "gel/module.h"
 #include "gel/namespace.h"
 #include "gel/native_procedure.h"
 #include "gel/object.h"

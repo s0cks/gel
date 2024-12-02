@@ -15,6 +15,7 @@
 #include "gel/expression.h"
 #include "gel/heap.h"
 #include "gel/macro.h"
+#include "gel/module.h"
 #include "gel/namespace.h"
 #include "gel/native_procedure.h"
 #include "gel/platform.h"
@@ -76,6 +77,7 @@ void Object::Init() {
   InitClass();
   Class::InitClass();
   Namespace::Init();
+  Module::Init();
   // exec
   Script::InitClass();
   Procedure::InitClass();
