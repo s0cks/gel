@@ -3,6 +3,22 @@
 #include "gel/to_string_helper.h"
 
 namespace gel {
+NamespaceList Namespace::namespaces_{};
+void Namespace::Init() {
+  InitClass();
+}
+
+auto Namespace::Get(const std::string& name) -> Namespace* {
+  ASSERT(!name.empty());
+  for (const auto& ns : namespaces_) {
+    ASSERT(ns);
+    const auto& ns_name = ns->GetName()->Get();
+    if (ns_name == name)
+      return ns;
+  }
+  return nullptr;
+}
+
 auto Namespace::CreateClass() -> Class* {
   ASSERT(kClass == nullptr);
   return Class::New(Object::GetClass(), "Namespace");

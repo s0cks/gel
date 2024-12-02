@@ -999,6 +999,7 @@ auto Parser::ParseScript() -> Script* {
           const auto ns = ParseNamespace();
           ASSERT(ns);
           script->Append(ns);
+          LOG_IF(FATAL, !scope->Add(ns->GetScope())) << "failed to add " << ns << " to scope.";
           break;
         }
         // Definitions

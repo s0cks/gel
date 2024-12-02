@@ -1,12 +1,17 @@
 #ifndef GEL_NAMESPACE_H
 #define GEL_NAMESPACE_H
 
+#include <type_traits>
 #include <vector>
 
 #include "gel/common.h"
 #include "gel/object.h"
+#include "gel/type_traits.h"
 
 namespace gel {
+class Namespace;
+using NamespaceList = std::vector<Namespace*>;
+
 class Namespace : public Object {
   friend class Script;
   friend class Parser;
@@ -59,14 +64,29 @@ class Namespace : public Object {
   auto HasPrefix(Symbol* rhs) const -> bool;
   DECLARE_TYPE(Namespace);
 
+ private:
+  static NamespaceList namespaces_;
+
  public:
+  static void Init();
   static inline auto New(String* name, LocalScope* scope) -> Namespace* {
     ASSERT(name);
-    return new Namespace(name, scope);
+    ASSERT(scope);
+    const auto ns = new Namespace(name, scope);
+    ASSERT(ns);
+    namespaces_.push_back(ns);
+    return ns;
+  }
+
+  static auto Get(const std::string& name) -> Namespace*;
+
+  template <typename T>
+  static inline auto Get(T* name, std::enable_if_t<is_string_like<T>::value>* = nullptr) -> Namespace* {
+    ASSERT(name && !name->IsEmpty());
+    return Get(name->Get());
   }
 };
 
-using NamespaceList = std::vector<Namespace*>;
 }  // namespace gel
 
 #endif  // GEL_NAMESPACE_H
