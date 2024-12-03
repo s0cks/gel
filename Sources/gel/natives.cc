@@ -46,7 +46,7 @@ NATIVE_PROCEDURE_F(gel_docs) {
       auto remaining = args.size();
       for (const auto& arg : args) {
         ss << arg.GetName();
-        if (remaining > 1)
+        if (--remaining > 0)
           ss << ", ";
       }
     }
@@ -66,7 +66,7 @@ NATIVE_PROCEDURE_F(gel_docs) {
       auto remaining = args.size();
       for (const auto& arg : args) {
         ss << arg.GetName();
-        if (remaining > 1)
+        if (--remaining > 0)
           ss << ", ";
       }
     }
@@ -200,7 +200,8 @@ NATIVE_PROCEDURE_F(array_get) {
   NativeArgument<1, Long> index(args);
   if (index->Get() > array->GetCapacity())
     return ThrowError(fmt::format("index `{}` is out of bounds for `{}`", index->Get(), (const gel::Object&)*array));
-  return Return(array->Get(index->Get()));
+  const auto result = array->Get(index->Get());
+  return Return(result ? result : Null());
 }
 
 NATIVE_PROCEDURE_F(array_set) {

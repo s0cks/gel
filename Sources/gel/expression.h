@@ -23,7 +23,7 @@
   V(CaseExpr)                       \
   V(LambdaExpr)                     \
   V(LocalDef)                       \
-  V(ImportDef)                      \
+  V(ImportExpr)                     \
   V(MacroDef)                       \
   V(EvalExpr)                       \
   V(CallProcExpr)                   \
@@ -1119,6 +1119,32 @@ class Binding : public Expression {
   }
 };
 
+class ImportExpr : public Expression {
+ private:
+  Module* module_;
+
+  explicit ImportExpr(Module* module) :
+    Expression(),
+    module_(module) {
+    ASSERT(module_);
+  }
+
+ public:
+  ~ImportExpr() override = default;
+
+  auto GetModule() const -> Module* {
+    return module_;
+  }
+
+  DECLARE_EXPRESSION(ImportExpr);
+
+ public:
+  static inline auto New(Module* module) -> ImportExpr* {
+    ASSERT(module);
+    return new ImportExpr(module);
+  }
+};
+
 using BindingList = std::vector<Binding*>;
 
 static inline auto operator<<(std::ostream& stream, const BindingList& rhs) -> std::ostream& {
@@ -1528,32 +1554,6 @@ class LocalDef : public TemplateDefinition<1> {
     ASSERT(symbol);
     ASSERT(value);
     return new LocalDef(symbol, value);
-  }
-};
-
-class ImportDef : public Definition {
- private:
-  Symbol* symbol_;
-
-  explicit ImportDef(Symbol* symbol) :
-    Definition(),
-    symbol_(symbol) {
-    ASSERT(symbol_);
-  }
-
- public:
-  ~ImportDef() override = default;
-
-  auto GetSymbol() const -> Symbol* {
-    return symbol_;
-  }
-
-  DECLARE_EXPRESSION(ImportDef);
-
- public:
-  static inline auto New(Symbol* symbol) -> ImportDef* {
-    ASSERT(symbol);
-    return new ImportDef(symbol);
   }
 };
 

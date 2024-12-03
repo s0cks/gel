@@ -284,7 +284,7 @@ auto Parser::ParseEvalExpr() -> expr::EvalExpr* {
 
 auto Parser::ParseExpression() -> Expression* {
   {
-    const auto next = PeekToken();
+    auto next = PeekToken();
     if (next.IsLiteral() || next.kind == Token::kIdentifier)
       return ParseLiteralExpr();
     else if (next.kind == Token::kQuote)
@@ -393,11 +393,15 @@ auto Parser::ParseQuotedExpr() -> expr::Expression* {
   return QuotedExpr::New(GetBufferedText());
 }
 
-auto Parser::ParseImportDef() -> expr::ImportDef* {
-  ExpectNext(Token::kImportDef);
+auto Parser::ParseImportExpr() -> expr::ImportExpr* {
+  ExpectNext(Token::kImportExpr);
   const auto symbol = ParseSymbol();
   ASSERT(symbol);
-  return ImportDef::New(symbol);
+  DVLOG(100) << "importing " << symbol;
+  const auto module = Module::Find(symbol->Get());
+  LOG_IF(FATAL, !module) << "failed to find Module named `" << symbol->Get() << "`";
+  LOG_IF(FATAL, !GetScope()->Add(module->GetScope())) << "failed to import Module `" << symbol->Get() << "` scope.";
+  return expr::ImportExpr::New(module);
 }
 
 auto Parser::ParseMacroDef() -> expr::MacroDef* {
@@ -531,9 +535,6 @@ auto Parser::ParseDefinition() -> expr::Definition* {
   switch (next.kind) {
     case Token::kDefn:
       defn = ParseDefunExpr();
-      break;
-    case Token::kImportDef:
-      defn = ParseImportDef();
       break;
     case Token::kMacroDef:
       defn = ParseMacroDef();
@@ -764,7 +765,7 @@ auto Parser::NextToken() -> const Token& {
     else if (ident == "defmacro")
       return NextToken(Token::kMacroDef);
     else if (ident == "import")
-      return NextToken(Token::kImportDef);
+      return NextToken(Token::kImportExpr);
     else if (ident == "cons")
       return NextToken(Token::kCons);
     else if (ident == "car")
@@ -1123,6 +1124,9 @@ auto Parser::ParseScript() -> Script* {
           break;
         case Token::kInstanceOfExpr:
           expr = ParseInstanceOfExpr();
+          break;
+        case Token::kImportExpr:
+          expr = ParseImportExpr();
           break;
         default:
           Unexpected(next);

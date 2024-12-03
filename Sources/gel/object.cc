@@ -82,7 +82,7 @@ void Object::Init() {
   Script::InitClass();
   Procedure::InitClass();
   Lambda::InitClass();
-  NativeProcedure::InitClass();
+  NativeProcedure::Init();
   // types
   // numeric type(s)
   Number::InitClass();
@@ -98,11 +98,8 @@ void Object::Init() {
   // error type(s)
   Error::InitClass();
 #ifdef GEL_ENABLE_RX
-  // observables
   Observable::InitClass();
-  // observers
   Observer::InitClass();
-  // subjects
   Subject::InitClass();
   ReplaySubject::InitClass();
   PublishSubject::InitClass();
@@ -460,7 +457,7 @@ auto PrintValue(std::ostream& stream, Object* value) -> std::ostream& {
   } else if (value->IsLong()) {
     return stream << (value->AsLong())->Get();
   } else if (value->IsString()) {
-    return stream << '"' << value->AsString()->Get() << '"';
+    return stream << value->AsString()->Get();
   } else if (value->IsSymbol()) {
     return stream << value->AsSymbol()->Get();
   } else if (value->IsNativeProcedure()) {

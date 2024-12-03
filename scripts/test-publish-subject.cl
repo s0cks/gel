@@ -1,3 +1,4 @@
+(import rx)
 (let ((topic (rx:publish-subject)) ; create a topic
       (numbers ; create an observable from the topic that is for only numbers
         (let:rx (:->Observable topic)

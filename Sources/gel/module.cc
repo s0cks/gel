@@ -1,10 +1,16 @@
 #include "gel/module.h"
 
 #include "gel/common.h"
+#include "gel/parser.h"
 #include "gel/to_string_helper.h"
 
 namespace gel {
 ModuleList Module::modules_{};
+
+auto Module::LoadFrom(const std::filesystem::path& abs_path) -> Module* {
+  DVLOG(100) << "loading Module from: " << abs_path << "....";
+  return Parser::ParseModuleFrom(abs_path);
+}
 
 auto Module::ToString() const -> std::string {
   ToStringHelper<Module> helper;

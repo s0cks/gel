@@ -6,7 +6,10 @@
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
+#include <filesystem>
 #include <functional>
+#include <ranges>
+#include <unordered_set>
 
 #include "gel/platform.h"
 #ifdef GEL_DEBUG
@@ -97,6 +100,40 @@ static inline auto IsPow2(T x) -> bool {
   return ((x & (x - 1)) == 0) && (x != 0);
 }
 
+static inline void Split(const std::string& str, const char delimiter, std::vector<std::string>& results) {
+  std::string current;
+  current.reserve(str.size());
+  for (const auto& c : str) {
+    if (c == delimiter) {
+      if (current.empty())
+        continue;
+      results.push_back(current);
+      current.clear();
+      continue;
+    }
+    current += c;
+  }
+  if (!current.empty())
+    results.push_back(current);
+}
+
+static inline void Split(const std::string& str, const char delimiter, std::unordered_set<std::string>& results) {
+  std::string current;
+  current.reserve(str.size());
+  for (const auto& c : str) {
+    if (c == delimiter) {
+      if (current.empty())
+        continue;
+      results.insert(current);
+      current.clear();
+      continue;
+    }
+    current += c;
+  }
+  if (!current.empty())
+    results.insert(current);
+}
+
 struct Percent {
  private:
   template <typename T>
@@ -165,6 +202,10 @@ class EnvironmentVariable {
     return exists();
   }
 
+  explicit operator std::string() const {
+    return value().value_or(std::string{});
+  }
+
   friend auto operator<<(std::ostream& stream, const EnvironmentVariable& rhs) -> std::ostream& {
     // TODO: use ToStringHelper
     stream << "EnvironmentVariable(";
@@ -178,6 +219,14 @@ class EnvironmentVariable {
 };
 
 auto GetHomeEnvVar() -> const EnvironmentVariable&;
+
+static inline auto GetFilename(const std::filesystem::path& p) -> std::string {
+  const auto& filename = p.filename().string();
+  const auto dotpos = filename.find_last_of('.');
+  if (dotpos == std::string::npos)
+    return filename;
+  return filename.substr(0, filename.length() - (filename.length() - dotpos));
+}
 }  // namespace gel
 
 #endif  // GEL_COMMON_H

@@ -1,5 +1,43 @@
 (ns _kernel
   "The main namespace for gel."
+  (defnative gel:docs? [o]
+    "Returns the docstring attached to the supplied Object [o].")
+  (defnative format [pattern args...]
+    "Returns a formatted String using the supplied [pattern] and [args...].")
+  (defnative print [value]
+    "Prints the supplied [value] to the console.")
+  (defnative list [values...]
+    "Returns a new list using the supplied [values...]")
+  ;; Random
+  (defnative random []
+    "Returns a random Long.")
+  (defnative random:range [min max]
+    "Returns a random Long in the range of [min] to [max].")
+  (defnative type? [o]
+    "Returns the type of Object [o].")
+  (defnative set-car! [p v]
+    "Sets the first value of Pair [p] to [v].")
+  (defnative set-cdr! [p v]
+    "Sets the second value of Pair [p] to [v].")
+  ;; TODO: reduce visibility to debug builds only:
+  ;; --------------------------------------------------
+  (defnative gel:minor-gc! []
+    "Performs a minor garbage collection cycle.")
+  (defnative gel:major-gc! []
+    "Performs a major garbage collection cycle.")
+  (defnative gel:debug? []
+    "Returns whether or not this is a debug instance of gelrt.")
+  (defnative gel:get-frame []
+    "Returns the current StackFrame from gelrt.")
+  (defnative gel:get-locals []
+    "Returns the current LocalScope from gelrt.")
+  (defnative gel:get-classes []
+    "Returns a list of the current register Classes in gelrt.")
+  (defnative gel:get-target-triple []
+    "Returns the current target triple for gelrt.")
+  (defnative gel:get-natives []
+    "Returns a list of native functions register in gelrt.")
+  ;; --------------------------------------------------
   ;; pair accessors
   (defn caar [xs]
     (car (car xs)))
@@ -83,31 +121,11 @@
       (* x (factorial (- x 1)))))
   (defn apply [f seq]
     (cond (null? seq) seq
-      (array? seq)
-        (begin
-          (defn next [f seq idx]
-            (cond (> idx (- (array:length seq) 1)) '()
-              (begin
-                (f (array:get seq idx))
-                (next f seq (+ idx 1)))))
-          (next f seq 0))
       (begin
         (f (car seq))
         (apply f (cdr seq)))))
   (defn map [f seq]
     (cond (null? seq) seq
-      (array? seq)
-        (begin
-          (var idx 0)
-          (var result '())
-          (print "iterating")
-          (while (< idx (array:length seq))
-            (const item (f (array:get seq idx)))
-            (set! result (cons item result))
-            (set! idx (+ idx 1))
-            (print (format "idx: {}" idx)))
-          (print (format "result: {}" result))
-          result) ; everything after the while doesn't get executed
       (cons (f (car seq)) (map f (cdr seq)))))
   (defn filter [p seq]
     (cond (null? seq) seq

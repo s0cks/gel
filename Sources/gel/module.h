@@ -1,6 +1,9 @@
 #ifndef GEL_MODULE_H
 #define GEL_MODULE_H
 
+#include <algorithm>
+#include <filesystem>
+
 #include "gel/namespace.h"
 #include "gel/object.h"
 
@@ -56,7 +59,24 @@ class Module : public Object {
  private:
   static ModuleList modules_;
 
+  static inline auto IsNamed(std::string name) -> std::function<bool(Module*)> {
+    return [&name](Module* m) {
+      ASSERT(m);
+      return m && name == m->GetName()->Get();
+    };
+  }
+
  public:
+  static inline auto IsLoaded(const std::string& name) -> bool {
+    const auto m = std::ranges::find_if(modules_, IsNamed(name));
+    return m != std::end(modules_);
+  }
+
+  static inline auto Find(const std::string& name) -> Module* {
+    const auto m = std::ranges::find_if(modules_, IsNamed(name));
+    return m != std::end(modules_) ? (*m) : nullptr;
+  }
+
   static inline auto New(String* name, LocalScope* scope) -> Module* {
     ASSERT(scope);
     const auto m = new Module(name, scope);
@@ -64,6 +84,8 @@ class Module : public Object {
     modules_.push_back(m);
     return m;
   }
+
+  static auto LoadFrom(const std::filesystem::path& abs_path) -> Module*;
 };
 }  // namespace gel
 

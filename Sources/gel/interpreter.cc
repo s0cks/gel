@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <ranges>
 
+#include "gel/array.h"
 #include "gel/common.h"
 #include "gel/error.h"
 #include "gel/expression.h"
@@ -75,6 +76,11 @@ auto Interpreter::VisitNewInstr(NewInstr* instr) -> bool {
   ASSERT(runtime);
   ObjectList args;
   runtime->PopN(args, instr->GetNumberOfArgs(), true);
+  if (instr->GetTarget()->Equals(Array<Object>::GetClass())) {
+    const auto length = gel::ToLong(args[0]);
+    ASSERT(length);
+    return PushNext(Array<Object>::New(Long::Unbox(length)));
+  }
 #define DEFINE_NEW_TYPE(Name) \
   if (type->Is<Name>())       \
     return PushNext(Name::New(args));

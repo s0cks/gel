@@ -91,6 +91,7 @@ class Runtime : public ExecutionStack {
   friend class Repl;
   friend class Lambda;
   friend class Interpreter;
+  friend class ModuleLoader;
   friend class NativeProcedure;
   friend class RuntimeScopeScope;
   friend class RuntimeStackIterator;
@@ -144,17 +145,6 @@ class Runtime : public ExecutionStack {
     return interpreter_.stack_;
   }
 
-  template <class Native>
-  static inline auto RegisterNative(LocalScope* scope) -> std::pair<Symbol*, NativeProcedure*> {
-    ASSERT(scope);
-    Native::Init();
-    const auto procedure = Native::Get();
-    ASSERT(procedure);
-    const auto symbol = procedure->GetSymbol();
-    LOG_IF(FATAL, !scope->Add(symbol, procedure)) << "failed to register: " << procedure->ToString();
-    return {symbol, procedure};
-  }
-
   void Call(NativeProcedure* native, const ObjectList& args);
   void Call(Lambda* lambda, const ObjectList& args);
   void Call(Script* script);
@@ -187,8 +177,6 @@ class Runtime : public ExecutionStack {
   inline auto Import(const std::string& name, LocalScope* scope) -> bool {
     return Import(Symbol::New(name), scope);
   }
-
-  auto LoadModule(const std::string& name) -> Module*;
 
   // Stack
   inline void PushError(Error* error) {

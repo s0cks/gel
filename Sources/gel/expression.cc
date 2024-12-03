@@ -8,6 +8,7 @@
 
 #include "gel/common.h"
 #include "gel/heap.h"
+#include "gel/module.h"
 #include "gel/natives.h"
 #include "gel/object.h"
 #include "gel/to_string_helper.h"
@@ -215,9 +216,9 @@ auto LocalDef::ToString() const -> std::string {
   return helper;
 }
 
-auto ImportDef::ToString() const -> std::string {
-  ToStringHelper<ImportDef> helper;
-  helper.AddField("symbol", GetSymbol());
+auto ImportExpr::ToString() const -> std::string {
+  ToStringHelper<ImportExpr> helper;
+  helper.AddField("module", GetModule());
   return helper;
 }
 

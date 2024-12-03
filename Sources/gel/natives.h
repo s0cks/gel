@@ -17,7 +17,7 @@ _DECLARE_NATIVE_PROCEDURE(set_car, "set-car!");
 _DECLARE_NATIVE_PROCEDURE(set_cdr, "set-cdr!");
 _DECLARE_NATIVE_PROCEDURE(array_new, "array:new");
 _DECLARE_NATIVE_PROCEDURE(array_get, "array:get");
-_DECLARE_NATIVE_PROCEDURE(array_set, "array:set");
+_DECLARE_NATIVE_PROCEDURE(array_set, "array:set!");
 _DECLARE_NATIVE_PROCEDURE(array_length, "array:length");
 
 #ifdef GEL_ENABLE_RX

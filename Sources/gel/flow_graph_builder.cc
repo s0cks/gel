@@ -7,6 +7,7 @@
 #include "gel/instruction.h"
 #include "gel/lambda.h"
 #include "gel/local.h"
+#include "gel/module.h"
 #include "gel/native_procedure.h"
 #include "gel/natives.h"
 #include "gel/object.h"
@@ -298,10 +299,9 @@ auto EffectVisitor::VisitWhileExpr(expr::WhileExpr* expr) -> bool {  // TODO: cl
   return true;
 }
 
-auto EffectVisitor::VisitImportDef(expr::ImportDef* expr) -> bool {
+auto EffectVisitor::VisitImportExpr(expr::ImportExpr* expr) -> bool {
   ASSERT(expr);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return false;
+  return true;
 }
 
 static inline auto IsLiteralSymbol(expr::LiteralExpr* expr, Symbol* value) -> bool {
@@ -411,21 +411,11 @@ static inline auto ResolveRxOp(Symbol* symbol, LocalScope* current_scope) -> Pro
   ASSERT(symbol);
   ASSERT(current_scope);
   LocalVariable* local = nullptr;
-  // try rx-scope
-  {
-    const auto rx_scope = rx::GetRxScope();
-    ASSERT(rx_scope);
-    if (rx_scope->Lookup(symbol, &local)) {
-      if (local->HasValue() && local->GetValue()->IsProcedure())
-        return local->GetValue()->AsProcedure();
-    }
-    DLOG(WARNING) << "failed to find rx target `" << symbol << " in scope: " << rx_scope->ToString();
-  }
-  if (current_scope->Lookup(symbol, &local)) {
-    if (local->HasValue() && local->GetValue()->IsProcedure())
-      return local->GetValue()->AsProcedure();
-  }
-  return nullptr;
+  if (!current_scope->Lookup(symbol, &local))
+    return nullptr;
+  if (local->HasValue() && !local->GetValue()->IsProcedure())
+    return nullptr;
+  return local->GetValue()->AsProcedure();
 }
 
 static inline auto CreateRxOpTarget(Symbol* symbol, LocalScope* scope) -> instr::Definition* {

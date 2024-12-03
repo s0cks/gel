@@ -4,19 +4,9 @@
 			"path": "Sources/gel/parser.cc",
 			"bookmarks": [
 				{
-					"line": 597,
+					"line": 598,
 					"column": 0,
 					"label": ""
-				}
-			]
-		},
-		{
-			"path": "Sources/gel/runtime.cc",
-			"bookmarks": [
-				{
-					"line": 180,
-					"column": 0,
-					"label": "REGISTER_RX"
 				}
 			]
 		},

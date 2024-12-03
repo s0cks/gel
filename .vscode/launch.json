@@ -40,7 +40,8 @@
         "test-instanceof.cl",
         "test-new.cl",
         "test-docstring.cl",
-        "test-namespaces.cl"
+        "test-namespaces.cl",
+        "test-array.cl"
       ],
       "default": "while.cl",
       "description": "A value that is even."

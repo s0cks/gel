@@ -30,7 +30,7 @@ class Parser {
  private:
   std::istream& stream_;
   LocalScope* scope_;
-  Chunk chunk_{};
+  std::vector<char> chunk_;
   std::string buffer_{};
   Position pos_{};
   uint64_t wpos_ = 0;
@@ -148,12 +148,12 @@ class Parser {
   auto ParseInstanceOfExpr() -> expr::InstanceOfExpr*;
   auto ParseCastExpr() -> expr::CastExpr*;
   auto ParseNewExpr() -> expr::NewExpr*;
+  auto ParseImportExpr() -> expr::ImportExpr*;
 
   // Definitions
   auto ParseDefinition() -> expr::Definition*;
   auto ParseLocalDef() -> expr::LocalDef*;
   auto ParseDefunExpr() -> expr::LocalDef*;
-  auto ParseImportDef() -> expr::ImportDef*;
   auto ParseMacroDef() -> expr::MacroDef*;
 
   inline auto PeekChar(const uint64_t offset = 0) const -> char {
@@ -269,10 +269,11 @@ class Parser {
     return length;
   }
 
-  inline auto ReadNextChunk() -> bool {
+  inline auto ReadNextChunk(const uint64_t num_bytes = kDefaultChunkSize) -> bool {
     ASSERT(stream_.good());
-    stream_.read(chunk_.data(), kDefaultChunkSize);
+    stream_.read(chunk_.data(), static_cast<long>(num_bytes));
     const auto num_read = stream_.gcount();
+    rpos_ = 0;
     return (wpos_ = num_read) >= 1;
   }
 
@@ -285,8 +286,10 @@ class Parser {
     scope_(scope) {
     ASSERT(stream.good());
     ASSERT(scope_);
+    const auto total_size = GetStreamSize();
+    chunk_.reserve(total_size);
     buffer_.reserve(kDefaultBufferSize);
-    LOG_IF(ERROR, !ReadNextChunk()) << "failed to read chunk from stream.";
+    LOG_IF(ERROR, !ReadNextChunk(total_size)) << "failed to read chunk from stream.";
   }
   ~Parser() = default;
 

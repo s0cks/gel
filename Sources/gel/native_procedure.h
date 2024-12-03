@@ -26,6 +26,14 @@ class NativeProcedure : public Procedure {
   ArgumentSet args_{};
   String* docs_ = nullptr;
 
+  template <class Native>
+  static inline void InitNative() {
+    Native::Init();
+    const auto native = Native::Get();
+    ASSERT(native);
+    DVLOG(1) << "initialized " << native;
+  }
+
  protected:
   explicit NativeProcedure(Symbol* symbol) :
     Procedure(),
@@ -100,6 +108,7 @@ class NativeProcedure : public Procedure {
   static void Register(NativeProcedure* native);
 
  public:
+  static void Init();
   static auto Find(const std::string& name) -> NativeProcedure*;
   static auto Find(Symbol* symbol) -> NativeProcedure*;
 
@@ -110,6 +119,7 @@ class NativeProcedure : public Procedure {
 
 #define _DEFINE_NATIVE_PROCEDURE_TYPE(Name, Sym)             \
   friend class gel::Runtime;                                 \
+  friend class NativeProcedure;                              \
   DEFINE_NON_COPYABLE_TYPE(Name);                            \
                                                              \
  protected:                                                  \

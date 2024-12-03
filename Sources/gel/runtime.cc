@@ -3,9 +3,11 @@
 #include <glog/logging.h>
 #include <units.h>
 
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <ranges>
+#include <unordered_set>
 
 #include "gel/common.h"
 #include "gel/error.h"
@@ -17,6 +19,7 @@
 #include "gel/local.h"
 #include "gel/local_scope.h"
 #include "gel/module.h"
+#include "gel/module_loader.h"
 #include "gel/native_procedure.h"
 #include "gel/natives.h"
 #include "gel/object.h"
@@ -33,6 +36,7 @@ DEFINE_bool(log_script_instrs, false, "Log the Script instructions before execut
 
 static const ThreadLocal<Runtime> runtime_;
 static const EnvironmentVariable kHomeVar("GEL_HOME");
+static const EnvironmentVariable kPathVar("GEL_PATH");
 
 auto GetHomeEnvVar() -> const EnvironmentVariable& {
   return kHomeVar;
@@ -62,29 +66,25 @@ Runtime::~Runtime() {
 namespace fs = std::filesystem;
 
 void Runtime::LoadKernelModule() {
-  ASSERT(FLAGS_kernel);
+  if (!FLAGS_kernel)
+    return;
   const auto home = kHomeVar.value();
   if (!home) {
     LOG(WARNING) << "${GEL_HOME} environment variable not set, skipping loading kernel.";
     return;
   }
-  const auto kernel = LoadModule("_kernel");
+  const auto kernel = Module::LoadFrom(fmt::format("{}/_kernel.cl", (*home)));
   LOG_IF(FATAL, !kernel) << "failed to load the _kernel Module.";
   LOG_IF(FATAL, !GetGlobalScope()->Add(kernel->GetScope())) << "failed to import the _kernel Module.";
-  for (const auto& entry : fs::directory_iterator((*home))) {
-    if (fs::is_regular_file(entry)) {
-      const auto& path = entry.path().string();
-      const auto slashpos = path.find_last_of('/') + 1;
-      const auto dotpos = path.find_first_of('.', slashpos);
-      const auto total_length = (dotpos - slashpos);
-      const auto module_name = path.substr(slashpos, total_length);
-      if (module_name == "_kernel")
-        continue;
-      DVLOG(10) << "loading the `" << module_name << "` Module....";
-      const auto m = LoadModule(module_name);
-      LOG_IF(ERROR, !m) << "failed to load the `" << module_name << "` Module.";
-      DVLOG(1) << m << " loaded!";
-    }
+  std::unordered_set<std::string> paths;
+  paths.insert(fmt::format("{}/lib", (*home)));
+  if (kPathVar) {
+    Split(*(kPathVar.value()), ';', paths);
+  }
+  for (const auto& path : paths) {
+    DVLOG(10) << "loading Modules from " << path << "....";
+    DirModuleLoader loader(path);
+    LOG_IF(ERROR, !loader.LoadAllModules()) << "failed to load Modules from " << path;
   }
 }
 
@@ -93,123 +93,22 @@ static inline auto FileExists(const std::string& filename) -> bool {  // TODO: r
   return file.good();
 }
 
-class RuntimeModuleResolver {
-  DEFINE_NON_COPYABLE_TYPE(RuntimeModuleResolver);
-
- private:
-  std::string home_;
-  LocalScope* scope_;
-
-  explicit RuntimeModuleResolver(const std::string& home, LocalScope* scope) :
-    home_(home),
-    scope_(scope) {
-    ASSERT(!home.empty());
-    ASSERT(scope_);
-  }
-
- public:
-  ~RuntimeModuleResolver() = default;
-
-  auto GetScope() const -> LocalScope* {
-    return scope_;
-  }
-
-  auto ResolveModule(Symbol* symbol) -> Module* {
-    ASSERT(symbol);
-    const auto module_filename = fmt::format("{0:s}/{1:s}.cl", home_, symbol->Get());
-    if (!FileExists(module_filename)) {
-      LOG(FATAL) << "cannot load module " << symbol << " from: " << module_filename;
-      return nullptr;
-    }
-    DVLOG(10) << "importing module " << symbol << " from: " << module_filename;
-    return Parser::ParseModuleFrom(module_filename, GetScope());
-  }
-
- public:
-  static inline auto Resolve(const std::string& home, Symbol* symbol, LocalScope* scope) -> Module* {
-    ASSERT(symbol);
-    RuntimeModuleResolver resolver(home, scope);
-    return resolver.ResolveModule(symbol);
-  }
-};
-
 auto Runtime::Import(Module* m) -> bool {
   ASSERT(m);
   return scope_->Add(m->GetScope());
-}
-
-auto Runtime::LoadModule(const std::string& name) -> Module* {
-  ASSERT(!name.empty());
-  const auto home = kHomeVar.value();
-  LOG_IF(FATAL, !home) << "no $" << kHomeVar.name() << " variable set in environment.";
-  return RuntimeModuleResolver::Resolve(home.value(), Symbol::New(name), GetGlobalScope());
 }
 
 auto Runtime::Import(Symbol* symbol, LocalScope* scope) -> bool {
   ASSERT(symbol);
   const auto home = kHomeVar.value();
   LOG_IF(FATAL, !home) << "no $" << kHomeVar.name() << " variable set in environment.";
-  const auto module = RuntimeModuleResolver::Resolve(home.value(), symbol, scope);
-  ASSERT(module);
+  auto module = nullptr;
   return Import(module);
 }
 
 auto Runtime::CreateInitScope() -> LocalScope* {
   const auto scope = LocalScope::New();
   ASSERT(scope);
-  RegisterNative<proc::print>(scope);
-  RegisterNative<proc::type>(scope);
-  RegisterNative<proc::import>(scope);
-  RegisterNative<proc::exit>(scope);
-  RegisterNative<proc::format>(scope);
-  RegisterNative<proc::list>(scope);
-  RegisterNative<proc::set_car>(scope);
-  RegisterNative<proc::set_cdr>(scope);
-  RegisterNative<proc::random>(scope);
-  RegisterNative<proc::rand_range>(scope);
-  RegisterNative<proc::array_new>(scope);
-  RegisterNative<proc::array_get>(scope);
-  RegisterNative<proc::array_set>(scope);
-  RegisterNative<proc::array_length>(scope);
-  RegisterNative<proc::gel_docs>(scope);
-
-#ifdef GEL_ENABLE_RX
-#define REGISTER_RX(Name) RegisterNative<proc::rx_##Name>(rx_scope);
-
-  {
-    const auto rx_scope = rx::GetRxScope();
-    REGISTER_RX(observer);
-    REGISTER_RX(observable);
-    REGISTER_RX(subscribe);
-    REGISTER_RX(first);
-    REGISTER_RX(last);
-    REGISTER_RX(map);
-    REGISTER_RX(take);
-    REGISTER_RX(take_last);
-    REGISTER_RX(skip);
-    REGISTER_RX(buffer);
-    REGISTER_RX(filter);
-    REGISTER_RX(take_while);
-    REGISTER_RX(replay_subject);
-    REGISTER_RX(publish_subject);
-    REGISTER_RX(publish);
-    REGISTER_RX(complete);
-    REGISTER_RX(publish_error);
-  }
-
-#undef REGISTER_RX
-#endif  // GEL_ENABLE_RX
-
-#ifdef GEL_DEBUG
-  RegisterNative<proc::gel_minor_gc>(scope);
-  RegisterNative<proc::gel_major_gc>(scope);
-  RegisterNative<proc::gel_get_frame>(scope);
-  RegisterNative<proc::gel_get_debug>(scope);
-  RegisterNative<proc::gel_get_target_triple>(scope);
-  RegisterNative<proc::gel_get_locals>(scope);
-  RegisterNative<proc::gel_get_classes>(scope);
-  RegisterNative<proc::gel_get_natives>(scope);
-#endif  // GEL_DEBUG
   return scope;
 }
 
@@ -327,8 +226,7 @@ void Runtime::Init() {
   Object::Init();
   const auto runtime = new Runtime();
   runtime_.Set(runtime);
-  if (FLAGS_kernel)
-    runtime->LoadKernelModule();
+  runtime->LoadKernelModule();
 
 #ifdef GEL_DEBUG
   const auto stop_ts = Clock::now();

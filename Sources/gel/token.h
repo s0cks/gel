@@ -172,6 +172,10 @@ struct Token {
     return atoi(text.data());
   }
 
+  auto operator==(const Token::Kind& rhs) const -> bool {
+    return kind == rhs;
+  }
+
   friend auto operator<<(std::ostream& stream, const Token& rhs) -> std::ostream& {
     stream << "Token(";
     stream << "kind=" << rhs.kind << ", ";
