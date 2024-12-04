@@ -19,28 +19,28 @@
 
 namespace gel {
 namespace dot {
-auto EffectVisitor::VisitGraphEntryInstr(instr::GraphEntryInstr* instr) -> bool {
+auto EffectVisitor::VisitGraphEntryInstr(ir::GraphEntryInstr* instr) -> bool {
   ASSERT(instr);
   const auto node = Append(instr);
   ASSERT(node);
   return true;
 }
 
-auto EffectVisitor::VisitTargetEntryInstr(instr::TargetEntryInstr* instr) -> bool {
+auto EffectVisitor::VisitTargetEntryInstr(ir::TargetEntryInstr* instr) -> bool {
   ASSERT(instr);
   const auto node = Append(instr);
   ASSERT(node);
   return true;
 }
 
-auto EffectVisitor::VisitJoinEntryInstr(instr::JoinEntryInstr* instr) -> bool {
+auto EffectVisitor::VisitJoinEntryInstr(ir::JoinEntryInstr* instr) -> bool {
   ASSERT(instr);
   const auto node = Append(instr);
   ASSERT(node);
   return true;
 }
 
-auto EffectVisitor::VisitGotoInstr(instr::GotoInstr* instr) -> bool {
+auto EffectVisitor::VisitGotoInstr(ir::GotoInstr* instr) -> bool {
   ASSERT(instr);
   const auto node = Append(instr);
   ASSERT(node);
@@ -61,7 +61,7 @@ auto EffectVisitor::VisitGotoInstr(instr::GotoInstr* instr) -> bool {
   return true;
 }
 
-auto EffectVisitor::VisitBranchInstr(instr::BranchInstr* instr) -> bool {
+auto EffectVisitor::VisitBranchInstr(ir::BranchInstr* instr) -> bool {
   ASSERT(instr);
   const auto node = Append(instr);
   ASSERT(node);
@@ -131,28 +131,28 @@ auto EffectVisitor::VisitBranchInstr(instr::BranchInstr* instr) -> bool {
   return true;
 }
 
-auto EffectVisitor::VisitLoadVariableInstr(instr::LoadVariableInstr* instr) -> bool {
+auto EffectVisitor::VisitLoadVariableInstr(ir::LoadVariableInstr* instr) -> bool {
   ASSERT(instr);
   const auto node = Append(instr);
   ASSERT(node);
   return true;
 }
 
-auto EffectVisitor::VisitStoreVariableInstr(instr::StoreVariableInstr* instr) -> bool {
+auto EffectVisitor::VisitStoreVariableInstr(ir::StoreVariableInstr* instr) -> bool {
   ASSERT(instr);
   const auto node = Append(instr);
   ASSERT(node);
   return true;
 }
 
-auto EffectVisitor::VisitUnaryOpInstr(instr::UnaryOpInstr* instr) -> bool {
+auto EffectVisitor::VisitUnaryOpInstr(ir::UnaryOpInstr* instr) -> bool {
   ASSERT(instr);
   const auto node = Append(instr);
   ASSERT(node);
   return true;
 }
 
-auto EffectVisitor::VisitBinaryOpInstr(instr::BinaryOpInstr* instr) -> bool {
+auto EffectVisitor::VisitBinaryOpInstr(ir::BinaryOpInstr* instr) -> bool {
   ASSERT(instr);
   const auto node = Append(instr);
   ASSERT(node);
@@ -163,42 +163,42 @@ auto EffectVisitor::VisitBinaryOpInstr(instr::BinaryOpInstr* instr) -> bool {
   return true;
 }
 
-auto EffectVisitor::VisitEvalInstr(instr::EvalInstr* instr) -> bool {
+auto EffectVisitor::VisitEvalInstr(ir::EvalInstr* instr) -> bool {
   ASSERT(instr);
   const auto node = Append(instr);
   ASSERT(node);
   return true;
 }
 
-auto EffectVisitor::VisitCastInstr(instr::CastInstr* instr) -> bool {
+auto EffectVisitor::VisitCastInstr(ir::CastInstr* instr) -> bool {
   ASSERT(instr);
   const auto node = Append(instr);
   ASSERT(node);
   return true;
 }
 
-auto EffectVisitor::VisitInvokeInstr(instr::InvokeInstr* instr) -> bool {
+auto EffectVisitor::VisitInvokeInstr(ir::InvokeInstr* instr) -> bool {
   ASSERT(instr);
   const auto node = Append(instr);
   ASSERT(node);
   return true;
 }
 
-auto EffectVisitor::VisitInvokeDynamicInstr(instr::InvokeDynamicInstr* instr) -> bool {
+auto EffectVisitor::VisitInvokeDynamicInstr(ir::InvokeDynamicInstr* instr) -> bool {
   ASSERT(instr);
   const auto node = Append(instr);
   ASSERT(node);
   return true;
 }
 
-static inline auto GetTargetNativeProcedure(instr::InvokeNativeInstr* instr) -> NativeProcedure* {
+static inline auto GetTargetNativeProcedure(ir::InvokeNativeInstr* instr) -> NativeProcedure* {
   ASSERT(instr->GetTarget() && instr->GetTarget()->IsConstantInstr());
   const auto target = instr->GetTarget()->AsConstantInstr();
   ASSERT(target && target->GetValue()->IsNativeProcedure());
   return target->GetValue()->AsNativeProcedure();
 }
 
-auto EffectVisitor::VisitInvokeNativeInstr(instr::InvokeNativeInstr* instr) -> bool {
+auto EffectVisitor::VisitInvokeNativeInstr(ir::InvokeNativeInstr* instr) -> bool {
   ASSERT(instr);
   const auto node = Append(instr);
   ASSERT(node);
@@ -211,21 +211,21 @@ auto EffectVisitor::VisitInvokeNativeInstr(instr::InvokeNativeInstr* instr) -> b
   return true;
 }
 
-auto EffectVisitor::VisitReturnInstr(instr::ReturnInstr* instr) -> bool {
+auto EffectVisitor::VisitReturnInstr(ir::ReturnInstr* instr) -> bool {
   ASSERT(instr);
   const auto node = Append(instr);
   ASSERT(node);
   return true;
 }
 
-auto EffectVisitor::VisitThrowInstr(instr::ThrowInstr* instr) -> bool {
+auto EffectVisitor::VisitThrowInstr(ir::ThrowInstr* instr) -> bool {
   ASSERT(instr);
   const auto node = Append(instr);
   ASSERT(node);
   return true;
 }
 
-auto EffectVisitor::VisitInstanceOfInstr(instr::InstanceOfInstr* instr) -> bool {
+auto EffectVisitor::VisitInstanceOfInstr(ir::InstanceOfInstr* instr) -> bool {
   ASSERT(instr);
   const auto node = Append(instr);
   ASSERT(node);
@@ -237,7 +237,7 @@ auto EffectVisitor::VisitInstanceOfInstr(instr::InstanceOfInstr* instr) -> bool 
   return true;
 }
 
-auto EffectVisitor::VisitConstantInstr(instr::ConstantInstr* instr) -> bool {
+auto EffectVisitor::VisitConstantInstr(ir::ConstantInstr* instr) -> bool {
   ASSERT(instr);
   const auto node = Append(instr);
   ASSERT(node);
@@ -249,7 +249,7 @@ auto EffectVisitor::VisitConstantInstr(instr::ConstantInstr* instr) -> bool {
   return true;
 }
 
-auto BlockVisitor::VisitGraphEntryInstr(instr::GraphEntryInstr* instr) -> bool {
+auto BlockVisitor::VisitGraphEntryInstr(ir::GraphEntryInstr* instr) -> bool {
   ASSERT(instr);
   GetOwner()->SetBlock(instr);
   if (!EffectVisitor::VisitGraphEntryInstr(instr))
@@ -269,7 +269,7 @@ auto BlockVisitor::VisitGraphEntryInstr(instr::GraphEntryInstr* instr) -> bool {
   return true;
 }
 
-auto BlockVisitor::VisitTargetEntryInstr(instr::TargetEntryInstr* instr) -> bool {
+auto BlockVisitor::VisitTargetEntryInstr(ir::TargetEntryInstr* instr) -> bool {
   ASSERT(instr);
   if (SeenBlock(instr))
     return true;
@@ -278,7 +278,7 @@ auto BlockVisitor::VisitTargetEntryInstr(instr::TargetEntryInstr* instr) -> bool
   if (!EffectVisitor::VisitTargetEntryInstr(instr))
     return false;
 
-  instr::InstructionIterator iter(instr->GetFirstInstruction());
+  ir::InstructionIterator iter(instr->GetFirstInstruction());
   while (iter.HasNext()) {
     const auto next = iter.Next();
     ASSERT(next);
@@ -288,7 +288,7 @@ auto BlockVisitor::VisitTargetEntryInstr(instr::TargetEntryInstr* instr) -> bool
   return true;
 }
 
-auto BlockVisitor::VisitJoinEntryInstr(instr::JoinEntryInstr* instr) -> bool {
+auto BlockVisitor::VisitJoinEntryInstr(ir::JoinEntryInstr* instr) -> bool {
   ASSERT(instr);
   if (SeenBlock(instr))
     return true;
@@ -296,7 +296,7 @@ auto BlockVisitor::VisitJoinEntryInstr(instr::JoinEntryInstr* instr) -> bool {
   GetOwner()->SetBlock(instr);
   if (!EffectVisitor::VisitJoinEntryInstr(instr))
     return false;
-  instr::InstructionIterator iter(instr->GetFirstInstruction());
+  ir::InstructionIterator iter(instr->GetFirstInstruction());
   while (iter.HasNext()) {
     const auto next = iter.Next();
     ASSERT(next);

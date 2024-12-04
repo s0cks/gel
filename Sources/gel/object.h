@@ -111,7 +111,7 @@ class Object {
   }
 };
 
-namespace instr {
+namespace ir {
 class GraphEntryInstr;
 }
 
@@ -119,12 +119,12 @@ class Executable {
   DEFINE_NON_COPYABLE_TYPE(Executable);
 
  private:
-  instr::GraphEntryInstr* entry_ = nullptr;
+  ir::GraphEntryInstr* entry_ = nullptr;
 
  protected:
   Executable() = default;
 
-  void SetEntry(instr::GraphEntryInstr* entry) {
+  void SetEntry(ir::GraphEntryInstr* entry) {
     ASSERT(entry);
     entry_ = entry;
   }
@@ -132,7 +132,7 @@ class Executable {
  public:
   virtual ~Executable() = default;
 
-  auto GetEntry() const -> instr::GraphEntryInstr* {
+  auto GetEntry() const -> ir::GraphEntryInstr* {
     return entry_;
   }
 

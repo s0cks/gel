@@ -17,9 +17,9 @@ namespace expr {
 class LambdaExpr;
 class Expression;
 }  // namespace expr
-namespace instr {
+namespace ir {
 class GraphEntryInstr;
-}  // namespace instr
+}  // namespace ir
 
 class Lambda : public Procedure, public Executable {
   friend class FlowGraphCompiler;

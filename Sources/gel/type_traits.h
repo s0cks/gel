@@ -55,8 +55,8 @@ DECLARE_TRAIT(has_to_string);
 #define DECLARE_HAS_TO_STRING(Name) DECLARE_HAS_TRAIT(has_to_string, Name);
 DECLARE_HAS_TO_STRING(Object);
 DECLARE_HAS_TO_STRING(expr::Expression);
-DECLARE_HAS_TO_STRING(instr::Instruction);
-DECLARE_HAS_TO_STRING(instr::Definition);
+DECLARE_HAS_TO_STRING(ir::Instruction);
+DECLARE_HAS_TO_STRING(ir::Definition);
 FOR_EACH_TYPE(DECLARE_HAS_TO_STRING)
 #undef DECLARE_HAS_TO_STRING
 

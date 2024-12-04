@@ -29,9 +29,9 @@ class FlowGraphToDotGraph : public dot::GraphBuilder {
   NodeList nodes_{};
   EdgeList edges_{};
   Node* previous_ = nullptr;
-  instr::EntryInstr* block_ = nullptr;
+  ir::EntryInstr* block_ = nullptr;
 
-  inline void SetBlock(instr::EntryInstr* blk) {
+  inline void SetBlock(ir::EntryInstr* blk) {
     ASSERT(blk);
     block_ = blk;
   }
@@ -95,7 +95,7 @@ class FlowGraphToDotGraph : public dot::GraphBuilder {
     return GetFlowGraph()->GetEntry();
   }
 
-  auto GetBlock() const -> instr::EntryInstr* {
+  auto GetBlock() const -> ir::EntryInstr* {
     return block_;
   }
 
@@ -159,20 +159,20 @@ class EffectVisitor : public InstructionVisitor, public dot::GraphDecorator {
     return node;
   }
 
-  inline auto GetCurrentBlock() const -> instr::EntryInstr* {
+  inline auto GetCurrentBlock() const -> ir::EntryInstr* {
     return GetOwner()->GetBlock();
   }
 
-  static inline auto GetBlockNodeId(instr::EntryInstr* instr) -> std::string {
+  static inline auto GetBlockNodeId(ir::EntryInstr* instr) -> std::string {
     ASSERT(instr);
     return fmt::format("blk{}", instr->GetBlockId());
   }
 
-  inline auto SeenBlock(instr::EntryInstr* instr) -> bool {
+  inline auto SeenBlock(ir::EntryInstr* instr) -> bool {
     return HasNode(GetBlockNodeId(instr));
   }
 
-  inline auto GetBlockNode(instr::EntryInstr* instr) -> Node* {
+  inline auto GetBlockNode(ir::EntryInstr* instr) -> Node* {
     return GetNode(GetBlockNodeId(instr));
   }
 

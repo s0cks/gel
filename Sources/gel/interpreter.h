@@ -46,7 +46,7 @@ class Interpreter : public InstructionVisitor {
   }
 
   auto PopStackFrame() -> StackFrame;
-  auto PushStackFrame(instr::TargetEntryInstr* target, LocalScope* locals) -> StackFrame*;
+  auto PushStackFrame(ir::TargetEntryInstr* target, LocalScope* locals) -> StackFrame*;
   auto PushStackFrame(NativeProcedure* native, LocalScope* locals) -> StackFrame*;
 
   void Run();

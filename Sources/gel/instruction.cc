@@ -5,7 +5,7 @@
 
 #include "gel/to_string_helper.h"
 
-namespace gel::instr {
+namespace gel::ir {
 void Instruction::Append(Instruction* instr) {
   ASSERT(instr);
   if (HasNext())
@@ -167,4 +167,4 @@ auto CastInstr::ToString() const -> std::string {
   helper.AddField("target", GetTarget());
   return helper;
 }
-}  // namespace gel::instr
+}  // namespace gel::ir

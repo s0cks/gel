@@ -9,7 +9,7 @@ auto StackFrame::ToString() const -> std::string {
   ToStringHelper<StackFrame> helper;
   helper.AddField("id", GetId());
   if (IsTargetEntryInstr()) {
-    helper.AddField("target", std::get<instr::TargetEntryInstr*>(GetTarget()));
+    helper.AddField("target", std::get<ir::TargetEntryInstr*>(GetTarget()));
   } else if (IsNativeFrame()) {
     helper.AddField("target", std::get<NativeProcedure*>(GetTarget()));
   }

@@ -192,7 +192,7 @@ auto Interpreter::VisitInvokeDynamicInstr(InvokeDynamicInstr* instr) -> bool {
   return Next();
 }
 
-static inline auto GetTarget(const bool branch, instr::BranchInstr* instr) -> instr::EntryInstr* {
+static inline auto GetTarget(const bool branch, ir::BranchInstr* instr) -> ir::EntryInstr* {
   if (branch)
     return instr->GetTrueTarget();
   if (instr->HasFalseTarget())
@@ -340,7 +340,7 @@ auto Interpreter::ExecuteInstr(Instruction* instr) -> bool {
   return instr->Accept(this);
 }
 
-auto Interpreter::PushStackFrame(instr::TargetEntryInstr* target, LocalScope* locals) -> StackFrame* {
+auto Interpreter::PushStackFrame(ir::TargetEntryInstr* target, LocalScope* locals) -> StackFrame* {
   ASSERT(locals);
   const auto frame_id = HasStackFrame() ? GetCurrentStackFrame()->GetId() + 1 : 1;
   uword return_address = UNALLOCATED;

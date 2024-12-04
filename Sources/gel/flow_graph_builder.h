@@ -101,7 +101,7 @@ class EffectVisitor : public ExpressionVisitor {
   EntryInstr* block_ = nullptr;
 
  protected:
-  virtual void Do(instr::Definition* defn) {
+  virtual void Do(ir::Definition* defn) {
     ASSERT(defn);
     if (IsEmpty()) {
       SetEntryInstr(defn);
@@ -111,7 +111,7 @@ class EffectVisitor : public ExpressionVisitor {
     SetExitInstr(defn);
   }
 
-  virtual void ReturnDefinition(instr::Definition* defn) {
+  virtual void ReturnDefinition(ir::Definition* defn) {
     ASSERT(defn);
     if (!defn->IsConstantInstr())
       Do(defn);
@@ -136,25 +136,25 @@ class EffectVisitor : public ExpressionVisitor {
     }
   }
 
-  void AddInstanceOf(instr::Definition* defn, Class* expected);
-  auto CreateCallFor(instr::Definition* defn, const uword num_args) -> instr::InvokeInstr*;
-  auto CreateStoreLoad(Symbol* symbol, instr::Definition* value) -> instr::Definition*;
-  auto CreateCastTo(instr::Definition* value, Class* target) -> instr::Definition*;
+  void AddInstanceOf(ir::Definition* defn, Class* expected);
+  auto CreateCallFor(ir::Definition* defn, const uword num_args) -> ir::InvokeInstr*;
+  auto CreateStoreLoad(Symbol* symbol, ir::Definition* value) -> ir::Definition*;
+  auto CreateCastTo(ir::Definition* value, Class* target) -> ir::Definition*;
 
-  inline auto DoCastTo(instr::Definition* defn, Class* expected) -> instr::Definition* {
+  inline auto DoCastTo(ir::Definition* defn, Class* expected) -> ir::Definition* {
     ASSERT(defn);
     ASSERT(expected);
-    const auto casted = instr::CastInstr::New(defn, expected);
+    const auto casted = ir::CastInstr::New(defn, expected);
     Do(casted);
     return casted;
   }
 
-  inline void AddReturnExit(instr::Definition* value) {
-    Add(ReturnInstr::New(value));
+  inline void AddReturnExit(ir::Definition* value) {
+    Add(ir::ReturnInstr::New(value));
     exit_ = nullptr;
   }
 
-  auto ReturnCall(instr::InvokeInstr* defn) -> bool;
+  auto ReturnCall(ir::InvokeInstr* defn) -> bool;
   auto ReturnCall(Procedure* procedure, const uword num_args) -> bool;
   auto ReturnCall(Symbol* function, const uword num_args) -> bool;
 
@@ -169,7 +169,7 @@ class EffectVisitor : public ExpressionVisitor {
     SetExitInstr(rhs.GetExitInstr());
   }
 
-  auto Bind(instr::Definition* defn) -> instr::Definition* {
+  auto Bind(ir::Definition* defn) -> ir::Definition* {
     if (IsEmpty()) {
       SetEntryInstr(defn);
     } else {
@@ -188,9 +188,9 @@ class EffectVisitor : public ExpressionVisitor {
     return block_;
   }
 
-  inline auto CreateReturnForExit(instr::Instruction* exit_instr) -> instr::ReturnInstr* {
+  inline auto CreateReturnForExit(ir::Instruction* exit_instr) -> ir::ReturnInstr* {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
-    return exit_instr->IsDefinition() ? ReturnInstr::New((instr::Definition*)exit_instr) : ReturnInstr::New();
+    return exit_instr->IsDefinition() ? ir::ReturnInstr::New((ir::Definition*)exit_instr) : ir::ReturnInstr::New();
   }
 
   inline void AddImplicitReturn() {
@@ -199,7 +199,7 @@ class EffectVisitor : public ExpressionVisitor {
       Add(CreateReturnForExit(exit));
   }
 
-  virtual void ReturnValue(instr::Definition* defn) {}
+  virtual void ReturnValue(ir::Definition* defn) {}
 
  public:
   explicit EffectVisitor(FlowGraphBuilder* owner) :
@@ -238,15 +238,15 @@ class ValueVisitor : public EffectVisitor {
   DEFINE_NON_COPYABLE_TYPE(ValueVisitor);
 
  private:
-  instr::Definition* value_ = nullptr;
+  ir::Definition* value_ = nullptr;
 
  protected:
-  void ReturnValue(instr::Definition* value) override {
+  void ReturnValue(ir::Definition* value) override {
     ASSERT(value);
     value_ = value;
   }
 
-  void ReturnDefinition(instr::Definition* defn) override {
+  void ReturnDefinition(ir::Definition* defn) override {
     value_ = Bind(defn);
   }
 
@@ -255,7 +255,7 @@ class ValueVisitor : public EffectVisitor {
     EffectVisitor(owner) {}
   ~ValueVisitor() override = default;
 
-  auto GetValue() const -> instr::Definition* {
+  auto GetValue() const -> ir::Definition* {
     return value_;
   }
 
@@ -268,17 +268,17 @@ class RxEffectVisitor : public EffectVisitor {
   DEFINE_NON_COPYABLE_TYPE(RxEffectVisitor);
 
  private:
-  instr::Definition* observable_;
+  ir::Definition* observable_;
 
  public:
-  RxEffectVisitor(FlowGraphBuilder* owner, instr::Definition* observable) :
+  RxEffectVisitor(FlowGraphBuilder* owner, ir::Definition* observable) :
     EffectVisitor(owner),
     observable_(observable) {
     ASSERT(observable_);
   }
   ~RxEffectVisitor() override = default;
 
-  auto GetObservable() const -> instr::Definition* {
+  auto GetObservable() const -> ir::Definition* {
     return observable_;
   }
 

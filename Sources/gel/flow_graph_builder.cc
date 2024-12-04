@@ -66,7 +66,7 @@ static inline auto AppendFragment(EntryInstr* entry, EffectVisitor& vis) -> Inst
   return vis.GetExitInstr();
 }
 
-static inline auto IsNativeCall(instr::Instruction* instr) -> bool {
+static inline auto IsNativeCall(ir::Instruction* instr) -> bool {
   ASSERT(instr);
   if (!instr->IsConstantInstr())
     return false;
@@ -75,21 +75,21 @@ static inline auto IsNativeCall(instr::Instruction* instr) -> bool {
   return target->IsNativeProcedure();
 }
 
-void EffectVisitor::AddInstanceOf(instr::Definition* defn, Class* cls) {
+void EffectVisitor::AddInstanceOf(ir::Definition* defn, Class* cls) {
   ASSERT(defn);
-  return Add(instr::InstanceOfInstr::New(defn, cls));
+  return Add(ir::InstanceOfInstr::New(defn, cls));
 }
 
-auto EffectVisitor::CreateCallFor(instr::Definition* defn, const uword num_args) -> instr::InvokeInstr* {
+auto EffectVisitor::CreateCallFor(ir::Definition* defn, const uword num_args) -> ir::InvokeInstr* {
   ASSERT(defn);
   ASSERT(num_args >= 0);
   Do(defn);
   if (IsNativeCall(defn))
-    return instr::InvokeNativeInstr::New(defn, num_args);
-  return instr::InvokeInstr::New(defn, num_args);
+    return ir::InvokeNativeInstr::New(defn, num_args);
+  return ir::InvokeInstr::New(defn, num_args);
 }
 
-auto EffectVisitor::ReturnCall(instr::InvokeInstr* instr) -> bool {
+auto EffectVisitor::ReturnCall(ir::InvokeInstr* instr) -> bool {
 #ifndef GEL_RELAXED
   AddInstanceOf(instr, instr->IsInvokeNativeInstr() ? NativeProcedure::GetClass() : Procedure::GetClass());
 #endif  // GEL_RELAXED
@@ -99,11 +99,11 @@ auto EffectVisitor::ReturnCall(instr::InvokeInstr* instr) -> bool {
 
 auto EffectVisitor::ReturnCall(Procedure* target, const uword num_args) -> bool {
   ASSERT(target);
-  return ReturnCall(CreateCallFor(instr::ConstantInstr::New(target), num_args));
+  return ReturnCall(CreateCallFor(ir::ConstantInstr::New(target), num_args));
 }
 
 auto EffectVisitor::ReturnCall(Symbol* symbol, const uword num_args) -> bool {
-  return ReturnCall(CreateCallFor(instr::LoadVariableInstr::New(symbol), num_args));
+  return ReturnCall(CreateCallFor(ir::LoadVariableInstr::New(symbol), num_args));
 }
 
 auto EffectVisitor::VisitCallProcExpr(CallProcExpr* expr) -> bool {
@@ -129,13 +129,13 @@ auto EffectVisitor::VisitCallProcExpr(CallProcExpr* expr) -> bool {
   Append(for_target);
 
   if (IsNativeCall(target)) {
-    Add(InstanceOfInstr::New(target, NativeProcedure::GetClass()));
+    Add(ir::InstanceOfInstr::New(target, NativeProcedure::GetClass()));
     ReturnDefinition(InvokeNativeInstr::New(for_target.GetValue(), expr->GetNumberOfArgs()));
     return true;
   }
 
-  Add(InstanceOfInstr::New(target, Procedure::GetClass()));
-  ReturnDefinition(InvokeInstr::New(target, expr->GetNumberOfArgs()));
+  Add(ir::InstanceOfInstr::New(target, Procedure::GetClass()));
+  ReturnDefinition(ir::InvokeInstr::New(target, expr->GetNumberOfArgs()));
   return true;
 }
 
@@ -165,9 +165,9 @@ auto EffectVisitor::VisitCaseExpr(expr::CaseExpr* expr) -> bool {
 
     ASSERT(for_clause.GetEntryInstr() != nullptr && for_clause.GetEntryInstr()->IsEntryInstr());
     const auto target = for_clause.GetEntryInstr()->AsEntryInstr();
-    const auto cmp = instr::BinaryOpInstr::NewEquals(for_test.GetValue(), for_test.GetValue());  // TODO: fix this
+    const auto cmp = ir::BinaryOpInstr::NewEquals(for_test.GetValue(), for_test.GetValue());  // TODO: fix this
     for_test.Add(cmp);
-    const auto branch = BranchInstr::New(cmp, target, join);
+    const auto branch = ir::BranchInstr::New(cmp, target, join);
     for_test.Add(branch);
     Append(for_test);
     GetOwner()->GetCurrentBlock()->AddDominated(target);
@@ -204,11 +204,11 @@ auto EffectVisitor::VisitClauseExpr(expr::ClauseExpr* expr) -> bool {
 
 auto EffectVisitor::VisitWhenExpr(expr::WhenExpr* expr) -> bool {
   ASSERT(expr);
-  const auto join = JoinEntryInstr::New(GetOwner()->GetNextBlockId());
+  const auto join = ir::JoinEntryInstr::New(GetOwner()->GetNextBlockId());
   ASSERT(join);
 
   // process conseq
-  const auto conseq_target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
+  const auto conseq_target = ir::TargetEntryInstr::New(GetOwner()->GetNextBlockId());
   for (const auto& action : expr->GetActions()) {
     EffectVisitor for_conseq(GetOwner());
     if (!action->Accept(&for_conseq)) {
@@ -217,7 +217,7 @@ auto EffectVisitor::VisitWhenExpr(expr::WhenExpr* expr) -> bool {
     }
     AppendFragment(conseq_target, for_conseq);
   }
-  conseq_target->Append(GotoInstr::New(join));
+  conseq_target->Append(ir::GotoInstr::New(join));
   GetOwner()->GetCurrentBlock()->AddDominated(conseq_target);
 
   // process test
@@ -228,7 +228,7 @@ auto EffectVisitor::VisitWhenExpr(expr::WhenExpr* expr) -> bool {
   }
   Append(for_test);
 
-  const auto branch = BranchInstr::New(for_test.GetValue(), conseq_target, join);
+  const auto branch = ir::BranchInstr::New(for_test.GetValue(), conseq_target, join);
   ASSERT(branch);
   Add(branch);
   SetExitInstr(join);
@@ -253,14 +253,14 @@ auto EffectVisitor::VisitMacroDef(MacroDef* expr) -> bool {
 
 auto EffectVisitor::VisitWhileExpr(expr::WhileExpr* expr) -> bool {  // TODO: clean this up
   ASSERT(expr);
-  const auto target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
+  const auto target = ir::TargetEntryInstr::New(GetOwner()->GetNextBlockId());
   ASSERT(target);
   Add(target);
 
-  const auto body_target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
+  const auto body_target = ir::TargetEntryInstr::New(GetOwner()->GetNextBlockId());
   ASSERT(body_target);
 
-  const auto join = JoinEntryInstr::New(GetOwner()->GetNextBlockId());
+  const auto join = ir::JoinEntryInstr::New(GetOwner()->GetNextBlockId());
   ASSERT(join);
 
   ValueVisitor for_test(GetOwner());
@@ -269,7 +269,7 @@ auto EffectVisitor::VisitWhileExpr(expr::WhileExpr* expr) -> bool {  // TODO: cl
     return false;
   }
   AppendFragment(target, for_test);
-  target->Append(BranchInstr::New(for_test.GetValue(), body_target, join));
+  target->Append(ir::BranchInstr::New(for_test.GetValue(), body_target, join));
 
   EffectVisitor for_body(GetOwner());
   for (const auto& expr : expr->GetBody()) {
@@ -279,7 +279,7 @@ auto EffectVisitor::VisitWhileExpr(expr::WhileExpr* expr) -> bool {  // TODO: cl
     }
   }
   AppendFragment(body_target, for_body);
-  body_target->Append(instr::GotoInstr::New(target));
+  body_target->Append(ir::GotoInstr::New(target));
 
   SetExitInstr(join);
   GetOwner()->GetCurrentBlock()->AddDominated(target);
@@ -331,20 +331,20 @@ auto EffectVisitor::VisitBinding(expr::Binding* expr) -> bool {
   const auto symbol = expr->GetSymbol();
   ASSERT(symbol);
   LocalVariable* local = nullptr;
-  instr::Definition* defn = nullptr;
+  ir::Definition* defn = nullptr;
   if (IsInvokePublishSubject(expr->GetValue())) {
     const auto value = PublishSubject::New();
     ASSERT(value);
     local = LocalVariable::New(scope, symbol, value);
     ASSERT(local);
-    defn = instr::ConstantInstr::New(value);
+    defn = ir::ConstantInstr::New(value);
     Add(defn);
   } else if (IsInvokeReplaySubject(expr->GetValue())) {
     const auto value = ReplaySubject::New();
     ASSERT(value);
     local = LocalVariable::New(scope, symbol, value);
     ASSERT(local);
-    defn = instr::ConstantInstr::New(value);
+    defn = ir::ConstantInstr::New(value);
     Add(defn);
   } else {
     ValueVisitor for_value(GetOwner());
@@ -362,7 +362,7 @@ auto EffectVisitor::VisitBinding(expr::Binding* expr) -> bool {
     LOG(FATAL) << "failed to add " << local << " to scope.";
     return false;
   }
-  Add(instr::StoreVariableInstr::New(symbol, defn));
+  Add(ir::StoreVariableInstr::New(symbol, defn));
   return true;
 }
 
@@ -379,13 +379,13 @@ auto EffectVisitor::VisitNewExpr(expr::NewExpr* expr) -> bool {
     }
     Append(for_arg);
   }
-  ReturnDefinition(instr::NewInstr::New(expr->GetTargetClass(), expr->GetNumberOfChildren()));
+  ReturnDefinition(ir::NewInstr::New(expr->GetTargetClass(), expr->GetNumberOfChildren()));
   return true;
 }
 
 auto EffectVisitor::VisitQuotedExpr(expr::QuotedExpr* expr) -> bool {
   ASSERT(expr);
-  ReturnDefinition(ConstantInstr::New(expr->Get()));
+  ReturnDefinition(ir::ConstantInstr::New(expr->Get()));
   return true;
 }
 
@@ -406,11 +406,11 @@ static inline auto ResolveRxOp(Symbol* symbol, LocalScope* current_scope) -> Pro
   return local->GetValue()->AsProcedure();
 }
 
-static inline auto CreateRxOpTarget(Symbol* symbol, LocalScope* scope) -> instr::Definition* {
+static inline auto CreateRxOpTarget(Symbol* symbol, LocalScope* scope) -> ir::Definition* {
   const auto procedure = ResolveRxOp(symbol, scope);
   if (procedure)
-    return instr::ConstantInstr::New(procedure);
-  return instr::LoadVariableInstr::New(symbol);
+    return ir::ConstantInstr::New(procedure);
+  return ir::LoadVariableInstr::New(symbol);
 }
 
 auto RxEffectVisitor::VisitRxOpExpr(expr::RxOpExpr* expr) -> bool {
@@ -431,10 +431,10 @@ auto RxEffectVisitor::VisitRxOpExpr(expr::RxOpExpr* expr) -> bool {
   const auto call_target = CreateRxOpTarget(expr->GetSymbol(), GetOwner()->GetScope());
   Add(call_target);
   if (IsNativeCall(call_target)) {
-    Add(instr::InvokeNativeInstr::New(call_target, expr->GetNumberOfChildren() + 1));
+    Add(ir::InvokeNativeInstr::New(call_target, expr->GetNumberOfChildren() + 1));
   } else {
-    Add(instr::InstanceOfInstr::New(call_target, Procedure::GetClass()));
-    Add(instr::InvokeInstr::New(call_target, expr->GetNumberOfChildren()) + 1);
+    Add(ir::InstanceOfInstr::New(call_target, Procedure::GetClass()));
+    Add(ir::InvokeInstr::New(call_target, expr->GetNumberOfChildren()) + 1);
   }
   return true;
 }
@@ -443,13 +443,13 @@ static inline auto IsLoadSymbol(ValueVisitor& rhs) -> bool {
   return rhs.HasValue() && rhs.GetValue()->IsLoadVariableInstr();
 }
 
-auto EffectVisitor::CreateStoreLoad(Symbol* symbol, instr::Definition* value) -> instr::Definition* {
+auto EffectVisitor::CreateStoreLoad(Symbol* symbol, ir::Definition* value) -> ir::Definition* {
   ASSERT(value);
-  Add(instr::StoreVariableInstr::New(symbol, value));
-  return instr::LoadVariableInstr::New(symbol);
+  Add(ir::StoreVariableInstr::New(symbol, value));
+  return ir::LoadVariableInstr::New(symbol);
 }
 
-// static inline auto IsConstantType(instr::Definition* value, Class* expected) -> bool {
+// static inline auto IsConstantType(ir::Definition* value, Class* expected) -> bool {
 //   ASSERT(value);
 //   if (!value->IsConstantInstr())
 //     return false;
@@ -458,7 +458,7 @@ auto EffectVisitor::CreateStoreLoad(Symbol* symbol, instr::Definition* value) ->
 //   return constant->GetValue()->GetType()->Equals(expected);
 // }
 
-// static inline auto IsConstantInstanceOf(instr::Definition* value, Class* expected) -> bool {
+// static inline auto IsConstantInstanceOf(ir::Definition* value, Class* expected) -> bool {
 //   if (!value || !value->IsConstantInstr())
 //     return false;
 //   const auto constant = value->AsConstantInstr();
@@ -466,25 +466,25 @@ auto EffectVisitor::CreateStoreLoad(Symbol* symbol, instr::Definition* value) ->
 //   return constant->GetValue()->GetType()->IsInstanceOf(expected);
 // }
 
-// static inline auto IsCastTo(instr::Definition* value, Class* expected) -> bool {
+// static inline auto IsCastTo(ir::Definition* value, Class* expected) -> bool {
 //   if (!value || !value->IsCastInstr())
 //     return false;
 //   const auto cast = value->AsCastInstr();
 //   return cast->GetTarget()->Equals(expected);
 // }
 
-// static inline auto IsCastToInstanceOf(instr::Definition* value, Class* expected) -> bool {
+// static inline auto IsCastToInstanceOf(ir::Definition* value, Class* expected) -> bool {
 //   if (!value || !value->IsCastInstr())
 //     return false;
 //   const auto cast = value->AsCastInstr();
 //   return cast->GetTarget()->IsInstanceOf(expected);
 // }
 
-// static inline auto IsObservableSource(instr::Definition* defn) -> bool {
+// static inline auto IsObservableSource(ir::Definition* defn) -> bool {
 //   return IsConstantType(defn, Observable::GetClass()) || IsCastTo(defn, Observable::GetClass());
 // }
 
-// static inline auto IsSubjectSource(instr::Definition* defn) -> bool {
+// static inline auto IsSubjectSource(ir::Definition* defn) -> bool {
 //   return IsConstantInstanceOf(defn, Subject::GetClass()) || IsCastToInstanceOf(defn, Subject::GetClass());
 // }
 
@@ -548,9 +548,9 @@ auto EffectVisitor::VisitLetRxExpr(expr::LetRxExpr* expr) -> bool {
   }
   Append(for_source);
   if (IsObservableSource(scope, expr->GetSource()) || IsSubjectSource(scope, expr->GetSource())) {
-    Add(instr::StoreVariableInstr::New(symbol, for_source.GetValue()));
+    Add(ir::StoreVariableInstr::New(symbol, for_source.GetValue()));
   } else {
-    Add(instr::StoreVariableInstr::New(symbol, DoCastTo(for_source.GetValue(), Observable::GetClass())));
+    Add(ir::StoreVariableInstr::New(symbol, DoCastTo(for_source.GetValue(), Observable::GetClass())));
   }
 
   // process body
@@ -558,18 +558,18 @@ auto EffectVisitor::VisitLetRxExpr(expr::LetRxExpr* expr) -> bool {
   while (IsOpen() && (idx < expr->GetNumberOfChildren())) {
     const auto oper_expr = expr->GetOperatorAt(idx++);
     ASSERT(oper_expr);
-    RxEffectVisitor for_effect(GetOwner(), instr::LoadVariableInstr::New(symbol));
+    RxEffectVisitor for_effect(GetOwner(), ir::LoadVariableInstr::New(symbol));
     if (!oper_expr->Accept(&for_effect)) {
       LOG(FATAL) << "failed to visit: " << oper_expr;
       return false;
     }
     Append(for_effect);
     if (idx == expr->GetNumberOfChildren()) {
-      instr::Definition* return_value = nullptr;
+      ir::Definition* return_value = nullptr;
       if (!oper_expr->IsSubscribe() && !oper_expr->IsComplete()) {
-        return_value = instr::LoadVariableInstr::New(symbol);
+        return_value = ir::LoadVariableInstr::New(symbol);
       } else {
-        return_value = instr::ConstantInstr::New(Null())->AsDefinition();
+        return_value = ir::ConstantInstr::New(Null())->AsDefinition();
       }
       ASSERT(return_value);
       ReturnDefinition(return_value);
@@ -601,10 +601,10 @@ auto EffectVisitor::VisitLetExpr(expr::LetExpr* expr) -> bool {
   return true;
 }
 
-auto EffectVisitor::CreateCastTo(instr::Definition* value, Class* target) -> instr::Definition* {
+auto EffectVisitor::CreateCastTo(ir::Definition* value, Class* target) -> ir::Definition* {
   ASSERT(value);
   ASSERT(target);
-  return instr::CastInstr::New(value, target);
+  return ir::CastInstr::New(value, target);
 }
 
 auto EffectVisitor::VisitCastExpr(expr::CastExpr* expr) -> bool {
@@ -637,11 +637,11 @@ auto EffectVisitor::VisitBeginExpr(BeginExpr* expr) -> bool {
 
 auto EffectVisitor::VisitCondExpr(CondExpr* expr) -> bool {
   ASSERT(expr);
-  const auto join = JoinEntryInstr::New(GetOwner()->GetNextBlockId());
+  const auto join = ir::JoinEntryInstr::New(GetOwner()->GetNextBlockId());
 
   for (const auto& clause : expr->GetClauses()) {
     // process conseq
-    const auto target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
+    const auto target = ir::TargetEntryInstr::New(GetOwner()->GetNextBlockId());
     ASSERT(target);
     for (const auto& action : clause->GetActions()) {
       ASSERT(action);
@@ -652,7 +652,7 @@ auto EffectVisitor::VisitCondExpr(CondExpr* expr) -> bool {
       }
       AppendFragment(target, for_action);
     }
-    target->Append(GotoInstr::New(join));
+    target->Append(ir::GotoInstr::New(join));
     GetOwner()->GetCurrentBlock()->AddDominated(target);
 
     ValueVisitor for_test(GetOwner());
@@ -661,13 +661,13 @@ auto EffectVisitor::VisitCondExpr(CondExpr* expr) -> bool {
       return false;
     }
     Append(for_test);
-    const auto branch = BranchInstr::New(for_test.GetValue(), target, join);
+    const auto branch = ir::BranchInstr::New(for_test.GetValue(), target, join);
     ASSERT(branch);
     Add(branch);
   }
 
   if (expr->HasAlternate()) {  // process alt (else)
-    const auto target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
+    const auto target = ir::TargetEntryInstr::New(GetOwner()->GetNextBlockId());
     ASSERT(target);
     Add(target);
     ValueVisitor for_alt(GetOwner());
@@ -676,7 +676,7 @@ auto EffectVisitor::VisitCondExpr(CondExpr* expr) -> bool {
       return false;
     }
     AppendFragment(target, for_alt);
-    target->Append(GotoInstr::New(join));
+    target->Append(ir::GotoInstr::New(join));
     GetOwner()->GetCurrentBlock()->AddDominated(target);
   }
 
@@ -696,9 +696,9 @@ auto EffectVisitor::VisitUnaryExpr(expr::UnaryExpr* expr) -> bool {
   switch (expr->GetOp()) {
     case expr::kCar:
     case expr::kCdr:
-      Add(instr::InstanceOfInstr::New(for_value.GetValue(), Pair::GetClass()));
+      Add(ir::InstanceOfInstr::New(for_value.GetValue(), Pair::GetClass()));
     default:
-      ReturnDefinition(instr::UnaryOpInstr::New(expr->GetOp(), for_value.GetValue()));
+      ReturnDefinition(ir::UnaryOpInstr::New(expr->GetOp(), for_value.GetValue()));
   }
   return true;
 }
@@ -716,14 +716,14 @@ auto EffectVisitor::VisitLocalDef(LocalDef* expr) -> bool {
     return false;
   }
   Append(for_value);
-  Add(StoreVariableInstr::New(symbol, for_value.GetValue()));
+  Add(ir::StoreVariableInstr::New(symbol, for_value.GetValue()));
   return true;
 }
 
 auto EffectVisitor::VisitListExpr(expr::ListExpr* expr) -> bool {
   ASSERT(expr);
   if (expr->IsConstantExpr()) {
-    ReturnDefinition(instr::ConstantInstr::New(expr->EvalToConstant()));
+    ReturnDefinition(ir::ConstantInstr::New(expr->EvalToConstant()));
     return true;
   }
   SeqExprIterator<expr::ListExpr> iter(this, expr);
@@ -748,33 +748,33 @@ auto EffectVisitor::VisitLiteralExpr(LiteralExpr* p) -> bool {
   if (value->IsSymbol()) {
     LocalVariable* local = nullptr;
     if (!GetOwner()->GetScope()->Lookup(value->AsSymbol(), &local)) {
-      ReturnDefinition(instr::LoadVariableInstr::New(value->AsSymbol()));
+      ReturnDefinition(ir::LoadVariableInstr::New(value->AsSymbol()));
       return true;
     }
     ASSERT(local);
     if (local->HasValue() && local->GetValue()->IsNativeProcedure()) {
-      ReturnDefinition(ConstantInstr::New(local->GetValue()));
+      ReturnDefinition(ir::ConstantInstr::New(local->GetValue()));
       return true;
     }
-    ReturnDefinition(instr::LoadVariableInstr::New(value->AsSymbol()));
+    ReturnDefinition(ir::LoadVariableInstr::New(value->AsSymbol()));
     return true;
   } else {
-    ReturnDefinition(ConstantInstr::New(p->GetValue()));
+    ReturnDefinition(ir::ConstantInstr::New(p->GetValue()));
   }
   return true;
 }
 
-static inline auto IsConstantSymbol(instr::Definition* defn) -> bool {
+static inline auto IsConstantSymbol(ir::Definition* defn) -> bool {
   return defn && defn->IsConstantInstr() && defn->AsConstantInstr()->GetValue() &&
          defn->AsConstantInstr()->GetValue()->IsSymbol();
 }
 
-static inline auto IsConstantString(instr::Definition* defn) -> bool {
+static inline auto IsConstantString(ir::Definition* defn) -> bool {
   return defn && defn->IsConstantInstr() && defn->AsConstantInstr()->GetValue() &&
          defn->AsConstantInstr()->GetValue()->IsString();
 }
 
-static inline auto GetClassReference(instr::Definition* defn) -> Class* {
+static inline auto GetClassReference(ir::Definition* defn) -> Class* {
   if (IsConstantSymbol(defn)) {
     return Class::FindClass(ToSymbol(defn->AsConstantInstr()->GetValue()));
   } else if (IsConstantString(defn)) {
@@ -798,7 +798,7 @@ auto EffectVisitor::VisitBinaryOpExpr(BinaryOpExpr* expr) -> bool {
   if (!expr->GetRight()->Accept(&for_right))
     return false;
   Append(for_right);
-  ReturnDefinition(BinaryOpInstr::New(op, for_left.GetValue(), for_right.GetValue()));
+  ReturnDefinition(ir::BinaryOpInstr::New(op, for_left.GetValue(), for_right.GetValue()));
   return true;
 }
 
@@ -810,7 +810,7 @@ auto EffectVisitor::VisitInstanceOfExpr(expr::InstanceOfExpr* expr) -> bool {
     return false;
   }
   Append(for_value);
-  ReturnDefinition(instr::InstanceOfInstr::New(for_value.GetValue(), expr->GetTarget(), false));
+  ReturnDefinition(ir::InstanceOfInstr::New(for_value.GetValue(), expr->GetTarget(), false));
   return true;
 }
 
@@ -822,8 +822,8 @@ auto EffectVisitor::VisitThrowExpr(expr::ThrowExpr* expr) -> bool {
     return false;
   }
   Append(for_value);
-  Add(InstanceOfInstr::New(for_value.GetValue(), String::GetClass()));
-  Add(ThrowInstr::New(for_value.GetValue()));
+  Add(ir::InstanceOfInstr::New(for_value.GetValue(), String::GetClass()));
+  Add(ir::ThrowInstr::New(for_value.GetValue()));
   return true;
 }
 
@@ -837,17 +837,17 @@ auto EffectVisitor::VisitSetExpr(expr::SetExpr* expr) -> bool {
     return false;
   }
   Append(for_value);
-  Add(StoreVariableInstr::New(expr->GetSymbol(), for_value.GetValue()));
+  Add(ir::StoreVariableInstr::New(expr->GetSymbol(), for_value.GetValue()));
   return true;
 }
 
 auto FlowGraphBuilder::Build(Lambda* lambda, LocalScope* scope) -> FlowGraph* {
   ASSERT(lambda);
   FlowGraphBuilder builder(scope);
-  const auto graph_entry = GraphEntryInstr::New(builder.GetNextBlockId());
+  const auto graph_entry = ir::GraphEntryInstr::New(builder.GetNextBlockId());
   ASSERT(graph_entry);
   builder.SetCurrentBlock(graph_entry);
-  const auto target = TargetEntryInstr::New(builder.GetNextBlockId());
+  const auto target = ir::TargetEntryInstr::New(builder.GetNextBlockId());
   ASSERT(target);
   builder.SetCurrentBlock(target);
   ValueVisitor for_value(&builder);
@@ -874,7 +874,7 @@ auto EffectVisitor::VisitScript(Script* script) -> bool {
     }
     Append(for_value);
     if (index == body.size()) {
-      const auto return_value = for_value.HasValue() ? for_value.GetValue() : instr::ConstantInstr::New(Null());
+      const auto return_value = for_value.HasValue() ? for_value.GetValue() : ir::ConstantInstr::New(Null());
       ASSERT(return_value);
       Do(return_value);
       AddReturnExit(return_value);
@@ -898,7 +898,7 @@ auto EffectVisitor::VisitLambda(Lambda* lambda) -> bool {
     }
     Append(for_value);
     if (index == body.size()) {
-      const auto return_value = for_value.HasValue() ? for_value.GetValue() : instr::ConstantInstr::New(Null());
+      const auto return_value = for_value.HasValue() ? for_value.GetValue() : ir::ConstantInstr::New(Null());
       ASSERT(return_value);
       Do(return_value);
       AddReturnExit(return_value);
@@ -913,10 +913,10 @@ auto FlowGraphBuilder::Build(Script* script, LocalScope* scope) -> FlowGraph* {
   ASSERT(script);
   ASSERT(scope);
   FlowGraphBuilder builder(scope);
-  const auto graph_entry = GraphEntryInstr::New(builder.GetNextBlockId());
+  const auto graph_entry = ir::GraphEntryInstr::New(builder.GetNextBlockId());
   ASSERT(graph_entry);
   builder.SetCurrentBlock(graph_entry);
-  const auto target = TargetEntryInstr::New(builder.GetNextBlockId());
+  const auto target = ir::TargetEntryInstr::New(builder.GetNextBlockId());
   ASSERT(target);
   builder.SetCurrentBlock(target);
   ValueVisitor for_effect(&builder);

@@ -21,7 +21,7 @@ class StackFrame {
   DEFINE_DEFAULT_COPYABLE_TYPE(StackFrame);
 
  public:
-  using TargetVariant = std::variant<instr::TargetEntryInstr*, NativeProcedure*>;
+  using TargetVariant = std::variant<ir::TargetEntryInstr*, NativeProcedure*>;
 
  private:
   uint64_t id_;
@@ -29,7 +29,7 @@ class StackFrame {
   LocalScope* locals_;
   uword return_address_;
 
-  StackFrame(const uword id, instr::TargetEntryInstr* target, LocalScope* locals, const uword return_address = UNALLOCATED) :
+  StackFrame(const uword id, ir::TargetEntryInstr* target, LocalScope* locals, const uword return_address = UNALLOCATED) :
     id_(id),
     target_(target),
     locals_(locals),
@@ -65,12 +65,12 @@ class StackFrame {
   }
 
   inline auto IsTargetEntryInstr() const -> bool {
-    return std::holds_alternative<instr::TargetEntryInstr*>(GetTarget());
+    return std::holds_alternative<ir::TargetEntryInstr*>(GetTarget());
   }
 
-  auto GetTargetAsTargetEntryInstr() const -> instr::TargetEntryInstr* {
+  auto GetTargetAsTargetEntryInstr() const -> ir::TargetEntryInstr* {
     ASSERT(IsTargetEntryInstr());
-    return std::get<instr::TargetEntryInstr*>(GetTarget());
+    return std::get<ir::TargetEntryInstr*>(GetTarget());
   }
 
   inline auto IsNativeFrame() const -> bool {
@@ -98,8 +98,8 @@ class StackFrame {
     return GetReturnAddress() != UNALLOCATED;
   }
 
-  inline auto GetReturnInstr() const -> instr::Instruction* {
-    return ((instr::Instruction*)GetReturnAddressPointer());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  inline auto GetReturnInstr() const -> ir::Instruction* {
+    return ((ir::Instruction*)GetReturnAddressPointer());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   }
 
   auto ToString() const -> std::string;

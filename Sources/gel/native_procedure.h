@@ -83,7 +83,7 @@ class NativeProcedure : public Procedure {
     return true;
   }
 
-  auto GetEntry() const -> instr::TargetEntryInstr* {
+  auto GetEntry() const -> ir::TargetEntryInstr* {
     return nullptr;  // TODO: remove this stupid function
   }
 

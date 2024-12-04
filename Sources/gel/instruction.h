@@ -36,7 +36,7 @@ class EffectVisitor;
 class ClauseVisitor;
 class FlowGraphBuilder;
 
-namespace instr {
+namespace ir {
 class Instruction;
 #define FORWARD_DECLARE(Name) class Name;
 FOR_EACH_INSTRUCTION(FORWARD_DECLARE)
@@ -890,13 +890,13 @@ class NewInstr : public Definition {
     return new NewInstr(target, num_args);
   }
 };
-}  // namespace instr
+}  // namespace ir
 
-using instr::EntryInstr;
-using instr::Instruction;
-using instr::InstructionIterator;
-using instr::InstructionVisitor;
-#define DEFINE_USE(Name) using instr::Name;
+using ir::EntryInstr;
+using ir::Instruction;
+using ir::InstructionIterator;
+using ir::InstructionVisitor;
+#define DEFINE_USE(Name) using ir::Name;
 FOR_EACH_INSTRUCTION(DEFINE_USE)
 #undef DEFINE_USE
 
@@ -918,18 +918,18 @@ class InstructionLogger {
     return severity_;
   }
 
-  inline void Visit(instr::Instruction* instr) {
+  inline void Visit(ir::Instruction* instr) {
     ASSERT(instr);
     LOG_AT_LEVEL(GetSeverity()) << " - " << instr->ToString();
   }
 
-  inline void operator()(instr::Instruction* instr) {
+  inline void operator()(ir::Instruction* instr) {
     return Visit(instr);
   }
 
  public:
   template <const Severity S = google::INFO, const bool OnlyOne = false>
-  static inline void Log(instr::Instruction* instr) {
+  static inline void Log(ir::Instruction* instr) {
     ASSERT(instr);
     InstructionLogger logger(S);
     logger.Visit(instr);

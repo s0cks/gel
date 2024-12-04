@@ -8,10 +8,10 @@ namespace expr {
 class Expression;
 }
 
-namespace instr {
+namespace ir {
 class Instruction;
 class Definition;
-}  // namespace instr
+}  // namespace ir
 
 #define FOR_EACH_PRIMITIVE_TYPE(V) \
   V(Class)                         \
