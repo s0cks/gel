@@ -192,16 +192,6 @@ auto Interpreter::VisitInvokeDynamicInstr(InvokeDynamicInstr* instr) -> bool {
   return Next();
 }
 
-auto Interpreter::VisitEvalInstr(EvalInstr* instr) -> bool {
-  ASSERT(instr);
-  const auto value = GetRuntime()->Pop();
-  ASSERT(value && value->IsString());
-  const auto result = GetRuntime()->Eval(String::Unbox(value));
-  ASSERT(result);
-  GetRuntime()->Push(result);
-  return Next();
-}
-
 static inline auto GetTarget(const bool branch, instr::BranchInstr* instr) -> instr::EntryInstr* {
   if (branch)
     return instr->GetTrueTarget();

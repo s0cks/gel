@@ -290,6 +290,13 @@ NATIVE_PROCEDURE_F(gel_get_natives) {
   return Return(result);
 }
 
+NATIVE_PROCEDURE_F(gel_get_compile_time) {
+  NativeArgument<0, Lambda> lambda(args);
+  if (!lambda)
+    return Throw(lambda.GetError());
+  return ReturnNew<Long>(lambda->GetCompileTimeNanos());
+}
+
 #endif  // GEL_DEBUG
 
 #ifdef GEL_ENABLE_RX

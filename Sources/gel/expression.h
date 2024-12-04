@@ -21,11 +21,9 @@
   V(ClauseExpr)                     \
   V(WhenExpr)                       \
   V(CaseExpr)                       \
-  V(LambdaExpr)                     \
   V(LocalDef)                       \
   V(ImportExpr)                     \
   V(MacroDef)                       \
-  V(EvalExpr)                       \
   V(CallProcExpr)                   \
   V(SetExpr)                        \
   V(Binding)                        \
@@ -636,33 +634,6 @@ class BeginExpr : public SequenceExpr {
   }
 };
 
-class EvalExpr : public TemplateExpression<1> {
- protected:
-  explicit EvalExpr(Expression* expr) :
-    TemplateExpression<1>() {
-    SetChildAt(0, expr);
-  }
-
- public:
-  ~EvalExpr() override = default;
-
-  auto GetExpression() const -> Expression* {
-    return GetChildAt(0);
-  }
-
-  auto HasExpression() const -> bool {
-    return HasChildAt(0);
-  }
-
-  DECLARE_EXPRESSION(EvalExpr);
-
- public:
-  static inline auto New(Expression* expr) -> EvalExpr* {
-    ASSERT(expr);
-    return new EvalExpr(expr);
-  }
-};
-
 class CallProcExpr : public Expression {
  private:
   Expression* target_ = nullptr;
@@ -1047,46 +1018,6 @@ class SetExpr : public Expression {
     ASSERT(symbol);
     ASSERT(value);
     return new SetExpr(symbol, value);
-  }
-};
-
-class LambdaExpr : public Expression {
-  friend class gel::Parser;
-
- protected:
-  ArgumentSet args_;
-  ExpressionList body_;
-
-  explicit LambdaExpr(const ArgumentSet& args, const ExpressionList& body) :
-    Expression(),
-    args_(args),
-    body_(body) {}
-
- public:
-  ~LambdaExpr() override = default;
-
-  auto GetArgs() const -> const ArgumentSet& {
-    return args_;
-  }
-
-  auto GetBody() const -> const ExpressionList& {
-    return body_;
-  }
-
-  inline auto IsEmpty() const -> bool {
-    return body_.empty();
-  }
-
-  auto VisitChildren(ExpressionVisitor* vis) -> bool override;
-  DECLARE_EXPRESSION(LambdaExpr);
-
- public:
-  static inline auto New(const ArgumentSet& args, const ExpressionList& body = {}) -> LambdaExpr* {
-    return new LambdaExpr(args, body);
-  }
-
-  static inline auto New(const ArgumentSet& args, Expression* body) -> LambdaExpr* {
-    return New(args, ExpressionList{body});
   }
 };
 

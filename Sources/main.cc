@@ -11,10 +11,11 @@
 
 #include "gel/common.h"
 #include "gel/error.h"
-#include "gel/expression_compiler.h"
+#include "gel/expression.h"
 #include "gel/expression_dot.h"
 #include "gel/flags.h"
 #include "gel/flow_graph_builder.h"
+#include "gel/flow_graph_compiler.h"
 #include "gel/flow_graph_dot.h"
 #include "gel/heap.h"
 #include "gel/instruction.h"
@@ -88,9 +89,13 @@ static inline auto Execute(const std::string& expr) -> int {
 
   if (FLAGS_dump_ast) {
     try {
-      const auto flow_graph = ExpressionCompiler::Compile(expr, GetRuntime()->GetGlobalScope());
-      ASSERT(flow_graph && flow_graph->HasEntry());
-      DumpFlowGraph(flow_graph);
+      ArgumentSet args{};
+      expr::ExpressionList body = {
+          Parser::ParseExpr(expr),
+      };
+      const auto lambda = Lambda::New(args, body);
+      LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, GetRuntime()->GetGlobalScope())) << "failed to compile: " << expr;
+      DumpFlowGraph(lambda);
     } catch (const gel::Exception& exc) {
       LOG(ERROR) << "failed to execute expression.";
       std::cerr << " * expression: " << expr << std::endl;

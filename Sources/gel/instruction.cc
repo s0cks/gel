@@ -29,36 +29,22 @@ auto NewInstr::ToString() const -> std::string {
 }
 
 auto LoadVariableInstr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "LoadVariableInstr(";
-  ss << "symbol=" << GetSymbol()->ToString();
-  ss << ")";
-  return ss.str();
-}
-
-auto EvalInstr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "EvalInstr(";
-  ss << "value=" << GetValue()->ToString();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<LoadVariableInstr> helper;
+  helper.AddField("symbol", GetSymbol());
+  return helper;
 }
 
 auto StoreVariableInstr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "StoreVariableInstr(";
-  ss << "symbol=" << GetSymbol()->ToString() << ", ";
-  ss << "value=" << GetValue()->ToString();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<StoreVariableInstr> helper;
+  helper.AddField("symbol", GetSymbol());
+  helper.AddField("value", GetValue());
+  return helper;
 }
 
 auto ConstantInstr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "ConstantInstr(";
-  ss << "value=" << GetValue()->ToString();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<ConstantInstr> helper;
+  helper.AddField("value", GetValue());
+  return helper;
 }
 
 auto EntryInstr::GetLastInstruction() const -> Instruction* {
@@ -84,78 +70,66 @@ auto GraphEntryInstr::GetFirstInstruction() const -> Instruction* {
 }
 
 auto GraphEntryInstr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "GraphEntryInstr()";
-  return ss.str();
+  ToStringHelper<GraphEntryInstr> helper;
+  helper.AddField("block_id", GetBlockId());
+  helper.AddField("target", GetTarget());
+  return helper;
 }
 
 auto TargetEntryInstr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "TargetEntryInstr(";
-  ss << "block_id=" << GetBlockId();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<TargetEntryInstr> helper;
+  helper.AddField("block_id", GetBlockId());
+  return helper;
 }
 
 auto JoinEntryInstr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "JoinEntryInstr(";
-  ss << ")";
-  return ss.str();
+  ToStringHelper<JoinEntryInstr> helper;
+  helper.AddField("block_id", GetBlockId());
+  return helper;
 }
 
 auto ReturnInstr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "ReturnInstr(";
+  ToStringHelper<ReturnInstr> helper;
   if (HasValue())
-    ss << "value=" << GetValue()->ToString();
-  ss << ")";
-  return ss.str();
+    helper.AddField("value", GetValue());
+  return helper;
 }
 
 auto BinaryOpInstr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "BinaryOpInstr(";
-  ss << "op=" << GetOp();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<BinaryOpInstr> helper;
+  helper.AddField("op", GetOp());
+  helper.AddField("left", GetLeft());
+  helper.AddField("right", GetRight());
+  return helper;
 }
 
 auto BranchInstr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "BranchInstr(";
-  ss << "test=" << GetTest()->ToString() << ", ";
-  ss << "true_target=" << GetTrueTarget()->ToString() << ", ";
+  ToStringHelper<BranchInstr> helper;
+  helper.AddField("test", GetTest());
+  helper.AddField("true_target", GetTrueTarget());
   if (HasFalseTarget())
-    ss << "false_target=" << GetFalseTarget()->ToString() << ", ";
-  ss << "join=" << GetJoin()->ToString();
-  ss << ")";
-  return ss.str();
+    helper.AddField("false_target", GetFalseTarget());
+  helper.AddField("join", GetJoin());
+  return helper;
 }
 
 auto GotoInstr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "GotoInstr(";
-  ss << "target=" << GetTarget()->ToString();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<GotoInstr> helper;
+  helper.AddField("target", GetTarget());
+  return helper;
 }
 
 auto UnaryOpInstr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "UnaryOpInstr(";
-  ss << "op=" << GetOp() << ", ";
-  ss << "value=" << GetValue()->ToString();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<BranchInstr> helper;
+  helper.AddField("op", GetOp());
+  helper.AddField("value", GetValue());
+  return helper;
 }
 
 auto ThrowInstr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "ThrowInstr(";
-  ss << "value=" << GetValue()->ToString();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<ThrowInstr> helper;
+  helper.AddField("value", GetValue());
+  return helper;
 }
 
 auto InvokeInstr::ToString() const -> std::string {
@@ -166,11 +140,10 @@ auto InvokeInstr::ToString() const -> std::string {
 }
 
 auto InvokeDynamicInstr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "InvokeDynamicInstr(";
-  ss << "target=" << GetTarget()->ToString();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<InvokeDynamicInstr> helper;
+  helper.AddField("target", GetTarget());
+  helper.AddField("num_args", GetNumberOfArgs());
+  return helper;
 }
 
 auto InvokeNativeInstr::ToString() const -> std::string {
@@ -181,11 +154,11 @@ auto InvokeNativeInstr::ToString() const -> std::string {
 }
 
 auto InstanceOfInstr::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "InstanceOfInstr(";
-  ss << "value=" << GetValue()->ToString();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<InstanceOfInstr> helper;
+  helper.AddField("type", GetType());
+  helper.AddField("value", GetValue());
+  helper.AddField("strict", IsStrict());
+  return helper;
 }
 
 auto CastInstr::ToString() const -> std::string {

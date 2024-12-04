@@ -63,6 +63,7 @@ _DECLARE_NATIVE_PROCEDURE(gel_get_locals, "gel:get-locals");
 _DECLARE_NATIVE_PROCEDURE(gel_get_classes, "gel:get-classes");
 _DECLARE_NATIVE_PROCEDURE(gel_get_target_triple, "gel:get-target-triple");
 _DECLARE_NATIVE_PROCEDURE(gel_get_natives, "gel:get-natives");
+_DECLARE_NATIVE_PROCEDURE(gel_get_compile_time, "gel:compile-time?");
 #endif  // GEL_DEBUG
 
 }  // namespace gel::proc

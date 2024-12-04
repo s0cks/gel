@@ -135,7 +135,6 @@ class Parser {
   auto ParseBinaryExpr() -> expr::BinaryOpExpr*;
   auto ParseLambdaExpr() -> expr::LambdaExpr*;
   auto ParseThrowExpr() -> expr::ThrowExpr*;
-  auto ParseEvalExpr() -> expr::EvalExpr*;
   auto ParseQuotedExpr() -> expr::Expression*;
   auto ParseWhenExpr() -> expr::WhenExpr*;
   auto ParseCaseExpr() -> expr::CaseExpr*;
@@ -153,7 +152,7 @@ class Parser {
   // Definitions
   auto ParseDefinition() -> expr::Definition*;
   auto ParseLocalDef() -> expr::LocalDef*;
-  auto ParseDefunExpr() -> expr::LocalDef*;
+  auto ParseDefnExpr() -> expr::LocalDef*;
   auto ParseMacroDef() -> expr::MacroDef*;
 
   inline auto PeekChar(const uint64_t offset = 0) const -> char {

@@ -249,23 +249,6 @@ auto Parser::ParseThrowExpr() -> ThrowExpr* {
   return ThrowExpr::New(value);
 }
 
-auto Parser::ParseLambdaExpr() -> LambdaExpr* {
-  ExpectNext(Token::kFn);
-  ArgumentSet args;
-  if (!ParseArguments(args)) {
-    LOG(FATAL) << "failed to parse lambda arguments.";
-    return nullptr;
-  }
-  PushScope();
-  ExpressionList body;
-  if (!ParseExpressionList(body)) {
-    LOG(FATAL) << "failed to parse lambda body.";
-    return nullptr;
-  }
-  PopScope();
-  return LambdaExpr::New(args, body);
-}
-
 auto Parser::ParseSetExpr() -> SetExpr* {
   ExpectNext(Token::kSetExpr);
   const auto symbol = ParseSymbol();
@@ -273,13 +256,6 @@ auto Parser::ParseSetExpr() -> SetExpr* {
   const auto value = ParseExpression();
   ASSERT(value);
   return SetExpr::New(symbol, value);
-}
-
-auto Parser::ParseEvalExpr() -> expr::EvalExpr* {
-  ExpectNext(Token::kEvalExpr);
-  const auto value = ParseExpression();
-  ASSERT(value);
-  return EvalExpr::New(value);
 }
 
 auto Parser::ParseExpression() -> Expression* {
@@ -311,7 +287,7 @@ auto Parser::ParseExpression() -> Expression* {
         expr = ParseMacroDef();
         break;
       case Token::kDefn:
-        expr = ParseDefunExpr();
+        expr = ParseDefnExpr();
         break;
       case Token::kNewExpr:
         expr = ParseNewExpr();
@@ -321,7 +297,7 @@ auto Parser::ParseExpression() -> Expression* {
         expr = ParseBeginExpr();
         break;
       case Token::kFn:
-        expr = ParseLambdaExpr();
+        expr = expr::LiteralExpr::New(ParseLambda(Token::kFn));
         break;
       case Token::kSetExpr:
         expr = ParseSetExpr();
@@ -338,9 +314,6 @@ auto Parser::ParseExpression() -> Expression* {
         break;
       case Token::kQuote:
         expr = ParseQuotedExpr();
-        break;
-      case Token::kEvalExpr:
-        expr = ParseEvalExpr();
         break;
       case Token::kWhenExpr:
         expr = ParseWhenExpr();
@@ -469,7 +442,7 @@ auto Parser::ParseWhileExpr() -> expr::WhileExpr* {
   return expr::WhileExpr::New(test, body);
 }
 
-auto Parser::ParseDefunExpr() -> LocalDef* {
+auto Parser::ParseDefnExpr() -> LocalDef* {
   ExpectNext(Token::kDefn);
   const auto symbol = ParseSymbol();
   ASSERT(symbol);
@@ -486,7 +459,7 @@ auto Parser::ParseDefunExpr() -> LocalDef* {
     return nullptr;
   }
   PopScope();
-  return LocalDef::New(symbol, LambdaExpr::New(args, body));
+  return LocalDef::New(symbol, expr::LiteralExpr::New(Lambda::New(symbol, args, body)));
 }
 
 auto Parser::ParseNewExpr() -> expr::NewExpr* {
@@ -534,7 +507,7 @@ auto Parser::ParseDefinition() -> expr::Definition* {
   const auto& next = PeekToken();
   switch (next.kind) {
     case Token::kDefn:
-      defn = ParseDefunExpr();
+      defn = ParseDefnExpr();
       break;
     case Token::kMacroDef:
       defn = ParseMacroDef();
@@ -806,8 +779,6 @@ auto Parser::NextToken() -> const Token& {
       return NextToken(Token::kSetExpr);
     else if (ident == "cond")
       return NextToken(Token::kCond);
-    else if (ident == "eval")
-      return NextToken(Token::kEvalExpr);
     else if (ident == "when")
       return NextToken(Token::kWhenExpr);
     else if (ident == "case")
@@ -956,7 +927,7 @@ auto Parser::ParseLambda(const Token::Kind kind) -> Lambda* {
   ASSERT(lambda);
   if (name)
     lambda->SetName(name);
-  DLOG_IF(WARNING, name && GetScope()->Has(name)) << "redefining: " << name;
+  DLOG_IF(FATAL, name && GetScope()->Has(name)) << "cannot redefine: " << name;
   if (docs) {
     if (body.empty()) {
       body.push_back(expr::LiteralExpr::New(docs));
@@ -1083,7 +1054,7 @@ auto Parser::ParseScript() -> Script* {
           expr = ParseBeginExpr();
           break;
         case Token::kFn:
-          expr = ParseLambdaExpr();
+          expr = expr::LiteralExpr::New(ParseLambda(Token::kFn));
           break;
         case Token::kSetExpr:
           expr = ParseSetExpr();
@@ -1100,9 +1071,6 @@ auto Parser::ParseScript() -> Script* {
           break;
         case Token::kQuote:
           expr = ParseQuotedExpr();
-          break;
-        case Token::kEvalExpr:
-          expr = ParseEvalExpr();
           break;
         case Token::kWhenExpr:
           expr = ParseWhenExpr();

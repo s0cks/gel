@@ -12,7 +12,7 @@
 #include "gel/common.h"
 #include "gel/error.h"
 #include "gel/expression.h"
-#include "gel/expression_compiler.h"
+#include "gel/flow_graph_compiler.h"
 #include "gel/instruction.h"
 #include "gel/interpreter.h"
 #include "gel/lambda.h"
@@ -152,12 +152,7 @@ void Runtime::Call(Lambda* lambda, const ObjectList& args) {
   ASSERT(lambda);
   const auto locals = LocalScope::New(GetCurrentScope());
   ASSERT(locals);
-  if (!lambda->IsCompiled()) {
-    if (!LambdaCompiler::Compile(lambda, locals)) {
-      LOG(FATAL) << "failed to compile: " << lambda;
-      return;
-    }
-  }
+  LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, locals)) << "failed to compile: " << lambda;
   const auto& lambda_args = lambda->GetArgs();
   ASSERT(lambda_args.size() == args.size());
   auto idx = 0;
@@ -199,9 +194,13 @@ auto Runtime::Eval(const std::string& expr) -> Object* {
   const auto runtime = GetRuntime();
   ASSERT(runtime);
   const auto scope = runtime->GetGlobalScope();
-  const auto e = ExpressionCompiler::Compile(expr, scope);
-  ASSERT(e);
-  return nullptr;  // TODO: implement
+  ArgumentSet args{};
+  expr::ExpressionList body = {
+      Parser::ParseExpr(expr),
+  };
+  const auto lambda = Lambda::New(args, body);
+  LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, scope)) << "failed to compile: " << expr;
+  return GetRuntime()->CallPop(lambda);
 }
 
 auto Runtime::Exec(Script* script) -> Object* {

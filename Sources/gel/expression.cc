@@ -129,15 +129,8 @@ auto BinaryOpExpr::ToString() const -> std::string {
   return helper;
 }
 
-auto EvalExpr::ToString() const -> std::string {
-  ToStringHelper<EvalExpr> helper;
-  if (HasExpression())
-    helper.AddField("expression", GetExpression());
-  return helper;
-}
-
 auto BeginExpr::ToString() const -> std::string {
-  ToStringHelper<EvalExpr> helper;
+  ToStringHelper<BeginExpr> helper;
   if (!IsEmpty())
     helper.AddField("num_expressions", GetNumberOfChildren());
   return helper;
@@ -182,22 +175,6 @@ auto CondExpr::ToString() const -> std::string {
   ToStringHelper<CondExpr> helper;
   helper.AddField("clauses", GetClauses());
   helper.AddField("alternate", GetAlternate());
-  return helper;
-}
-
-auto LambdaExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
-  ASSERT(vis);
-  for (const auto& expr : body_) {
-    if (!expr->Accept(vis))
-      return false;
-  }
-  return true;
-}
-
-auto LambdaExpr::ToString() const -> std::string {
-  ToStringHelper<LambdaExpr> helper;
-  helper.AddField("args", GetArgs());
-  helper.AddField("body", GetBody());
   return helper;
 }
 

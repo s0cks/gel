@@ -66,18 +66,6 @@ static inline auto AppendFragment(EntryInstr* entry, EffectVisitor& vis) -> Inst
   return vis.GetExitInstr();
 }
 
-auto EffectVisitor::VisitEvalExpr(EvalExpr* expr) -> bool {
-  ASSERT(expr && expr->HasExpression());
-  ValueVisitor for_value(GetOwner());
-  if (!expr->GetExpression()->Accept(&for_value)) {
-    LOG(ERROR) << "failed to visit EvalExpr expr: " << expr->GetExpression()->ToString();
-    return false;
-  }
-  Append(for_value);
-  ReturnDefinition(EvalInstr::New(for_value.GetValue()));
-  return true;
-}
-
 static inline auto IsNativeCall(instr::Instruction* instr) -> bool {
   ASSERT(instr);
   if (!instr->IsConstantInstr())
@@ -697,13 +685,6 @@ auto EffectVisitor::VisitCondExpr(CondExpr* expr) -> bool {
   return true;
 }
 
-auto EffectVisitor::VisitLambdaExpr(LambdaExpr* expr) -> bool {
-  const auto lambda = Lambda::New(expr->GetArgs(), expr->GetBody());
-  ASSERT(lambda);
-  ReturnDefinition(ConstantInstr::New(lambda));
-  return true;
-}
-
 auto EffectVisitor::VisitUnaryExpr(expr::UnaryExpr* expr) -> bool {
   ASSERT(expr && expr->HasValue());
   ValueVisitor for_value(GetOwner());
@@ -860,9 +841,8 @@ auto EffectVisitor::VisitSetExpr(expr::SetExpr* expr) -> bool {
   return true;
 }
 
-auto FlowGraphBuilder::Build(Expression* expr, LocalScope* scope) -> FlowGraph* {
-  ASSERT(expr);
-  ASSERT(scope);
+auto FlowGraphBuilder::Build(Lambda* lambda, LocalScope* scope) -> FlowGraph* {
+  ASSERT(lambda);
   FlowGraphBuilder builder(scope);
   const auto graph_entry = GraphEntryInstr::New(builder.GetNextBlockId());
   ASSERT(graph_entry);
@@ -870,20 +850,12 @@ auto FlowGraphBuilder::Build(Expression* expr, LocalScope* scope) -> FlowGraph* 
   const auto target = TargetEntryInstr::New(builder.GetNextBlockId());
   ASSERT(target);
   builder.SetCurrentBlock(target);
-  EffectVisitor for_effect(&builder);
-  if (!expr->Accept(&for_effect)) {
-    LOG(ERROR) << "failed to visit: " << expr->ToString();
-    return nullptr;  // TODO: free entry
+  ValueVisitor for_value(&builder);
+  if (!for_value.VisitLambda(lambda)) {
+    LOG(ERROR) << "failed to visit: " << lambda;
+    return nullptr;
   }
-  const auto exit = for_effect.GetExitInstr();
-  ASSERT(exit);
-  if (exit && !exit->IsReturnInstr()) {
-    const auto new_exit = exit->IsDefinition() ? instr::ReturnInstr::New(exit->AsDefinition()) : instr::ReturnInstr::New();
-    ASSERT(new_exit);
-    for_effect.Add(new_exit);
-  }
-  ASSERT(for_effect.GetExitInstr() && for_effect.GetExitInstr()->IsReturnInstr());
-  AppendFragment(target, for_effect);
+  AppendFragment(target, for_value);
   graph_entry->Append(target);
   graph_entry->AddDominated(target);
   return new FlowGraph(graph_entry);
@@ -892,6 +864,30 @@ auto FlowGraphBuilder::Build(Expression* expr, LocalScope* scope) -> FlowGraph* 
 auto EffectVisitor::VisitScript(Script* script) -> bool {
   auto index = 0;
   const auto& body = script->GetBody();
+  while (IsOpen() && (index < body.size())) {
+    const auto expr = body[index++];
+    ASSERT(expr);
+    ValueVisitor for_value(GetOwner());
+    if (!expr->Accept(&for_value)) {
+      LOG(ERROR) << "failed to visit: " << expr->ToString();
+      return false;
+    }
+    Append(for_value);
+    if (index == body.size()) {
+      const auto return_value = for_value.HasValue() ? for_value.GetValue() : instr::ConstantInstr::New(Null());
+      ASSERT(return_value);
+      Do(return_value);
+      AddReturnExit(return_value);
+    }
+    if (!IsOpen())
+      break;
+  }
+  return true;
+}
+
+auto EffectVisitor::VisitLambda(Lambda* lambda) -> bool {
+  auto index = 0;
+  const auto& body = lambda->GetBody();
   while (IsOpen() && (index < body.size())) {
     const auto expr = body[index++];
     ASSERT(expr);

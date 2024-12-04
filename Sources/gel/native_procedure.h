@@ -306,7 +306,7 @@ class NativeArgument {
 
  public:
   explicit NativeArgument(const ObjectList& args) {
-    if (Index < 0 || Index >= args.size()) {
+    if (Index < 0 || Index > args.size()) {
       if (Required) {
         value_ = Error::New("Hello World");
         return;

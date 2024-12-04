@@ -15,7 +15,6 @@
   V(ConstantInstr)              \
   V(UnaryOpInstr)               \
   V(BinaryOpInstr)              \
-  V(EvalInstr)                  \
   V(StoreVariableInstr)         \
   V(LoadVariableInstr)          \
   V(GraphEntryInstr)            \
@@ -252,7 +251,7 @@ class GraphEntryInstr : public EntryInstr {
     return HasNext() && GetNext()->IsTargetEntryInstr();
   }
 
-  auto GetTarget() -> TargetEntryInstr* {
+  auto GetTarget() const -> TargetEntryInstr* {
     return HasTarget() ? GetNext()->AsTargetEntryInstr() : nullptr;
   }
 
@@ -534,34 +533,6 @@ class ReturnInstr : public Definition {
  public:
   static inline auto New(Definition* value = nullptr) -> ReturnInstr* {
     return new ReturnInstr(value);
-  }
-};
-
-class EvalInstr : public Definition {
- private:
-  Definition* value_;
-
- protected:
-  explicit EvalInstr(Definition* value) :
-    Definition(),
-    value_(value) {}
-
- public:
-  ~EvalInstr() override = default;
-
-  auto GetValue() const -> Definition* {
-    return value_;
-  }
-
-  inline auto HasValue() const -> bool {
-    return GetValue() != nullptr;
-  }
-
-  DECLARE_INSTRUCTION(EvalInstr);
-
- public:
-  static inline auto New(Definition* value = nullptr) -> EvalInstr* {
-    return new EvalInstr(value);
   }
 };
 

@@ -32,8 +32,9 @@ DECLARE_HAS_TO_STRING(Expression);
 DECLARE_HAS_TO_STRING(Datum);
 DECLARE_HAS_TO_STRING(Object);
 DECLARE_HAS_TO_STRING(LocalScope);
-DECLARE_HAS_TO_STRING(instr::Instruction);
 DECLARE_HAS_TO_STRING(instr::Definition);
+DECLARE_HAS_TO_STRING(instr::EntryInstr);
+DECLARE_HAS_TO_STRING(instr::Instruction);
 FOR_EACH_INSTRUCTION(DECLARE_HAS_TO_STRING);
 #undef DECLARE_HAS_TO_STRING
 
@@ -235,6 +236,11 @@ class ToStringHelper : public ToStringHelperBase {
     std::stringstream ss;
     ss << value;
     return ToStringHelperBase::AddField(name, ss.str());
+  }
+
+  void AddField(const std::string& name, const bool value) {
+    ASSERT(!name.empty());
+    return value ? AddField(name, "true") : AddField(name, "false");
   }
 
   operator std::string() const {

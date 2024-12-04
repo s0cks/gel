@@ -85,8 +85,8 @@ class FlowGraphBuilder {
   }
 
  public:
-  static auto Build(Expression* expr, LocalScope* scope) -> FlowGraph*;
   static auto Build(Script* script, LocalScope* scope) -> FlowGraph*;
+  static auto Build(Lambda* lambda, LocalScope* scope) -> FlowGraph*;
 };
 
 class ValueVisitor;
@@ -228,6 +228,7 @@ class EffectVisitor : public ExpressionVisitor {
   }
 
   auto VisitScript(Script* script) -> bool;
+  auto VisitLambda(Lambda* lambda) -> bool;
 #define DECLARE_VISIT(Name) virtual auto Visit##Name(Name* name)->bool override;
   FOR_EACH_EXPRESSION_NODE(DECLARE_VISIT)
 #undef DECLARE_VISIT

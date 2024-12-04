@@ -6,6 +6,7 @@
     "Returns a formatted String using the supplied [pattern] and [args...].")
   (defnative print [value]
     "Prints the supplied [value] to the console.")
+  ;; TODO: remove (list ...)
   (defnative list [values...]
     "Returns a new list using the supplied [values...]")
   ;; Random
@@ -37,11 +38,17 @@
     "Returns the current target triple for gelrt.")
   (defnative gel:get-natives []
     "Returns a list of native functions register in gelrt.")
+  (defnative gel:compile-time? [f]
+    "Returns the compilation time of a function [f] in nanoseconds.")
+  (defn gel:inspect [o]
+    (when (#Procedure? o)
+      (print (format "compiled in {}ns." (gel:compile-time? o)))))
   ;; --------------------------------------------------
   ;; pair accessors
   (defn caar [xs]
     (car (car xs)))
   (defn cadr [xs]
+    "Returns the second item in a list."
     (car (cdr xs)))
   (defn cdar [xs]
     (cdr (car xs)))

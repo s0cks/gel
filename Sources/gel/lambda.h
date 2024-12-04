@@ -22,17 +22,25 @@ class GraphEntryInstr;
 }  // namespace instr
 
 class Lambda : public Procedure, public Executable {
-  friend class LambdaCompiler;
+  friend class FlowGraphCompiler;
 
  private:
   Object* owner_ = nullptr;
   Symbol* name_;
   String* docstring_ = nullptr;
-  ArgumentSet args_;  // TODO: fails to copy during GC
-  expr::Expression* body_;
+  ArgumentSet args_;           // TODO: fails to copy during GC
+  expr::ExpressionList body_;  // TODO: fails to copy during GC
+#ifdef GEL_DEBUG
+  uword compile_time_ = 0;
+
+  void SetCompileTime(const uword rhs) {
+    ASSERT(rhs > 0);
+    compile_time_ = rhs;
+  }
+#endif  // GEL_DEBUG
 
  protected:
-  Lambda(Symbol* name, ArgumentSet args, expr::Expression* body) :  // NOLINT(modernize-pass-by-value)
+  Lambda(Symbol* name, ArgumentSet args, const expr::ExpressionList& body) :  // NOLINT(modernize-pass-by-value)
     name_(name),
     args_(args),
     body_(body) {}
@@ -85,70 +93,33 @@ class Lambda : public Procedure, public Executable {
     return args_;
   }
 
-  auto GetBody() const -> expr::Expression* {
+  auto GetBody() const -> const expr::ExpressionList& {
     return body_;
   }
 
-  inline auto HasBody() const -> bool {
-    return GetBody() != nullptr;
-  }
-
   inline auto IsEmpty() const -> bool {
-    return !HasBody();
+    return body_.empty();
   }
 
   auto GetNumberOfArgs() const -> uint64_t {
     return args_.size();
   }
 
+#ifdef GEL_DEBUG
+  auto GetCompileTimeNanos() const -> uword {
+    return compile_time_;
+  }
+#endif  // GEL_DEBUG
+
   DECLARE_TYPE(Lambda);
 
  public:
-  static inline auto New(Symbol* name, const ArgumentSet& args, expr::Expression* body) -> Lambda* {
+  static inline auto New(Symbol* name, const ArgumentSet& args, const expr::ExpressionList& body) -> Lambda* {
     return new Lambda(name, args, body);
   }
 
-  static inline auto New(const ArgumentSet& args, expr::Expression* body) -> Lambda* {
-    return New(nullptr, args, body);
-  }
-
-  static inline auto New(Symbol* name, const ArgumentSet& args, const expr::ExpressionList& body) -> Lambda* {
-    return New(args, expr::BeginExpr::New(body));  // TODO: remove
-  }
-
   static inline auto New(const ArgumentSet& args, const expr::ExpressionList& body) -> Lambda* {
-    return New(args, expr::BeginExpr::New(body));  // TODO: remove
-  }
-};
-
-class LambdaCompiler {
-  DEFINE_NON_COPYABLE_TYPE(LambdaCompiler);
-
- private:
-  LocalScope* scope_;
-
- public:
-  explicit LambdaCompiler(LocalScope* scope) :
-    scope_(scope) {
-    ASSERT(scope_);
-  }
-  virtual ~LambdaCompiler() = default;
-  virtual auto CompileLambda(Lambda* lambda) -> bool;
-
-  auto GetScope() const -> LocalScope* {
-    return scope_;
-  }
-
- public:
-  static inline auto Compile(Lambda* lambda, LocalScope* scope) -> bool {
-    ASSERT(lambda);
-    ASSERT(scope);
-#ifdef GEL_ENABLE_LAMBDA_CACHE
-    if (lambda->IsCompiled())
-      return true;
-#endif  // GEL_ENABLE_LAMBDA_CACHE
-    LambdaCompiler compiler(scope);
-    return compiler.CompileLambda(lambda);
+    return new Lambda(nullptr, args, body);
   }
 };
 }  // namespace gel

@@ -3,6 +3,7 @@
 #include "gel/common.h"
 #include "gel/natives.h"
 #include "gel/runtime.h"
+#include "gel/to_string_helper.h"
 #include "gel/type.h"
 
 namespace gel {
@@ -57,6 +58,7 @@ void NativeProcedure::Init() {
   InitNative<proc::gel_get_locals>();
   InitNative<proc::gel_get_classes>();
   InitNative<proc::gel_get_natives>();
+  InitNative<proc::gel_get_compile_time>();
 #endif  // GEL_DEBUG
 }
 
@@ -107,11 +109,12 @@ auto NativeProcedure::Equals(Object* rhs) const -> bool {
 }
 
 auto NativeProcedure::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "NativeProcedure(";
-  ss << "symbol=" << GetSymbol();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<NativeProcedure> helper;
+  helper.AddField("symbol", GetSymbol());
+  helper.AddField("args", GetArgs());
+  if (HasDocs())
+    helper.AddField("docs", GetDocs());
+  return helper;
 }
 
 }  // namespace gel

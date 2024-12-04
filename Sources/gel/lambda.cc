@@ -7,11 +7,11 @@
 
 #include "gel/common.h"
 #include "gel/expression.h"
-#include "gel/expression_compiler.h"
 #include "gel/flow_graph_builder.h"
 #include "gel/local_scope.h"
 #include "gel/pointer.h"
 #include "gel/runtime.h"
+#include "gel/to_string_helper.h"
 #include "gel/type.h"
 
 namespace gel {
@@ -37,23 +37,15 @@ auto Lambda::New(const ObjectList& args) -> Lambda* {
 }
 
 auto Lambda::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "Lambda(";
-  if (HasOwner())
-    ss << "owner=" << GetOwner() << ", ";
+  ToStringHelper<Lambda> helper;
   if (HasName())
-    ss << "name=" << GetName()->Get() << ", ";
-  ss << "args=" << GetArgs() << ", ";
-  ss << "body=" << GetBody()->GetName();
-  ss << ")";
-  return ss.str();
-}
-
-auto LambdaCompiler::CompileLambda(Lambda* lambda) -> bool {
-  ASSERT(lambda);
-  const auto flow_graph = ExpressionCompiler::Compile(lambda->GetBody(), GetScope());
-  if (flow_graph && flow_graph->HasEntry())
-    lambda->SetEntry(flow_graph->GetEntry());
-  return lambda->IsCompiled();
+    helper.AddField("name", GetName());
+  if (HasOwner())
+    helper.AddField("owner", GetOwner());
+  helper.AddField("args", GetArgs());
+  helper.AddField("body", GetBody());
+  if (HasDocstring())
+    helper.AddField("docs", GetDocstring());
+  return helper;
 }
 }  // namespace gel

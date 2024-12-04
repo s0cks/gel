@@ -149,6 +149,12 @@ class Runtime : public ExecutionStack {
   void Call(Lambda* lambda, const ObjectList& args);
   void Call(Script* script);
 
+  inline auto CallPop(Lambda* lambda) -> Object* {
+    ASSERT(lambda);
+    Call(lambda, {});
+    return Pop();
+  }
+
   inline auto CallPop(Script* script) -> Object* {
     ASSERT(script);
     Call(script);

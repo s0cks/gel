@@ -134,8 +134,6 @@
       "args": [
         "-logtostdout",
         "-colorlogtostdout",
-        "--reports-dir", "${workspaceFolder}/reports",
-        "--module-dir", "${workspaceFolder}/gel",
         "-v=${input:verbose-level}"
       ],
       "cwd": "${workspaceFolder}",
