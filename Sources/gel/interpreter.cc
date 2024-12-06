@@ -9,6 +9,7 @@
 #include "gel/expression.h"
 #include "gel/instruction.h"
 #include "gel/lambda.h"
+#include "gel/local.h"
 #include "gel/local_scope.h"
 #include "gel/macro.h"
 #include "gel/module.h"
@@ -22,9 +23,7 @@
 namespace gel {
 Interpreter::Interpreter(Runtime* runtime) :
   InstructionVisitor(),
-  runtime_(runtime) {
-  ASSERT(runtime);
-}
+  runtime_(runtime) {}
 
 auto Interpreter::GetStackTop() const -> std::optional<Stack::value_type> {
   return GetRuntime()->StackTop();
@@ -42,28 +41,30 @@ auto Interpreter::PushNext(Object* rhs) -> bool {
   return Next();
 }
 
-auto Interpreter::VisitLoadVariableInstr(LoadVariableInstr* instr) -> bool {
+auto Interpreter::VisitLoadLocalInstr(LoadLocalInstr* instr) -> bool {
   ASSERT(instr);
-  const auto symbol = instr->GetSymbol();
-  ASSERT(symbol);
-  Object* result = nullptr;
-  if (!GetRuntime()->LookupSymbol(symbol, &result)) {
-    DLOG(ERROR) << "failed to find " << symbol << " in scope: ";
-    PRINT_SCOPE(ERROR, GetRuntime()->GetCurrentScope());
-    return PushError(fmt::format("failed to find Symbol: `{0:s}`", symbol->Get()));
+  const auto locals = GetRuntime()->GetScope();
+  ASSERT(locals);
+  LocalVariable* local = nullptr;
+  if (!locals->Lookup(instr->GetLocal()->GetName(), &local)) {
+    LOG(ERROR) << "failed to find local named `" << instr->GetLocal()->GetName() << "` in LocalScope:";
+    LocalScopePrinter::Print<google::ERROR, false>(locals, __FILE__, __LINE__);
+    LOG(FATAL) << "";
   }
+  ASSERT(local);
+  const auto result = local->GetValue();
   if (IsNull(result))
     return PushNext(Null());
   return PushNext(result);
 }
 
 auto Interpreter::VisitReturnInstr(ReturnInstr* instr) -> bool {
-  const auto frame = PopStackFrame();
+  const auto frame = GetRuntime()->PopStackFrame();
+  GetRuntime()->PopScope();
   if (frame.HasReturnAddress()) {
     SetCurrentInstr((Instruction*)frame.GetReturnAddress());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
     return false;
   }
-  DLOG_IF(INFO, instr->HasNext()) << "next after return: " << instr->GetNext()->ToString();
   SetCurrentInstr(instr->GetNext());
   return false;
 }
@@ -304,10 +305,12 @@ auto Interpreter::VisitBinaryOpInstr(BinaryOpInstr* instr) -> bool {
 }
 
 auto Interpreter::VisitTargetEntryInstr(TargetEntryInstr* instr) -> bool {
+  GetRuntime()->PushStackFrame(instr);
   return Next();
 }
 
 auto Interpreter::VisitJoinEntryInstr(JoinEntryInstr* instr) -> bool {
+  GetRuntime()->PopStackFrame();
   return Next();
 }
 
@@ -318,14 +321,18 @@ auto Interpreter::VisitConstantInstr(ConstantInstr* instr) -> bool {
   return Next();
 }
 
-auto Interpreter::VisitStoreVariableInstr(StoreVariableInstr* instr) -> bool {
+auto Interpreter::VisitStoreLocalInstr(StoreLocalInstr* instr) -> bool {
+  const auto local = instr->GetLocal();
+  ASSERT(local);
   const auto value = GetRuntime()->Pop();
   ASSERT(value);
-  const auto symbol = instr->GetSymbol();
-  ASSERT(symbol);
-  if (!GetRuntime()->StoreSymbol(symbol, value)) {
-    LOG(FATAL) << "failed to store symbol " << symbol << " to value: " << value;
-    return Next();
+  const auto locals = GetRuntime()->GetScope();
+  ASSERT(locals);
+  local->SetValue(value);
+  if (!locals->Add(local)) {
+    LOG(ERROR) << "failed to add " << (*local) << " to:";
+    PRINT_SCOPE(ERROR, locals);
+    LOG(FATAL) << "";
   }
   return Next();
 }
@@ -340,46 +347,10 @@ auto Interpreter::ExecuteInstr(Instruction* instr) -> bool {
   return instr->Accept(this);
 }
 
-auto Interpreter::PushStackFrame(ir::TargetEntryInstr* target, LocalScope* locals) -> StackFrame* {
-  ASSERT(locals);
-  const auto frame_id = HasStackFrame() ? GetCurrentStackFrame()->GetId() + 1 : 1;
-  uword return_address = UNALLOCATED;
-  if (HasCurrentInstr())
-    return_address = (uword)GetCurrentInstr();  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-  LOG_IF(FATAL, return_address == UNALLOCATED && frame_id != 1) << "return address empty";
-  stack_.push(StackFrame(frame_id, target, locals, return_address));
-  DVLOG(1000) << "pushed: " << stack_.top();
-  return &stack_.top();
-}
-
 void Interpreter::Run() {
   while (HasCurrentInstr()) {
     if (!ExecuteInstr(GetCurrentInstr()))
       break;
   }
-}
-
-auto Interpreter::PushStackFrame(NativeProcedure* native, LocalScope* locals) -> StackFrame* {
-  ASSERT(locals);
-  const auto frame_id = HasStackFrame() ? GetCurrentStackFrame()->GetId() + 1 : 1;
-  uword return_address = UNALLOCATED;
-  if (HasCurrentInstr())
-    return_address = (uword)GetCurrentInstr();  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-  stack_.push(StackFrame(frame_id, native, locals, return_address));
-  DVLOG(1000) << "pushed: " << stack_.top();
-  LOG_IF(FATAL, return_address == UNALLOCATED && frame_id != 1) << "return address empty";
-  return &stack_.top();
-}
-
-auto Interpreter::PopStackFrame() -> StackFrame {
-  if (stack_.empty()) {
-    LOG(WARNING) << "stack empty";
-    return {};
-  }
-  ASSERT(!stack_.empty());
-  const auto frame = stack_.top();
-  stack_.pop();
-  DVLOG(1000) << "popped: " << frame;
-  return frame;
 }
 }  // namespace gel

@@ -95,17 +95,18 @@ class Runtime : public ExecutionStack {
   friend class NativeProcedure;
   friend class RuntimeScopeScope;
   friend class RuntimeStackIterator;
-
-  using ModuleList = std::vector<Module*>;
   DEFINE_NON_COPYABLE_TYPE(Runtime);
 
  private:
   LocalScope* init_scope_;
-  LocalScope* scope_ = nullptr;
-  std::vector<Script*> scripts_{};
-  bool running_ = false;
-  bool executing_ = false;
+  LocalScope* curr_scope_;
   Interpreter interpreter_;
+  std::stack<StackFrame> stack_{};
+  bool executing_ = false;
+
+  inline void SetExecuting(const bool value = true) {
+    executing_ = value;
+  }
 
   inline void PopN(std::vector<Object*>& result, const uword num, const bool reverse = false) {
     for (auto idx = 0; idx < num; idx++) {
@@ -133,18 +134,6 @@ class Runtime : public ExecutionStack {
     return Call(native, args);
   }
 
-  inline void SetRunning(const bool rhs = true) {
-    running_ = rhs;
-  }
-
-  inline void StopRunning() {
-    return SetRunning(false);
-  }
-
-  auto GetStackFrames() const -> const std::stack<StackFrame>& {
-    return interpreter_.stack_;
-  }
-
   void Call(NativeProcedure* native, const ObjectList& args);
   void Call(Lambda* lambda, const ObjectList& args);
   void Call(Script* script);
@@ -160,6 +149,22 @@ class Runtime : public ExecutionStack {
     Call(script);
     return Pop();
   }
+
+  inline auto PushScope() -> LocalScope* {
+    const auto new_scope = LocalScope::New(curr_scope_);
+    curr_scope_ = new_scope;
+    return new_scope;
+  }
+
+  inline void PopScope() {
+    if (!curr_scope_)
+      return;
+    curr_scope_ = curr_scope_->GetParent();
+  }
+
+  auto PopStackFrame() -> StackFrame;
+  auto PushStackFrame(ir::TargetEntryInstr* target) -> const StackFrame&;
+  auto PushStackFrame(NativeProcedure* native, LocalScope* locals) -> const StackFrame&;
 
  public:  // TODO: reduce visibility
   void LoadKernelModule();
@@ -196,41 +201,38 @@ class Runtime : public ExecutionStack {
   }
 
  public:
-  ~Runtime() override;
-
-  auto IsRunning() const -> bool {
-    return running_;
-  }
-
-  auto GetCurrentFrame() -> StackFrame* {
-    return interpreter_.GetCurrentStackFrame();
-  }
-
-  auto HasFrame() const -> bool {
-    return interpreter_.HasStackFrame();
-  }
-
-  auto GetGlobalScope() const -> LocalScope* {
-    return scope_;
-  }
+  ~Runtime() override = default;
 
   auto GetInitScope() const -> LocalScope* {
     return init_scope_;
   }
 
-  auto GetCurrentScope() -> LocalScope* {
-    const auto frame = GetCurrentFrame();
-    return frame ? frame->GetLocals() : GetInitScope();
+  auto GetScope() const -> LocalScope* {
+    return curr_scope_;
   }
 
- public:
+  auto IsExecuting() const -> bool {
+    return executing_;
+  }
+
+  auto HasStackFrame() const -> bool {
+    return !stack_.empty();
+  }
+
+  auto GetCurrentStackFrame() -> const StackFrame& {
+    return stack_.top();
+  }
+
+ private:
   static auto CreateInitScope() -> LocalScope*;
-  static auto Eval(const std::string& expr) -> Object*;
-  static auto Exec(Script* script) -> Object*;
 
   static inline auto New(LocalScope* init_scope = CreateInitScope()) -> Runtime* {
     return new Runtime(init_scope);
   }
+
+ public:
+  static auto Eval(const std::string& expr) -> Object*;
+  static auto Exec(Script* script) -> Object*;
 
  public:
   static void Init();

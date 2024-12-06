@@ -5,6 +5,7 @@
 
 #include "gel/common.h"
 #include "gel/instruction.h"
+#include "gel/local_scope.h"
 #include "gel/platform.h"
 #include "gel/stack_frame.h"
 #include "gel/type_traits.h"
@@ -17,8 +18,8 @@ class Interpreter : public InstructionVisitor {
 
  private:
   Runtime* runtime_;
+  Instruction* previous_ = nullptr;
   Instruction* current_ = nullptr;
-  std::stack<StackFrame> stack_{};
 
  protected:
   explicit Interpreter(Runtime* runtime);
@@ -35,37 +36,40 @@ class Interpreter : public InstructionVisitor {
     return GetCurrentInstr() != nullptr;
   }
 
+  inline void SetPreviousInstr(Instruction* instr) {
+    ASSERT(instr);
+    previous_ = instr;
+  }
+
+  inline auto GetPreviousInstr() const -> Instruction* {
+    return previous_;
+  }
+
+  inline auto HasPreviousInstr() const -> bool {
+    return GetPreviousInstr() != nullptr;
+  }
+
   auto ExecuteInstr(Instruction* instr) -> bool;
-
-  auto GetCurrentStackFrame() -> StackFrame* {
-    return stack_.empty() ? nullptr : &stack_.top();
-  }
-
-  auto HasStackFrame() const -> bool {
-    return !stack_.empty();
-  }
-
-  auto PopStackFrame() -> StackFrame;
-  auto PushStackFrame(ir::TargetEntryInstr* target, LocalScope* locals) -> StackFrame*;
-  auto PushStackFrame(NativeProcedure* native, LocalScope* locals) -> StackFrame*;
-
   void Run();
 
   template <typename E>
   void Execute(E* executable, LocalScope* locals, std::enable_if_t<gel::is_executable<E>::value>* = nullptr) {
     ASSERT(executable && executable->IsCompiled());
     ASSERT(locals);
-    DVLOG(1000) << "executing " << executable << " with locals: " << locals;
+    DVLOG(1) << "executing " << executable << " with locals: " << locals->ToString();
     const auto target = executable->GetEntry()->GetTarget();
-    PushStackFrame(target, locals);
-    SetCurrentInstr(target->GetNext());
+    SetCurrentInstr(target);
     Run();
   }
 
   inline auto Next() -> bool {
-    const auto next = HasCurrentInstr() ? GetCurrentInstr()->GetNext() : nullptr;
-    SetCurrentInstr(next);
-    return true;
+    if (HasCurrentInstr()) {
+      SetPreviousInstr(GetCurrentInstr());
+      SetCurrentInstr(GetCurrentInstr()->GetNext());
+      return HasCurrentInstr();
+    }
+    SetCurrentInstr(nullptr);
+    return false;
   }
 
   auto PushError(const std::string& message) -> bool;

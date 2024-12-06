@@ -7,6 +7,7 @@
 
 #include "gel/argument.h"
 #include "gel/common.h"
+#include "gel/local.h"
 #include "gel/local_scope.h"
 #include "gel/object.h"
 #include "gel/variable.h"
@@ -980,20 +981,23 @@ class WhileExpr : public SequenceExpr {
 
 class SetExpr : public Expression {
  private:
-  Symbol* symbol_;
+  LocalVariable* local_;
   Expression* value_;
 
  protected:
-  SetExpr(Symbol* symbol, Expression* value) :
+  SetExpr(LocalVariable* local, Expression* value) :
     Expression(),
-    symbol_(symbol),
-    value_(value) {}
+    local_(local),
+    value_(value) {
+    ASSERT(local_);
+    ASSERT(value_);
+  }
 
  public:
   ~SetExpr() override = default;
 
-  auto GetSymbol() const -> Symbol* {
-    return symbol_;
+  auto GetLocal() const -> LocalVariable* {
+    return local_;
   }
 
   auto GetValue() const -> Expression* {
@@ -1014,28 +1018,28 @@ class SetExpr : public Expression {
   DECLARE_EXPRESSION(SetExpr);
 
  public:
-  static inline auto New(Symbol* symbol, Expression* value) -> SetExpr* {
-    ASSERT(symbol);
+  static inline auto New(LocalVariable* local, Expression* value) -> SetExpr* {
+    ASSERT(local);
     ASSERT(value);
-    return new SetExpr(symbol, value);
+    return new SetExpr(local, value);
   }
 };
 
 class Binding : public Expression {
  private:
-  Symbol* symbol_;
+  LocalVariable* local_;
   Expression* value_;
 
  protected:
-  Binding(Symbol* symbol, Expression* value) :
-    symbol_(symbol),
+  Binding(LocalVariable* local, Expression* value) :
+    local_(local),
     value_(value) {}
 
  public:
   ~Binding() override = default;
 
-  auto GetSymbol() const -> Symbol* {
-    return symbol_;
+  auto GetLocal() const -> LocalVariable* {
+    return local_;
   }
 
   auto GetValue() const -> Expression* {
@@ -1045,8 +1049,8 @@ class Binding : public Expression {
   DECLARE_EXPRESSION(Binding);
 
  public:
-  static inline auto New(Symbol* symbol, Expression* value) -> Binding* {
-    return new Binding(symbol, value);
+  static inline auto New(LocalVariable* local, Expression* value) -> Binding* {
+    return new Binding(local, value);
   }
 };
 
@@ -1218,6 +1222,10 @@ class LetExpr : public TemplateLetExpr {
 
   auto GetNumberOfChildren() const -> uint64_t override {
     return SequenceExpr::GetNumberOfChildren() + GetNumberOfBindings();
+  }
+
+  auto IsConstantExpr() const -> bool override {
+    return false;
   }
 
   auto VisitAllBindings(ExpressionVisitor* vis) -> bool;
@@ -1449,25 +1457,20 @@ class TemplateDefinition : public Definition {
 
 class LocalDef : public TemplateDefinition<1> {
  private:
-  Symbol* symbol_ = nullptr;
-
-  inline void SetSymbol(Symbol* symbol) {
-    ASSERT(symbol);
-    symbol_ = symbol;
-  }
+  LocalVariable* local_;
 
  protected:
-  LocalDef(Symbol* symbol, Expression* value) :
-    TemplateDefinition<1>() {
-    SetSymbol(symbol);
+  LocalDef(LocalVariable* local, Expression* value) :
+    TemplateDefinition<1>(),
+    local_(local) {
     SetChildAt(0, value);
   }
 
  public:
   ~LocalDef() override = default;
 
-  auto GetSymbol() const -> Symbol* {
-    return symbol_;
+  auto GetLocal() const -> LocalVariable* {
+    return local_;
   }
 
   auto GetValue() const -> Expression* {
@@ -1481,10 +1484,10 @@ class LocalDef : public TemplateDefinition<1> {
   DECLARE_EXPRESSION(LocalDef);
 
  public:
-  static inline auto New(Symbol* symbol, Expression* value) -> LocalDef* {
-    ASSERT(symbol);
+  static inline auto New(LocalVariable* local, Expression* value) -> LocalDef* {
+    ASSERT(local);
     ASSERT(value);
-    return new LocalDef(symbol, value);
+    return new LocalDef(local, value);
   }
 };
 

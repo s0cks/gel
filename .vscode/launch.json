@@ -413,6 +413,7 @@
         "-logtostdout",
         "-colorlogtostdout",
         "-v=${input:verbose-level}",
+        "--dump-flow-graph",
         "${workspaceFolder}/scripts/${input:target-script}"
       ],
       "cwd": "${workspaceFolder}",

@@ -37,8 +37,8 @@ static inline auto IsClearCommand(const std::string& cmd) -> bool {
 auto Repl::RunRepl() -> int {
   const auto runtime = GetRuntime();
   ASSERT(runtime);
-  runtime->SetRunning();
-  while (runtime->IsRunning() && Prompt()) {
+  runtime->SetExecuting();
+  while (runtime->IsExecuting() && Prompt()) {
     if (IsExitCommand(expression_)) {
       break;
     } else if (IsHelpCommand(expression_)) {

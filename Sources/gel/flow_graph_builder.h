@@ -1,11 +1,15 @@
 #ifndef GEL_FLOW_GRAPH_BUILDER_H
 #define GEL_FLOW_GRAPH_BUILDER_H
 
+#include <type_traits>
+
 #include "gel/common.h"
 #include "gel/expression.h"
 #include "gel/flow_graph.h"
 #include "gel/instruction.h"
+#include "gel/local.h"
 #include "gel/object.h"
+#include "gel/type_traits.h"
 
 namespace gel {
 class FlowGraphBuilder {
@@ -138,7 +142,7 @@ class EffectVisitor : public ExpressionVisitor {
 
   void AddInstanceOf(ir::Definition* defn, Class* expected);
   auto CreateCallFor(ir::Definition* defn, const uword num_args) -> ir::InvokeInstr*;
-  auto CreateStoreLoad(Symbol* symbol, ir::Definition* value) -> ir::Definition*;
+  auto CreateStoreLoad(LocalVariable* local, ir::Definition* value) -> ir::Definition*;
   auto CreateCastTo(ir::Definition* value, Class* target) -> ir::Definition*;
 
   inline auto DoCastTo(ir::Definition* defn, Class* expected) -> ir::Definition* {
@@ -156,7 +160,6 @@ class EffectVisitor : public ExpressionVisitor {
 
   auto ReturnCall(ir::InvokeInstr* defn) -> bool;
   auto ReturnCall(Procedure* procedure, const uword num_args) -> bool;
-  auto ReturnCall(Symbol* function, const uword num_args) -> bool;
 
   void Append(const EffectVisitor& rhs) {
     if (rhs.IsEmpty())
@@ -177,6 +180,16 @@ class EffectVisitor : public ExpressionVisitor {
     }
     SetExitInstr(defn);
     return defn;
+  }
+
+  template <class E>
+  inline auto NewBlock(std::enable_if_t<ir::is_entry<E>::value>* = nullptr) -> E* {
+    const auto parent = GetCurrentBlock();
+    const auto blk = E::New(GetOwner()->GetNextBlockId());
+    if (parent)
+      parent->AddDominated(blk);
+    SetCurrentBlock(blk);
+    return blk;
   }
 
   inline void SetCurrentBlock(EntryInstr* instr) {

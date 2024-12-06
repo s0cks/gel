@@ -10,6 +10,7 @@
 #include "gel/common.h"
 #include "gel/error.h"
 #include "gel/instruction.h"
+#include "gel/object.h"
 #include "gel/procedure.h"
 
 namespace gel {
@@ -43,6 +44,10 @@ class NativeProcedure : public Procedure {
 
   auto Return(Object* rhs) const -> bool;
   virtual auto Apply(const ObjectList& args) const -> bool = 0;
+
+  inline auto ReturnNull() const -> bool {
+    return Return(Null());
+  }
 
   template <class T, typename... Args>
   inline auto ReturnNew(Args... args) const -> bool {

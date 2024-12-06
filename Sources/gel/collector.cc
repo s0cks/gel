@@ -2,11 +2,28 @@
 
 #include "gel/common.h"
 #include "gel/heap.h"
+#include "gel/module.h"
 #include "gel/object.h"
 #include "gel/platform.h"
 #include "gel/runtime.h"
+#include "gel/zone.h"
 
 namespace gel {
+auto VisitRoots(const std::function<bool(Pointer**)>& vis) -> bool {
+  if (!HasRuntime())
+    return false;
+  if (!Class::VisitClassPointers(vis)) {
+    LOG(ERROR) << "failed to visit Class pointers.";
+    return false;
+  }
+  if (!Module::VisitModulePointers(vis)) {
+    LOG(ERROR) << "failed to visit Module pointers.";
+    return false;
+  }
+  // TODO: should we visit the current local scope?
+  return true;
+}
+
 Collector::Collector(Heap& heap) :
   heap_(heap) {}
 
@@ -29,25 +46,28 @@ auto Collector::ProcessRoot(Pointer** ptr) -> bool {
   const auto new_ptr = CopyPointer(old_ptr);
   ASSERT(new_ptr);
   new_ptr->tag().SetRememberedBit();
-  DLOG(INFO) << "new_ptr: " << (*new_ptr);
-  (*ptr) = new_ptr;
+  old_ptr->SetForwardingAddress(new_ptr->GetStartingAddress());
   return true;
 }
 
-auto Collector::ProcessRoots() -> bool {
-  const auto runtime = GetRuntime();
-  ASSERT(runtime);
-  const auto scope = runtime->GetCurrentScope();
-  if (scope) {
-    const auto scope_processed = scope->VisitLocalPointers([&](Pointer** ptr) {
-      return ProcessRoot(ptr);
-    });
-    if (!scope_processed) {
-      LOG(ERROR) << "failed to process: " << scope->ToString();
-      return false;
-    }
-  }
+void Collector::ProcessRoots() {
+  const auto vis = [this](Pointer** ptr) {
+    return ProcessRoot(ptr);
+  };
+  LOG_IF(FATAL, !VisitRoots(vis)) << "failed to visit roots.";
+}
+
+auto Collector::NotifyRoot(Pointer** ptr) -> bool {
+  ASSERT(ptr && (*ptr)->IsForwarding());
+  (*ptr) = Pointer::At((*ptr)->GetForwardingAddress());
   return true;
+}
+
+void Collector::NotifyRoots() {
+  const auto vis = [this](Pointer** ptr) {
+    return NotifyRoot(ptr);
+  };
+  LOG_IF(FATAL, !VisitRoots(vis)) << "failed to visit roots.";
 }
 
 auto Collector::ProcessFromspace() -> bool {
@@ -80,15 +100,32 @@ auto Collector::ProcessFromspace() -> bool {
 void Collector::Collect() {
   heap().new_zone().SwapSpaces();
   next_address_ = curr_address_ = heap().new_zone().fromspace();
-  LOG_IF(FATAL, !ProcessRoots()) << "failed to mark roots.";
+  ProcessRoots();
   LOG_IF(FATAL, !ProcessFromspace()) << "failed to process fromspace.";
+  NotifyRoots();
 }
 
 void MinorCollection() {
   const auto heap = Heap::GetHeap();
   ASSERT(heap);
+
+  static const auto kPrintRoot = [](Pointer** ptr) {
+    ASSERT(ptr && (*ptr)->GetObjectPointer());
+    LOG(INFO) << "- " << (void*)(*ptr) << " ;; " << *(*ptr) << " " << (*ptr)->GetObjectPointer()->ToString();
+    return true;
+  };
+
+  LOG(INFO) << "NewZone before:";
+  PrintNewZone(heap->GetNewZone());
+  LOG(INFO) << "roots:";
+  LOG_IF(FATAL, !VisitRoots(kPrintRoot)) << "failed to visit roots.";
   Collector collector((*heap));
   collector.Collect();
+
+  LOG(INFO) << "NewZone after:";
+  PrintNewZone(heap->GetNewZone());
+  LOG(INFO) << "roots:";
+  LOG_IF(FATAL, !VisitRoots(kPrintRoot)) << "failed to visit roots.";
 }
 
 void MajorCollection() {

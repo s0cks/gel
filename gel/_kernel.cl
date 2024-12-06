@@ -40,6 +40,8 @@
     "Returns a list of native functions register in gelrt.")
   (defnative gel:compile-time? [f]
     "Returns the compilation time of a function [f] in nanoseconds.")
+  (defnative gel:get-roots []
+    "Returns the roots for the GC.")
   (defn gel:inspect [o]
     (when (#Procedure? o)
       (print (format "compiled in {}ns." (gel:compile-time? o)))))
@@ -146,12 +148,6 @@
     "Appends a sequence to another sequence."
     (cond (null? seq) x
       (cons (car seq) (append (cdr seq) x))))
-  (defn reverse [seq]
-    "Returns the reverse of a sequence."
-    (defn _reverse [seq acc]
-      (cond (null? seq) acc
-        (_reverse (cdr seq) (cons (car seq) acc))))
-    (_reverse seq '()))
   (defn nth [seq n]
     "Returns the nth value in a sequence."
     (when (or (> n (length seq)) (< n 0))

@@ -194,13 +194,13 @@ auto Parser::ParseLetExpr() -> expr::LetExpr* {
       throw Exception(fmt::format("cannot redefine binding for: `{}`", *symbol));
     const auto value = ParseExpression();
     ASSERT(value);
-    bindings.emplace_back(Binding::New(symbol, value));
     const auto local = LocalVariable::New(scope, symbol);
     ASSERT(local);
+    LOG_IF(FATAL, !scope->Add(local)) << "failed to add " << local << " to scope.";
+    bindings.emplace_back(Binding::New(local, value));
     ExpectNext(Token::kRParen);
   }
   ExpectNext(Token::kRParen);
-
   // parse body
   ExpressionList body;
   if (!ParseExpressionList(body))
@@ -253,9 +253,20 @@ auto Parser::ParseSetExpr() -> SetExpr* {
   ExpectNext(Token::kSetExpr);
   const auto symbol = ParseSymbol();
   ASSERT(symbol);
+  const auto scope = GetScope();
+  ASSERT(scope);
+  LocalVariable* local = nullptr;
+  if (!scope->Lookup(symbol, &local)) {
+    DLOG(WARNING) << "failed to find local named `" << symbol << "`";
+    local = LocalVariable::New(scope, symbol, nullptr);
+    ASSERT(local);
+    LOG_IF(ERROR, !scope->Add(local)) << "failed to add `" << local << "` to scope:";
+    LocalScopePrinter::Print<google::ERROR, false>(scope, __FILE__, __LINE__);
+    LOG(FATAL) << "";
+  }
   const auto value = ParseExpression();
   ASSERT(value);
-  return SetExpr::New(symbol, value);
+  return SetExpr::New(local, value);
 }
 
 auto Parser::ParseExpression() -> Expression* {
@@ -285,9 +296,6 @@ auto Parser::ParseExpression() -> Expression* {
       // Definitions
       case Token::kMacroDef:
         expr = ParseMacroDef();
-        break;
-      case Token::kDefn:
-        expr = ParseDefnExpr();
         break;
       case Token::kNewExpr:
         expr = ParseNewExpr();
@@ -332,6 +340,9 @@ auto Parser::ParseExpression() -> Expression* {
         break;
       case Token::kInstanceOfExpr:
         expr = ParseInstanceOfExpr();
+        break;
+      case Token::kLetExpr:
+        expr = ParseLetExpr();
         break;
       default:
         Unexpected(next);
@@ -442,26 +453,6 @@ auto Parser::ParseWhileExpr() -> expr::WhileExpr* {
   return expr::WhileExpr::New(test, body);
 }
 
-auto Parser::ParseDefnExpr() -> LocalDef* {
-  ExpectNext(Token::kDefn);
-  const auto symbol = ParseSymbol();
-  ASSERT(symbol);
-  ArgumentSet args;
-  if (!ParseArguments(args)) {
-    LOG(FATAL) << "failed to parse lambda arguments.";
-    return nullptr;
-  }
-
-  PushScope();
-  ExpressionList body;
-  if (!ParseExpressionList(body)) {
-    LOG(FATAL) << "failed to parse lambda body.";
-    return nullptr;
-  }
-  PopScope();
-  return LocalDef::New(symbol, expr::LiteralExpr::New(Lambda::New(symbol, args, body)));
-}
-
 auto Parser::ParseNewExpr() -> expr::NewExpr* {
   const auto new_expr_token = ExpectNext(Token::kNewExpr);
   const auto symbol = Symbol::New(new_expr_token.text);
@@ -488,7 +479,7 @@ auto Parser::ParseLocalDef() -> LocalDef* {
   ASSERT(local);
   LOG_IF(FATAL, !GetScope()->Add(local)) << "failed to add local: " << local->GetName();
   LOG_IF(FATAL, !PeekEq(Token::kRParen)) << "unexpected: " << NextToken() << ", expected: " << Token::kRParen;
-  return LocalDef::New(symbol, value);
+  return LocalDef::New(local, value);
 }
 
 auto Parser::ParseIdentifier(std::string& result) -> bool {
@@ -506,9 +497,6 @@ auto Parser::ParseDefinition() -> expr::Definition* {
   expr::Definition* defn = nullptr;
   const auto& next = PeekToken();
   switch (next.kind) {
-    case Token::kDefn:
-      defn = ParseDefnExpr();
-      break;
     case Token::kMacroDef:
       defn = ParseMacroDef();
       break;
@@ -829,7 +817,14 @@ auto Parser::ParseLocalVariable(LocalVariable** local, expr::Expression** value)
   ASSERT(symbol);
   (*value) = ParseExpression();
   ASSERT(value);
-  (*local) = LocalVariable::New(GetScope(), symbol, (*value)->IsConstantExpr() ? (*value)->EvalToConstant() : nullptr);
+  if ((*value)->IsConstantExpr()) {
+    const auto cvalue = (*value)->EvalToConstant();
+    DLOG(INFO) << "cvalue: " << cvalue;
+    (*local) = LocalVariable::New(GetScope(), symbol, cvalue);
+    (*value) = nullptr;
+  } else {
+    (*local) = LocalVariable::New(GetScope(), symbol, nullptr);
+  }
   ASSERT(local);
   // TODO: store value if not constant
   if (!GetScope()->Add((*local)))
@@ -1031,10 +1026,8 @@ auto Parser::ParseScript() -> Script* {
             break;
           }
           ASSERT(local);
-          ASSERT(value);
-          if (!value->IsConstantExpr()) {
-            expr = LocalDef::New(Symbol::New(local->GetName()), value);
-          }
+          if (value)
+            expr = expr::SetExpr::New(local, value);
           break;
         }
         case Token::kDefn: {

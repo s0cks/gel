@@ -94,7 +94,7 @@ static inline auto Execute(const std::string& expr) -> int {
           Parser::ParseExpr(expr),
       };
       const auto lambda = Lambda::New(args, body);
-      LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, GetRuntime()->GetGlobalScope())) << "failed to compile: " << expr;
+      LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, GetRuntime()->GetScope())) << "failed to compile: " << expr;
       DumpFlowGraph(lambda);
     } catch (const gel::Exception& exc) {
       LOG(ERROR) << "failed to execute expression.";

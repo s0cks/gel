@@ -55,6 +55,7 @@ _DECLARE_NATIVE_RX_PROCEDURE(get_operators, "get-operators");
 #endif  // GEL_ENABLE_RX
 
 #ifdef GEL_DEBUG
+_DECLARE_NATIVE_PROCEDURE(gel_get_roots, "gel:get-roots");
 _DECLARE_NATIVE_PROCEDURE(gel_minor_gc, "gel:minor-gc!");
 _DECLARE_NATIVE_PROCEDURE(gel_major_gc, "gel:major-gc!");
 _DECLARE_NATIVE_PROCEDURE(gel_get_debug, "gel:debug?");

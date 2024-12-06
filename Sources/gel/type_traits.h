@@ -69,6 +69,17 @@ DECLARE_HAS_DOCS(Namespace);
 template <class T>
 auto GetDocs(T* value, std::enable_if_t<has_docs<T>::value>* = nullptr) -> String*;
 
+namespace ir {
+class JoinEntryInstr;
+class TargetEntryInstr;
+
+DECLARE_TRAIT(is_entry);
+#define DECLARE_IS_ENTRY(Name) DECLARE_HAS_TRAIT(is_entry, Name);
+DECLARE_IS_ENTRY(JoinEntryInstr);
+DECLARE_IS_ENTRY(TargetEntryInstr);
+#undef DECLARE_IS_ENTRY
+}  // namespace ir
+
 #undef DECLARE_HAS_TRAIT
 #undef DECLARE_TRAIT
 }  // namespace gel

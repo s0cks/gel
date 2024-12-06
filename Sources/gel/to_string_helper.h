@@ -243,6 +243,13 @@ class ToStringHelper : public ToStringHelperBase {
     return value ? AddField(name, "true") : AddField(name, "false");
   }
 
+  void AddField(const std::string& name, const void* value) {
+    ASSERT(!name.empty());
+    std::stringstream ss;
+    ss << value;
+    return AddField(name, ss.str());
+  }
+
   operator std::string() const {
     return ToStringHelperBase::ToString();
   }

@@ -17,6 +17,7 @@
 
 namespace gel {
 class StackFrame {
+  friend class Runtime;
   friend class Interpreter;
   DEFINE_DEFAULT_COPYABLE_TYPE(StackFrame);
 

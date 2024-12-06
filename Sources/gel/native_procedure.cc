@@ -10,25 +10,26 @@ namespace gel {
 NativeProcedureList NativeProcedure::all_{};
 
 void NativeProcedure::Init() {
+  using namespace proc;
   InitClass();
-  InitNative<proc::print>();
-  InitNative<proc::type>();
-  InitNative<proc::import>();
-  InitNative<proc::exit>();
-  InitNative<proc::format>();
-  InitNative<proc::list>();
-  InitNative<proc::set_car>();
-  InitNative<proc::set_cdr>();
-  InitNative<proc::random>();
-  InitNative<proc::rand_range>();
-  InitNative<proc::array_new>();
-  InitNative<proc::array_get>();
-  InitNative<proc::array_set>();
-  InitNative<proc::array_length>();
-  InitNative<proc::gel_docs>();
+  InitNative<print>();
+  InitNative<type>();
+  InitNative<import>();
+  InitNative<exit>();
+  InitNative<format>();
+  InitNative<list>();
+  InitNative<set_car>();
+  InitNative<set_cdr>();
+  InitNative<random>();
+  InitNative<rand_range>();
+  InitNative<array_new>();
+  InitNative<array_get>();
+  InitNative<array_set>();
+  InitNative<array_length>();
+  InitNative<gel_docs>();
 
 #ifdef GEL_ENABLE_RX
-#define REGISTER_RX(Name) InitNative<proc::rx_##Name>();
+#define REGISTER_RX(Name) InitNative<rx_##Name>();
   REGISTER_RX(observer);
   REGISTER_RX(observable);
   REGISTER_RX(subscribe);
@@ -50,15 +51,16 @@ void NativeProcedure::Init() {
 #endif  // GEL_ENABLE_RX
 
 #ifdef GEL_DEBUG
-  InitNative<proc::gel_minor_gc>();
-  InitNative<proc::gel_major_gc>();
-  InitNative<proc::gel_get_frame>();
-  InitNative<proc::gel_get_debug>();
-  InitNative<proc::gel_get_target_triple>();
-  InitNative<proc::gel_get_locals>();
-  InitNative<proc::gel_get_classes>();
-  InitNative<proc::gel_get_natives>();
-  InitNative<proc::gel_get_compile_time>();
+  InitNative<gel_get_roots>();
+  InitNative<gel_minor_gc>();
+  InitNative<gel_major_gc>();
+  InitNative<gel_get_frame>();
+  InitNative<gel_get_debug>();
+  InitNative<gel_get_target_triple>();
+  InitNative<gel_get_locals>();
+  InitNative<gel_get_classes>();
+  InitNative<gel_get_natives>();
+  InitNative<gel_get_compile_time>();
 #endif  // GEL_DEBUG
 }
 

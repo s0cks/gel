@@ -106,7 +106,7 @@ auto LocalScope::ToString() const -> std::string {
   if (!IsEmpty())
     helper.AddField("locals", locals_);
   if (HasParent())
-    helper.AddField("parent", GetParent());
+    helper.AddField("parent", (void*)GetParent());
   return helper;
 }
 

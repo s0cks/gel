@@ -7,6 +7,7 @@
 #include "gel/common.h"
 #include "gel/expression.h"
 #include "gel/lambda.h"
+#include "gel/local.h"
 #include "gel/procedure.h"
 #include "gel/type_traits.h"
 #include "gel/variable.h"
@@ -15,8 +16,8 @@
   V(ConstantInstr)              \
   V(UnaryOpInstr)               \
   V(BinaryOpInstr)              \
-  V(StoreVariableInstr)         \
-  V(LoadVariableInstr)          \
+  V(StoreLocalInstr)            \
+  V(LoadLocalInstr)             \
   V(GraphEntryInstr)            \
   V(TargetEntryInstr)           \
   V(JoinEntryInstr)             \
@@ -37,6 +38,8 @@ class ClauseVisitor;
 class FlowGraphBuilder;
 
 namespace ir {
+class Definition;
+class EntryInstr;
 class Instruction;
 #define FORWARD_DECLARE(Name) class Name;
 FOR_EACH_INSTRUCTION(FORWARD_DECLARE)
@@ -55,8 +58,6 @@ class InstructionVisitor {
 #undef DECLARE_VISIT
 };
 
-class Definition;
-class EntryInstr;
 class Instruction {
   DEFINE_NON_COPYABLE_TYPE(Instruction);
 
@@ -337,63 +338,62 @@ class ConstantInstr : public Definition {
   }
 };
 
-class LoadVariableInstr : public Definition {
+class LoadLocalInstr : public Definition {
  private:
-  Symbol* symbol_ = nullptr;
-
-  inline void SetSymbol(Symbol* symbol) {
-    ASSERT(symbol);
-    symbol_ = symbol;
-  }
+  LocalVariable* local_;
 
  public:
-  explicit LoadVariableInstr(Symbol* symbol) :
-    Definition() {
-    SetSymbol(symbol);
+  explicit LoadLocalInstr(LocalVariable* local) :
+    Definition(),
+    local_(local) {
+    ASSERT(local_);
   }
-  ~LoadVariableInstr() override = default;
+  ~LoadLocalInstr() override = default;
 
-  auto GetSymbol() const -> Symbol* {
-    return symbol_;
+  auto GetLocal() const -> LocalVariable* {
+    return local_;
   }
 
-  DECLARE_INSTRUCTION(LoadVariableInstr);
+  DECLARE_INSTRUCTION(LoadLocalInstr);
 
  public:
-  static inline auto New(Symbol* symbol) -> LoadVariableInstr* {
-    ASSERT(symbol);
-    return new LoadVariableInstr(symbol);
+  static inline auto New(LocalVariable* local) -> LoadLocalInstr* {
+    ASSERT(local);
+    return new LoadLocalInstr(local);
   }
 };
 
-class StoreVariableInstr : public Instruction {
+class StoreLocalInstr : public Instruction {
  private:
-  Symbol* symbol_;
+  LocalVariable* local_;
   Definition* value_;
 
-  StoreVariableInstr(Symbol* symbol, Definition* value) :
+  StoreLocalInstr(LocalVariable* local, Definition* value) :
     Instruction(),
-    symbol_(symbol),
-    value_(value) {}
+    local_(local),
+    value_(value) {
+    ASSERT(local_);
+    ASSERT(value_);
+  }
 
  public:
-  ~StoreVariableInstr() override = default;
+  ~StoreLocalInstr() override = default;
 
-  auto GetSymbol() const -> Symbol* {
-    return symbol_;
+  auto GetLocal() const -> LocalVariable* {
+    return local_;
   }
 
   auto GetValue() const -> Definition* {
     return value_;
   }
 
-  DECLARE_INSTRUCTION(StoreVariableInstr);
+  DECLARE_INSTRUCTION(StoreLocalInstr);
 
  public:
-  static inline auto New(Symbol* symbol, Definition* value) -> StoreVariableInstr* {
-    ASSERT(symbol);
+  static inline auto New(LocalVariable* local, Definition* value) -> StoreLocalInstr* {
+    ASSERT(local);
     ASSERT(value);
-    return new StoreVariableInstr(symbol, value);
+    return new StoreLocalInstr(local, value);
   }
 };
 

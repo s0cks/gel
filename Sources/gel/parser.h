@@ -117,7 +117,7 @@ class Parser {
   auto ParseLocalVariable(LocalVariable** local, expr::Expression** value) -> bool;
   auto ParseLiteralString() -> String*;
   auto ParseSymbol() -> Symbol*;
-  auto ParseLoadSymbol() -> LoadVariableInstr*;
+  auto ParseLoadSymbol() -> LoadLocalInstr*;
   auto ParseArguments(ArgumentSet& args) -> bool;
   auto ParseExpressionList(expr::ExpressionList& expressions) -> bool;
   auto ParseRxOpList(expr::RxOpList& operators) -> bool;
@@ -152,7 +152,6 @@ class Parser {
   // Definitions
   auto ParseDefinition() -> expr::Definition*;
   auto ParseLocalDef() -> expr::LocalDef*;
-  auto ParseDefnExpr() -> expr::LocalDef*;
   auto ParseMacroDef() -> expr::MacroDef*;
 
   inline auto PeekChar(const uint64_t offset = 0) const -> char {
@@ -311,7 +310,7 @@ class Parser {
     return ParseExpr(ss, scope);
   }
 
-  static inline auto ParseScript(std::istream& stream, LocalScope* scope = LocalScope::New(GetRuntime()->GetGlobalScope()))
+  static inline auto ParseScript(std::istream& stream, LocalScope* scope = LocalScope::New(GetRuntime()->GetInitScope()))
       -> Script* {
     ASSERT(stream.good());
     ASSERT(scope);
@@ -320,7 +319,7 @@ class Parser {
   }
 
   static inline auto ParseModuleFrom(const std::string& filename,
-                                     LocalScope* scope = LocalScope::New(GetRuntime()->GetGlobalScope())) -> Module* {
+                                     LocalScope* scope = LocalScope::New(GetRuntime()->GetInitScope())) -> Module* {
     std::stringstream code;
     {
       std::ifstream file(filename, std::ios::binary | std::ios::in);

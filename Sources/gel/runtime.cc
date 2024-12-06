@@ -50,17 +50,10 @@ auto GetRuntime() -> Runtime* {
 Runtime::Runtime(LocalScope* scope) :
   ExecutionStack(),
   init_scope_(scope),
-  scope_(scope),
+  curr_scope_(scope),
   interpreter_(this) {
   ASSERT(init_scope_);
-  ASSERT(scope_);
-}
-
-Runtime::~Runtime() {
-  if (scope_) {
-    delete scope_;
-    scope_ = nullptr;
-  }
+  ASSERT(curr_scope_);
 }
 
 namespace fs = std::filesystem;
@@ -75,7 +68,7 @@ void Runtime::LoadKernelModule() {
   }
   const auto kernel = Module::LoadFrom(fmt::format("{}/_kernel.cl", (*home)));
   LOG_IF(FATAL, !kernel) << "failed to load the _kernel Module.";
-  LOG_IF(FATAL, !GetGlobalScope()->Add(kernel->GetScope())) << "failed to import the _kernel Module.";
+  LOG_IF(FATAL, !GetInitScope()->Add(kernel->GetScope())) << "failed to import the _kernel Module.";
   std::unordered_set<std::string> paths;
   paths.insert(fmt::format("{}/lib", (*home)));
   if (kPathVar) {
@@ -95,7 +88,7 @@ static inline auto FileExists(const std::string& filename) -> bool {  // TODO: r
 
 auto Runtime::Import(Module* m) -> bool {
   ASSERT(m);
-  return scope_->Add(m->GetScope());
+  return curr_scope_->Add(m->GetScope());
 }
 
 auto Runtime::Import(Symbol* symbol, LocalScope* scope) -> bool {
@@ -115,16 +108,14 @@ auto Runtime::CreateInitScope() -> LocalScope* {
 auto Runtime::DefineSymbol(Symbol* symbol, Object* value) -> bool {
   ASSERT(symbol);
   ASSERT(value);
-  const auto frame = GetCurrentFrame();
-  ASSERT(frame);
-  const auto locals = frame->GetLocals();
+  const auto locals = GetScope();
   ASSERT(locals);
   return locals->Add(symbol, value);
 }
 
 auto Runtime::LookupSymbol(Symbol* symbol, Object** result) -> bool {
   ASSERT(symbol);
-  const auto scope = GetCurrentScope();
+  const auto scope = GetScope();
   ASSERT(scope);
   LocalVariable* local = nullptr;
   if (!scope->Lookup(symbol, &local))
@@ -137,9 +128,7 @@ auto Runtime::LookupSymbol(Symbol* symbol, Object** result) -> bool {
 auto Runtime::StoreSymbol(Symbol* symbol, Object* value) -> bool {
   ASSERT(symbol);
   ASSERT(value);
-  const auto frame = GetCurrentFrame();
-  ASSERT(frame);
-  const auto locals = frame->GetLocals();
+  const auto locals = GetScope();
   ASSERT(locals);
   LocalVariable* local = nullptr;
   if (!locals->Lookup(symbol, &local))
@@ -150,9 +139,7 @@ auto Runtime::StoreSymbol(Symbol* symbol, Object* value) -> bool {
 
 void Runtime::Call(Lambda* lambda, const ObjectList& args) {
   ASSERT(lambda);
-  const auto locals = LocalScope::New(GetCurrentScope());
-  ASSERT(locals);
-  LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, locals)) << "failed to compile: " << lambda;
+  const auto locals = PushScope();
   const auto& lambda_args = lambda->GetArgs();
   ASSERT(lambda_args.size() == args.size());
   auto idx = 0;
@@ -165,27 +152,31 @@ void Runtime::Call(Lambda* lambda, const ObjectList& args) {
     ASSERT(local);
     LOG_IF(FATAL, !locals->Add(local)) << "failed to add parameter local";
   }
+  LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, locals)) << "failed to compile: " << lambda;
   StackFrameGuard<Lambda> stack_guard(lambda);
   interpreter_.Execute(lambda, locals);
+  PopScope();
 }
 
 void Runtime::Call(NativeProcedure* native, const ObjectList& args) {
   ASSERT(native);
-  const auto locals = LocalScope::New(GetCurrentScope());
+  const auto locals = LocalScope::New(GetScope());
   ASSERT(locals);
   for (auto idx = 0; idx < args.size(); idx++) {
     locals->Add(Symbol::New(fmt::format("arg{}", idx)), args[idx]);
   }
   StackFrameGuard<NativeProcedure> guard(native);
-  interpreter_.PushStackFrame(native, locals);
+  PushStackFrame(native, locals);
   LOG_IF(FATAL, !native->Apply(args)) << "failed to apply: " << native->ToString() << " with args: " << args;
-  interpreter_.PopStackFrame();
+  PopStackFrame();
 }
 
 void Runtime::Call(Script* script) {
   ASSERT(script && script->IsCompiled());
   StackFrameGuard<Script> stack_guard(script);
-  interpreter_.Execute(script, LocalScope::Union({script->GetScope()}, GetInitScope()));
+  const auto scope = LocalScope::Union({script->GetScope()}, GetScope());
+  ASSERT(scope);
+  interpreter_.Execute(script, scope);
 }
 
 auto Runtime::Eval(const std::string& expr) -> Object* {
@@ -193,7 +184,7 @@ auto Runtime::Eval(const std::string& expr) -> Object* {
   DVLOG(10) << "evaluating expression:" << std::endl << expr;
   const auto runtime = GetRuntime();
   ASSERT(runtime);
-  const auto scope = runtime->GetGlobalScope();
+  const auto scope = runtime->GetScope();
   ArgumentSet args{};
   expr::ExpressionList body = {
       Parser::ParseExpr(expr),
@@ -232,5 +223,43 @@ void Runtime::Init() {
   const auto total_ms = std::chrono::duration_cast<std::chrono::milliseconds>((stop_ts - start_ts)).count();
   LOG(INFO) << "runtime initialized in " << units::time::millisecond_t(static_cast<double>(total_ms));
 #endif  // GEL_DEBUG
+}
+
+auto Runtime::PushStackFrame(NativeProcedure* native, LocalScope* locals) -> const StackFrame& {
+  ASSERT(locals);
+  const auto frame_id = HasStackFrame() ? GetCurrentStackFrame().GetId() + 1 : 1;
+  uword return_address = UNALLOCATED;
+  if (interpreter_.HasCurrentInstr())
+    return_address = (uword)interpreter_.GetCurrentInstr();  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  stack_.push(StackFrame(frame_id, native, locals, return_address));
+  DVLOG(1000) << "pushed: " << stack_.top();
+  LOG_IF(FATAL, return_address == UNALLOCATED && frame_id != 1) << "return address empty";
+  return stack_.top();
+}
+
+auto Runtime::PushStackFrame(ir::TargetEntryInstr* target) -> const StackFrame& {
+  ASSERT(target);
+  const auto frame_id = HasStackFrame() ? GetCurrentStackFrame().GetId() + 1 : 1;
+  uword return_address = UNALLOCATED;
+  if (interpreter_.HasPreviousInstr())
+    return_address = (uword)interpreter_.GetPreviousInstr()->GetNext();  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  LOG_IF(FATAL, return_address == UNALLOCATED && frame_id != 1) << "return address empty";
+  const auto scope = PushScope();
+  ASSERT(scope);
+  stack_.push(StackFrame(frame_id, target, scope, return_address));
+  DVLOG(1000) << "pushed: " << stack_.top();
+  return stack_.top();
+}
+
+auto Runtime::PopStackFrame() -> StackFrame {
+  if (stack_.empty()) {
+    DLOG(WARNING) << "stack empty";
+    return {};
+  }
+  ASSERT(!stack_.empty());
+  const auto frame = stack_.top();
+  stack_.pop();
+  DVLOG(1000) << "popped: " << frame;
+  return frame;
 }
 }  // namespace gel

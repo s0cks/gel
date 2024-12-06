@@ -26,15 +26,15 @@ StackFrameGuardBase::StackFrameGuardBase(TargetInfoCallback target_info) :
   target_info_(target_info) {
   const auto runtime = GetRuntime();
   ASSERT(runtime);
-  if (runtime->HasFrame())
-    enter_ = std::optional<StackFrame>(*(runtime->GetCurrentFrame()));
+  if (runtime->HasStackFrame())
+    enter_ = std::optional<StackFrame>(runtime->GetCurrentStackFrame());
 }
 
 StackFrameGuardBase::~StackFrameGuardBase() {
   const auto runtime = GetRuntime();
   ASSERT(runtime);
-  if (runtime->HasFrame())
-    exit_ = std::optional<StackFrame>(*(runtime->GetCurrentFrame()));
+  if (runtime->HasStackFrame())
+    exit_ = std::optional<StackFrame>(runtime->GetCurrentStackFrame());
   if ((!enter_ && !exit_) || (enter_ == exit_))
     return;
   if (runtime->HasError()) {

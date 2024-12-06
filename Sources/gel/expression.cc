@@ -145,7 +145,7 @@ auto CallProcExpr::ToString() const -> std::string {
 
 auto SetExpr::ToString() const -> std::string {
   ToStringHelper<SetExpr> helper;
-  helper.AddField("symbol", GetSymbol());
+  helper.AddField("local", (*GetLocal()));
   helper.AddField("value", GetValue());
   return helper;
 }
@@ -188,7 +188,7 @@ auto ThrowExpr::ToString() const -> std::string {
 
 auto LocalDef::ToString() const -> std::string {
   ToStringHelper<LocalDef> helper;
-  helper.AddField("symbol", GetSymbol());
+  helper.AddField("local", (*GetLocal()));
   helper.AddField("value", GetValue());
   return helper;
 }
@@ -294,7 +294,7 @@ auto WhileExpr::ToString() const -> std::string {
 
 auto Binding::ToString() const -> std::string {
   ToStringHelper<Binding> helper;
-  helper.AddField("symbol", GetSymbol());
+  helper.AddField("local", GetLocal());
   helper.AddField("value", GetValue());
   return helper;
 }

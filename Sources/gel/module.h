@@ -57,35 +57,20 @@ class Module : public Object {
   DECLARE_TYPE(Module);
 
  private:
-  static ModuleList modules_;
-
   static inline auto IsNamed(std::string name) -> std::function<bool(Module*)> {
-    return [&name](Module* m) {
+    return [name](Module* m) {
       ASSERT(m);
       return m && name == m->GetName()->Get();
     };
   }
 
  public:
-  static inline auto IsLoaded(const std::string& name) -> bool {
-    const auto m = std::ranges::find_if(modules_, IsNamed(name));
-    return m != std::end(modules_);
-  }
-
-  static inline auto Find(const std::string& name) -> Module* {
-    const auto m = std::ranges::find_if(modules_, IsNamed(name));
-    return m != std::end(modules_) ? (*m) : nullptr;
-  }
-
-  static inline auto New(String* name, LocalScope* scope) -> Module* {
-    ASSERT(scope);
-    const auto m = new Module(name, scope);
-    ASSERT(m);
-    modules_.push_back(m);
-    return m;
-  }
-
+  static auto IsLoaded(const std::string& name) -> bool;
+  static auto Find(const std::string& name) -> Module*;
+  static auto New(String* name, LocalScope* scope) -> Module*;
   static auto LoadFrom(const std::filesystem::path& abs_path) -> Module*;
+  static auto VisitModules(const std::function<bool(Module*)>& vis) -> bool;
+  static auto VisitModulePointers(const std::function<bool(Pointer**)>& vis) -> bool;
 };
 }  // namespace gel
 

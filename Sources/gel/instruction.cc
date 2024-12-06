@@ -28,15 +28,15 @@ auto NewInstr::ToString() const -> std::string {
   return helper;
 }
 
-auto LoadVariableInstr::ToString() const -> std::string {
-  ToStringHelper<LoadVariableInstr> helper;
-  helper.AddField("symbol", GetSymbol());
+auto LoadLocalInstr::ToString() const -> std::string {
+  ToStringHelper<LoadLocalInstr> helper;
+  helper.AddField("local", *(GetLocal()));
   return helper;
 }
 
-auto StoreVariableInstr::ToString() const -> std::string {
-  ToStringHelper<StoreVariableInstr> helper;
-  helper.AddField("symbol", GetSymbol());
+auto StoreLocalInstr::ToString() const -> std::string {
+  ToStringHelper<StoreLocalInstr> helper;
+  helper.AddField("local", *(GetLocal()));
   helper.AddField("value", GetValue());
   return helper;
 }

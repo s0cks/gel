@@ -4,7 +4,7 @@
 			"path": "Sources/gel/parser.cc",
 			"bookmarks": [
 				{
-					"line": 571,
+					"line": 559,
 					"column": 0,
 					"label": ""
 				}
@@ -14,7 +14,7 @@
 			"path": "Sources/gel/object.cc",
 			"bookmarks": [
 				{
-					"line": 75,
+					"line": 73,
 					"column": 0,
 					"label": ""
 				}

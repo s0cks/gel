@@ -161,6 +161,8 @@ class Pointer {
     return (Pointer*)address;  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   }
 };
+
+using PointerList = std::vector<Pointer*>;
 }  // namespace gel
 
 #endif  // GEL_POINTER_H

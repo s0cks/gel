@@ -26,6 +26,7 @@
 #include "gel/runtime.h"
 #include "gel/rx.h"
 #include "gel/stack_frame.h"
+#include "gel/type.h"
 
 namespace gel::proc {
 NATIVE_PROCEDURE_F(gel_docs) {
@@ -90,7 +91,7 @@ NATIVE_PROCEDURE_F(import) {
     LOG(FATAL) << arg << " is not a valid Symbol.";
     return false;
   }
-  if (!GetRuntime()->Import(symbol, GetRuntime()->GetCurrentScope())) {
+  if (!GetRuntime()->Import(symbol, GetRuntime()->GetScope())) {
     LOG(FATAL) << "failed to import module: " << symbol;
     return false;
   }
@@ -101,7 +102,7 @@ NATIVE_PROCEDURE_F(import) {
 NATIVE_PROCEDURE_F(print) {
   ASSERT(!args.empty());
   PrintValue(std::cout, args[0]) << std::endl;
-  return DoNothing();
+  return ReturnNull();
 }
 
 static std::random_device rand_device_{};   // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
@@ -130,7 +131,7 @@ NATIVE_PROCEDURE_F(type) {
 }
 
 NATIVE_PROCEDURE_F(exit) {
-  GetRuntime()->StopRunning();
+  // TODO: GetRuntime()->StopRunning();
   return true;
 }
 
@@ -229,6 +230,17 @@ NATIVE_PROCEDURE_F(array_length) {
 
 #ifdef GEL_DEBUG
 
+NATIVE_PROCEDURE_F(gel_get_roots) {
+  Object* result = Null();
+  LOG_IF(FATAL, !VisitRoots([&result](Pointer** ptr) {
+           ASSERT((*ptr));
+           result = Pair::New((*ptr)->GetObjectPointer(), result);
+           return true;
+         }))
+      << "failed to visit roots.";
+  return Return(result);
+}
+
 NATIVE_PROCEDURE_F(gel_minor_gc) {
   gel::MinorCollection();
   return DoNothing();
@@ -251,7 +263,7 @@ NATIVE_PROCEDURE_F(gel_get_frame) {
   const auto runtime = GetRuntime();
   ASSERT(runtime);
   DLOG(INFO) << "stack frames:";
-  StackFrameIterator iter(runtime->GetStackFrames());
+  StackFrameIterator iter(runtime->stack_);
   while (iter.HasNext()) {
     DLOG(INFO) << "- " << iter.Next();
   }
@@ -261,17 +273,26 @@ NATIVE_PROCEDURE_F(gel_get_frame) {
 NATIVE_PROCEDURE_F(gel_get_locals) {
   ASSERT(HasRuntime());
   ASSERT(args.empty());
-  LocalScope::RecursiveIterator iter(GetRuntime()->GetCurrentFrame()->GetLocals());
-  return Return(gel::ToList<LocalScope::RecursiveIterator, LocalVariable*>(iter, [](LocalVariable* local) -> Object* {
-    return String::New(local->GetName());
+  LocalScope::Iterator iter(GetRuntime()->GetScope());
+  return Return(gel::ToList<LocalScope::Iterator, LocalVariable*>(iter, [](LocalVariable* local) -> Object* {
+    return gel::ToList(ObjectList{
+
+        local->HasValue() ? local->GetValue() : Null(),
+        String::New(local->GetName()),
+    });
   }));
 }
 
 NATIVE_PROCEDURE_F(gel_get_classes) {
   ASSERT(HasRuntime());
   ASSERT(args.empty());
-  ClassListIterator iter;
-  return Return(gel::ToList(iter));
+  Object* result = Null();
+  const auto visitor = [&result](Class* cls) {
+    result = Pair::New(cls, result);
+    return true;
+  };
+  LOG_IF(FATAL, !Class::VisitClasses(visitor, true)) << "failed to visit classes.";
+  return Return(result);
 }
 
 NATIVE_PROCEDURE_F(gel_get_target_triple) {

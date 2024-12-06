@@ -61,8 +61,6 @@ DEFINE_INIT_CLASS(Object);
 FOR_EACH_TYPE(DEFINE_INIT_CLASS)
 #undef DEFINE_TYPE_INIT
 
-ClassList Class::all_ = {};  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-
 auto Object::CreateClass() -> Class* {
   return Class::New(kClassName);
 }
@@ -106,14 +104,6 @@ void Object::Init() {
 #endif  // GEL_ENABLE_RX
 }
 
-auto Class::CreateClass() -> Class* {
-  return Class::New(Object::GetClass(), kClassName);
-}
-
-auto Class::New(const ObjectList& args) -> Class* {
-  NOT_IMPLEMENTED(FATAL);
-}
-
 auto Long::CreateClass() -> Class* {
   return Class::New(Number::GetClass(), kClassName);
 }
@@ -134,13 +124,6 @@ auto Long::Unbox(Object* rhs) -> uint64_t {
   if (!rhs || !rhs->IsLong())
     throw Exception(fmt::format("expected `{}` to be a Long.", *rhs));
   return rhs->AsLong()->Get();
-}
-
-auto Class::ToString() const -> std::string {
-  ToStringHelper<Class> helper;
-  helper.AddField("name", GetName());
-  helper.AddField("parent", GetParent());
-  return helper;
 }
 
 auto Datum::Add(Datum* rhs) const -> Datum* {
@@ -442,6 +425,31 @@ auto String::ValueOf(Object* rhs) -> String* {
     ss << rhs->AsDouble()->Get();
   } else if (rhs->IsSymbol()) {
     ss << rhs->AsSymbol()->Get();
+  } else if (rhs->IsPair()) {
+    const auto pair = rhs->AsPair();
+    ASSERT(pair);
+    ss << "(";
+    if (pair->IsEmpty()) {
+      ss << ")";
+    } else {
+      PrintValue(ss, pair->GetCar());
+      auto next = pair->GetCdr();
+      do {
+        if (gel::IsNull(next)) {
+          ss << ")";
+          break;
+        }
+        if (!next->IsPair()) {
+          ss << " ";
+          PrintValue(ss, next);
+          ss << ")";
+          break;
+        }
+        ss << " ";
+        PrintValue(ss, next->AsPair()->GetCar());
+        next = next->AsPair()->GetCdr();
+      } while (true);
+    }
   } else {
     ss << rhs->ToString();
   }
@@ -464,71 +472,31 @@ auto PrintValue(std::ostream& stream, Object* value) -> std::ostream& {
     stream << "NativeProcedure #" << value->AsNativeProcedure()->GetSymbol()->Get();
     return stream;
   } else if (value->IsPair()) {
+    const auto pair = value->AsPair();
+    ASSERT(pair);
     stream << "(";
-    if (!value->AsPair()->IsEmpty()) {
-      PrintValue(stream, value->AsPair()->GetCar()) << ", ";
-      PrintValue(stream, value->AsPair()->GetCdr());
+    if (pair->IsEmpty()) {
+      stream << ")";
+      return stream;
     }
-    stream << ")";
-    return stream;
+    PrintValue(stream, pair->GetCar());
+    auto next = pair->GetCdr();
+    do {
+      if (gel::IsNull(next)) {
+        stream << ")";
+        return stream;
+      }
+      if (!next->IsPair()) {
+        stream << " ";
+        PrintValue(stream, next);
+        stream << ")";
+        return stream;
+      }
+      stream << " ";
+      PrintValue(stream, next->AsPair()->GetCar());
+      next = next->AsPair()->GetCdr();
+    } while (true);
   }
   return stream << value->ToString();
-}
-
-auto Class::FindClass(String* name) -> Class* {
-  for (const auto& cls : all_) {
-    if (cls->GetName()->Equals(name))
-      return cls;
-  }
-  return nullptr;
-}
-
-auto Class::FindClass(Symbol* name) -> Class* {
-  return FindClass(gel::ToString(name));
-}
-
-auto Class::VisitPointers(PointerVisitor* vis) -> bool {
-  ASSERT(vis);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return false;
-}
-
-auto Class::IsInstanceOf(Class* rhs) const -> bool {
-  ASSERT(rhs);
-  auto cls = this;
-  while (cls) {
-    if (cls->Equals(rhs))
-      return true;
-    cls = cls->GetParent();
-  }
-  return false;
-}
-
-auto Class::Equals(Object* rhs) const -> bool {
-  if (!rhs || !rhs->IsClass())
-    return false;
-  const auto other = rhs->AsClass();
-  ASSERT(other);
-  return GetName()->Equals(other->GetName());
-}
-
-auto Class::New(const std::string& name) -> Class* {
-  ASSERT(!name.empty());
-  return New(String::New(name));
-}
-
-auto Class::New(Class* parent, String* name) -> Class* {
-  ASSERT(parent);
-  ASSERT(name);
-  const auto cls = new Class(parent, name);
-  ASSERT(cls);
-  all_.push_back(cls);
-  return cls;
-}
-
-auto Class::New(Class* parent, const std::string& name) -> Class* {
-  ASSERT(parent);
-  ASSERT(!name.empty());
-  return New(parent, String::New(name));
 }
 }  // namespace gel

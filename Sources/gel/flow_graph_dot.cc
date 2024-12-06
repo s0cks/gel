@@ -131,7 +131,7 @@ auto EffectVisitor::VisitBranchInstr(ir::BranchInstr* instr) -> bool {
   return true;
 }
 
-auto EffectVisitor::VisitLoadVariableInstr(ir::LoadVariableInstr* instr) -> bool {
+auto EffectVisitor::VisitLoadLocalInstr(ir::LoadLocalInstr* instr) -> bool {
   ASSERT(instr);
   const auto node = Append(instr);
   ASSERT(node);

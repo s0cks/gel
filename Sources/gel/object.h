@@ -205,110 +205,11 @@ class Datum : public Object {
   virtual auto Or(Datum* rhs) const -> Datum*;
   virtual auto Compare(Datum* rhs) const -> int;
 };
+}  // namespace gel
 
-class Class;
-using ClassList = std::vector<Class*>;
+#include "gel/class.h"
 
-class Class : public Datum {
-  friend class Object;
-
- private:
-  Class* parent_;
-  String* name_;
-
- protected:
-  explicit Class(Class* parent, String* name) :
-    Datum(),
-    parent_(parent),
-    name_(name) {
-    ASSERT(name_);
-  }
-
-  auto VisitPointers(PointerVisitor* vis) -> bool override;
-
- public:
-  ~Class() override = default;
-
-  auto GetParent() const -> Class* {
-    return parent_;
-  }
-
-  inline auto HasParent() const -> bool {
-    return GetParent() != nullptr;
-  }
-
-  auto GetName() const -> String* {
-    return name_;
-  }
-
-  template <class T>
-  inline auto Is() const -> bool {
-    return Equals(T::GetClass());
-  }
-
-  template <class T>
-  inline auto IsInstance() const -> bool {
-    return IsInstanceOf(T::GetClass());
-  }
-
-  auto IsInstanceOf(Class* rhs) const -> bool;
-  DECLARE_TYPE(Class);
-
- private:
-  static ClassList all_;
-
-  static inline auto New(String* name) -> Class* {
-    ASSERT(name);
-    return new Class(nullptr, name);
-  }
-
-  static auto New(const std::string& name) -> Class*;
-
- public:
-  static auto New(Class* parent, String* name) -> Class*;
-  static auto New(Class* parent, const std::string& name) -> Class*;
-
-  static inline auto GetAllClasses() -> const ClassList& {
-    return all_;
-  }
-
-  static auto FindClass(String* name) -> Class*;
-  static auto FindClass(Symbol* name) -> Class*;
-};
-
-class ClassListIterator {
-  DEFINE_NON_COPYABLE_TYPE(ClassListIterator);
-
- private:
-  const ClassList& values_;  // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
-  ClassList::const_iterator iter_;
-
- public:
-  explicit ClassListIterator(const ClassList& values = Class::GetAllClasses()) :
-    values_(values),
-    iter_(std::begin(values)) {}
-  ~ClassListIterator() = default;
-
-  auto values() const -> const ClassList& {
-    return values_;
-  }
-
-  auto iter() const -> const ClassList::const_iterator& {
-    return iter_;
-  }
-
-  auto HasNext() const -> bool {
-    return iter() != std::end(values());
-  }
-
-  auto Next() -> Class* {
-    const auto next = (*iter_);
-    ASSERT(next);
-    iter_++;
-    return next;
-  }
-};
-
+namespace gel {
 class Bool : public Datum {
  private:
   bool value_;
@@ -751,6 +652,35 @@ struct formatter<gel::Double> : public formatter<std::string> {
   template <typename FormatContext>
   constexpr auto format(const gel::Double& value, FormatContext& ctx) const -> decltype(ctx.out()) {
     return format_to(ctx.out(), "{}", value.Get());
+  }
+};
+
+template <>
+struct formatter<gel::Pair> : public formatter<std::string> {
+  template <typename FormatContext>
+  constexpr auto format(const gel::Pair& value, FormatContext& ctx) const -> decltype(ctx.out()) {
+    ctx.out() << "(";
+    if (value.IsEmpty()) {
+      ctx.out() << ")";
+      return ctx.out();
+    }
+    format_to(ctx.out(), "{}", *(value.GetCar()));
+    auto next = value.GetCdr();
+    do {
+      if (gel::IsNull(next)) {
+        ctx.out() << ")";
+        return ctx.out();
+      }
+      if (!next->IsPair()) {
+        ctx.out() << " ";
+        format_to(ctx.out(), "{}", (*next));
+        ctx.out() << ")";
+        return ctx.out();
+      }
+      ctx.out() << " ";
+      format_to(ctx.out(), "{}", next->AsPair()->GetCar());
+      next = next->AsPair()->GetCdr();
+    } while (true);
   }
 };
 
