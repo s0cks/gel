@@ -34,6 +34,7 @@ class Pointer;
 class Datum;
 class PointerVisitor;
 class Object {
+  friend class Pointer;
   DEFINE_NON_COPYABLE_TYPE(Object)
  protected:
   Object() = default;

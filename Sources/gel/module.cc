@@ -60,6 +60,27 @@ auto Module::Equals(Object* rhs) const -> bool {
   return GetName()->Equals(other->GetName());
 }
 
+auto Module::VisitPointers(PointerPointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  {
+    auto name_ptr = name_->raw_ptr();
+    if (!vis->Visit(&name_ptr))
+      return false;
+    name_ = name_ptr->As<String>();
+  }
+  DLOG(INFO) << "visiting: " << scope_->ToString();
+  LOG_IF(FATAL, !scope_->VisitLocalPointers([vis](Pointer** ptr) {
+    return vis->Visit(ptr);
+  })) << "failed to visit pointers in scope.";
+  for (auto& ns : namespaces_) {
+    auto ns_ptr = ns->raw_ptr();
+    if (!vis->Visit(&ns_ptr))
+      return false;
+    ns = ns_ptr->As<Namespace>();
+  }
+  return true;
+}
+
 auto Module::CreateClass() -> Class* {
   ASSERT(kClass == nullptr);
   return Class::New(Object::GetClass(), "Module");

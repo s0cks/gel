@@ -45,6 +45,12 @@
   (defn gel:inspect [o]
     (when (#Procedure? o)
       (print (format "compiled in {}ns." (gel:compile-time? o)))))
+  (defnative gel:print-heap []
+    "Prints the heap information to the terminal.")
+  (defnative gel:print-new-zone []
+    "Prints the heap's new zone information to the terminal.")
+  (defnative gel:print-old-zone []
+    "Prints the heap's old zone information to the terminal.")
   ;; --------------------------------------------------
   ;; pair accessors
   (defn caar [xs]

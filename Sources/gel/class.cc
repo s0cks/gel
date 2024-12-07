@@ -50,10 +50,22 @@ auto Class::ToString() const -> std::string {
   return helper;
 }
 
+auto Class::GetAllocationSize() const -> uword {
+  if (Equals(Class::GetClass()))
+    return sizeof(Class);
+  return 0;
+}
+
 auto Class::VisitPointers(PointerVisitor* vis) -> bool {
   ASSERT(vis);
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
   return false;
+}
+
+auto Class::VisitPointers(PointerPointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return true;
 }
 
 auto Class::IsInstanceOf(Class* rhs) const -> bool {
@@ -108,9 +120,9 @@ auto Class::VisitClasses(const std::function<bool(Class*)>& vis, const bool reve
 }
 
 auto Class::VisitClassPointers(const std::function<bool(Pointer**)>& vis) -> bool {
-  for (auto& ptr : classes_) {
-    ASSERT(ptr && ptr->GetObjectPointer());
-    if (!vis(&ptr))
+  for (auto& cls : classes_) {
+    ASSERT(cls && cls->GetObjectPointer());
+    if (!vis(&cls))
       return false;
   }
   return true;

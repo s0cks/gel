@@ -8,6 +8,7 @@
 
 namespace gel {
 DEFINE_uword(new_zone_size, 4 * 1024 * 1024, "The size of the new zone.");
+DEFINE_uword(old_zone_size, 4 * 1024 * 1024, "The initial size of the old zone (tenured & large object space).");
 
 using namespace units::data;
 
@@ -16,13 +17,11 @@ static inline auto CalcSemispaceSize(const uword size) -> uword {
   return size / 2;
 }
 
-NewZone::NewZone(const uword size, const MemoryRegion::ProtectionMode mode) :
-  Zone(size, mode),
+NewZone::NewZone(const uword size) :
+  Zone(size, MemoryRegion::kReadWrite),
   fromspace_(GetStartingAddress()),
   tospace_(GetStartingAddress() + CalcSemispaceSize(size)),
-  semi_size_(CalcSemispaceSize(size)) {
-  Zone::SetWritable();
-}
+  semi_size_(CalcSemispaceSize(size)) {}
 
 auto NewZone::TryAllocate(const uword size) -> uword {
   ASSERT(size > 0);
@@ -66,10 +65,15 @@ auto NewZone::VisitAllMarkedPointers(PointerVisitor* vis) const -> bool {
   return true;
 }
 
+OldZone::OldZone(const uword size) :
+  Zone(size, MemoryRegion::kReadWrite),
+  free_list_() {
+  free_list_ = FreeList(GetStartingAddress(), size);
+}
+
 auto OldZone::TryAllocate(const uword size) -> uword {
   ASSERT(size > 0);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return UNALLOCATED;
+  return free_list_.TryAllocate(size);
 }
 
 #ifdef GEL_DEBUG
@@ -112,15 +116,27 @@ static inline auto PrettyPrintBytes(const uword num_bytes) -> std::string {
 
 void PrintNewZone(const NewZone& zone) {
   DLOG(INFO) << "New Zone:";
+  DLOG(INFO) << "  Starting Address: " << zone.GetStartingAddressPointer();
   DLOG(INFO) << "  Total Size: " << PrettyPrintBytes(zone.GetSize());
   DLOG(INFO) << "  Semispace Size: " << PrettyPrintBytes(zone.semisize());
-  DLOG(INFO) << "  Allocated: " << PrettyPrintBytes(zone.GetNumberOfBytesAllocated()) << " / " << zone.GetAllocationPercent();
+  DLOG(INFO) << "  Fromspace: " << zone.GetFromspacePointer();
+  DLOG(INFO) << "  Tospace: " << zone.GetTospacePointer();
+  DLOG(INFO) << "  Total Allocated: " << PrettyPrintBytes(zone.GetNumberOfBytesAllocated()) << " / "
+             << zone.GetAllocationPercent();
 }
 
 void PrintOldZone(const OldZone& zone) {
   DLOG(INFO) << "Old Zone:";
+  DLOG(INFO) << "  Starting Address: " << zone.GetStartingAddressPointer();
   DLOG(INFO) << "  Total Size: " << PrettyPrintBytes(zone.GetSize());
-  DLOG(INFO) << "  Allocated: " << PrettyPrintBytes(zone.GetNumberOfBytesAllocated()) << " / " << zone.GetAllocationPercent();
+  DLOG(INFO) << "  Total Allocated: " << PrettyPrintBytes(zone.GetNumberOfBytesAllocated()) << " / "
+             << zone.GetAllocationPercent();
+  DLOG(INFO) << "  Free Pointers:";
+  LOG_IF(FATAL, !zone.free_list().VisitFreePointers([](FreePointer* ptr) {
+    DLOG(INFO) << "  - " << (*ptr);
+    return true;
+  })) << "failed to visit FreePointers in: "
+      << zone;
 }
 
 #endif  // GEL_DEBUG

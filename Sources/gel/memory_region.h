@@ -1,6 +1,8 @@
 #ifndef GEL_MEMORY_REGION_H
 #define GEL_MEMORY_REGION_H
 
+#include <units.h>
+
 #include <ostream>
 
 #include "gel/common.h"
@@ -52,7 +54,7 @@ class MemoryRegion : public Section {
   friend auto operator<<(std::ostream& stream, const MemoryRegion& rhs) -> std::ostream& {
     stream << "MemoryRegion(";
     stream << "start=" << rhs.GetStartingAddressPointer() << ", ";
-    stream << "size=" << rhs.GetSize();
+    stream << "size=" << units::data::byte_t(static_cast<double>(rhs.GetSize()));
     stream << ")";
     return stream;
   }

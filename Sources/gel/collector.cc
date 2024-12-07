@@ -5,10 +5,17 @@
 #include "gel/module.h"
 #include "gel/object.h"
 #include "gel/platform.h"
+#include "gel/pointer.h"
 #include "gel/runtime.h"
 #include "gel/zone.h"
 
 namespace gel {
+auto VisitRoots(PointerPointerVisitor* vis) -> bool {
+  return VisitRoots([vis](Pointer** ptr) {
+    return vis->Visit(ptr);
+  });
+}
+
 auto VisitRoots(const std::function<bool(Pointer**)>& vis) -> bool {
   if (!HasRuntime())
     return false;
@@ -37,7 +44,7 @@ auto Collector::CopyPointer(Pointer* ptr) -> Pointer* {
   return next;
 }
 
-auto Collector::ProcessRoot(Pointer** ptr) -> bool {
+auto Collector::Process(Pointer** ptr) -> bool {
   ASSERT(ptr && (*ptr));
   const auto old_ptr = (*ptr);
   const auto value = old_ptr->GetObjectPointer();
@@ -52,28 +59,48 @@ auto Collector::ProcessRoot(Pointer** ptr) -> bool {
 
 void Collector::ProcessRoots() {
   const auto vis = [this](Pointer** ptr) {
-    return ProcessRoot(ptr);
+    return Process(ptr);
   };
+  DLOG(INFO) << "processing roots....";
   LOG_IF(FATAL, !VisitRoots(vis)) << "failed to visit roots.";
 }
 
-auto Collector::NotifyRoot(Pointer** ptr) -> bool {
-  ASSERT(ptr && (*ptr)->IsForwarding());
-  (*ptr) = Pointer::At((*ptr)->GetForwardingAddress());
-  return true;
-}
+class PointerNotifier : public PointerPointerVisitor {
+  DEFINE_NON_COPYABLE_TYPE(PointerNotifier);
+
+ public:
+  PointerNotifier() = default;
+  ~PointerNotifier() override = default;
+
+  auto Visit(Pointer** ptr) -> bool override {
+    ASSERT(ptr && (*ptr)->IsForwarding());
+    const auto old_ptr = (*ptr);
+    const auto new_ptr = (*ptr) = Pointer::At((*ptr)->GetForwardingAddress());
+    VLOG(1) << "forwarded " << (*old_ptr) << " => " << (*new_ptr);
+    return true;
+  }
+};
 
 void Collector::NotifyRoots() {
-  const auto vis = [this](Pointer** ptr) {
-    return NotifyRoot(ptr);
-  };
-  LOG_IF(FATAL, !VisitRoots(vis)) << "failed to visit roots.";
+  PointerNotifier notifier;
+  LOG_IF(FATAL, !VisitRoots(&notifier)) << "failed to notify roots.";
+}
+
+auto Collector::Visit(Pointer** ptr) -> bool {
+  ASSERT(ptr && (*ptr));
+  if ((*ptr)->IsForwarding())
+    return true;
+  return Process(ptr);
 }
 
 auto Collector::ProcessFromspace() -> bool {
-  while (current_address() < heap().new_zone().fromspace()) {
+  DLOG(INFO) << "processing fromspace....";
+  while (current_address() < next_address_) {
     auto ptr = Pointer::At(current_address());
     ASSERT(ptr);
+    DLOG(INFO) << "processing: " << (*ptr) << " ;; " << ptr->GetObjectPointer()->ToString();
+    if (!ptr->VisitPointers(this))
+      return false;
     curr_address_ += ptr->GetTotalSize();
   }
   return true;
@@ -103,6 +130,7 @@ void Collector::Collect() {
   ProcessRoots();
   LOG_IF(FATAL, !ProcessFromspace()) << "failed to process fromspace.";
   NotifyRoots();
+  heap().new_zone().SetCurrent(next_address_);
 }
 
 void MinorCollection() {

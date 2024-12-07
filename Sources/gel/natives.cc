@@ -17,6 +17,7 @@
 #include "gel/common.h"
 #include "gel/error.h"
 #include "gel/gel.h"
+#include "gel/heap.h"
 #include "gel/local.h"
 #include "gel/local_scope.h"
 #include "gel/native_procedure.h"
@@ -27,6 +28,7 @@
 #include "gel/rx.h"
 #include "gel/stack_frame.h"
 #include "gel/type.h"
+#include "gel/zone.h"
 
 namespace gel::proc {
 NATIVE_PROCEDURE_F(gel_docs) {
@@ -229,6 +231,27 @@ NATIVE_PROCEDURE_F(array_length) {
 }
 
 #ifdef GEL_DEBUG
+
+NATIVE_PROCEDURE_F(gel_print_heap) {
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return Return();
+}
+
+NATIVE_PROCEDURE_F(gel_print_new_zone) {
+  const auto heap = Heap::GetHeap();
+  if (!heap)
+    return Return();
+  PrintNewZone(heap->GetNewZone());
+  return Return();
+}
+
+NATIVE_PROCEDURE_F(gel_print_old_zone) {
+  const auto heap = Heap::GetHeap();
+  if (!heap)
+    return Return();
+  PrintOldZone(heap->GetOldZone());
+  return Return();
+}
 
 NATIVE_PROCEDURE_F(gel_get_roots) {
   Object* result = Null();

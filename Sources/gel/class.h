@@ -29,6 +29,7 @@ class Class : public Datum {
   }
 
   auto VisitPointers(PointerVisitor* vis) -> bool override;
+  auto VisitPointers(PointerPointerVisitor* vis) -> bool override;
 
  public:
   ~Class() override = default;
@@ -55,6 +56,7 @@ class Class : public Datum {
     return IsInstanceOf(T::GetClass());
   }
 
+  auto GetAllocationSize() const -> uword;
   auto IsInstanceOf(Class* rhs) const -> bool;
   DECLARE_TYPE(Class);
 

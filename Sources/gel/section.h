@@ -106,6 +106,11 @@ class AllocationSection : public Section {
     ASSERT(GetCurrentAddress() == GetStartingAddress());
   }
 
+  void SetCurrent(const uword address) {
+    ASSERT(address >= GetStartingAddress() && address <= GetEndingAddress());
+    current_ = address;
+  }
+
   void Clear() override {
     Section::Clear();
     current_ = GetStartingAddress();

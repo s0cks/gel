@@ -32,6 +32,16 @@ class Heap {
  public:
   ~Heap();
 
+  auto TryAllocateOld(const uword size) -> uword;  // TODO: reduce visbility
+
+  template <typename T>
+  auto TryAllocateOldValue() -> T* {
+    const auto cls = T::GetClass();
+    ASSERT(cls);
+    return (T*)TryAllocateOld(cls->GetAllocationSize());
+  }
+
+  auto TryAllocateNew(const uword size) -> uword;  // TODO: reduce visibility
   auto TryAllocate(const uword size) -> uword;
 
   auto GetNewZone() const -> const NewZone& {

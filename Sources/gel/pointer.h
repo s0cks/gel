@@ -46,6 +46,7 @@ class Pointer {
   friend class NewZone;
   friend class OldZone;
   friend class Collector;
+  friend class PointerNotifier;
   DEFINE_NON_COPYABLE_TYPE(Pointer);
 
  private:
@@ -70,6 +71,9 @@ class Pointer {
   inline auto tag() -> Tag& {
     return tag_;
   }
+
+ protected:
+  auto VisitPointers(PointerPointerVisitor* vis) -> bool;
 
  public:
   ~Pointer() = default;

@@ -51,6 +51,9 @@ void NativeProcedure::Init() {
 #endif  // GEL_ENABLE_RX
 
 #ifdef GEL_DEBUG
+  InitNative<gel_print_heap>();
+  InitNative<gel_print_new_zone>();
+  InitNative<gel_print_old_zone>();
   InitNative<gel_get_roots>();
   InitNative<gel_minor_gc>();
   InitNative<gel_major_gc>();

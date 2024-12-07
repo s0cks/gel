@@ -3,6 +3,7 @@
 
 #include "gel/common.h"
 #include "gel/flags.h"
+#include "gel/free_list.h"
 #include "gel/memory_region.h"
 #include "gel/pointer.h"
 #include "gel/section.h"
@@ -89,7 +90,7 @@ class NewZone : public Zone {
   uword tospace_;
   uword semi_size_;
 
-  explicit NewZone(const uword size = GetNewZoneSize(), const MemoryRegion::ProtectionMode mode = MemoryRegion::kReadOnly);
+  explicit NewZone(const uword size = GetNewZoneSize());
 
   inline void SwapSpaces() {
     std::swap(fromspace_, tospace_);
@@ -122,6 +123,10 @@ class NewZone : public Zone {
   auto VisitAllMarkedPointers(PointerVisitor* vis) const -> bool;
   auto TryAllocate(const uword size) -> uword override;
 
+  auto GetNumberOfBytesAllocated() const -> uword override {
+    return (GetCurrentAddress() - fromspace());
+  }
+
   auto GetAllocationPercent() const -> Percent override {
     return Percent(GetNumberOfBytesAllocated(), semisize());
   }
@@ -143,14 +148,26 @@ class NewZone : public Zone {
   }
 };
 
+DECLARE_uword(old_zone_size);
+
+static inline auto GetOldZoneSize() -> uword {
+  return FLAGS_old_zone_size;
+}
+
 class OldZone : public Zone {
   friend class Heap;
-  DEFINE_DEFAULT_COPYABLE_TYPE(OldZone);
+  DEFINE_NON_COPYABLE_TYPE(OldZone);
+
+ private:
+  FreeList free_list_;
 
  public:
-  OldZone() = default;
-  explicit OldZone(const uword size, const MemoryRegion::ProtectionMode mode = MemoryRegion::kReadOnly);
+  explicit OldZone(const uword size = GetOldZoneSize());
   ~OldZone() override = default;
+
+  auto free_list() const -> const FreeList& {
+    return free_list_;
+  }
 
   auto TryAllocate(const uword size) -> uword override;
 

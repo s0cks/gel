@@ -4,8 +4,10 @@
 #include <algorithm>
 #include <filesystem>
 
+#include "gel/common.h"
 #include "gel/namespace.h"
 #include "gel/object.h"
+#include "gel/pointer.h"
 
 namespace gel {
 class Module;
@@ -29,6 +31,8 @@ class Module : public Object {
     ASSERT(name_);
     ASSERT(scope_);
   }
+
+  auto VisitPointers(PointerPointerVisitor* vis) -> bool override;
 
  public:
   ~Module() override = default;

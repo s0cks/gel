@@ -7,9 +7,10 @@
 #include "gel/zone.h"
 
 namespace gel {
+auto VisitRoots(PointerPointerVisitor* vis) -> bool;
 auto VisitRoots(const std::function<bool(Pointer**)>& vis) -> bool;
 
-class Collector {
+class Collector : public PointerPointerVisitor {
   DEFINE_NON_COPYABLE_TYPE(Collector);
 
  private:
@@ -36,14 +37,15 @@ class Collector {
  protected:
   void ProcessRoots();
   auto ProcessFromspace() -> bool;
-  auto ProcessRoot(Pointer** ptr) -> bool;
+  auto Process(Pointer** ptr) -> bool;
   auto NotifyRoot(Pointer** ptr) -> bool;
   auto CopyPointer(Pointer* ptr) -> Pointer*;
   void NotifyRoots();
+  auto Visit(Pointer** ptr) -> bool override;
 
  public:
   explicit Collector(Heap& heap);
-  virtual ~Collector() = default;
+  ~Collector() override = default;
   void Collect();
 };
 

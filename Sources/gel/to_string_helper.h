@@ -253,6 +253,10 @@ class ToStringHelper : public ToStringHelperBase {
   operator std::string() const {
     return ToStringHelperBase::ToString();
   }
+
+  friend auto operator<<(std::ostream& stream, const ToStringHelper<T, ES, VS, FS>& rhs) -> std::ostream& {
+    return stream << rhs.ToString();
+  }
 };
 }  // namespace tostring
 

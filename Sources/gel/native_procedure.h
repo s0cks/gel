@@ -42,7 +42,7 @@ class NativeProcedure : public Procedure {
     ASSERT(symbol_);
   }
 
-  auto Return(Object* rhs) const -> bool;
+  auto Return(Object* rhs = Null()) const -> bool;
   virtual auto Apply(const ObjectList& args) const -> bool = 0;
 
   inline auto ReturnNull() const -> bool {
