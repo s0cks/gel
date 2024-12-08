@@ -27,8 +27,9 @@ set(GFLAGS_USE_TARGET_NAMESPACE ON)
 find_package(gflags CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(units CONFIG REQUIRED)
+find_package(libuv CONFIG REQUIRED)
 
-list(APPEND GEL_LIBRARIES Threads::Threads glog::glog gflags::gflags fmt::fmt units::units)
+list(APPEND GEL_LIBRARIES Threads::Threads glog::glog gflags::gflags fmt::fmt units::units $<IF:$<TARGET_EXISTS:libuv::uv_a>,libuv::uv_a,libuv::uv>)
 
 
 if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")

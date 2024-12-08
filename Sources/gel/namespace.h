@@ -49,6 +49,10 @@ class Namespace : public Object {
  public:
   ~Namespace() override = default;
 
+  auto GetType() const -> Class* override {
+    return GetClass();
+  }
+
   auto GetName() const -> String* {
     return name_;
   }

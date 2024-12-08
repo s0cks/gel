@@ -15,10 +15,20 @@ _DECLARE_NATIVE_PROCEDURE(type, "type?");
 _DECLARE_NATIVE_PROCEDURE(rand_range, "random:range");
 _DECLARE_NATIVE_PROCEDURE(set_car, "set-car!");
 _DECLARE_NATIVE_PROCEDURE(set_cdr, "set-cdr!");
+// array lib
+//----------------------------------------------------------------------
 _DECLARE_NATIVE_PROCEDURE(array_new, "array:new");
 _DECLARE_NATIVE_PROCEDURE(array_get, "array:get");
 _DECLARE_NATIVE_PROCEDURE(array_set, "array:set!");
 _DECLARE_NATIVE_PROCEDURE(array_length, "array:length");
+//----------------------------------------------------------------------
+// uv lib
+//----------------------------------------------------------------------
+_DECLARE_NATIVE_PROCEDURE(uv_close, "uv:close");
+_DECLARE_NATIVE_PROCEDURE(uv_run, "uv:run");
+_DECLARE_NATIVE_PROCEDURE(uv_alive, "uv:alive");
+_DECLARE_NATIVE_PROCEDURE(uv_stop, "uv:stop");
+//----------------------------------------------------------------------
 
 #ifdef GEL_ENABLE_RX
 #define _DECLARE_NATIVE_RX_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(rx_##Name, "rx:" Sym)

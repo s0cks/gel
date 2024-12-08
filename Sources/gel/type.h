@@ -15,6 +15,7 @@ class Definition;
 
 #define FOR_EACH_PRIMITIVE_TYPE(V) \
   V(Class)                         \
+  V(Field)                         \
   V(Bool)                          \
   V(Number)                        \
   V(Double)                        \
@@ -29,7 +30,8 @@ class Definition;
   V(Script)                        \
   V(Error)                         \
   V(Namespace)                     \
-  V(Module)
+  V(Module)                        \
+  V(Loop)
 
 #define FOR_EACH_TYPE(V)     \
   FOR_EACH_PRIMITIVE_TYPE(V) \

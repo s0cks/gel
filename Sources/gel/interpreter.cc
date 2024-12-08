@@ -343,7 +343,7 @@ auto Interpreter::VisitGraphEntryInstr(GraphEntryInstr* instr) -> bool {
 
 auto Interpreter::ExecuteInstr(Instruction* instr) -> bool {
   ASSERT(instr);
-  DVLOG(100) << "executing " << instr->ToString();
+  DVLOG(10) << "executing " << instr->ToString();
   return instr->Accept(this);
 }
 

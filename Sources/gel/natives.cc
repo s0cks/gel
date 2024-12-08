@@ -544,4 +544,34 @@ NATIVE_RX_PROCEDURE_F(get_operators) {
 #endif  // GEL_DEBUG
 #endif  // GEL_ENABLE_RX
 
+NATIVE_PROCEDURE_F(uv_close) {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return Return();
+}
+
+NATIVE_PROCEDURE_F(uv_run) {
+  NativeArgument<0, Loop> loop(args);
+  if (!loop)
+    return Throw(loop.GetError());
+  OptionalNativeArgument<1, Symbol> mode(args);
+  std::optional<Loop::RunMode> m;
+  if (mode) {
+    if (mode->Get() == "no-wait")
+      m = std::optional<Loop::RunMode>(Loop::RunMode::UV_RUN_NOWAIT);
+    else if (mode->Get() == "once")
+      m = std::optional<Loop::RunMode>(Loop::RunMode::UV_RUN_ONCE);
+  }
+  loop->Run(m.value_or(UV_RUN_DEFAULT));
+  return Return();
+}
+
+NATIVE_PROCEDURE_F(uv_alive) {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return Return();
+}
+
+NATIVE_PROCEDURE_F(uv_stop) {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return Return();
+}
 }  // namespace gel::proc

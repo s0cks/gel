@@ -58,13 +58,13 @@ auto Class::GetAllocationSize() const -> uword {
 
 auto Class::VisitPointers(PointerVisitor* vis) -> bool {
   ASSERT(vis);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  NOT_IMPLEMENTED(FATAL);  // TODO: @s0cks implement
   return false;
 }
 
 auto Class::VisitPointers(PointerPointerVisitor* vis) -> bool {
   ASSERT(vis);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  NOT_IMPLEMENTED(ERROR);  // TODO: @s0cks implement
   return true;
 }
 
@@ -126,5 +126,43 @@ auto Class::VisitClassPointers(const std::function<bool(Pointer**)>& vis) -> boo
       return false;
   }
   return true;
+}
+
+auto Class::AddField(const std::string& name, Class* type, Instance* value) -> Field* {
+  ASSERT(type);
+  const auto field = value ? Field::New(this, name, type, value) : Field::New(this, name, type);
+  ASSERT(field);
+  Add(field);
+  return field;
+}
+
+auto Field::Equals(Object* rhs) const -> bool {
+  if (!rhs || !rhs->IsField())
+    return false;
+  NOT_IMPLEMENTED(ERROR);  // TODO: @s0cks implement
+  return false;
+}
+
+auto Field::CreateClass() -> Class* {
+  return Class::New(Object::GetClass(), "Field");
+}
+
+auto Field::New(const ObjectList& args) -> Field* {
+  NOT_IMPLEMENTED(FATAL);  // TODO: @s0cks implement
+  return nullptr;
+}
+
+auto Field::ToString() const -> std::string {
+  ToStringHelper<Field> helper;
+  if (HasOwner())
+    helper.AddField("owner", (const void*)GetOwner());
+  helper.AddField("name", GetName());
+  helper.AddField("type", GetFieldType());
+  if (IsConstant()) {
+    helper.AddField("value", GetValue());
+  } else {
+    helper.AddField("offset", GetOffset());
+  }
+  return helper;
 }
 }  // namespace gel

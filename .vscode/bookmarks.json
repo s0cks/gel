@@ -11,16 +11,6 @@
 			]
 		},
 		{
-			"path": "Sources/gel/object.cc",
-			"bookmarks": [
-				{
-					"line": 73,
-					"column": 0,
-					"label": ""
-				}
-			]
-		},
-		{
 			"path": "Sources/gel/native_procedure.cc",
 			"bookmarks": [
 				{

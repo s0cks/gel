@@ -32,6 +32,7 @@ class rx_buffer;
 
 class Pointer;
 class Datum;
+class Instance;
 class PointerVisitor;
 class Object {
   friend class Pointer;
@@ -172,19 +173,61 @@ static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream
                                                     \
  public:                                            \
   auto Equals(Object* rhs) const -> bool override;  \
-  auto GetType() const -> Class* override {         \
-    return GetClass();                              \
-  }                                                 \
   auto ToString() const -> std::string override;    \
   auto As##Name()->Name* override {                 \
     return this;                                    \
   }
+}  // namespace gel
 
-class Datum : public Object {
+#include "gel/class.h"
+
+namespace gel {
+class Instance : public Object {
+  DEFINE_NON_COPYABLE_TYPE(Instance);
+
+ private:
+  Class* type_;
+
+ protected:
+  explicit Instance(Class* type) :
+    Object(),
+    type_(type) {}
+
+  auto FieldAddressAt(const uword offset) const -> Instance** {
+    return (Instance**)(((uword)this) + offset);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  }
+
+  inline auto FieldAddress(const Field* field) const -> Instance** {
+    return FieldAddressAt(field->GetOffset());
+  }
+
+  void SetField(Field* field, Instance* value) {
+    ASSERT(field);
+    ASSERT(value);
+    *(FieldAddress(field)) = value;
+  }
+
+  auto GetField(Field* field) const -> Instance* {
+    return *(FieldAddress(field));
+  }
+
+ public:
+  ~Instance() override = default;
+
+  auto GetType() const -> Class* override {
+    return type_;
+  }
+
+ public:
+  static auto New(Class* type) -> Instance*;
+};
+
+class Datum : public Instance {
   DEFINE_NON_COPYABLE_TYPE(Datum);
 
  protected:
-  Datum() = default;
+  explicit Datum(Class* type) :
+    Instance(type) {}
 
  public:
   ~Datum() override = default;
@@ -206,17 +249,13 @@ class Datum : public Object {
   virtual auto Or(Datum* rhs) const -> Datum*;
   virtual auto Compare(Datum* rhs) const -> int;
 };
-}  // namespace gel
 
-#include "gel/class.h"
-
-namespace gel {
 class Bool : public Datum {
  private:
   bool value_;
 
   explicit Bool(const bool value) :
-    Datum(),
+    Datum(GetClass()),
     value_(value) {}
 
  public:
@@ -266,11 +305,11 @@ class Number : public Datum {
   std::variant<uint64_t, double> value_;
 
  protected:
-  explicit Number(const uint64_t value) :
-    Datum(),
+  explicit Number(Class* type, const uint64_t value) :
+    Datum(type),
     value_(value) {}
-  explicit Number(const double value) :
-    Datum(),
+  explicit Number(Class* type, const double value) :
+    Datum(type),
     value_(value) {}
 
  public:
@@ -298,7 +337,7 @@ class Number : public Datum {
 class Long : public Number {
  protected:
   explicit Long(const uint64_t value) :
-    Number(value) {}
+    Number(GetClass(), value) {}
 
  public:
   ~Long() override = default;
@@ -326,7 +365,7 @@ class Long : public Number {
 class Double : public Number {
  protected:
   Double(const double value) :
-    Number(value) {}
+    Number(GetClass(), value) {}
 
  public:
   ~Double() override = default;
@@ -354,6 +393,7 @@ class Pair : public Datum {
 
  protected:
   explicit Pair(Object* car = nullptr, Object* cdr = nullptr) :
+    Datum(GetClass()),
     car_(car),
     cdr_(cdr) {}
 
@@ -411,9 +451,11 @@ class StringObject : public Datum {
   std::string value_;
 
  protected:
-  StringObject() = default;
-  explicit StringObject(std::string value) :
-    Datum(),
+  StringObject(Class* type) :
+    Datum(type),
+    value_() {}
+  explicit StringObject(Class* type, std::string value) :
+    Datum(type),
     value_(std::move(value)) {}
 
   inline void Set(const std::string& value) {
@@ -436,9 +478,8 @@ class StringObject : public Datum {
 
 class String : public StringObject {
  protected:
-  String() = default;
-  explicit String(const std::string& value) :
-    StringObject(value) {}
+  explicit String(const std::string& value = {}) :
+    StringObject(kClass, value) {}
 
  public:
   ~String() override = default;
@@ -469,8 +510,8 @@ class Symbol : public StringObject {
   };
 
  private:
-  explicit Symbol(const std::string& value) :
-    StringObject(value) {}
+  explicit Symbol(const std::string& value = {}) :
+    StringObject(kClass, value) {}
 
  public:
   ~Symbol() override = default;
@@ -484,6 +525,11 @@ class Symbol : public StringObject {
 using SymbolList = std::vector<Symbol*>;
 using SymbolSet = std::unordered_set<Symbol*, Symbol::Comparator>;
 
+}  // namespace gel
+
+#include "gel/uv_object.h"
+
+namespace gel {
 auto PrintValue(std::ostream& stream, Object* value) -> std::ostream&;
 
 #define DEFINE_TYPE_PRED(Name)                     \

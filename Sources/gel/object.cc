@@ -73,11 +73,14 @@ auto Object::raw_ptr() const -> Pointer* {
 
 void Object::Init() {
   InitClass();
+  // string-like type(s)
   Class::InitClass();
+  Field::InitClass();
+  String::InitClass();
+  Symbol::InitClass();
   Namespace::InitClass();
   Module::InitClass();
   // exec
-  Script::InitClass();
   Procedure::InitClass();
   Lambda::InitClass();
   NativeProcedure::Init();
@@ -88,13 +91,12 @@ void Object::Init() {
   Double::InitClass();
   Pair::InitClass();
   Bool::Init();
+  Script::InitClass();
   ArrayBase::InitClass();
   Macro::InitClass();
-  // string-like type(s)
-  String::InitClass();
-  Symbol::InitClass();
   // error type(s)
   Error::InitClass();
+  Loop::InitClass();
 #ifdef GEL_ENABLE_RX
   Observable::InitClass();
   Observer::InitClass();

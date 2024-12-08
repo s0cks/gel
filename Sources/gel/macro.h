@@ -24,6 +24,10 @@ class Macro : public Object {
  public:
   ~Macro() override = default;
 
+  auto GetType() const -> Class* override {
+    return GetClass();
+  }
+
   auto GetSymbol() const -> Symbol* {
     return symbol_;
   }

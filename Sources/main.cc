@@ -150,16 +150,6 @@ auto main(int argc, char** argv) -> int {
   ::google::ParseCommandLineFlags(&argc, &argv, true);
   Heap::Init();
   Runtime::Init();
-
-  // const auto heap = Heap::GetHeap();
-  // ASSERT(heap);
-  // LOG(INFO) << "Old Zone (before):";
-  // PrintOldZone(heap->GetOldZone());
-  // const auto cls = heap->TryAllocateOldValue<Class>();
-  // ASSERT(cls);
-  // LOG(INFO) << "Old Zone (after):";
-  // PrintOldZone(heap->GetOldZone());
-  // VLOG(1) << "${GEL_HOME} := " << GetHomeEnvVar();
   const auto expr = GetExpressionFlag();
   if (expr)
     return Execute((*expr));

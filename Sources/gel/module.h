@@ -37,6 +37,10 @@ class Module : public Object {
  public:
   ~Module() override = default;
 
+  auto GetType() const -> Class* override {
+    return GetClass();
+  }
+
   auto GetName() const -> String* {
     return name_;
   }

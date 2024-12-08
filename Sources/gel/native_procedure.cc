@@ -12,6 +12,9 @@ NativeProcedureList NativeProcedure::all_{};
 void NativeProcedure::Init() {
   using namespace proc;
   InitClass();
+  //----------------------------------------------------------------------
+  // kernel lib
+  //----------------------------------------------------------------------
   InitNative<print>();
   InitNative<type>();
   InitNative<import>();
@@ -21,15 +24,29 @@ void NativeProcedure::Init() {
   InitNative<set_car>();
   InitNative<set_cdr>();
   InitNative<random>();
+  InitNative<gel_docs>();
   InitNative<rand_range>();
+  //----------------------------------------------------------------------
+  // array lib
+  //----------------------------------------------------------------------
   InitNative<array_new>();
   InitNative<array_get>();
   InitNative<array_set>();
   InitNative<array_length>();
-  InitNative<gel_docs>();
+  //----------------------------------------------------------------------
+  // uv lib
+  //----------------------------------------------------------------------
+  InitNative<uv_close>();
+  InitNative<uv_run>();
+  InitNative<uv_alive>();
+  InitNative<uv_stop>();
+  //----------------------------------------------------------------------
 
 #ifdef GEL_ENABLE_RX
 #define REGISTER_RX(Name) InitNative<rx_##Name>();
+  //----------------------------------------------------------------------
+  // rx lib
+  //----------------------------------------------------------------------
   REGISTER_RX(observer);
   REGISTER_RX(observable);
   REGISTER_RX(subscribe);
@@ -51,6 +68,9 @@ void NativeProcedure::Init() {
 #endif  // GEL_ENABLE_RX
 
 #ifdef GEL_DEBUG
+  //----------------------------------------------------------------------
+  // debug lib
+  //----------------------------------------------------------------------
   InitNative<gel_print_heap>();
   InitNative<gel_print_new_zone>();
   InitNative<gel_print_old_zone>();

@@ -23,7 +23,7 @@ class Error : public Datum {
 
  public:
   explicit Error(String* message) :
-    Datum() {
+    Datum(GetClass()) {
     SetMessage(message);
   }
 

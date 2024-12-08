@@ -11,12 +11,13 @@
 #include "gel/rx.h"
 
 namespace gel {
-class Observer : public Object {
+class Observer : public Instance {
  private:
   rx::DynamicObjectObserver value_;
 
  protected:
   explicit Observer(rx::DynamicObjectObserver value) :
+    Instance(GetClass()),
     value_(value) {}
 
  public:
@@ -45,7 +46,7 @@ class Observer : public Object {
   }
 };
 
-class Observable : public Object {
+class Observable : public Instance {
   friend class proc::rx_buffer;
   friend class proc::rx_map;
   friend class proc::rx_subscribe;
@@ -55,6 +56,7 @@ class Observable : public Object {
 
  private:
   explicit Observable(const rx::DynamicObjectObservable& value) :
+    Instance(GetClass()),
     value_(value) {}
 
  public:
@@ -98,21 +100,18 @@ class Observable : public Object {
   static auto ToObservable(Pair* list) -> rx::DynamicObjectObservable;
 };
 
-class Subject : public Object {
+class Subject : public Instance {
   friend class Object;
   DEFINE_NON_COPYABLE_TYPE(Subject);
 
  protected:
-  Subject() = default;
+  explicit Subject(Class* type) :
+    Instance(type) {}
 
   auto to_exception_ptr(Error* error) -> std::exception_ptr;
 
  public:
   ~Subject() override = default;
-
-  auto GetType() const -> Class* override {
-    return GetClass();
-  }
 
   auto Equals(Object* rhs) const -> bool override {
     return false;
@@ -159,7 +158,8 @@ class TemplateSubject : public Subject {
   S value_{};
 
  protected:
-  TemplateSubject() = default;
+  explicit TemplateSubject(Class* type) :
+    Subject(type) {}
 
  public:
   ~TemplateSubject() override = default;
@@ -203,7 +203,8 @@ class TemplateSubject : public Subject {
 
 class PublishSubject : public TemplateSubject<rx::PublishSubject> {
  protected:
-  PublishSubject() = default;
+  PublishSubject() :
+    TemplateSubject<rx::PublishSubject>(GetClass()) {}
 
  public:
   ~PublishSubject() override = default;
@@ -218,7 +219,8 @@ class PublishSubject : public TemplateSubject<rx::PublishSubject> {
 
 class ReplaySubject : public TemplateSubject<rx::ReplaySubject> {
  protected:
-  ReplaySubject() = default;
+  ReplaySubject() :
+    TemplateSubject<rx::ReplaySubject>(GetClass()) {}
 
  public:
   ~ReplaySubject() override = default;

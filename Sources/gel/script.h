@@ -50,6 +50,10 @@ class Script : public Object, public Executable {
     return body_.empty();
   }
 
+  auto GetType() const -> Class* override {
+    return GetClass();
+  }
+
   DECLARE_TYPE(Script);
 
  public:
