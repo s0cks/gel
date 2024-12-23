@@ -24,8 +24,20 @@
     "Sets the first value of Pair [p] to [v].")
   (defnative set-cdr! [p v]
     "Sets the second value of Pair [p] to [v].")
-  ;; TODO: reduce visibility to debug builds only:
-  ;; --------------------------------------------------
+  ;; ---------------------------------------------------------------------------------
+  ;; Sets
+  ;; ---------------------------------------------------------------------------------
+  (defnative set:contains [s o]
+    "Returns whether or not Object [o] is in Set [s].")
+  (defnative set:size [s]
+    "Returns the size of Set [s].")
+  (defnative set:empty? [s]
+    "Returns whether or not Set [s] is empty.")
+  ;; ---------------------------------------------------------------------------------
+
+  ;; ---------------------------------------------------------------------------------
+  ;; Debug Only - TODO: Reduce visibility
+  ;; ---------------------------------------------------------------------------------
   (defnative gel:minor-gc! []
     "Performs a minor garbage collection cycle.")
   (defnative gel:major-gc! []
@@ -57,8 +69,11 @@
     "Prints the heap's new zone information to the terminal.")
   (defnative gel:print-old-zone []
     "Prints the heap's old zone information to the terminal.")
-  ;; --------------------------------------------------
-  ;; pair accessors
+  ;; ---------------------------------------------------------------------------------
+
+  ;; ---------------------------------------------------------------------------------
+  ;; Pair Accessors
+  ;; ---------------------------------------------------------------------------------
   (defn caar [xs]
     (car (car xs)))
   (defn cadr [xs]
@@ -116,7 +131,11 @@
     (cdr (cdr (cdr (car xs)))))
   (defn cddddr [xs]
     (cdr (cdr (cdr (cdr xs)))))
-  ;; --------------------------------------------------
+  ;; ---------------------------------------------------------------------------------
+
+  ;; ---------------------------------------------------------------------------------
+  ;; Misc
+  ;; ---------------------------------------------------------------------------------
   (defn newline [] ;; TODO: convert to defmacro
     "Prints a platform specific newline to the console."
     (print ""))

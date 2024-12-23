@@ -529,19 +529,28 @@ class Set : public Object {
     Object(),
     data_(data) {}
 
+  inline auto Find(Object* rhs) const -> StorageType::const_iterator {
+    return data().find(rhs);
+  }
+
  public:
   ~Set() override = default;
 
-  auto Get() const -> const StorageType& {
+  auto data() const -> const StorageType& {
     return data_;
   }
 
   auto GetSize() const -> uword {
-    return data_.size();
+    return data().size();
   }
 
   inline auto IsEmpty() const -> uword {
-    return data_.empty();
+    return data().empty();
+  }
+
+  auto Contains(Object* rhs) const -> bool {
+    const auto& pos = Find(rhs);
+    return pos != std::end(data());
   }
 
   DECLARE_TYPE(Set);

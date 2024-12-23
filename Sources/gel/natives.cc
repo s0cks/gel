@@ -51,6 +51,12 @@ void NativeProcedure::InitNatives() {
   InitNative<array_length>();
   InitNative<gel_docs>();
 
+#define InitSetNative(Name) InitNative<set_##Name>()
+  InitSetNative(contains);
+  InitSetNative(empty);
+  InitSetNative(size);
+#undef InitSetNative
+
 #ifdef GEL_ENABLE_RX
 #define REGISTER_RX(Name) InitNative<rx_##Name>();
   REGISTER_RX(observer);
@@ -213,6 +219,34 @@ NATIVE_PROCEDURE_F(exit) {
   // TODO: GetRuntime()->StopRunning();
   return true;
 }
+
+#define SET_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(set_##Name)
+
+SET_PROCEDURE_F(contains) {
+  NativeArgument<0, Set> set(args);
+  if (!set)
+    return Throw(set.GetError());
+  NativeArgument<1> value(args);
+  if (!value)
+    return Throw(value.GetError());
+  return Return(Bool::Box(set->Contains(value)));
+}
+
+SET_PROCEDURE_F(size) {
+  NativeArgument<0, Set> set(args);
+  if (!set)
+    return Throw(set.GetError());
+  return ReturnNew<Long>(set->GetSize());
+}
+
+SET_PROCEDURE_F(empty) {
+  NativeArgument<0, Set> set(args);
+  if (!set)
+    return Throw(set.GetError());
+  return Return(Bool::Box(set->IsEmpty()));
+}
+
+#undef SET_PROCEDURE_F
 
 NATIVE_PROCEDURE_F(list) {
   if (args.empty())
