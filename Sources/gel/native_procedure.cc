@@ -12,6 +12,7 @@ NativeProcedureList NativeProcedure::all_{};
 void NativeProcedure::Init() {
   using namespace proc;
   InitClass();
+  InitNative<hashcode>();
   InitNative<print>();
   InitNative<type>();
   InitNative<import>();
@@ -82,6 +83,10 @@ auto NativeProcedure::Find(const std::string& name) -> NativeProcedure* {
       return native;
   }
   return nullptr;
+}
+
+auto NativeProcedure::HashCode() const -> uword {
+  return Procedure::HashCode();
 }
 
 auto NativeProcedure::Find(Symbol* symbol) -> NativeProcedure* {

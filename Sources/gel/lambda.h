@@ -28,14 +28,13 @@ class Lambda : public Procedure, public Executable {
 
  private:
   Object* owner_ = nullptr;
-  Symbol* name_;
   String* docstring_ = nullptr;
   ArgumentSet args_;           // TODO: fails to copy during GC
   expr::ExpressionList body_;  // TODO: fails to copy during GC
 
  protected:
-  Lambda(Symbol* name, ArgumentSet args, const expr::ExpressionList& body) :  // NOLINT(modernize-pass-by-value)
-    name_(name),
+  Lambda(Symbol* symbol, ArgumentSet args, const expr::ExpressionList& body) :  // NOLINT(modernize-pass-by-value)
+    Procedure(symbol),
     args_(args),
     body_(body) {}
 
@@ -63,19 +62,6 @@ class Lambda : public Procedure, public Executable {
   void SetOwner(Object* rhs) {
     ASSERT(rhs);
     owner_ = rhs;
-  }
-
-  auto GetName() const -> Symbol* {
-    return name_;
-  }
-
-  inline auto HasName() const -> bool {
-    return GetName() != nullptr;
-  }
-
-  void SetName(Symbol* rhs) {
-    ASSERT(rhs);
-    name_ = rhs;
   }
 
   auto GetDocstring() const -> String* {

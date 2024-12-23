@@ -1,3 +1,4 @@
+#include "gel/common.h"
 #ifndef GEL_OBJECT_H
 #error "Please #include <gel/object.h> instead."
 #endif  // GEL_OBJECT_H
@@ -19,6 +20,7 @@ class Class : public Datum {
  private:
   Class* parent_;
   String* name_;
+  std::vector<Procedure*> funcs_{};
 
  protected:
   explicit Class(Class* parent, String* name) :
@@ -30,6 +32,11 @@ class Class : public Datum {
 
   auto VisitPointers(PointerVisitor* vis) -> bool override;
   auto VisitPointers(PointerPointerVisitor* vis) -> bool override;
+
+  void AddFunction(Procedure* func) {
+    ASSERT(func);
+    funcs_.push_back(func);
+  }
 
  public:
   ~Class() override = default;
@@ -58,6 +65,8 @@ class Class : public Datum {
 
   auto GetAllocationSize() const -> uword;
   auto IsInstanceOf(Class* rhs) const -> bool;
+  auto HasFunction(Symbol* symbol, const bool recursive = true) const -> bool;
+  auto GetFunction(Symbol* symbol, const bool recursive = true) const -> Procedure*;
   DECLARE_TYPE(Class);
 
  private:

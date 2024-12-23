@@ -26,6 +26,10 @@ auto Lambda::Equals(Object* rhs) const -> bool {
   return false;
 }
 
+auto Lambda::HashCode() const -> uword {
+  return Procedure::HashCode();
+}
+
 auto Lambda::VisitPointers(PointerVisitor* vis) -> bool {
   ASSERT(vis);
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
@@ -38,8 +42,8 @@ auto Lambda::New(const ObjectList& args) -> Lambda* {
 
 auto Lambda::ToString() const -> std::string {
   ToStringHelper<Lambda> helper;
-  if (HasName())
-    helper.AddField("name", GetName()->Get());
+  if (HasSymbol())
+    helper.AddField("name", GetSymbol()->Get());
   if (HasOwner())
     helper.AddField("owner", GetOwner());
   helper.AddField("args", GetArgs());

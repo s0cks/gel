@@ -861,7 +861,7 @@ auto EffectVisitor::VisitScript(Script* script) -> bool {
 auto EffectVisitor::VisitLambda(Lambda* lambda) -> bool {
   const auto scope = GetOwner()->PushScope();
   ASSERT(scope);
-  const auto self_local = LocalVariable::New(scope, lambda->HasName() ? lambda->GetName() : Symbol::New("$"), lambda);
+  const auto self_local = LocalVariable::New(scope, lambda->HasSymbol() ? lambda->GetSymbol() : Symbol::New("$"), lambda);
   ASSERT(self_local);
   LOG_IF(FATAL, !scope->Add(self_local)) << "failed to add " << (*self_local) << " to scope.";
   for (const auto& arg : lambda->GetArgs()) {

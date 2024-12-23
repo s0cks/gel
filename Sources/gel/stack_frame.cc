@@ -15,7 +15,7 @@ auto StackFrame::GetTargetName() const -> std::string {
   } else if (IsLambdaFrame()) {
     const auto lambda = GetLambda();
     ASSERT(lambda);
-    return lambda->HasName() ? lambda->GetName()->Get() : "Lambda";
+    return lambda->HasSymbol() ? lambda->GetSymbol()->Get() : "Lambda";
   }
   return "Unknown";
 }

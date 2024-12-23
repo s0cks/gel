@@ -1,3 +1,4 @@
+#include "gel/common.h"
 #ifndef GEL_OBJECT_H
 #error "Please #include <gel/object.h> instead."
 #endif  // GEL_OBJECT_H
@@ -112,6 +113,11 @@ class Subject : public Object {
 
   auto GetType() const -> Class* override {
     return GetClass();
+  }
+
+  auto HashCode() const -> uword override {
+    NOT_IMPLEMENTED(FATAL);  // TODO: implement
+    return 0;
   }
 
   auto Equals(Object* rhs) const -> bool override {

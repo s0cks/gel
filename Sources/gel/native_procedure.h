@@ -23,7 +23,6 @@ class NativeProcedure : public Procedure {
   friend class Interpreter;
 
  private:
-  Symbol* symbol_;
   ArgumentSet args_{};
   String* docs_ = nullptr;
 
@@ -37,10 +36,7 @@ class NativeProcedure : public Procedure {
 
  protected:
   explicit NativeProcedure(Symbol* symbol) :
-    Procedure(),
-    symbol_(symbol) {
-    ASSERT(symbol_);
-  }
+    Procedure(symbol) {}
 
   auto Return(Object* rhs = Null()) const -> bool;
   virtual auto Apply(const ObjectList& args) const -> bool = 0;
@@ -79,10 +75,6 @@ class NativeProcedure : public Procedure {
 
  public:
   ~NativeProcedure() override = default;
-
-  auto GetSymbol() const -> Symbol* {
-    return symbol_;
-  }
 
   auto IsNative() const -> bool override {
     return true;

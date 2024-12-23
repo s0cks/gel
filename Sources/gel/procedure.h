@@ -12,11 +12,39 @@ class Procedure : public Object {
   friend class Interpreter;
   DEFINE_NON_COPYABLE_TYPE(Procedure);
 
+ private:
+  Symbol* symbol_;
+
  protected:
-  Procedure() = default;
+  explicit Procedure(Symbol* symbol) :
+    symbol_(symbol) {}
+
+  void SetSymbol(Symbol* rhs) {
+    ASSERT(rhs);
+    symbol_ = rhs;
+  }
+
+  void RemoveSymbol() {
+    symbol_ = nullptr;
+  }
 
  public:
   ~Procedure() override = default;
+
+  auto GetSymbol() const -> Symbol* {
+    return symbol_;
+  }
+
+  inline auto HasSymbol() const -> bool {
+    return GetSymbol() != nullptr;
+  }
+
+  auto HashCode() const -> uword override {
+    uword hash = 0;
+    if (HasSymbol())
+      CombineHash(hash, GetSymbol()->Get());
+    return hash;
+  }
 
   auto Equals(Object* rhs) const -> bool override {
     return rhs && rhs->IsProcedure();

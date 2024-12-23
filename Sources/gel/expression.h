@@ -152,6 +152,11 @@ class Expression : public Object {  // TODO: should Expression inherit from Obje
     return GetClass();
   }
 
+  auto HashCode() const -> uword override {
+    NOT_IMPLEMENTED(ERROR);  // TODO: implement
+    return false;
+  }
+
   auto Equals(Object* rhs) const -> bool override {
     ASSERT(rhs);
     NOT_IMPLEMENTED(ERROR);  // TODO: implement

@@ -1,5 +1,7 @@
 (ns _kernel
   "The main namespace for gel."
+  (defnative hashcode [v]
+    "Returns the hashcode of value [v].")
   (defnative gel:docs? [o]
     "Returns the docstring attached to the supplied Object [o].")
   (defnative format [pattern args...]

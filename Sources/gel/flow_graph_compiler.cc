@@ -74,7 +74,7 @@ auto FlowGraphCompiler::CompileLambda(Lambda* lambda) -> bool {
   lambda->SetCompileTime(total_ns);
   if (VLOG_IS_ON(10)) {
     const auto scope = LocalScope::New(GetScope());
-    const auto self_local = LocalVariable::New(scope, lambda->HasName() ? lambda->GetName() : Symbol::New("$"), lambda);
+    const auto self_local = LocalVariable::New(scope, lambda->HasSymbol() ? lambda->GetSymbol() : Symbol::New("$"), lambda);
     ASSERT(self_local);
     LOG_IF(FATAL, !scope->Add(self_local)) << "failed to add " << (*self_local) << " to scope.";
     for (const auto& arg : lambda->GetArgs()) {
@@ -82,7 +82,7 @@ auto FlowGraphCompiler::CompileLambda(Lambda* lambda) -> bool {
       ASSERT(local);
       LOG_IF(FATAL, !scope->Add(local)) << "failed to add " << local << " to scope.";
     }
-    const auto label = lambda->HasName() ? lambda->GetName()->Get().c_str() : "lambda";
+    const auto label = lambda->HasSymbol() ? lambda->GetSymbol()->Get().c_str() : "lambda";
     std::stringstream ss;
     Disassembler disassembler(ss, scope);
     disassembler.Disassemble(code, label);

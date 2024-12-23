@@ -53,6 +53,12 @@ auto Module::ToString() const -> std::string {
   return helper;
 }
 
+auto Module::HashCode() const -> uword {
+  uword hash = 0;
+  CombineHash(hash, GetName()->Get());
+  return hash;
+}
+
 auto Module::Equals(Object* rhs) const -> bool {
   if (!rhs || !rhs->IsModule())
     return false;

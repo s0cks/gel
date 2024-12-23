@@ -141,7 +141,7 @@ void Runtime::Call(Lambda* lambda, const ObjectList& args) {
   ASSERT(lambda);
   const auto locals = PushScope();
   ASSERT(locals);
-  const auto self_local = LocalVariable::New(locals, lambda->HasName() ? lambda->GetName() : Symbol::New("$"), lambda);
+  const auto self_local = LocalVariable::New(locals, lambda->HasSymbol() ? lambda->GetSymbol() : Symbol::New("$"), lambda);
   ASSERT(self_local);
   LOG_IF(FATAL, !locals->Add(self_local)) << "failed to add " << (*self_local) << " to scope.";
   {

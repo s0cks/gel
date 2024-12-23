@@ -44,6 +44,11 @@ auto Script::Equals(Object* rhs) const -> bool {
   return true;
 }
 
+auto Script::HashCode() const -> uword {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return 0;
+}
+
 auto Script::ToString() const -> std::string {
   std::stringstream ss;
   ss << "Script(";

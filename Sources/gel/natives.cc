@@ -31,6 +31,14 @@
 #include "gel/zone.h"
 
 namespace gel::proc {
+NATIVE_PROCEDURE_F(hashcode) {
+  ASSERT(args.size() == 1);
+  NativeArgument<0> value(args);
+  if (!value)
+    return Throw(value.GetError());
+  return ReturnNew<Long>(value->HashCode());
+}
+
 NATIVE_PROCEDURE_F(gel_docs) {
   if (args.empty())
     return DoNothing();
@@ -40,8 +48,8 @@ NATIVE_PROCEDURE_F(gel_docs) {
   if (func->IsLambda()) {
     const auto lambda = func->AsLambda();
     std::stringstream ss;
-    if (lambda->HasName())
-      ss << lambda->GetName()->Get();
+    if (lambda->HasSymbol())
+      ss << lambda->GetSymbol()->Get();
     ss << std::endl;
     ss << "([";
     const auto& args = lambda->GetArgs();

@@ -12,6 +12,12 @@ auto Error::CreateClass() -> Class* {
   return Class::New(Object::GetClass(), kClassName);
 }
 
+auto Error::HashCode() const -> uword {
+  uword hash = 0;
+  CombineHash(hash, GetMessage()->Get());
+  return hash;
+}
+
 auto Error::Equals(Object* rhs) const -> bool {
   if (!rhs || !rhs->IsError())
     return false;

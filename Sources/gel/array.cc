@@ -30,6 +30,11 @@ void ArrayBase::InitClass() {
   ASSERT(kClass);
 }
 
+auto ArrayBase::HashCode() const -> uword {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return 0;
+}
+
 auto ArrayBase::Equals(Object* rhs) const -> bool {
   if (!rhs || !rhs->IsArray())
     return false;

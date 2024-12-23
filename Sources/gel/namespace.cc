@@ -5,6 +5,12 @@
 namespace gel {
 NamespaceList Namespace::namespaces_{};
 
+auto Namespace::HashCode() const -> uword {
+  uword hash = 0;
+  CombineHash(hash, GetName()->HashCode());
+  return hash;
+}
+
 auto Namespace::Get(const std::string& name) -> Namespace* {
   ASSERT(!name.empty());
   for (const auto& ns : namespaces_) {

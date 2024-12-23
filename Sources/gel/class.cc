@@ -87,6 +87,12 @@ auto Class::Equals(Object* rhs) const -> bool {
   return GetName()->Equals(other->GetName());
 }
 
+auto Class::HashCode() const -> uword {
+  uword hash = 0;
+  CombineHash(hash, GetName()->Get());
+  return hash;
+}
+
 auto Class::FindClass(const std::string& name) -> Class* {
   for (const auto& ptr : classes_) {
     ASSERT(ptr && ptr->GetObjectPointer());
@@ -103,6 +109,39 @@ auto Class::FindClass(String* name) -> Class* {
 
 auto Class::FindClass(Symbol* name) -> Class* {
   return FindClass(name->Get());
+}
+
+auto Class::GetFunction(Symbol* symbol, const bool recursive) const -> Procedure* {
+  for (const auto& func : funcs_) {
+    if (func->GetSymbol()->Equals(symbol))
+      return func;
+  }
+  if (recursive && HasParent()) {
+    auto cls = GetParent();
+    do {
+      const auto func = cls->GetFunction(symbol, false);
+      if (func)
+        return func;
+      cls = cls->GetParent();
+    } while (cls);
+  }
+  return nullptr;
+}
+
+auto Class::HasFunction(Symbol* symbol, const bool recursive) const -> bool {
+  for (const auto& func : funcs_) {
+    if (func->GetSymbol()->Equals(symbol))
+      return true;
+  }
+  if (!recursive || !HasParent())
+    return false;
+  auto cls = GetParent();
+  do {
+    if (cls->HasFunction(symbol, false))
+      return true;
+    cls = cls->GetParent();
+  } while (cls);
+  return false;
 }
 
 template <typename V>

@@ -51,9 +51,16 @@ class Object {
     return true;
   }
 
+  template <typename T>
+  static inline void CombineHash(uword& seed, const T& rhs) {
+    std::hash<T> hasher;
+    seed ^= hasher(rhs) + 0x9e3779b9 + (seed << 6) + (seed >> 2);  // NOLINT(cppcoreguidelines-avoid-magic-numbers)
+  }
+
  public:
   virtual ~Object() = default;
   virtual auto GetType() const -> Class* = 0;
+  virtual auto HashCode() const -> uword = 0;
   virtual auto Equals(Object* rhs) const -> bool = 0;
   virtual auto ToString() const -> std::string = 0;
 
@@ -180,6 +187,7 @@ static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream
   }                                                 \
                                                     \
  public:                                            \
+  auto HashCode() const -> uword override;          \
   auto Equals(Object* rhs) const -> bool override;  \
   auto GetType() const -> Class* override {         \
     return GetClass();                              \
@@ -189,6 +197,9 @@ static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream
     return this;                                    \
   }
 
+/**
+ * @deprecated
+ */
 class Datum : public Object {
   DEFINE_NON_COPYABLE_TYPE(Datum);
 
@@ -440,6 +451,7 @@ class StringObject : public Datum {
     return value_.empty();
   }
 
+  auto HashCode() const -> uword override;
   auto Equals(const std::string& rhs) const -> bool;
 };
 

@@ -18,6 +18,11 @@ auto Macro::CreateClass() -> Class* {
   return Class::New(Object::GetClass(), "Macro");
 }
 
+auto Macro::HashCode() const -> uword {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return 0;
+}
+
 auto Macro::Equals(Object* rhs) const -> bool {
   if (!rhs || !rhs->IsMacro())
     return false;

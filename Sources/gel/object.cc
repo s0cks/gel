@@ -112,6 +112,18 @@ auto Long::New(const ObjectList& args) -> Long* {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
 }
 
+auto Long::HashCode() const -> uword {
+  uword hash = 0;
+  CombineHash(hash, Get());
+  return hash;
+}
+
+auto Long::Unbox(Object* rhs) -> uint64_t {
+  if (!rhs || !rhs->IsLong())
+    throw Exception(fmt::format("expected `{}` to be a Long.", *rhs));
+  return rhs->AsLong()->Get();
+}
+
 auto Double::CreateClass() -> Class* {
   return Class::New(Number::GetClass(), kClassName);
 }
@@ -120,10 +132,10 @@ auto Double::New(const ObjectList& args) -> Double* {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
 }
 
-auto Long::Unbox(Object* rhs) -> uint64_t {
-  if (!rhs || !rhs->IsLong())
-    throw Exception(fmt::format("expected `{}` to be a Long.", *rhs));
-  return rhs->AsLong()->Get();
+auto Double::HashCode() const -> uword {
+  uword hash = 0;
+  CombineHash(hash, Get());
+  return hash;
 }
 
 auto Datum::Add(Datum* rhs) const -> Datum* {
@@ -208,6 +220,12 @@ auto Bool::False() -> Bool* {
   return kFalse;
 }
 
+auto Bool::HashCode() const -> uword {
+  uword hash = 0;
+  CombineHash(hash, Get());
+  return hash;
+}
+
 auto Number::CreateClass() -> Class* {
   return Class::New(Object::GetClass(), kClassName);
 }
@@ -222,6 +240,11 @@ auto Number::New(const uint64_t rhs) -> Number* {
 
 auto Number::New(const double rhs) -> Number* {
   return Double::New(rhs);
+}
+
+auto Number::HashCode() const -> uword {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return 0;
 }
 
 auto Number::Equals(Object* rhs) const -> bool {
@@ -342,11 +365,22 @@ auto Pair::Empty() -> Pair* {
   return kEmptyPair = Pair::NewEmpty();
 }
 
+auto Pair::HashCode() const -> uword {
+  uword hash = 0;
+  CombineHash(hash, HasCar() ? GetCar()->HashCode() : Null()->HashCode());
+  CombineHash(hash, HasCdr() ? GetCdr()->HashCode() : Null()->HashCode());
+  return hash;
+}
+
 auto Symbol::Equals(Object* rhs) const -> bool {
   if (!rhs->IsSymbol())
     return false;
   const auto other = rhs->AsSymbol();
   return Get() == other->Get();
+}
+
+auto Symbol::HashCode() const -> uword {
+  return StringObject::HashCode();
 }
 
 auto StringObject::Equals(const std::string& rhs) const -> bool {
@@ -456,6 +490,16 @@ auto String::ValueOf(Object* rhs) -> String* {
   return String::New(ss.str());
 }
 
+auto String::HashCode() const -> uword {
+  return StringObject::HashCode();
+}
+
+auto StringObject::HashCode() const -> uword {
+  uword hash = 0;
+  CombineHash(hash, Get());
+  return hash;
+}
+
 auto PrintValue(std::ostream& stream, Object* value) -> std::ostream& {
   ASSERT(value);
   if (value->IsBool()) {
@@ -480,8 +524,8 @@ auto PrintValue(std::ostream& stream, Object* value) -> std::ostream& {
   } else if (value->IsLambda()) {
     const auto lambda = value->AsLambda();
     stream << "Lambda(";
-    if (lambda->HasName())
-      stream << lambda->GetName()->Get();
+    if (lambda->HasSymbol())
+      stream << lambda->GetSymbol()->Get();
     stream << ")";
     return stream;
   } else if (value->IsPair()) {

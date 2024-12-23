@@ -1,6 +1,7 @@
 #include <rpp/observers/dynamic_observer.hpp>
 #include <rpp/observers/fwd.hpp>
 
+#include "gel/common.h"
 #include "gel/object.h"
 #include "gel/rx.h"
 
@@ -22,6 +23,11 @@ auto Observable::Equals(Object* rhs) const -> bool {
   ASSERT(rhs);
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
   return false;
+}
+
+auto Observable::HashCode() const -> uword {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return 0;
 }
 
 auto Observable::ToObservable(Pair* list) -> rx::DynamicObjectObservable {
@@ -83,6 +89,11 @@ auto Observer::Equals(Object* rhs) const -> bool {
   return false;
 }
 
+auto Observer::HashCode() const -> uword {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return 0;
+}
+
 auto Observer::New() -> Observer* {
   return new Observer(
       rx::make_lambda_observer<gel::Object*>(rx::DoNothingOnNext(), rx::DoNothingOnError(), rx::DoNothingOnComplete()));
@@ -136,6 +147,10 @@ auto PublishSubject::Equals(Object* rhs) const -> bool {
   return false;
 }
 
+auto PublishSubject::HashCode() const -> uword {
+  return Subject::HashCode();
+}
+
 auto PublishSubject::CreateClass() -> Class* {
   return Class::New(Subject::GetClass(), "PublishSubject");
 }
@@ -147,6 +162,10 @@ auto ReplaySubject::New(const ObjectList& args) -> ReplaySubject* {
 
 auto ReplaySubject::ToString() const -> std::string {
   return ToStringHelper<ReplaySubject>{};
+}
+
+auto ReplaySubject::HashCode() const -> uword {
+  return Subject::HashCode();
 }
 
 auto ReplaySubject::Equals(Object* rhs) const -> bool {

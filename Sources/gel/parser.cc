@@ -845,7 +845,7 @@ auto Parser::ParseLambda(const Token::Kind kind) -> Lambda* {
       ASSERT(name);
     }
     if (name)
-      lambda->SetName(name);
+      lambda->SetSymbol(name);
     const auto local = LocalVariable::New(GetScope(), name ? name : Symbol::New("$"), lambda);
     ASSERT(local);
     LOG_IF(FATAL, !GetScope()->Add(local)) << "cannot add " << local << " to scope.";
@@ -1039,8 +1039,8 @@ auto Parser::ParseScript() -> Script* {
 auto Parser::ParseDefn(LocalVariable** result) -> bool {
   const auto scope = GetScope();
   const auto lambda = ParseLambda(Token::kDefn);
-  ASSERT(lambda && lambda->HasName());
-  const auto local = LocalVariable::New(scope, lambda->GetName(), lambda);
+  ASSERT(lambda && lambda->HasSymbol());
+  const auto local = LocalVariable::New(scope, lambda->GetSymbol(), lambda);
   ASSERT(local);
   LOG_IF(FATAL, !scope->Add(local)) << "failed to add " << local << " to scope.";
   (*result) = local;
