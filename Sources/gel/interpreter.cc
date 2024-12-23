@@ -1,10 +1,14 @@
 #include "gel/interpreter.h"
 
 #include <algorithm>
+#include <exception>
 #include <ranges>
+#include <stdexcept>
 
 #include "gel/array.h"
+#include "gel/bytecode.h"
 #include "gel/common.h"
+#include "gel/disassembler.h"
 #include "gel/error.h"
 #include "gel/expression.h"
 #include "gel/instruction.h"
@@ -21,336 +25,374 @@
 #include "gel/script.h"
 
 namespace gel {
-Interpreter::Interpreter(Runtime* runtime) :
-  InstructionVisitor(),
-  runtime_(runtime) {}
+#define TOP         (GetRuntime()->StackTop())
+#define POP         (GetRuntime()->Pop())
+#define PUSH(Value) (GetRuntime()->Push(gel::IsNull((Value)) ? Null() : (Value)))
 
-auto Interpreter::GetStackTop() const -> std::optional<Stack::value_type> {
-  return GetRuntime()->StackTop();
+auto BytecodeInterpreter::GetScope() const -> LocalScope* {
+  return runtime_->GetScope();
 }
 
-auto Interpreter::PushError(const std::string& message) -> bool {
-  ASSERT(!message.empty());
-  GetRuntime()->PushError(message);
-  return true;
+void BytecodeInterpreter::LoadLocal(const uword idx) {
+  ASSERT(idx >= 0 && idx <= GetScope()->GetNumberOfLocals());
+  const auto local = GetScope()->GetLocalAt(idx);
+  ASSERT(local && local->HasValue());
+  return PUSH(local->GetValue());
 }
 
-auto Interpreter::PushNext(Object* rhs) -> bool {
-  ASSERT(rhs);
-  GetRuntime()->Push(rhs);
-  return Next();
-}
-
-auto Interpreter::VisitLoadLocalInstr(LoadLocalInstr* instr) -> bool {
-  ASSERT(instr);
-  const auto locals = GetRuntime()->GetScope();
-  ASSERT(locals);
-  LocalVariable* local = nullptr;
-  if (!locals->Lookup(instr->GetLocal()->GetName(), &local)) {
-    LOG(ERROR) << "failed to find local named `" << instr->GetLocal()->GetName() << "` in LocalScope:";
-    LocalScopePrinter::Print<google::ERROR, false>(locals, __FILE__, __LINE__);
-    LOG(FATAL) << "";
-  }
+void BytecodeInterpreter::StoreLocal(const uword idx) {
+  ASSERT(idx >= 0 && idx <= GetScope()->GetNumberOfLocals());
+  const auto local = GetScope()->GetLocalAt(idx);
   ASSERT(local);
-  const auto result = local->GetValue();
-  if (IsNull(result))
-    return PushNext(Null());
-  return PushNext(result);
-}
-
-auto Interpreter::VisitReturnInstr(ReturnInstr* instr) -> bool {
-  const auto frame = GetRuntime()->PopStackFrame();
-  GetRuntime()->PopScope();
-  if (frame.HasReturnAddress()) {
-    SetCurrentInstr((Instruction*)frame.GetReturnAddress());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-    return false;
-  }
-  SetCurrentInstr(instr->GetNext());
-  return false;
-}
-
-auto Interpreter::VisitNewInstr(NewInstr* instr) -> bool {
-  ASSERT(instr);
-  const auto type = instr->GetTarget();
-  ASSERT(type);
-  const auto runtime = GetRuntime();
-  ASSERT(runtime);
-  ObjectList args;
-  runtime->PopN(args, instr->GetNumberOfArgs(), true);
-  if (instr->GetTarget()->Equals(Array<Object>::GetClass())) {
-    const auto length = gel::ToLong(args[0]);
-    ASSERT(length);
-    return PushNext(Array<Object>::New(Long::Unbox(length)));
-  }
-#define DEFINE_NEW_TYPE(Name) \
-  if (type->Is<Name>())       \
-    return PushNext(Name::New(args));
-  FOR_EACH_TYPE(DEFINE_NEW_TYPE)
-#undef DEFINE_NEW_TYPE
-  return false;
-}
-
-auto Interpreter::VisitCastInstr(CastInstr* instr) -> bool {
-  ASSERT(instr);
-  const auto target = instr->GetTarget();
-  ASSERT(target);
-  {
-    const auto top = GetStackTop();
-    ASSERT(top);
-    if ((*top)->GetType()->IsInstanceOf(target)) {
-      DVLOG(1000) << "skipping cast of " << (*top) << " to: " << target;
-      return Next();
-    }
-  }
-
-  const auto value = GetRuntime()->Pop();
+  const auto value = POP;
   ASSERT(value);
-  const auto current_type = value->GetType();
-  ASSERT(current_type);
-  DVLOG(1000) << "casting " << value << " to: " << target;
-  if (target->Is<Observable>()) {
-    return PushNext(Observable::New(value));
-  } else if (target->Is<String>()) {
-    return PushNext(String::ValueOf(value));
-  } else if (target->Is<Subject>()) {
-    return PushNext(ToSubject(value));
-  }
-  return PushError(fmt::format("Cannot cast `{}` to {}", (*value), (*target->GetName())));
-}
-
-static inline auto Unary(const expr::UnaryOp op, Object* rhs) -> Object* {
-  ASSERT(rhs);
-  switch (op) {
-    case expr::kNot:
-      return Not(rhs);
-    case expr::kCar:
-      return Car(rhs);
-    case expr::kCdr:
-      return Cdr(rhs);
-    case expr::kNull:
-      return Bool::Box(IsNull(rhs));
-    case expr::kNonnull:
-      return Bool::Box(!IsNull(rhs));
-    default:
-      LOG(FATAL) << "invalid UnaryOp: " << op;
-      return nullptr;
-  }
-}
-
-auto Interpreter::VisitUnaryOpInstr(UnaryOpInstr* instr) -> bool {
-  ASSERT(instr);
-  const auto value = GetRuntime()->Pop();
-  ASSERT(value);
-  const auto result = Unary(instr->GetOp(), value);
-  ASSERT(result);
-  GetRuntime()->Push(result);
-  return Next();
-}
-
-auto Interpreter::VisitGotoInstr(GotoInstr* instr) -> bool {
-  ASSERT(instr);
-  ASSERT(instr->HasTarget());
-  return Goto(instr->GetTarget());
-}
-
-auto Interpreter::VisitThrowInstr(ThrowInstr* instr) -> bool {
-  ASSERT(instr);
-  GetRuntime()->Push(Error::New(GetRuntime()->Pop()));
-  return Next();
-}
-
-auto Interpreter::VisitInvokeNativeInstr(InvokeNativeInstr* instr) -> bool {
-  ASSERT(instr);
-  const auto target = GetRuntime()->Pop();
-  if (!target || !target->IsNativeProcedure())
-    throw Exception(fmt::format("expected {0:s} to be a NativeProcedure.", target ? target->ToString() : "null"));
-  GetRuntime()->CallWithNArgs(target->AsNativeProcedure(), instr->GetNumberOfArgs());
-  DVLOG(1000) << "current instr: " << GetCurrentInstr()->ToString();
-  DVLOG(1000) << "next instr: " << GetCurrentInstr()->GetNext()->ToString();
-  return Next();
-}
-
-auto Interpreter::VisitInvokeInstr(InvokeInstr* instr) -> bool {
-  ASSERT(instr);
-  const auto runtime = GetRuntime();
-  ASSERT(runtime);
-  const auto target = runtime->Pop();
-  if (!IsProcedure(target))
-    throw Exception(fmt::format("expected {0:s} to be a Procedure.", target ? target->ToString() : "null"));
-  if (target->IsLambda()) {
-    runtime->CallWithNArgs(target->AsLambda(), instr->GetNumberOfArgs());
-  } else if (target->IsNativeProcedure()) {
-    runtime->CallWithNArgs(target->AsNativeProcedure(), instr->GetNumberOfArgs());
-  }
-  return Next();
-}
-
-auto Interpreter::VisitInvokeDynamicInstr(InvokeDynamicInstr* instr) -> bool {
-  ASSERT(instr);
-  const auto target = GetRuntime()->Pop();
-  ASSERT(target->IsSymbol());
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return Next();
-}
-
-static inline auto GetTarget(const bool branch, ir::BranchInstr* instr) -> ir::EntryInstr* {
-  if (branch)
-    return instr->GetTrueTarget();
-  if (instr->HasFalseTarget())
-    return instr->GetFalseTarget();
-  if (!instr->HasNext())
-    return instr->GetJoin();
-  return nullptr;
-}
-
-auto Interpreter::VisitBranchInstr(BranchInstr* instr) -> bool {
-  ASSERT(instr);
-  const auto test = GetRuntime()->Pop();
-  ASSERT(test);
-  const auto target = GetTarget(Truth(test), instr);
-  return Goto(target ? target : instr->GetNext());
-}
-
-auto Interpreter::VisitInstanceOfInstr(InstanceOfInstr* instr) -> bool {
-  ASSERT(instr);
-  const auto type = instr->GetType();
-  ASSERT(type);
-  const auto runtime = GetRuntime();
-  ASSERT(runtime);
-  const auto stack_top = runtime->StackTop();
-  if (!stack_top) {
-    if (!instr->IsStrict())
-      return PushError(fmt::format("stack top is null, expected: {}", type->GetName()->Get()));
-    runtime->Pop();
-    return PushNext(Bool::False());
-  }
-  if (!(*stack_top)->GetType()->IsInstanceOf(instr->GetType())) {
-    if (instr->IsStrict())
-      return PushError(fmt::format("unexpected stack top: {}, expected: {}", (*stack_top)->ToString(), type->GetName()->Get()));
-    runtime->Pop();
-    return PushNext(Bool::False());
-  }
-  if (!instr->IsStrict()) {
-    runtime->Pop();
-    return PushNext(Bool::True());
-  }
-  return Next();
-}
-
-static inline auto InstanceOf(Class* actual, Class* expected) -> Bool* {
-  ASSERT(actual);
-  ASSERT(expected);
-  return Bool::Box(actual->IsInstanceOf(expected));
-}
-
-static inline auto InstanceOf(Datum* value, Datum* expected) -> Datum* {
-  ASSERT(value);
-  ASSERT(expected);
-  if (gel::IsSymbol(expected)) {
-    const auto cls = Class::FindClass(expected->AsSymbol());
-    if (gel::IsNull(cls))
-      return Error::New(fmt::format("failed to find class named `{}`", (*expected->AsSymbol())));
-    return InstanceOf(value->GetClass(), cls);
-  }
-  ASSERT(expected->IsClass());
-  return InstanceOf(value->GetClass(), expected->GetClass());
-}
-
-static inline auto ApplyBinaryOp(BinaryOp op, Datum* lhs, Datum* rhs) -> Datum* {
-  switch (op) {
-    case expr::kAdd:
-      return lhs->Add(rhs);
-    case expr::kSubtract:
-      return lhs->Sub(rhs);
-    case expr::kMultiply:
-      return lhs->Mul(rhs);
-    case expr::kDivide:
-      return lhs->Div(rhs);
-    case expr::kEquals:
-      return Bool::Box(lhs->Equals(rhs));
-    case expr::kModulus:
-      return lhs->Mod(rhs);
-    case expr::kBinaryAnd:
-      return lhs->And(rhs);
-    case expr::kBinaryOr:
-      return lhs->Or(rhs);
-    case expr::kGreaterThan:
-      return Bool::Box(lhs->Compare(rhs) > 0);
-    case expr::kGreaterThanEqual:
-      return Bool::Box(lhs->Compare(rhs) >= 0);
-    case expr::kLessThan:
-      return Bool::Box(lhs->Compare(rhs) < 0);
-    case expr::kLessThanEqual:
-      return Bool::Box(lhs->Compare(rhs) <= 0);
-    case expr::kCons:
-      return Pair::New(lhs, rhs);
-    case expr::kInstanceOf:
-      return Bool::Box(lhs->GetType()->IsInstanceOf(rhs->GetType()));
-    default:
-      LOG(FATAL) << "invalid BinaryOp: " << op;
-      return nullptr;
-  }
-}
-
-auto Interpreter::VisitBinaryOpInstr(BinaryOpInstr* instr) -> bool {
-  const auto right = GetRuntime()->Pop();
-  ASSERT(right && right->IsDatum());
-  const auto left = GetRuntime()->Pop();
-  ASSERT(left && left->IsDatum());
-  const auto result = ApplyBinaryOp(instr->GetOp(), left->AsDatum(), right->AsDatum());
-  ASSERT(result);
-  GetRuntime()->Push(result);
-  DVLOG(100) << left << " " << instr->GetOp() << " " << right << " := " << result;
-  return Next();
-}
-
-auto Interpreter::VisitTargetEntryInstr(TargetEntryInstr* instr) -> bool {
-  GetRuntime()->PushStackFrame(instr);
-  return Next();
-}
-
-auto Interpreter::VisitJoinEntryInstr(JoinEntryInstr* instr) -> bool {
-  GetRuntime()->PopStackFrame();
-  return Next();
-}
-
-auto Interpreter::VisitConstantInstr(ConstantInstr* instr) -> bool {
-  const auto value = instr->GetValue();
-  ASSERT(value);
-  GetRuntime()->Push(value);
-  return Next();
-}
-
-auto Interpreter::VisitStoreLocalInstr(StoreLocalInstr* instr) -> bool {
-  const auto local = instr->GetLocal();
-  ASSERT(local);
-  const auto value = GetRuntime()->Pop();
-  ASSERT(value);
-  const auto locals = GetRuntime()->GetScope();
-  ASSERT(locals);
   local->SetValue(value);
-  if (!locals->Add(local)) {
-    LOG(ERROR) << "failed to add " << (*local) << " to:";
-    PRINT_SCOPE(ERROR, locals);
-    LOG(FATAL) << "";
+}
+
+void BytecodeInterpreter::Push(const Bytecode code) {
+  switch (code.op()) {
+    case Bytecode::kPushQ: {
+      const auto value = NextObjectPointer();
+      ASSERT(value);
+      PUSH(value);
+      return;
+    }
+    case Bytecode::kPushI: {
+      const auto value = NextLong();
+      ASSERT(value);
+      PUSH(value);
+      return;
+    }
+    case Bytecode::kPushN: {
+      const auto value = Null();
+      ASSERT(value);
+      PUSH(value);
+      return;
+    }
+    case Bytecode::kPushF: {
+      const auto value = Bool::False();
+      ASSERT(value);
+      PUSH(value);
+      return;
+    }
+    case Bytecode::kPushT: {
+      const auto value = Bool::True();
+      ASSERT(value);
+      PUSH(value);
+      return;
+    }
+    default:
+      LOG(FATAL) << "invalid Push instruction: " << code;
   }
-  return Next();
 }
 
-auto Interpreter::VisitGraphEntryInstr(GraphEntryInstr* instr) -> bool {
-  return Next();
+void BytecodeInterpreter::Jump(const Bytecode code, const uword target) {
+  switch (code.op()) {
+    case Bytecode::kJnz: {
+      const auto value = POP;
+      ASSERT(value);
+      if (!gel::Truth(value))
+        current_ = target;
+      return;
+    }
+    case Bytecode::kJne: {
+      const auto rhs = POP;
+      ASSERT(rhs && rhs->IsDatum());
+      const auto lhs = POP;
+      ASSERT(lhs && lhs->IsDatum());
+      if (!lhs->AsDatum()->Equals(rhs->AsDatum()))
+        current_ = target;
+      return;
+    }
+    case Bytecode::kJump:
+      current_ = target;
+      return;
+    default:
+      LOG(FATAL) << "invalid Jump bytecode: " << code;
+  }
 }
 
-auto Interpreter::ExecuteInstr(Instruction* instr) -> bool {
-  ASSERT(instr);
-  DVLOG(100) << "executing " << instr->ToString();
-  return instr->Accept(this);
+void BytecodeInterpreter::nop() {
+  // do nothing
 }
 
-void Interpreter::Run() {
-  while (HasCurrentInstr()) {
-    if (!ExecuteInstr(GetCurrentInstr()))
-      break;
+void BytecodeInterpreter::bt() {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+}
+
+void BytecodeInterpreter::InvokeDynamic() {
+  const auto procedure = POP;
+  ASSERT(procedure && procedure->IsProcedure());
+  const auto num_args = NextUWord();
+  if (procedure->IsLambda()) {
+    return GetRuntime()->CallWithNArgs(procedure->AsLambda(), num_args);
+  } else if (procedure->IsNativeProcedure()) {
+    return GetRuntime()->CallWithNArgs(procedure->AsNativeProcedure(), num_args);
+  }
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+}
+
+void BytecodeInterpreter::InvokeNative() {
+  const auto func = POP;
+  ASSERT(func && func->IsNativeProcedure());
+  const auto num_args = NextUWord();
+  return GetRuntime()->CallWithNArgs(func->AsNativeProcedure(), num_args);
+}
+
+void BytecodeInterpreter::Throw() {
+  const auto err = POP;
+  ASSERT(err && err->IsError());
+  throw std::runtime_error(err->AsError()->GetMessage()->Get());
+}
+
+void BytecodeInterpreter::ExecBinaryOp(const Bytecode code) {
+  ASSERT(code.IsBinaryOp());
+  const auto rhs = POP;
+  ASSERT(rhs);
+  const auto lhs = POP;
+  ASSERT(lhs);
+  switch (code.op()) {
+    case Bytecode::kAdd: {
+      const auto value = lhs->AsDatum()->Add(rhs->AsDatum());
+      ASSERT(value);
+      return PUSH(value);
+    }
+    case Bytecode::kSubtract: {
+      const auto value = lhs->AsDatum()->Sub(rhs->AsDatum());
+      ASSERT(value);
+      return PUSH(value);
+    }
+    case Bytecode::kDivide: {
+      const auto value = lhs->AsDatum()->Div(rhs->AsDatum());
+      ASSERT(value);
+      return PUSH(value);
+    }
+    case Bytecode::kMultiply: {
+      const auto value = lhs->AsDatum()->Mul(rhs->AsDatum());
+      ASSERT(value);
+      return PUSH(value);
+    }
+    case Bytecode::kModulus: {
+      const auto value = lhs->AsDatum()->Mod(rhs->AsDatum());
+      ASSERT(value);
+      return PUSH(value);
+    }
+    case Bytecode::kEquals: {
+      const auto value = Bool::Box(lhs->Equals(rhs));
+      ASSERT(value);
+      return PUSH(value);
+    }
+    case Bytecode::kBinaryAnd: {
+      const auto value = lhs->AsDatum()->And(rhs->AsDatum());
+      ASSERT(value);
+      return PUSH(value);
+    }
+    case Bytecode::kBinaryOr: {
+      const auto value = lhs->AsDatum()->Or(rhs->AsDatum());
+      ASSERT(value);
+      return PUSH(value);
+    }
+    case Bytecode::kLessThan: {
+      const auto comparison = lhs->AsDatum()->Compare(rhs->AsDatum());
+      const auto value = Bool::Box(comparison < 0);
+      ASSERT(value);
+      return PUSH(value);
+    }
+    case Bytecode::kLessThanEqual: {
+      const auto comparison = lhs->AsDatum()->Compare(rhs->AsDatum());
+      const auto value = Bool::Box(comparison <= 0);
+      ASSERT(value);
+      return PUSH(value);
+    }
+    case Bytecode::kGreaterThan: {
+      const auto comparison = lhs->AsDatum()->Compare(rhs->AsDatum());
+      const auto value = Bool::Box(comparison > 0);
+      ASSERT(value);
+      return PUSH(value);
+    }
+    case Bytecode::kGreaterThanEqual: {
+      const auto comparison = lhs->AsDatum()->Compare(rhs->AsDatum());
+      const auto value = Bool::Box(comparison >= 0);
+      ASSERT(value);
+      return PUSH(value);
+    }
+    case Bytecode::kCons: {
+      const auto value = gel::Cons(lhs, rhs);
+      ASSERT(value);
+      return PUSH(value);
+    }
+    case Bytecode::kInstanceOf: {
+      ASSERT(rhs->IsClass());
+      const auto value = Bool::Box(lhs->GetType()->IsInstanceOf(rhs->AsClass()));
+      ASSERT(value);
+      return PUSH(value);
+    }
+    default:
+      LOG(FATAL) << "invalid BinaryOp: " << code;
+  }
+}
+
+void BytecodeInterpreter::ExecUnaryOp(const Bytecode code) {
+  ASSERT(code.IsUnaryOp());
+  const auto value = POP;
+  ASSERT(value && value->IsDatum());
+  switch (code.op()) {
+    case Bytecode::kNot: {
+      const auto new_value = Bool::Box(!gel::Truth(value));
+      ASSERT(new_value);
+      PUSH(new_value);
+      return;
+    }
+    case Bytecode::kCdr: {
+      const auto new_value = gel::Cdr(value);
+      ASSERT(new_value);
+      PUSH(new_value);
+      return;
+    }
+    case Bytecode::kCar: {
+      const auto new_value = gel::Car(value);
+      ASSERT(new_value);
+      PUSH(new_value);
+      return;
+    }
+    case Bytecode::kNull: {
+      const auto new_value = Bool::Box(gel::IsNull(value));
+      ASSERT(new_value);
+      PUSH(new_value);
+      return;
+    }
+    case Bytecode::kNonnull: {
+      const auto new_value = Bool::Box(!gel::IsNull(value));
+      ASSERT(new_value);
+      PUSH(new_value);
+      return;
+    }
+    default:
+      LOG(FATAL) << "invalid UnaryOp: " << code;
+  }
+}
+
+void BytecodeInterpreter::CheckInstance(Class* cls) {
+  ASSERT(cls);
+  const auto top = GetRuntime()->StackTop();
+  LOG_IF(FATAL, !top) << "expected " << Null() << " to be an instanceof " << cls;
+  LOG_IF(FATAL, !(*top)->GetType()->IsInstanceOf(cls->AsClass())) << "expected " << (*top) << " to be an instanceof " << cls;
+}
+
+void BytecodeInterpreter::Cast(Class* cls) {
+  ASSERT(cls);
+  const auto value = POP;
+  ASSERT(value);
+  if (cls->Equals(Observable::GetClass())) {
+    const auto new_value = Observable::New(value);
+    ASSERT(new_value);
+    PUSH(new_value);
+    return;
+  }
+}
+
+void BytecodeInterpreter::Pop() {
+  const auto value = POP;
+  ASSERT(value);
+}
+
+void BytecodeInterpreter::Dup() {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+}
+
+void BytecodeInterpreter::Run(const uword address) {
+  SetCurrentAddress(address);
+  ASSERT(GetCurrentAddress() == address);
+  while (true) {
+    const auto start_address = GetCurrentAddress();
+    const auto pos = (start_address - address);
+    const auto op = NextBytecode();
+    // DLOG(INFO) << "executing " << op << " (" << ((void*)start_address) << ")....";
+    switch (op.op()) {
+      case Bytecode::kPushN:
+      case Bytecode::kPushT:
+      case Bytecode::kPushF:
+      case Bytecode::kPushI:
+      case Bytecode::kPushQ:
+        Push(op);
+        continue;
+      case Bytecode::kPop:
+        Pop();
+        continue;
+      case Bytecode::kDup:
+        Dup();
+        continue;
+      case Bytecode::kLoadLocal:
+        LoadLocal(NextUWord());
+        continue;
+      case Bytecode::kLoadLocal0:
+      case Bytecode::kLoadLocal1:
+      case Bytecode::kLoadLocal2:
+      case Bytecode::kLoadLocal3: {
+        const auto idx = op - Bytecode::kLoadLocal0;
+        LoadLocal(idx);
+        continue;
+      }
+      case Bytecode::kStoreLocal:
+        StoreLocal(NextUWord());
+        continue;
+      case Bytecode::kStoreLocal0:
+      case Bytecode::kStoreLocal1:
+      case Bytecode::kStoreLocal2:
+      case Bytecode::kStoreLocal3:
+        StoreLocal(op - Bytecode::kStoreLocal0);
+        continue;
+      case Bytecode::kInvokeDynamic:
+        InvokeDynamic();
+        continue;
+      case Bytecode::kInvokeNative:
+        InvokeNative();
+        continue;
+      case Bytecode::kThrow:
+        return Throw();
+      case Bytecode::kCheckInstance: {
+        const auto cls = NextObjectPointer();
+        ASSERT(cls && cls->IsClass());
+        CheckInstance(cls->AsClass());
+        continue;
+      }
+      case Bytecode::kCast: {
+        const auto cls = NextObjectPointer();
+        ASSERT(cls && cls->IsClass());
+        Cast(cls->AsClass());
+        continue;
+      }
+      case Bytecode::kNop:
+        nop();
+        continue;
+        // clang-format off
+#define DECLARE_CASE(Name) \
+  case Bytecode::k##Name:
+      FOR_EACH_BINARY_OP(DECLARE_CASE)
+        // clang-format on
+        ExecBinaryOp(op);
+        continue;
+        // clang-format off
+      FOR_EACH_UNARY_OP(DECLARE_CASE)
+        // clang-format on
+        ExecUnaryOp(op);
+        continue;
+#undef DECLARE_CASE
+      case Bytecode::kRet:
+        return;
+      case Bytecode::kJump:
+      case Bytecode::kJz:
+      case Bytecode::kJnz:
+      case Bytecode::kJeq:
+      case Bytecode::kJne: {
+        const auto offset = NextWord();
+        Jump(op, address + (pos + offset));
+        continue;
+      }
+      case Bytecode::kInvalid:
+      default:
+        LOG(FATAL) << "invalid op: " << op;
+    }
   }
 }
 }  // namespace gel

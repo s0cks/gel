@@ -30,6 +30,8 @@
     "Returns whether or not this is a debug instance of gelrt.")
   (defnative gel:get-frame []
     "Returns the current StackFrame from gelrt.")
+  (defnative gel:print-st []
+    "Prints the current StackTrace for the gelrt.")
   (defnative gel:get-locals []
     "Returns the current LocalScope from gelrt.")
   (defnative gel:get-classes []
@@ -110,6 +112,16 @@
     (cdr (cdr (cdr (car xs)))))
   (defn cddddr [xs]
     (cdr (cdr (cdr (cdr xs)))))
+  ;; --------------------------------------------------
+  (defn newline [] ;; TODO: convert to defmacro
+    "Prints a platform specific newline to the console."
+    (print ""))
+  (defn inc [x]
+    "Returns one more than [x]."
+    (+ x 1))
+  (defn dec [x]
+    "Returns one less than [x]."
+    (- x 1))
   ;;TODO:
   ;; - (def PI 3.14159)
   ;; - (def TAU (* 2 PI))
@@ -122,14 +134,33 @@
   (defn even? [x]
     "Returns true if x is even."
     (zero? (% x 2)))
-  (defn max [a b]
-    "Returns the max value between a & b."
-    (cond (> a b) a
-      b))
-  (defn min [a b]
-    "Returns the min value between a"
-    (cond (< a b) a
-      b))
+  (defn odd? [x]
+    "Returns true if x is even."
+    (not (zero? (% x 2))))
+  (defn false? [x]
+    "Returns true if [x] is an instanceof false."
+    (and (#Bool? x) (not x)))
+  (defn true? [x]
+    "Returns true if [x] is an instanceof true."
+    (and (#Bool? x) x))
+  (defn constantly [x] ;; TODO: implement
+    "Returns a function that constantly returns [x].")
+  (defn min [seq]
+    "Returns the min value in Seq [seq]."
+    ((fn [candidate tail]
+      (cond (null? tail) candidate
+        ($ ((fn [a b] (cond (< a b) a b)) candidate (car tail)) (cdr tail))))
+      (car seq) (cdr seq)))
+  (defn max [seq]
+    "Returns the max value in Seq [seq]."
+    ((fn [candidate tail]
+      (cond (null? tail) candidate
+        ($
+          ((fn [a b]
+            (cond (> a b) a b)) candidate
+              (car tail))
+          (cdr tail))))
+      (car seq) (cdr seq)))
   (defn factorial [x]
     "Returns x!."
     (cond (eq? x 1) 1

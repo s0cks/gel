@@ -1,8 +1,9 @@
 (defn say-hello [name]
-  (print (format "Hello {}" name)))
+  (print (format "Hello {}" name))
+  (gel:print-st))
 (say-hello "Tazz")
 (print (format "locals: {}" (gel:get-locals)))
-(print "")
+(newline)
 (print (gel:docs? gel:docs?))
-(print "")
+(newline)
 (print (gel:docs? random:range))

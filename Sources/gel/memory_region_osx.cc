@@ -29,7 +29,7 @@ MemoryRegion::MemoryRegion(const uword size, const ProtectionMode mode) :
                                   << GetError();
   SetStartingAddress((uword)ptr);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   SetSize(size);
-  VLOG(GEL_VLEVEL_1) << "created " << (*this);
+  VLOG(1000) << "created " << (*this);
   Protect(mode);
 }
 
@@ -38,7 +38,7 @@ void MemoryRegion::FreeRegion() {
     return;
   int error = munmap(GetStartingAddressPointer(), GetSize());
   LOG_IF(FATAL, error != 0) << "failed to munmap " << (*this) << ": " << GetError();
-  VLOG(GEL_VLEVEL_1) << "freed " << (*this);
+  VLOG(1000) << "freed " << (*this);
   SetSize(0);
   SetStartingAddress(0);
 }
@@ -65,7 +65,7 @@ void MemoryRegion::Protect(const ProtectionMode mode) {
 
   int error = mprotect(GetStartingAddressPointer(), GetSize(), protection);
   LOG_IF(FATAL, error != 0) << "failed to protect " << (*this) << " w/ " << mode;
-  DVLOG(GEL_VLEVEL_1) << "changed " << (*this) << " protection to: " << mode;
+  DVLOG(1000) << "changed " << (*this) << " protection to: " << mode;
 }
 }  // namespace gel
 

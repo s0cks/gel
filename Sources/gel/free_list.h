@@ -82,7 +82,7 @@ class FreePointer {
   }
 };
 
-class FreeList : public Section {
+class FreeList : public Region {
   friend class OldZone;
   DEFINE_DEFAULT_COPYABLE_TYPE(FreeList);
 
@@ -91,10 +91,10 @@ class FreeList : public Section {
 
  protected:
   FreeList() :
-    Section(),
+    Region(),
     head_(nullptr) {}
   FreeList(const uword start_address, const uword size) :
-    Section(start_address, size),
+    Region(start_address, size),
     head_(FreePointer::New(start_address, Tag::Old(size))) {
     ASSERT(head_);
   }

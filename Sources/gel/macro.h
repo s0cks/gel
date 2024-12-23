@@ -11,10 +11,10 @@ class Macro : public Object {
  private:
   Symbol* symbol_;
   ArgumentSet args_;
-  expr::Expression* body_;
+  expr::ExpressionList body_{};
 
  protected:
-  explicit Macro(Symbol* symbol, const ArgumentSet& args, expr::Expression* body) :  // NOLINT(modernize-pass-by-value)
+  explicit Macro(Symbol* symbol, const ArgumentSet& args, const expr::ExpressionList& body) :  // NOLINT(modernize-pass-by-value)
     symbol_(symbol),
     args_(args),
     body_(body) {
@@ -32,29 +32,20 @@ class Macro : public Object {
     return args_;
   }
 
-  auto GetBody() const -> expr::Expression* {
+  auto GetBody() const -> const expr::ExpressionList& {
     return body_;
   }
 
-  inline auto HasBody() const -> bool {
-    return GetBody() != nullptr;
+  inline auto IsEmpty() const -> bool {
+    return body_.empty();
   }
 
   DECLARE_TYPE(Macro);
 
  public:
-  static inline auto New(Symbol* symbol, const ArgumentSet& args = {}, expr::Expression* body = nullptr) -> Macro* {
+  static inline auto New(Symbol* symbol, const ArgumentSet& args = {}, const expr::ExpressionList& body = {}) -> Macro* {
     return new Macro(symbol, args, body);
   }
-};
-
-class MacroExpander {
-  DEFINE_NON_COPYABLE_TYPE(MacroExpander);
-
- public:
-  MacroExpander() = default;
-  virtual ~MacroExpander() = default;
-  auto Expand(expr::Expression** expr) -> bool;
 };
 }  // namespace gel
 

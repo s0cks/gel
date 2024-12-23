@@ -990,7 +990,6 @@ class SetExpr : public Expression {
     local_(local),
     value_(value) {
     ASSERT(local_);
-    ASSERT(value_);
   }
 
  public:
@@ -1020,7 +1019,6 @@ class SetExpr : public Expression {
  public:
   static inline auto New(LocalVariable* local, Expression* value) -> SetExpr* {
     ASSERT(local);
-    ASSERT(value);
     return new SetExpr(local, value);
   }
 };
@@ -1491,6 +1489,9 @@ class LocalDef : public TemplateDefinition<1> {
   }
 };
 
+/**
+ * @deprecated This is going to be removed. Return a literal Macro instance instead.
+ */
 class MacroDef : public TemplateDefinition<1> {
  private:
   Symbol* symbol_;

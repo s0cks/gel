@@ -12,6 +12,6 @@ AllowShortFunctionsOnASingleLine: Empty
 BreakConstructorInitializers: AfterColon
 ConstructorInitializerIndentWidth: 2
 BreakInheritanceList: AfterColon
-
+AlignConsecutiveMacros: AcrossEmptyLinesAndComments
 BreakBeforeBinaryOperators: None
 AlignOperands: AlignAfterOperator

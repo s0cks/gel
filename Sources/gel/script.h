@@ -11,6 +11,7 @@ namespace gel {
 class Script : public Object, public Executable {
   friend class Parser;
   friend class ScriptCompiler;
+  friend class FlowGraphCompiler;
   using LambdaList = std::vector<Lambda*>;
 
  private:
@@ -59,22 +60,6 @@ class Script : public Object, public Executable {
   }
 
   static auto FromFile(const std::string& filename, const bool compile = true) -> Script*;
-};
-
-class ScriptCompiler {
-  DEFINE_NON_COPYABLE_TYPE(ScriptCompiler);
-
- public:
-  ScriptCompiler() = default;
-  virtual ~ScriptCompiler() = default;
-  virtual void CompileScript(Script* script);
-
- public:
-  static void Compile(Script* script) {
-    ASSERT(script);
-    ScriptCompiler compiler;
-    return compiler.CompileScript(script);
-  }
 };
 }  // namespace gel
 

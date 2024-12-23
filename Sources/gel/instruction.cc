@@ -14,10 +14,10 @@ void Instruction::Append(Instruction* instr) {
   instr->SetPrevious(this);
 }
 
-#define DEFINE_ACCEPT(Name)                            \
-  auto Name::Accept(InstructionVisitor* vis) -> bool { \
-    ASSERT(vis);                                       \
-    return vis->Visit##Name(this);                     \
+#define DEFINE_ACCEPT(Name)                                 \
+  auto Name##Instr::Accept(InstructionVisitor* vis)->bool { \
+    ASSERT(vis);                                            \
+    return vis->Visit##Name##Instr(this);                   \
   }
 FOR_EACH_INSTRUCTION(DEFINE_ACCEPT)
 #undef DEFINE_ACCEPT
@@ -105,7 +105,6 @@ auto BinaryOpInstr::ToString() const -> std::string {
 
 auto BranchInstr::ToString() const -> std::string {
   ToStringHelper<BranchInstr> helper;
-  helper.AddField("test", GetTest());
   helper.AddField("true_target", GetTrueTarget());
   if (HasFalseTarget())
     helper.AddField("false_target", GetFalseTarget());

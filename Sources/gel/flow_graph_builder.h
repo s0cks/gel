@@ -159,7 +159,8 @@ class EffectVisitor : public ExpressionVisitor {
   }
 
   auto ReturnCall(ir::InvokeInstr* defn) -> bool;
-  auto ReturnCall(Procedure* procedure, const uword num_args) -> bool;
+  auto ReturnCallTo(ir::Definition* defn, const uword num_args) -> bool;
+  auto ReturnCallTo(Procedure* procedure, const uword num_args) -> bool;
 
   void Append(const EffectVisitor& rhs) {
     if (rhs.IsEmpty())

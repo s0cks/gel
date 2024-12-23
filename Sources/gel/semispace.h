@@ -8,7 +8,7 @@
 #include "gel/section.h"
 
 namespace gel {
-class Semispace : public AllocationSection {
+class Semispace : public AllocationRegion {
   DEFINE_DEFAULT_COPYABLE_TYPE(Semispace);
 
  public:
@@ -40,7 +40,7 @@ class Semispace : public AllocationSection {
  public:
   Semispace() = default;
   Semispace(const uword start, const uword size) :
-    AllocationSection(start, size) {}
+    AllocationRegion(start, size) {}
   ~Semispace() override = default;
 
   auto TryAllocate(const uword size) -> uword override;
@@ -48,11 +48,11 @@ class Semispace : public AllocationSection {
   auto VisitAllMarkedPointers(PointerVisitor* vis) -> bool;
 
   auto operator==(const Semispace& rhs) const -> bool {
-    return ((const AllocationSection&)*this) == ((const AllocationSection&)rhs);
+    return ((const AllocationRegion&)*this) == ((const AllocationRegion&)rhs);
   }
 
   auto operator!=(const Semispace& rhs) const -> bool {
-    return ((const AllocationSection&)*this) != ((const AllocationSection&)rhs);
+    return ((const AllocationRegion&)*this) != ((const AllocationRegion&)rhs);
   }
 
   friend auto operator<<(std::ostream& stream, const Semispace& rhs) -> std::ostream& {

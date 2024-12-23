@@ -112,19 +112,20 @@ class Parser {
   }
 
   auto ParseLambda(const Token::Kind kind) -> Lambda*;
+  auto ParseMacro(const Token::Kind kind) -> Macro*;
   auto ParseNamespace() -> Namespace*;
 
-  auto ParseLocalVariable(LocalVariable** local, expr::Expression** value) -> bool;
   auto ParseLiteralString() -> String*;
   auto ParseSymbol() -> Symbol*;
   auto ParseLoadSymbol() -> LoadLocalInstr*;
   auto ParseArguments(ArgumentSet& args) -> bool;
-  auto ParseExpressionList(expr::ExpressionList& expressions) -> bool;
+  auto ParseExpressionList(expr::ExpressionList& expressions, const bool push_scope = true) -> bool;
   auto ParseRxOpList(expr::RxOpList& operators) -> bool;
   auto ParseSymbolList(SymbolList& symbols) -> bool;
   auto ParseIdentifier(std::string& result) -> bool;
   auto ParseClauseList(expr::ClauseList& clauses) -> bool;
-  auto ParseLiteralValue() -> Datum*;
+  auto ParseLiteralValue() -> Object*;
+  auto ParseLiteralLambda() -> expr::LiteralExpr*;
 
   // Expressions
   auto ParseSetExpr() -> expr::SetExpr*;
@@ -148,11 +149,9 @@ class Parser {
   auto ParseCastExpr() -> expr::CastExpr*;
   auto ParseNewExpr() -> expr::NewExpr*;
   auto ParseImportExpr() -> expr::ImportExpr*;
-
-  // Definitions
-  auto ParseDefinition() -> expr::Definition*;
-  auto ParseLocalDef() -> expr::LocalDef*;
-  auto ParseMacroDef() -> expr::MacroDef*;
+  auto ParseDef() -> expr::Expression*;
+  auto ParseDefn(LocalVariable** local) -> bool;
+  auto ParseDefmacro() -> expr::Expression*;
 
   inline auto PeekChar(const uint64_t offset = 0) const -> char {
     const auto idx = (rpos_ + offset);

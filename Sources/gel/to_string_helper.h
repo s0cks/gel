@@ -35,6 +35,14 @@ DECLARE_HAS_TO_STRING(LocalScope);
 DECLARE_HAS_TO_STRING(ir::Definition);
 DECLARE_HAS_TO_STRING(ir::EntryInstr);
 DECLARE_HAS_TO_STRING(ir::Instruction);
+
+#undef DECLARE_HAS_TO_STRING
+#define DECLARE_HAS_TO_STRING(Name)            \
+  template <>                                  \
+  struct has_to_string<gel::ir::Name##Instr> { \
+    static constexpr const auto value = true;  \
+  };
+
 FOR_EACH_INSTRUCTION(DECLARE_HAS_TO_STRING);
 #undef DECLARE_HAS_TO_STRING
 

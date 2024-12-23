@@ -469,7 +469,20 @@ auto PrintValue(std::ostream& stream, Object* value) -> std::ostream& {
   } else if (value->IsSymbol()) {
     return stream << value->AsSymbol()->Get();
   } else if (value->IsNativeProcedure()) {
-    stream << "NativeProcedure #" << value->AsNativeProcedure()->GetSymbol()->Get();
+    const auto native = value->AsNativeProcedure();
+    const auto& symbol = native->GetSymbol()->Get();
+    return stream << "NativeProcedure(" << symbol << ")";
+  } else if (value->IsClass()) {
+    const auto cls = value->AsClass();
+    ASSERT(cls);
+    const auto& name = cls->GetName()->Get();
+    return stream << "Class(" << name << ")";
+  } else if (value->IsLambda()) {
+    const auto lambda = value->AsLambda();
+    stream << "Lambda(";
+    if (lambda->HasName())
+      stream << lambda->GetName()->Get();
+    stream << ")";
     return stream;
   } else if (value->IsPair()) {
     const auto pair = value->AsPair();

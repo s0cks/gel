@@ -63,6 +63,7 @@ _DECLARE_NATIVE_PROCEDURE(gel_print_new_zone, "gel:print-new-zone");
 _DECLARE_NATIVE_PROCEDURE(gel_print_old_zone, "gel:print-old-zone");
 _DECLARE_NATIVE_PROCEDURE(gel_get_debug, "gel:debug?");
 _DECLARE_NATIVE_PROCEDURE(gel_get_frame, "gel:get-frame");
+_DECLARE_NATIVE_PROCEDURE(gel_print_st, "gel:print-st");
 _DECLARE_NATIVE_PROCEDURE(gel_get_locals, "gel:get-locals");
 _DECLARE_NATIVE_PROCEDURE(gel_get_classes, "gel:get-classes");
 _DECLARE_NATIVE_PROCEDURE(gel_get_target_triple, "gel:get-target-triple");

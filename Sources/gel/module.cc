@@ -48,7 +48,8 @@ auto Module::LoadFrom(const std::filesystem::path& abs_path) -> Module* {
 
 auto Module::ToString() const -> std::string {
   ToStringHelper<Module> helper;
-  helper.AddField("name", GetName());
+  helper.AddField("name", GetName()->Get());
+  helper.AddField("locals", GetScope());
   return helper;
 }
 

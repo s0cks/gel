@@ -87,10 +87,12 @@ class Runtime : public ExecutionStack {
   friend class proc::format;  // TODO: remove
 #ifdef GEL_DEBUG
   friend class proc::gel_get_frame;
+  friend class proc::gel_print_st;
 #endif  // GEL_DEBUG
   friend class Repl;
   friend class Lambda;
   friend class Interpreter;
+  friend class BytecodeInterpreter;
   friend class ModuleLoader;
   friend class NativeProcedure;
   friend class RuntimeScopeScope;
@@ -100,7 +102,7 @@ class Runtime : public ExecutionStack {
  private:
   LocalScope* init_scope_;
   LocalScope* curr_scope_;
-  Interpreter interpreter_;
+  BytecodeInterpreter interpreter_;
   std::stack<StackFrame> stack_{};
   bool executing_ = false;
 
@@ -163,7 +165,8 @@ class Runtime : public ExecutionStack {
   }
 
   auto PopStackFrame() -> StackFrame;
-  auto PushStackFrame(ir::TargetEntryInstr* target) -> const StackFrame&;
+  auto PushStackFrame(Script* script, LocalScope* locals) -> const StackFrame&;
+  auto PushStackFrame(Lambda* lambda, LocalScope* locals) -> const StackFrame&;
   auto PushStackFrame(NativeProcedure* native, LocalScope* locals) -> const StackFrame&;
 
  public:  // TODO: reduce visibility

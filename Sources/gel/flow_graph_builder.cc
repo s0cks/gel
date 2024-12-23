@@ -4,6 +4,7 @@
 
 #include "gel/common.h"
 #include "gel/expression.h"
+#include "gel/flags.h"
 #include "gel/instruction.h"
 #include "gel/lambda.h"
 #include "gel/local.h"
@@ -90,31 +91,28 @@ auto EffectVisitor::CreateCallFor(ir::Definition* defn, const uword num_args) ->
 }
 
 auto EffectVisitor::ReturnCall(ir::InvokeInstr* instr) -> bool {
-#ifndef GEL_RELAXED
-  AddInstanceOf(instr, instr->IsInvokeNativeInstr() ? NativeProcedure::GetClass() : Procedure::GetClass());
-#endif  // GEL_RELAXED
+  if (gel::IsPedantic())
+    AddInstanceOf(instr, instr->IsInvokeNativeInstr() ? NativeProcedure::GetClass() : Procedure::GetClass());
   ReturnDefinition(instr);
   return true;
 }
 
-auto EffectVisitor::ReturnCall(Procedure* target, const uword num_args) -> bool {
+auto EffectVisitor::ReturnCallTo(ir::Definition* defn, const uword num_args) -> bool {
+  const auto invoke = CreateCallFor(defn, num_args);
+  if (gel::IsPedantic())
+    AddInstanceOf(defn, invoke->IsInvokeNativeInstr() ? NativeProcedure::GetClass() : Procedure::GetClass());
+  ReturnDefinition(invoke);
+  return true;
+}
+
+auto EffectVisitor::ReturnCallTo(Procedure* target, const uword num_args) -> bool {
   ASSERT(target);
-  return ReturnCall(CreateCallFor(ir::ConstantInstr::New(target), num_args));
+  const auto defn = ir::ConstantInstr::New(target);
+  return ReturnCallTo(defn, num_args);
 }
 
 auto EffectVisitor::VisitCallProcExpr(CallProcExpr* expr) -> bool {
-  ASSERT(expr);
-  ValueVisitor for_target(GetOwner());
-  {
-    const auto target = expr->GetTarget();
-    ASSERT(target);
-    if (!target->Accept(&for_target)) {
-      LOG(ERROR) << "failed to visit target: " << expr->GetTarget()->ToString();
-      return false;
-    }
-  }
-  const auto target = for_target.GetValue();
-  ASSERT(target);
+  ASSERT(expr && expr->HasTarget());
   for (auto idx = 1; idx < expr->GetNumberOfChildren(); idx++) {
     const auto arg = expr->GetChildAt(idx);
     ASSERT(arg);
@@ -122,17 +120,14 @@ auto EffectVisitor::VisitCallProcExpr(CallProcExpr* expr) -> bool {
     LOG_IF(ERROR, !arg->Accept(&for_value)) << "failed to determine value for: " << expr->ToString();
     Append(for_value);
   }
-  Append(for_target);
-
-  if (IsNativeCall(target)) {
-    Add(ir::InstanceOfInstr::New(target, NativeProcedure::GetClass()));
-    ReturnDefinition(InvokeNativeInstr::New(for_target.GetValue(), expr->GetNumberOfArgs()));
-    return true;
+  ValueVisitor for_target(GetOwner());
+  if (!expr->GetTarget()->Accept(&for_target)) {
+    LOG(ERROR) << "failed to visit target: " << expr->GetTarget()->ToString();
+    return false;
   }
-
-  Add(ir::InstanceOfInstr::New(target, Procedure::GetClass()));
-  ReturnDefinition(ir::InvokeInstr::New(target, expr->GetNumberOfArgs()));
-  return true;
+  ASSERT(for_target.HasValue());
+  Append(for_target);
+  return ReturnCallTo(for_target.GetValue(), expr->GetNumberOfArgs());
 }
 
 auto EffectVisitor::VisitCaseExpr(expr::CaseExpr* expr) -> bool {
@@ -163,7 +158,7 @@ auto EffectVisitor::VisitCaseExpr(expr::CaseExpr* expr) -> bool {
     const auto target = for_clause.GetEntryInstr()->AsEntryInstr();
     const auto cmp = ir::BinaryOpInstr::NewEquals(for_test.GetValue(), for_test.GetValue());  // TODO: fix this
     for_test.Add(cmp);
-    const auto branch = ir::BranchInstr::New(cmp, target, join);
+    const auto branch = ir::BranchInstr::BranchTrue(target, join);
     for_test.Add(branch);
     Append(for_test);
     GetOwner()->GetCurrentBlock()->AddDominated(target);
@@ -224,7 +219,7 @@ auto EffectVisitor::VisitWhenExpr(expr::WhenExpr* expr) -> bool {
   }
   Append(for_test);
 
-  const auto branch = ir::BranchInstr::New(for_test.GetValue(), conseq_target, join);
+  const auto branch = ir::BranchInstr::BranchTrue(conseq_target, join);
   ASSERT(branch);
   Add(branch);
   SetExitInstr(join);
@@ -256,7 +251,7 @@ auto EffectVisitor::VisitWhileExpr(expr::WhileExpr* expr) -> bool {  // TODO: cl
     return false;
   }
   AppendFragment(target, for_test);
-  target->Append(ir::BranchInstr::New(for_test.GetValue(), body_target, join));
+  target->Append(ir::BranchInstr::BranchTrue(body_target, join));
 
   EffectVisitor for_body(GetOwner());
   for (const auto& expr : expr->GetBody()) {
@@ -368,9 +363,12 @@ auto RxEffectVisitor::VisitRxOpExpr(expr::RxOpExpr* expr) -> bool {
   const auto call_target = CreateRxOpTarget(expr->GetSymbol(), GetOwner()->GetScope());
   Add(call_target);
   if (IsNativeCall(call_target)) {
+    if (IsPedantic())
+      AddInstanceOf(call_target, NativeProcedure::GetClass());
     Add(ir::InvokeNativeInstr::New(call_target, expr->GetNumberOfChildren() + 1));
   } else {
-    Add(ir::InstanceOfInstr::New(call_target, Procedure::GetClass()));
+    if (gel::IsPedantic())
+      AddInstanceOf(call_target, Procedure::GetClass());
     Add(ir::InvokeInstr::New(call_target, expr->GetNumberOfChildren()) + 1);
   }
   return true;
@@ -593,6 +591,8 @@ auto EffectVisitor::VisitBeginExpr(BeginExpr* expr) -> bool {
 
 auto EffectVisitor::VisitCondExpr(CondExpr* expr) -> bool {
   ASSERT(expr);
+  const auto alt_target = ir::TargetEntryInstr::New(GetOwner()->GetNextBlockId());
+  ASSERT(alt_target);
   const auto join = ir::JoinEntryInstr::New(GetOwner()->GetNextBlockId());
 
   for (const auto& clause : expr->GetClauses()) {
@@ -611,29 +611,44 @@ auto EffectVisitor::VisitCondExpr(CondExpr* expr) -> bool {
     target->Append(ir::GotoInstr::New(join));
     GetOwner()->GetCurrentBlock()->AddDominated(target);
 
-    ValueVisitor for_test(GetOwner());
-    if (!clause->GetKey()->Accept(&for_test)) {
-      LOG(ERROR) << "failed to visit clause for cond: " << expr->ToString();
-      return false;
+    ir::BranchInstr* branch = nullptr;
+    if (clause->GetKey()->IsBinaryOpExpr()) {
+      const auto cond = clause->GetKey()->AsBinaryOpExpr();
+      ASSERT(cond);
+      if (cond->IsEqualsOp()) {
+        // lhs
+        ValueVisitor for_left(GetOwner());
+        LOG_IF(FATAL, !cond->GetLeft()->Accept(&for_left)) << "failed to visit: " << cond->GetLeft();
+        Append(for_left);
+        // rhs
+        ValueVisitor for_right(GetOwner());
+        LOG_IF(FATAL, !cond->GetRight()->Accept(&for_right)) << "failed to visit: " << cond->GetRight();
+        Append(for_right);
+        branch = ir::BranchInstr::BranchEqual(target, alt_target, join);
+      }
     }
-    Append(for_test);
-    const auto branch = ir::BranchInstr::New(for_test.GetValue(), target, join);
+    if (!branch) {
+      ValueVisitor for_test(GetOwner());
+      if (!clause->GetKey()->Accept(&for_test)) {
+        LOG(ERROR) << "failed to visit clause for cond: " << expr->ToString();
+        return false;
+      }
+      Append(for_test);
+      branch = ir::BranchInstr::BranchTrue(target, alt_target, join);
+    }
     ASSERT(branch);
     Add(branch);
   }
 
   if (expr->HasAlternate()) {  // process alt (else)
-    const auto target = ir::TargetEntryInstr::New(GetOwner()->GetNextBlockId());
-    ASSERT(target);
-    Add(target);
     ValueVisitor for_alt(GetOwner());
     if (!expr->GetAlternate()->Accept(&for_alt)) {
       LOG(ERROR) << "failed to visit alternate for cond: " << expr->ToString();
       return false;
     }
-    AppendFragment(target, for_alt);
-    target->Append(ir::GotoInstr::New(join));
-    GetOwner()->GetCurrentBlock()->AddDominated(target);
+    AppendFragment(alt_target, for_alt);
+    alt_target->Append(ir::GotoInstr::New(join));
+    GetOwner()->GetCurrentBlock()->AddDominated(alt_target);
   }
 
   SetExitInstr(join);
@@ -652,7 +667,8 @@ auto EffectVisitor::VisitUnaryExpr(expr::UnaryExpr* expr) -> bool {
   switch (expr->GetOp()) {
     case expr::kCar:
     case expr::kCdr:
-      Add(ir::InstanceOfInstr::New(for_value.GetValue(), Pair::GetClass()));
+      if (IsPedantic())
+        AddInstanceOf(for_value.GetValue(), Pair::GetClass());
     default:
       ReturnDefinition(ir::UnaryOpInstr::New(expr->GetOp(), for_value.GetValue()));
   }
@@ -694,7 +710,7 @@ auto EffectVisitor::VisitListExpr(expr::ListExpr* expr) -> bool {
     const auto value = for_value.GetValue();
     ASSERT(value);
   }
-  return ReturnCall(gel::proc::list::Get(), expr->GetNumberOfChildren());
+  return ReturnCallTo(gel::proc::list::Get(), expr->GetNumberOfChildren());
 }
 
 auto EffectVisitor::VisitLiteralExpr(LiteralExpr* p) -> bool {
@@ -765,7 +781,9 @@ auto EffectVisitor::VisitInstanceOfExpr(expr::InstanceOfExpr* expr) -> bool {
     return false;
   }
   Append(for_value);
-  ReturnDefinition(ir::InstanceOfInstr::New(for_value.GetValue(), expr->GetTarget(), false));
+  const auto type = Bind(ir::ConstantInstr::New(expr->GetTarget()));
+  ASSERT(type);
+  ReturnDefinition(ir::BinaryOpInstr::New(BinaryOp::kInstanceOf, for_value.GetValue(), type));
   return true;
 }
 
@@ -777,7 +795,8 @@ auto EffectVisitor::VisitThrowExpr(expr::ThrowExpr* expr) -> bool {
     return false;
   }
   Append(for_value);
-  Add(ir::InstanceOfInstr::New(for_value.GetValue(), String::GetClass()));
+  if (gel::IsPedantic())
+    AddInstanceOf(for_value.GetValue(), String::GetClass());
   Add(ir::ThrowInstr::New(for_value.GetValue()));
   return true;
 }
@@ -841,6 +860,10 @@ auto EffectVisitor::VisitScript(Script* script) -> bool {
 
 auto EffectVisitor::VisitLambda(Lambda* lambda) -> bool {
   const auto scope = GetOwner()->PushScope();
+  ASSERT(scope);
+  const auto self_local = LocalVariable::New(scope, lambda->HasName() ? lambda->GetName() : Symbol::New("$"), lambda);
+  ASSERT(self_local);
+  LOG_IF(FATAL, !scope->Add(self_local)) << "failed to add " << (*self_local) << " to scope.";
   for (const auto& arg : lambda->GetArgs()) {
     const auto local = LocalVariable::New(scope, Symbol::New(arg.GetName()));
     LOG_IF(FATAL, !scope->Add(local)) << "failed to add " << (*local) << " to current scope";
@@ -858,9 +881,8 @@ auto EffectVisitor::VisitLambda(Lambda* lambda) -> bool {
     Append(for_value);
     if (index == body.size()) {
       auto return_value = for_value.GetValue();
-      if (!return_value)
+      if (!return_value && !for_value.GetExitInstr()->IsJoinEntryInstr())
         return_value = Bind(ir::ConstantInstr::New(Null()));
-      ASSERT(return_value);
       Add(ir::ReturnInstr::New(return_value));
     }
     if (!IsOpen())

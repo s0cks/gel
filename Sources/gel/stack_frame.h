@@ -7,6 +7,7 @@
 #include <variant>
 
 #include "gel/common.h"
+#include "gel/disassembler.h"
 #include "gel/instruction.h"
 #include "gel/native_procedure.h"
 #include "gel/object.h"
@@ -22,7 +23,7 @@ class StackFrame {
   DEFINE_DEFAULT_COPYABLE_TYPE(StackFrame);
 
  public:
-  using TargetVariant = std::variant<ir::TargetEntryInstr*, NativeProcedure*>;
+  using TargetVariant = std::variant<Script*, Lambda*, NativeProcedure*>;
 
  private:
   uint64_t id_;
@@ -30,19 +31,12 @@ class StackFrame {
   LocalScope* locals_;
   uword return_address_;
 
-  StackFrame(const uword id, ir::TargetEntryInstr* target, LocalScope* locals, const uword return_address = UNALLOCATED) :
+  StackFrame(const uword id, const TargetVariant target, LocalScope* locals, const uword return_address = UNALLOCATED) :
     id_(id),
     target_(target),
     locals_(locals),
     return_address_(return_address) {
     ASSERT(locals);
-  }
-  StackFrame(uword id, NativeProcedure* target, LocalScope* locals, const uword return_address = UNALLOCATED) :
-    id_(id),
-    target_(target),
-    locals_(locals),
-    return_address_(return_address) {
-    ASSERT(locals_);
   }
 
   void SetReturnAddress(const uword addr) {
@@ -61,26 +55,32 @@ class StackFrame {
     return id_;
   }
 
-  auto GetTarget() const -> const TargetVariant& {
+  auto target() const -> const TargetVariant& {
     return target_;
   }
 
-  inline auto IsTargetEntryInstr() const -> bool {
-    return std::holds_alternative<ir::TargetEntryInstr*>(GetTarget());
+  auto IsScriptFrame() const -> bool {
+    return std::holds_alternative<Script*>(target());
   }
 
-  auto GetTargetAsTargetEntryInstr() const -> ir::TargetEntryInstr* {
-    ASSERT(IsTargetEntryInstr());
-    return std::get<ir::TargetEntryInstr*>(GetTarget());
+  auto GetScript() const -> Script* {
+    return std::get<Script*>(target());
   }
 
-  inline auto IsNativeFrame() const -> bool {
-    return std::holds_alternative<NativeProcedure*>(GetTarget());
+  auto IsLambdaFrame() const -> bool {
+    return std::holds_alternative<Lambda*>(target());
   }
 
-  auto GetTargetAsNativeProcedure() const -> NativeProcedure* {
-    ASSERT(IsNativeFrame());
-    return std::get<NativeProcedure*>(GetTarget());
+  auto GetLambda() const -> Lambda* {
+    return std::get<Lambda*>(target());
+  }
+
+  auto IsNativeFrame() const -> bool {
+    return std::holds_alternative<NativeProcedure*>(target());
+  }
+
+  auto GetNativeProcedure() const -> NativeProcedure* {
+    return std::get<NativeProcedure*>(target());
   }
 
   auto GetLocals() const -> LocalScope* {
@@ -103,6 +103,7 @@ class StackFrame {
     return ((ir::Instruction*)GetReturnAddressPointer());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   }
 
+  auto GetTargetName() const -> std::string;
   auto ToString() const -> std::string;
   friend auto operator<<(std::ostream& stream, const StackFrame& rhs) -> std::ostream& {
     return stream << rhs.ToString();
@@ -189,11 +190,13 @@ class StackFrameGuard : public StackFrameGuardBase {
     ASSERT(target);
     return [target]() {
       ASSERT(target);
-      LOG(ERROR) << "Target: " << ((void*)target) << " ; " << target->ToString();
-      if (!target->IsNativeProcedure()) {
-        LOG(ERROR) << "Target Instructions:";
-        InstructionLogger::Log(target);
-      }
+      // TODO:
+      //  LOG(ERROR) << "Target: " << ((void*)target) << " ; " << target->ToString();
+      //  if (!target->IsNativeProcedure()) {
+      //    LOG(ERROR) << "Target Instructions:";
+      //    Disassembler disassembler(std::cerr, LocalScope::New());  // TODO: need to get local scope
+      //    disassembler.Disassemble(target->GetCode(), target->GetType()->GetName()->Get().c_str());
+      //  }
     };
   }
 

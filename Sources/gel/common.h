@@ -37,7 +37,13 @@
   auto operator=(const Name& rhs)->Name& = default; \
   auto operator=(Name&& rhs)->Name& = default;
 
-#define NOT_IMPLEMENTED(Level) LOG(Level) << __FUNCTION__ << " is not implemented.";
+#ifdef _MSC_VER
+#define NOT_IMPLEMENTED(Level) LOG(Level) << __FUNCSIG__ << " is not implemented!"
+#elif defined(__clang__) || defined(__GNUC__)
+#define NOT_IMPLEMENTED(Level) LOG(Level) << __PRETTY_FUNCTION__ << " is not implemented!"
+#else
+#define NOT_IMPLEMENTED(Level) LOG(Level) << __FUNCTION__ << " is not implemented!"
+#endif  // NOT_IMPLEMENTED
 
 #define GEL_VLEVEL_1 1
 #define GEL_VLEVEL_2 2
@@ -227,6 +233,23 @@ static inline auto GetFilename(const std::filesystem::path& p) -> std::string {
     return filename;
   return filename.substr(0, filename.length() - (filename.length() - dotpos));
 }
+
+#ifdef GEL_DEBUG
+
+#define TIMER_START                   \
+  const auto start_ns = Clock::now(); \
+  {
+#define TIMER_STOP(Result)           \
+  }                                  \
+  const auto stop_ns = Clock::now(); \
+  const auto Result = std::chrono::duration_cast<std::chrono::nanoseconds>(stop_ns - start_ns).count();
+
+#else
+
+#define TIMER_START
+#define TIMER_STOP(Result)
+
+#endif  // GEL_DEBUG
 }  // namespace gel
 
 #endif  // GEL_COMMON_H

@@ -5,29 +5,19 @@
 #include "gel/platform.h"
 
 namespace gel {
-class Section {
-  DEFINE_DEFAULT_COPYABLE_TYPE(Section);
+class Region {
+  DEFINE_DEFAULT_COPYABLE_TYPE(Region);
 
  private:
   uword start_;
   uword size_;
 
  protected:
-  Section() :
-    start_(0),
-    size_(0) {}
-  Section(const uword start, const uword size) :
-    start_(start),
-    size_(size) {
-    ASSERT(start >= 0);
-    ASSERT(size == 0 || IsPow2(size));
-  }
-
   virtual void Clear() {
     memset(GetStartingAddressPointer(), 0, GetSize());
   }
 
-  virtual void SetRegion(const Section& rhs) {
+  virtual void SetRegion(const Region& rhs) {
     operator=(rhs);
   }
 
@@ -42,7 +32,16 @@ class Section {
   }
 
  public:
-  virtual ~Section() = default;
+  Region() :
+    start_(0),
+    size_(0) {}
+  Region(const uword start, const uword size) :
+    start_(start),
+    size_(size) {
+    ASSERT(start >= 0);
+    // TODO: ASSERT(size == 0 || IsPow2(size));
+  }
+  virtual ~Region() = default;
 
   auto GetStartingAddress() const -> uword {
     return start_;
@@ -68,20 +67,26 @@ class Section {
     return address >= GetStartingAddress() && address <= GetEndingAddress();
   }
 
+  void CopyFrom(const uword start, const uword size) {
+    ASSERT(start != UNALLOCATED);
+    ASSERT(GetSize() >= size);
+    memcpy(GetStartingAddressPointer(), (void*)start, size);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  }
+
   inline auto IsAllocated() const -> bool {
     return GetStartingAddress() != UNALLOCATED && GetSize() >= 1;
   }
 
-  auto operator==(const Section& rhs) const -> bool {
+  auto operator==(const Region& rhs) const -> bool {
     return GetStartingAddress() == rhs.GetStartingAddress() && GetSize() == rhs.GetSize();
   }
 
-  auto operator!=(const Section& rhs) const -> bool {
+  auto operator!=(const Region& rhs) const -> bool {
     return GetStartingAddress() != rhs.GetStartingAddress() || GetSize() != rhs.GetSize();
   }
 
-  friend auto operator<<(std::ostream& stream, const Section& rhs) -> std::ostream& {
-    stream << "Section(";
+  friend auto operator<<(std::ostream& stream, const Region& rhs) -> std::ostream& {
+    stream << "Region(";
     stream << "start=" << rhs.GetStartingAddressPointer() << ", ";
     stream << "size=" << rhs.GetSize();
     stream << ")";
@@ -89,18 +94,18 @@ class Section {
   }
 };
 
-class AllocationSection : public Section {
-  DEFINE_DEFAULT_COPYABLE_TYPE(AllocationSection);
+class AllocationRegion : public Region {
+  DEFINE_DEFAULT_COPYABLE_TYPE(AllocationRegion);
 
  protected:
   uword current_;
 
  protected:
-  AllocationSection() :
-    Section(),
+  AllocationRegion() :
+    Region(),
     current_(0) {}
-  AllocationSection(const uword start, const uword size) :
-    Section(start, size),
+  AllocationRegion(const uword start, const uword size) :
+    Region(start, size),
     current_(start) {
     ASSERT(current_ >= 0);
     ASSERT(GetCurrentAddress() == GetStartingAddress());
@@ -112,17 +117,17 @@ class AllocationSection : public Section {
   }
 
   void Clear() override {
-    Section::Clear();
+    Region::Clear();
     current_ = GetStartingAddress();
   }
 
-  void SetRegion(const Section& rhs) override {
-    Section::SetRegion(rhs);
+  void SetRegion(const Region& rhs) override {
+    Region::SetRegion(rhs);
     current_ = rhs.GetStartingAddress();
   }
 
  public:
-  ~AllocationSection() override = default;
+  ~AllocationRegion() override = default;
 
   auto GetCurrentAddress() const -> uword {
     return current_;

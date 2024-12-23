@@ -10,13 +10,13 @@
 #include "gel/semispace.h"
 
 namespace gel {
-class Zone : public AllocationSection {
+class Zone : public AllocationRegion {
   DEFINE_DEFAULT_COPYABLE_TYPE(Zone);
 
  protected:
   Zone() = default;
   explicit Zone(const MemoryRegion& region) :
-    AllocationSection(region.GetStartingAddress(), region.GetSize()) {}
+    AllocationRegion(region.GetStartingAddress(), region.GetSize()) {}
   explicit Zone(const uword size, const MemoryRegion::ProtectionMode mode = MemoryRegion::kReadOnly) :
     Zone(MemoryRegion(size, mode)) {}
 

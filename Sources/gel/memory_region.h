@@ -10,7 +10,7 @@
 #include "gel/section.h"
 
 namespace gel {
-class MemoryRegion : public Section {
+class MemoryRegion : public Region {
   DEFINE_DEFAULT_COPYABLE_TYPE(MemoryRegion);
 
  public:
@@ -42,10 +42,10 @@ class MemoryRegion : public Section {
  public:
   MemoryRegion() = default;
   MemoryRegion(const uword start, const uword size) :
-    Section(start, size) {}
+    Region(start, size) {}
   MemoryRegion(const uword size, const ProtectionMode mode = kNoAccess);
-  explicit MemoryRegion(const Section& section) :
-    Section(section) {}
+  explicit MemoryRegion(const Region& section) :
+    Region(section) {}
   ~MemoryRegion() override = default;
 
   virtual void FreeRegion();

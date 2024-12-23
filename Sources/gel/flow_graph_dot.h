@@ -205,7 +205,7 @@ class EffectVisitor : public InstructionVisitor, public dot::GraphDecorator {
     return GetExit() != nullptr;
   }
 
-#define DECLARE_VISIT(Name) auto Visit##Name(Name* instr)->bool override;
+#define DECLARE_VISIT(Name) auto Visit##Name(Name##Instr* instr)->bool override;
   FOR_EACH_INSTRUCTION(DECLARE_VISIT)
 #undef DECLARE_VISIT
 };

@@ -73,20 +73,8 @@ struct TimedResult {
   }
 };
 
-template <class E, const Severity S = google::INFO>
-static inline void DumpFlowGraph(E* value, std::enable_if_t<has_entry<E>::value>* = nullptr) {
-  if (!FLAGS_dump_flow_graph)
-    return;
-  LOG_AT_LEVEL(S) << value << " Instructions:";
-  InstructionLogger::Log<S>(value->GetEntry());
-}
-
 // TODO: cleanup
 static inline auto Execute(const std::string& expr) -> int {
-  if (FLAGS_dump_ast) {
-    // TODO: implement
-  }
-
   if (FLAGS_dump_ast) {
     try {
       ArgumentSet args{};
@@ -95,7 +83,6 @@ static inline auto Execute(const std::string& expr) -> int {
       };
       const auto lambda = Lambda::New(args, body);
       LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, GetRuntime()->GetScope())) << "failed to compile: " << expr;
-      DumpFlowGraph(lambda);
     } catch (const gel::Exception& exc) {
       LOG(ERROR) << "failed to execute expression.";
       std::cerr << " * expression: " << expr << std::endl;
@@ -124,10 +111,6 @@ static inline auto Execute(const std::string& expr) -> int {
 static inline auto ExecuteScript(const std::string& filename) -> int {
   const auto script = Script::FromFile(filename);
   ASSERT(script);
-  if (FLAGS_dump_ast) {
-    // TODO: implement
-  }
-  DumpFlowGraph(script);
   if (!FLAGS_eval)
     return EXIT_SUCCESS;
   const TimedResult result = TimedExecution<Object*>([script]() -> Object* {
@@ -150,16 +133,6 @@ auto main(int argc, char** argv) -> int {
   ::google::ParseCommandLineFlags(&argc, &argv, true);
   Heap::Init();
   Runtime::Init();
-
-  // const auto heap = Heap::GetHeap();
-  // ASSERT(heap);
-  // LOG(INFO) << "Old Zone (before):";
-  // PrintOldZone(heap->GetOldZone());
-  // const auto cls = heap->TryAllocateOldValue<Class>();
-  // ASSERT(cls);
-  // LOG(INFO) << "Old Zone (after):";
-  // PrintOldZone(heap->GetOldZone());
-  // VLOG(1) << "${GEL_HOME} := " << GetHomeEnvVar();
   const auto expr = GetExpressionFlag();
   if (expr)
     return Execute((*expr));

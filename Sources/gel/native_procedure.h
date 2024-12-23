@@ -32,7 +32,7 @@ class NativeProcedure : public Procedure {
     Native::Init();
     const auto native = Native::Get();
     ASSERT(native);
-    DVLOG(1) << "initialized " << native;
+    DVLOG(1000) << "initialized " << native;
   }
 
  protected:
@@ -152,7 +152,7 @@ class NativeProcedure : public Procedure {
   }
 
 #define DEFINE_NATIVE_PROCEDURE_TYPE(Name) _DEFINE_NATIVE_PROCEDURE_TYPE(Name, #Name)
-#define _NATIVE_PROCEDURE_NAMED(Name) class Name : public NativeProcedure
+#define _NATIVE_PROCEDURE_NAMED(Name)      class Name : public NativeProcedure
 
 #define _DECLARE_NATIVE_PROCEDURE(Name, Sym)  \
   _NATIVE_PROCEDURE_NAMED(Name) {             \
@@ -311,7 +311,7 @@ class NativeArgument {
 
  public:
   explicit NativeArgument(const ObjectList& args) {
-    if (Index < 0 || Index > args.size()) {
+    if (Index < 0 || Index >= args.size()) {
       if (Required) {
         value_ = Error::New("Hello World");
         return;

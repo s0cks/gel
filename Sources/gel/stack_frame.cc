@@ -1,17 +1,34 @@
 #include "gel/stack_frame.h"
 
 #include "gel/local_scope.h"
+#include "gel/object.h"
 #include "gel/runtime.h"
+#include "gel/script.h"
 #include "gel/to_string_helper.h"
 
 namespace gel {
+auto StackFrame::GetTargetName() const -> std::string {
+  if (IsScriptFrame()) {
+    return "Script";  // TODO: implement
+  } else if (IsNativeFrame()) {
+    return GetNativeProcedure()->GetSymbol()->Get();
+  } else if (IsLambdaFrame()) {
+    const auto lambda = GetLambda();
+    ASSERT(lambda);
+    return lambda->HasName() ? lambda->GetName()->Get() : "Lambda";
+  }
+  return "Unknown";
+}
+
 auto StackFrame::ToString() const -> std::string {
   ToStringHelper<StackFrame> helper;
   helper.AddField("id", GetId());
-  if (IsTargetEntryInstr()) {
-    helper.AddField("target", std::get<ir::TargetEntryInstr*>(GetTarget()));
+  if (IsScriptFrame()) {
+    helper.AddField("target", GetScript());
   } else if (IsNativeFrame()) {
-    helper.AddField("target", std::get<NativeProcedure*>(GetTarget()));
+    helper.AddField("target", GetNativeProcedure());
+  } else if (IsLambdaFrame()) {
+    helper.AddField("target", GetLambda());
   }
   if (HasReturnAddress()) {
     helper.AddField("return_address", GetReturnInstr());
@@ -61,6 +78,11 @@ StackFrameGuardBase::~StackFrameGuardBase() {
   LOG(FATAL);
 }
 
+template <typename T>
+static inline constexpr auto AddressOf(const T* rhs) -> const void* {
+  return reinterpret_cast<const void*>(rhs);  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+}
+
 #define __ (google::LogMessage(file(), line(), GetSeverity())).stream() << GetIndentString()
 void StackFrameLogger::Visit(const StackFrame& frame) {
   __ << "Stack Frame #" << frame.GetId();
@@ -69,10 +91,12 @@ void StackFrameLogger::Visit(const StackFrame& frame) {
   } else {
     __ << "Return Address: " << frame.GetReturnAddressPointer() << " ; null";
   }
-  if (frame.IsTargetEntryInstr()) {
-    __ << "Target: " << ((void*)frame.GetTargetAsTargetEntryInstr()) << " ; " << frame.GetTargetAsTargetEntryInstr()->ToString();
+  if (frame.IsScriptFrame()) {
+    __ << "Script: " << AddressOf(frame.GetScript()) << " ;; " << frame.GetScript()->ToString();
+  } else if (frame.IsLambdaFrame()) {
+    __ << "Lambda: " << AddressOf(frame.GetLambda()) << " ;; " << frame.GetLambda()->ToString();
   } else if (frame.IsNativeFrame()) {
-    __ << "Native: " << ((void*)frame.GetTargetAsNativeProcedure()) << " ; " << frame.GetTargetAsNativeProcedure()->ToString();
+    __ << "Native: " << AddressOf(frame.GetNativeProcedure()) << " ;; " << frame.GetNativeProcedure()->ToString();
   }
   LocalScopePrinter::Print<google::INFO, false>(frame.GetLocals(), file(), line(), indent());
 }

@@ -13,6 +13,7 @@
 #include "gel/procedure.h"
 
 namespace gel {
+class Parser;
 namespace expr {
 class LambdaExpr;
 class Expression;
@@ -22,6 +23,7 @@ class GraphEntryInstr;
 }  // namespace ir
 
 class Lambda : public Procedure, public Executable {
+  friend class Parser;
   friend class FlowGraphCompiler;
 
  private:
@@ -30,20 +32,20 @@ class Lambda : public Procedure, public Executable {
   String* docstring_ = nullptr;
   ArgumentSet args_;           // TODO: fails to copy during GC
   expr::ExpressionList body_;  // TODO: fails to copy during GC
-#ifdef GEL_DEBUG
-  uword compile_time_ = 0;
-
-  void SetCompileTime(const uword rhs) {
-    ASSERT(rhs > 0);
-    compile_time_ = rhs;
-  }
-#endif  // GEL_DEBUG
 
  protected:
   Lambda(Symbol* name, ArgumentSet args, const expr::ExpressionList& body) :  // NOLINT(modernize-pass-by-value)
     name_(name),
     args_(args),
     body_(body) {}
+
+  void SetArgs(const ArgumentSet& args) {
+    args_ = args;
+  }
+
+  void SetBody(const expr::ExpressionList& body) {
+    body_ = body;
+  }
 
   auto VisitPointers(PointerVisitor* vis) -> bool override;
 
@@ -105,12 +107,6 @@ class Lambda : public Procedure, public Executable {
     return args_.size();
   }
 
-#ifdef GEL_DEBUG
-  auto GetCompileTimeNanos() const -> uword {
-    return compile_time_;
-  }
-#endif  // GEL_DEBUG
-
   DECLARE_TYPE(Lambda);
 
  public:
@@ -118,7 +114,7 @@ class Lambda : public Procedure, public Executable {
     return new Lambda(name, args, body);
   }
 
-  static inline auto New(const ArgumentSet& args, const expr::ExpressionList& body) -> Lambda* {
+  static inline auto New(const ArgumentSet& args = {}, const expr::ExpressionList& body = {}) -> Lambda* {
     return new Lambda(nullptr, args, body);
   }
 };

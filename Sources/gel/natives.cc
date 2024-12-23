@@ -293,6 +293,18 @@ NATIVE_PROCEDURE_F(gel_get_frame) {
   return DoNothing();
 }
 
+NATIVE_PROCEDURE_F(gel_print_st) {
+  const auto runtime = GetRuntime();
+  ASSERT(runtime);
+  LOG(INFO) << "Stack Trace:";
+  StackFrameIterator iter(runtime->stack_);
+  while (iter.HasNext()) {
+    const auto& next = iter.Next();
+    LOG(INFO) << "  " << next.GetId() << ": " << next.GetTargetName();
+  }
+  return DoNothing();
+}
+
 NATIVE_PROCEDURE_F(gel_get_locals) {
   ASSERT(HasRuntime());
   ASSERT(args.empty());
@@ -338,7 +350,7 @@ NATIVE_PROCEDURE_F(gel_get_compile_time) {
   NativeArgument<0, Lambda> lambda(args);
   if (!lambda)
     return Throw(lambda.GetError());
-  return ReturnNew<Long>(lambda->GetCompileTimeNanos());
+  return ReturnNew<Long>(lambda->GetCompileTime());
 }
 
 #endif  // GEL_DEBUG

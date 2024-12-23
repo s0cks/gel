@@ -62,8 +62,8 @@ static inline auto operator<<(std::ostream& stream, const ArgumentSet& rhs) -> s
   stream << "[";
   auto remaining = rhs.size();
   for (const auto& arg : rhs) {
-    stream << arg;
-    if (remaining != 1 && --remaining >= 1)
+    stream << arg.GetName();
+    if (--remaining > 0)
       stream << ", ";
   }
   stream << "]";

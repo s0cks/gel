@@ -64,6 +64,7 @@ void NativeProcedure::Init() {
   InitNative<gel_get_classes>();
   InitNative<gel_get_natives>();
   InitNative<gel_get_compile_time>();
+  InitNative<gel_print_st>();
 #endif  // GEL_DEBUG
 }
 
@@ -115,7 +116,7 @@ auto NativeProcedure::Equals(Object* rhs) const -> bool {
 
 auto NativeProcedure::ToString() const -> std::string {
   ToStringHelper<NativeProcedure> helper;
-  helper.AddField("symbol", GetSymbol());
+  helper.AddField("symbol", GetSymbol()->Get());
   helper.AddField("args", GetArgs());
   if (HasDocs())
     helper.AddField("docs", GetDocs());

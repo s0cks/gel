@@ -13,35 +13,37 @@
 #include "gel/variable.h"
 
 #define FOR_EACH_INSTRUCTION(V) \
-  V(ConstantInstr)              \
-  V(UnaryOpInstr)               \
-  V(BinaryOpInstr)              \
-  V(StoreLocalInstr)            \
-  V(LoadLocalInstr)             \
-  V(GraphEntryInstr)            \
-  V(TargetEntryInstr)           \
-  V(JoinEntryInstr)             \
-  V(InvokeInstr)                \
-  V(InvokeDynamicInstr)         \
-  V(InvokeNativeInstr)          \
-  V(ReturnInstr)                \
-  V(BranchInstr)                \
-  V(GotoInstr)                  \
-  V(ThrowInstr)                 \
-  V(InstanceOfInstr)            \
-  V(CastInstr)                  \
-  V(NewInstr)
+  V(Constant)                   \
+  V(UnaryOp)                    \
+  V(BinaryOp)                   \
+  V(StoreLocal)                 \
+  V(LoadLocal)                  \
+  V(GraphEntry)                 \
+  V(TargetEntry)                \
+  V(JoinEntry)                  \
+  V(Invoke)                     \
+  V(InvokeDynamic)              \
+  V(InvokeNative)               \
+  V(Return)                     \
+  V(Branch)                     \
+  V(Goto)                       \
+  V(Throw)                      \
+  V(InstanceOf)                 \
+  V(Cast)                       \
+  V(New)
 
 namespace gel {
+class Assembler;
 class EffectVisitor;
 class ClauseVisitor;
 class FlowGraphBuilder;
+class FlowGraphCompiler;
 
 namespace ir {
 class Definition;
 class EntryInstr;
 class Instruction;
-#define FORWARD_DECLARE(Name) class Name;
+#define FORWARD_DECLARE(Name) class Name##Instr;
 FOR_EACH_INSTRUCTION(FORWARD_DECLARE)
 #undef FORWARD_DECLARE
 
@@ -53,12 +55,14 @@ class InstructionVisitor {
 
  public:
   virtual ~InstructionVisitor() = default;
-#define DECLARE_VISIT(Name) virtual auto Visit##Name(Name* instr)->bool = 0;
+#define DECLARE_VISIT(Name) virtual auto Visit##Name##Instr(Name##Instr* instr)->bool = 0;
   FOR_EACH_INSTRUCTION(DECLARE_VISIT)
 #undef DECLARE_VISIT
 };
 
 class Instruction {
+  friend class BranchInstr;
+  friend class gel::FlowGraphCompiler;
   DEFINE_NON_COPYABLE_TYPE(Instruction);
 
  private:
@@ -77,6 +81,8 @@ class Instruction {
     ASSERT(instr);
     previous_ = instr;
   }
+
+  virtual void Compile(FlowGraphCompiler*) = 0;
 
  public:
   virtual ~Instruction() = default;
@@ -118,12 +124,12 @@ class Instruction {
     return AsDefinition() != nullptr;
   }
 
-#define DEFINE_TYPE_CHECK(Name)    \
-  virtual auto As##Name()->Name* { \
-    return nullptr;                \
-  }                                \
-  auto Is##Name()->bool {          \
-    return As##Name() != nullptr;  \
+#define DEFINE_TYPE_CHECK(Name)                  \
+  virtual auto As##Name##Instr()->Name##Instr* { \
+    return nullptr;                              \
+  }                                              \
+  auto Is##Name##Instr()->bool {                 \
+    return As##Name##Instr() != nullptr;         \
   }
   FOR_EACH_INSTRUCTION(DEFINE_TYPE_CHECK)
 #undef DEFINE_TYPE_CHECK
@@ -168,6 +174,9 @@ class InstructionIterator {
 
 #define DECLARE_INSTRUCTION(Name)                        \
   DEFINE_NON_COPYABLE_TYPE(Name)                         \
+ protected:                                              \
+  void Compile(FlowGraphCompiler* assembler) override;   \
+                                                         \
  public:                                                 \
   auto Accept(InstructionVisitor* vis) -> bool override; \
   auto ToString() const -> std::string override;         \
@@ -660,48 +669,33 @@ class UnaryOpInstr : public TemplateOpInstr<expr::UnaryOp> {
 };
 
 class BranchInstr : public Instruction {
+ public:
+  enum Condition : uint8_t {
+    kTrue,
+    kNotTrue,
+    kEqual,
+    kNotEqual,
+  };
+
  private:
-  Definition* test_ = nullptr;
-  EntryInstr* true_target_ = nullptr;
-  EntryInstr* false_target_ = nullptr;
-  JoinEntryInstr* join_ = nullptr;
+  Condition condition_;
+  EntryInstr* true_target_;
+  EntryInstr* false_target_;
+  JoinEntryInstr* join_;
 
  protected:
-  explicit BranchInstr(Definition* test, EntryInstr* true_target, EntryInstr* false_target, JoinEntryInstr* join) :
-    Instruction() {
-    SetTest(test);
-    SetTrueTarget(true_target);
-    if (false_target)
-      SetFalseTarget(false_target);
-    SetJoin(join);
-  }
-
-  inline void SetTest(Definition* test) {
-    ASSERT(test);
-    test_ = test;
-  }
-
-  inline void SetTrueTarget(EntryInstr* target) {
-    ASSERT(target);
-    true_target_ = target;
-  }
-
-  inline void SetFalseTarget(EntryInstr* target) {
-    ASSERT(target);
-    false_target_ = target;
-  }
-
-  inline void SetJoin(JoinEntryInstr* join) {
-    ASSERT(join);
-    join_ = join;
+  explicit BranchInstr(Condition condition, EntryInstr* true_target, EntryInstr* false_target, JoinEntryInstr* join) :
+    Instruction(),
+    condition_(condition),
+    true_target_(true_target),
+    false_target_(false_target),
+    join_(join) {
+    ASSERT(true_target_);
+    ASSERT(join_);
   }
 
  public:
   ~BranchInstr() override = default;
-
-  auto GetTest() const -> Definition* {
-    return test_;
-  }
 
   auto GetTrueTarget() const -> EntryInstr* {
     return true_target_;
@@ -726,17 +720,45 @@ class BranchInstr : public Instruction {
   DECLARE_INSTRUCTION(BranchInstr);
 
  public:
-  static inline auto New(Definition* test, EntryInstr* true_target, EntryInstr* false_target, JoinEntryInstr* join)
+  static inline auto New(Condition condition, EntryInstr* true_target, EntryInstr* false_target, JoinEntryInstr* join)
       -> BranchInstr* {
-    ASSERT(test);
     ASSERT(true_target);
-    return new BranchInstr(test, true_target, false_target, join);
+    return new BranchInstr(condition, true_target, false_target, join);
   }
 
-  static inline auto New(Definition* test, EntryInstr* true_target, JoinEntryInstr* join) -> BranchInstr* {
-    ASSERT(test);
+  static inline auto New(Condition condition, EntryInstr* true_target, JoinEntryInstr* join) -> BranchInstr* {
     ASSERT(true_target);
-    return New(test, true_target, nullptr, join);
+    return New(condition, true_target, nullptr, join);
+  }
+
+  static inline auto BranchTrue(EntryInstr* true_target, EntryInstr* false_target, JoinEntryInstr* join) -> BranchInstr* {
+    ASSERT(true_target);
+    ASSERT(join);
+    return New(Condition::kTrue, true_target, false_target, join);
+  }
+
+  static inline auto BranchTrue(EntryInstr* true_target, JoinEntryInstr* join) -> BranchInstr* {
+    ASSERT(true_target);
+    ASSERT(join);
+    return BranchTrue(true_target, nullptr, join);
+  }
+
+  static inline auto BranchFalse(EntryInstr* true_target, EntryInstr* false_target, JoinEntryInstr* join) -> BranchInstr* {
+    ASSERT(true_target);
+    ASSERT(join);
+    return New(Condition::kNotTrue, true_target, false_target, join);
+  }
+
+  static inline auto BranchEqual(EntryInstr* true_target, EntryInstr* false_target, JoinEntryInstr* join) -> BranchInstr* {
+    ASSERT(true_target);
+    ASSERT(join);
+    return New(Condition::kEqual, true_target, false_target, join);
+  }
+
+  static inline auto BranchNotEqual(EntryInstr* true_target, EntryInstr* false_target, JoinEntryInstr* join) -> BranchInstr* {
+    ASSERT(true_target);
+    ASSERT(join);
+    return New(Condition::kNotEqual, true_target, false_target, join);
   }
 };
 
@@ -896,7 +918,7 @@ using ir::EntryInstr;
 using ir::Instruction;
 using ir::InstructionIterator;
 using ir::InstructionVisitor;
-#define DEFINE_USE(Name) using ir::Name;
+#define DEFINE_USE(Name) using ir::Name##Instr;
 FOR_EACH_INSTRUCTION(DEFINE_USE)
 #undef DEFINE_USE
 

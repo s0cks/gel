@@ -19,9 +19,9 @@
 #include "gel/common.h"
 #include "gel/pointer.h"
 #include "gel/rx.h"
+#include "gel/section.h"
 #include "gel/type.h"
 #include "gel/type_traits.h"
-#include "gmock/gmock.h"
 
 namespace gel {
 namespace proc {
@@ -117,33 +117,42 @@ class GraphEntryInstr;
 }
 
 class Executable {
+  friend class FlowGraphCompiler;
   DEFINE_NON_COPYABLE_TYPE(Executable);
 
  private:
-  ir::GraphEntryInstr* entry_ = nullptr;
+  Region code_{};
+#ifdef GEL_DEBUG
+  uword compile_time_ns_ = 0;
+
+  void SetCompileTime(const uword ns) {
+    compile_time_ns_ = ns;
+  }
+#endif  // GEL_DEBUG
 
  protected:
   Executable() = default;
 
-  void SetEntry(ir::GraphEntryInstr* entry) {
-    ASSERT(entry);
-    entry_ = entry;
+  void SetCodeRegion(const Region& rhs) {
+    code_ = rhs;
   }
 
  public:
   virtual ~Executable() = default;
 
-  auto GetEntry() const -> ir::GraphEntryInstr* {
-    return entry_;
-  }
-
-  inline auto HasEntry() const -> bool {
-    return GetEntry() != nullptr;
+  auto GetCode() const -> const Region& {
+    return code_;
   }
 
   inline auto IsCompiled() const -> bool {
-    return HasEntry();
+    return GetCode().IsAllocated();
   }
+
+#ifdef GEL_DEBUG
+  auto GetCompileTime() const -> uword {
+    return compile_time_ns_;
+  }
+#endif  // GEL_DEBUG
 };
 
 static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream& {

@@ -140,43 +140,72 @@ auto Runtime::StoreSymbol(Symbol* symbol, Object* value) -> bool {
 void Runtime::Call(Lambda* lambda, const ObjectList& args) {
   ASSERT(lambda);
   const auto locals = PushScope();
-  const auto& lambda_args = lambda->GetArgs();
-  ASSERT(lambda_args.size() == args.size());
-  auto idx = 0;
-  for (const auto& arg : std::ranges::reverse_view(lambda_args)) {
-    const auto symbol = Symbol::New(arg.GetName());
-    ASSERT(symbol);
-    const auto value = args[idx++];
-    ASSERT(value);
-    const auto local = LocalVariable::New(locals, symbol, value);
-    ASSERT(local);
-    LOG_IF(FATAL, !locals->Add(local)) << "failed to add parameter local";
+  ASSERT(locals);
+  const auto self_local = LocalVariable::New(locals, lambda->HasName() ? lambda->GetName() : Symbol::New("$"), lambda);
+  ASSERT(self_local);
+  LOG_IF(FATAL, !locals->Add(self_local)) << "failed to add " << (*self_local) << " to scope.";
+  {
+    const auto& lambda_args = lambda->GetArgs();
+    ASSERT(lambda_args.size() == args.size());
+    auto idx = 0;
+    for (const auto& arg : std::ranges::reverse_view(lambda_args)) {
+      const auto symbol = Symbol::New(arg.GetName());
+      ASSERT(symbol);
+      const auto value = args[idx++];
+      ASSERT(value);
+      const auto local = LocalVariable::New(locals, symbol, value);
+      ASSERT(local);
+      LOG_IF(FATAL, !locals->Add(local)) << "failed to add parameter local";
+    }
+    LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, locals)) << "failed to compile: " << lambda;
+    StackFrameGuard<Lambda> stack_guard(lambda);
+    {
+      PushStackFrame(lambda, locals);
+      interpreter_.Run(lambda->GetCode().GetStartingAddress());
+      const auto frame = PopStackFrame();
+      if (frame.HasReturnAddress())
+        interpreter_.SetCurrentAddress(frame.GetReturnAddress());
+    }
   }
-  LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, locals)) << "failed to compile: " << lambda;
-  StackFrameGuard<Lambda> stack_guard(lambda);
-  interpreter_.Execute(lambda, locals);
   PopScope();
 }
 
 void Runtime::Call(NativeProcedure* native, const ObjectList& args) {
   ASSERT(native);
-  const auto locals = LocalScope::New(GetScope());
+  const auto locals = PushScope();
   ASSERT(locals);
-  for (auto idx = 0; idx < args.size(); idx++) {
-    locals->Add(Symbol::New(fmt::format("arg{}", idx)), args[idx]);
+  {
+    for (auto idx = 0; idx < args.size(); idx++) {
+      locals->Add(Symbol::New(fmt::format("arg{}", idx)), args[idx]);
+    }
+    StackFrameGuard<NativeProcedure> guard(native);
+    {
+      PushStackFrame(native, locals);
+      LOG_IF(FATAL, !native->Apply(args)) << "failed to apply: " << native->ToString() << " with args: " << args;
+      const auto frame = PopStackFrame();
+      if (frame.HasReturnAddress())
+        interpreter_.SetCurrentAddress(frame.GetReturnAddress());
+    }
   }
-  StackFrameGuard<NativeProcedure> guard(native);
-  PushStackFrame(native, locals);
-  LOG_IF(FATAL, !native->Apply(args)) << "failed to apply: " << native->ToString() << " with args: " << args;
-  PopStackFrame();
+  PopScope();
 }
 
 void Runtime::Call(Script* script) {
   ASSERT(script && script->IsCompiled());
-  StackFrameGuard<Script> stack_guard(script);
-  const auto scope = LocalScope::Union({script->GetScope()}, GetScope());
-  ASSERT(scope);
-  interpreter_.Execute(script, scope);
+  const auto locals = PushScope();
+  ASSERT(locals);
+  {
+    locals->Add(script->GetScope());
+    StackFrameGuard<Script> stack_guard(script);
+    {
+      PushStackFrame(script, locals);
+      interpreter_.Run(script->GetCode().GetStartingAddress());
+      const auto frame = PopStackFrame();
+      if (frame.HasReturnAddress())
+        interpreter_.SetCurrentAddress(frame.GetReturnAddress());
+    }
+  }
+  PopScope();
 }
 
 auto Runtime::Eval(const std::string& expr) -> Object* {
@@ -196,14 +225,8 @@ auto Runtime::Eval(const std::string& expr) -> Object* {
 
 auto Runtime::Exec(Script* script) -> Object* {
   ASSERT(script);
-  if (!script->HasEntry())
-    return Null();
   const auto runtime = GetRuntime();
   ASSERT(runtime);
-  if (FLAGS_log_script_instrs) {
-    LOG(INFO) << "Script instructions:";
-    InstructionLogger::Log(script->GetEntry());
-  }
   return GetRuntime()->CallPop(script);
 }
 
@@ -228,25 +251,30 @@ void Runtime::Init() {
 auto Runtime::PushStackFrame(NativeProcedure* native, LocalScope* locals) -> const StackFrame& {
   ASSERT(locals);
   const auto frame_id = HasStackFrame() ? GetCurrentStackFrame().GetId() + 1 : 1;
-  uword return_address = UNALLOCATED;
-  if (interpreter_.HasCurrentInstr())
-    return_address = (uword)interpreter_.GetCurrentInstr();  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-  stack_.push(StackFrame(frame_id, native, locals, return_address));
+  const auto new_frame = StackFrame(frame_id, native, locals, interpreter_.GetCurrentAddress());
+  stack_.push(new_frame);
+  LOG_IF(ERROR, !new_frame.HasReturnAddress() && frame_id != 1) << "return address empty";
   DVLOG(1000) << "pushed: " << stack_.top();
-  LOG_IF(FATAL, return_address == UNALLOCATED && frame_id != 1) << "return address empty";
   return stack_.top();
 }
 
-auto Runtime::PushStackFrame(ir::TargetEntryInstr* target) -> const StackFrame& {
+auto Runtime::PushStackFrame(Script* target, LocalScope* locals) -> const StackFrame& {
   ASSERT(target);
   const auto frame_id = HasStackFrame() ? GetCurrentStackFrame().GetId() + 1 : 1;
-  uword return_address = UNALLOCATED;
-  if (interpreter_.HasPreviousInstr())
-    return_address = (uword)interpreter_.GetPreviousInstr()->GetNext();  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-  LOG_IF(FATAL, return_address == UNALLOCATED && frame_id != 1) << "return address empty";
-  const auto scope = PushScope();
-  ASSERT(scope);
-  stack_.push(StackFrame(frame_id, target, scope, return_address));
+  const auto new_frame = StackFrame(frame_id, target, locals, interpreter_.GetCurrentAddress());
+  stack_.push(new_frame);
+  LOG_IF(ERROR, !new_frame.HasReturnAddress() && frame_id != 1) << "return address empty";
+  DVLOG(1000) << "pushed: " << stack_.top();
+  return stack_.top();
+}
+
+auto Runtime::PushStackFrame(Lambda* target, LocalScope* locals) -> const StackFrame& {
+  ASSERT(target);
+  const auto frame_id = HasStackFrame() ? GetCurrentStackFrame().GetId() + 1 : 1;
+  const auto return_address = interpreter_.GetCurrentAddress();
+  const auto new_frame = StackFrame(frame_id, target, locals, return_address);
+  stack_.push(new_frame);
+  LOG_IF(ERROR, !new_frame.HasReturnAddress() && frame_id != 1) << "return address empty";
   DVLOG(1000) << "pushed: " << stack_.top();
   return stack_.top();
 }

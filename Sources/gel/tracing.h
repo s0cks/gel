@@ -6,17 +6,17 @@
 #define TRACY_ENABLE 1
 #include <tracy/Tracy.hpp>
 
-#define TRACE_BEGIN ZoneScoped
-#define TRACE_SECTION(Name) ZoneScopedN(#Name)
+#define TRACE_MARK FrameMark
+#define TRACE_ZONE ZoneScoped
+#define TRACE_ZONE_NAMED(Name) ZoneScopedN((Name))
 #define TRACE_TAG(Value) (ZoneText((Value), strlen((Value))))
-#define TRACE_END FrameMark
 
 #else
 
-#define TRACE_BEGIN
-#define TRACE_SECTION(Name)
+#define TRACE_MARK
+#define TRACE_ZONE
+#define TRACE_ZONE_NAMED(Name)
 #define TRACE_TAG(Value)
-#define TRACE_END
 
 #endif  // GEL_TRACING
 
