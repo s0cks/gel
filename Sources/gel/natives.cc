@@ -438,7 +438,11 @@ NATIVE_PROCEDURE_F(gel_get_classes) {
   ASSERT(args.empty());
   Object* result = Null();
   const auto visitor = [&result](Class* cls) {
-    result = Pair::New(cls, result);
+    ObjectList meta;
+    meta.push_back(cls->GetName());
+    if (cls->HasParent())
+      meta.push_back(cls->GetParent()->GetName());
+    result = Pair::New(gel::ToList((const ObjectList&)meta, true), result);
     return true;
   };
   LOG_IF(FATAL, !Class::VisitClasses(visitor, true)) << "failed to visit classes.";

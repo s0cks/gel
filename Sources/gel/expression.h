@@ -90,6 +90,8 @@ class ExpressionVisitor {
 };
 
 class Expression : public Object {  // TODO: should Expression inherit from Object?
+  friend class Class;
+  friend class Object;
   DEFINE_NON_COPYABLE_TYPE(Expression);
 
  protected:
@@ -176,7 +178,7 @@ class Expression : public Object {  // TODO: should Expression inherit from Obje
   static Class* kClass;
 
  public:
-  void Init();
+  static void Init();
 
   static inline auto GetClass() -> Class* {
     ASSERT(kClass);
@@ -1382,7 +1384,11 @@ class NewExpr : public Expression {
     return VisitArgs(vis);
   }
 
-  auto EvalToConstant(LocalScope* scope) -> Object*;
+  auto EvalToConstant() const -> Object* override {
+    return EvalToConstant(nullptr);
+  }
+
+  auto EvalToConstant(LocalScope* scope) const -> Object*;
   auto IsConstantExpr() const -> bool override;
   DECLARE_EXPRESSION(NewExpr);
 

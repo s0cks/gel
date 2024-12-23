@@ -615,11 +615,18 @@ static inline auto Cons(Object* lhs, Object* rhs) -> Object* {
   return Pair::New(lhs, rhs);
 }
 
-static inline auto ToList(const ObjectList& values) -> Object* {
+static inline auto ToList(const ObjectList& values, const bool reverse = false) -> Object* {
   Object* result = Null();
-  for (const auto& next : values) {
-    result = Pair::New(next, result);
+  if (reverse) {
+    for (const auto& next : std::ranges::reverse_view(values)) {
+      result = Pair::New(next, result);
+    }
+  } else {
+    for (const auto& next : values) {
+      result = Pair::New(next, result);
+    }
   }
+  ASSERT(result);
   return result;
 }
 

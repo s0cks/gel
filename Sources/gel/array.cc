@@ -63,7 +63,7 @@ auto ArrayBase::ToString() const -> std::string {
 
 auto ArrayBase::CreateClass() -> Class* {
   ASSERT(kClass == nullptr);
-  return Class::New(Object::GetClass(), "Array");
+  return Class::New(Seq::GetClass(), "Array");
 }
 
 auto ArrayBase::VisitPointers(const std::function<bool(Pointer**)>& vis) -> bool {

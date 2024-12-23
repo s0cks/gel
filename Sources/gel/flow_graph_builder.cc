@@ -789,6 +789,13 @@ auto EffectVisitor::VisitBinaryOpExpr(BinaryOpExpr* expr) -> bool {
 
 auto EffectVisitor::VisitInstanceOfExpr(expr::InstanceOfExpr* expr) -> bool {
   ASSERT(expr);
+  if (expr->IsConstantExpr()) {
+    const auto constant_value = expr->EvalToConstant();
+    ASSERT(constant_value);
+    ReturnDefinition(ir::ConstantInstr::New(constant_value));
+    return true;
+  }
+
   ValueVisitor for_value(GetOwner());
   if (!expr->GetValue()->Accept(&for_value)) {
     LOG(FATAL) << "failed to visit value: " << expr->GetValue()->ToString();

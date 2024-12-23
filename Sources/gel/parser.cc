@@ -102,20 +102,31 @@ static inline auto IsClassReference(expr::Expression* expr) -> bool {
   return false;
 }
 
-auto Parser::ParseCallProcExpr() -> expr::Expression* {
-  const auto target = ParseExpression();
+auto Parser::ParseCallExpr() -> expr::Expression* {
+  Expression* target = nullptr;
+  if (PeekEq(Token::kIdentifier)) {
+    const auto symbol = ParseSymbol();
+    const auto cls = Class::FindClass(symbol);
+    if (cls) {
+      ASSERT(cls && cls->GetName()->Equals(symbol));
+      ExpressionList args;
+      while (!PeekEq(Token::kRParen)) {
+        const auto arg = ParseExpression();
+        ASSERT(arg);
+        args.push_back(arg);
+      }
+      return expr::NewExpr::New(cls, args);
+    }
+    target = expr::LiteralExpr::New(symbol);
+  } else {
+    target = ParseExpression();
+  }
   ASSERT(target);
   ExpressionList args;
   while (!PeekEq(Token::kRParen)) {
     const auto arg = ParseExpression();
     ASSERT(arg);
     args.push_back(arg);
-  }
-  if (IsClassReference(target)) {
-    const auto symbol = target->AsLiteralExpr()->GetValue()->AsSymbol();
-    const auto cls = Class::FindClass(symbol);
-    ASSERT(cls && cls->GetName()->Equals(symbol));
-    return expr::NewExpr::New(cls, args);
   }
   return CallProcExpr::New(target, args);
 }
@@ -345,7 +356,7 @@ auto Parser::ParseExpression() -> Expression* {
         break;
       case Token::kLParen:
       case Token::kIdentifier: {
-        expr = ParseCallProcExpr();
+        expr = ParseCallExpr();
         break;
       }
       case Token::kQuote:
@@ -617,6 +628,8 @@ auto Parser::NextToken() -> const Token& {
       Advance();
       return NextToken(Token::kHash, '#');
     }
+    case '?':
+      return NextToken(Token::kQuestion);
     case '\n':
     case '\t':
     case '\r':
@@ -694,10 +707,23 @@ auto Parser::NextToken() -> const Token& {
   } else if (IsValidIdentifierChar(next, true)) {
     token_len_ = 0;
     while (IsValidIdentifierChar(PeekChar(), token_len_ == 0)) {
+      if (PeekChar() == '?' && !IsValidIdentifierChar(PeekChar(1))) {
+        const auto ident = GetBufferedText();
+        const auto cls = Class::FindClass(ident);
+        if (!cls) {
+          buffer_[token_len_++] = NextChar();
+          continue;
+        }
+        NextChar();
+        return NextToken(Token::kInstanceOfExpr, ident);
+      }
       buffer_[token_len_++] = NextChar();
     }
     const auto ident = GetBufferedText();
-    if (ident == "ns")
+    const auto cls = Class::FindClass(ident);
+    if (cls)
+      return NextToken(Token::kNewExpr, ident);
+    else if (ident == "ns")
       return NextToken(Token::kDefNamespace);
     else if (ident == "def")
       return NextToken(Token::kDef);
@@ -1011,7 +1037,7 @@ auto Parser::ParseScript() -> Script* {
           break;
         case Token::kLParen:
         case Token::kIdentifier:
-          expr = ParseCallProcExpr();
+          expr = ParseCallExpr();
           break;
         case Token::kQuote:
           expr = ParseQuotedExpr();

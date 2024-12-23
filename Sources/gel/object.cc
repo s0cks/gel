@@ -137,6 +137,7 @@ void Object::Init() {
   // error type(s)
   Error::InitClass();
   Set::InitClass();
+  Expression::Init();
 #ifdef GEL_ENABLE_RX
   Observable::InitClass();
   Observer::InitClass();
@@ -348,7 +349,7 @@ auto Pair::New(const ObjectList& args) -> Pair* {
 }
 
 auto Pair::CreateClass() -> Class* {
-  return Class::New(Object::GetClass(), kClassName);
+  return Class::New(Seq::GetClass(), kClassName);
 }
 
 auto Pair::VisitPointers(PointerVisitor* vis) -> bool {
@@ -534,7 +535,7 @@ auto Set::New(const ObjectList& args) -> Set* {
 
 auto Set::CreateClass() -> Class* {
   ASSERT(kClass == nullptr);
-  return Class::New(Object::GetClass(), "Set");
+  return Class::New(Seq::GetClass(), "Set");
 }
 
 auto Seq::New(const ObjectList& args) -> Seq* {

@@ -47,6 +47,7 @@ struct Position {
   V(Identifier)               \
   V(LBracket)                 \
   V(RBracket)                 \
+  V(Question)                 \
   V(LiteralNumber)            \
   V(LiteralDouble)            \
   V(LiteralLong)              \

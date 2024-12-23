@@ -12,7 +12,7 @@
 
 namespace gel {
 auto Observable::CreateClass() -> Class* {
-  return Class::New(Object::GetClass(), kClassName);
+  return Class::New(Seq::GetClass(), kClassName);
 }
 
 auto Observable::ToString() const -> std::string {

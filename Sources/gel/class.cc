@@ -120,9 +120,9 @@ auto Class::NewInstance(const ObjectList& args) -> Object* {
   // clang-format off
   if(Equals(Object::GetClass()))
     LOG(FATAL) << "cannot create a new instance of Object.";
-#define INVOKE_NEW(Name) \
-  else if(Equals(Name::GetClass())) \
-    return Name::New(args);
+#define INVOKE_NEW(Name)              \
+  else if(Equals(Name::GetClass()))   \
+    return Name::New(args);           \
   // clang-format on
   FOR_EACH_TYPE(INVOKE_NEW)
 #undef INVOKE_NEW

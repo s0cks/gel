@@ -354,13 +354,14 @@ auto InstanceOfExpr::ToString() const -> std::string {
 }
 
 auto InstanceOfExpr::EvalToConstant() const -> Object* {
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return nullptr;
+  ASSERT(IsConstantExpr());
+  const auto value = GetValue()->EvalToConstant();
+  ASSERT(value);
+  return Bool::Box(value->GetType()->IsInstanceOf(GetTarget()));
 }
 
 auto InstanceOfExpr::IsConstantExpr() const -> bool {
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return false;
+  return GetValue()->IsConstantExpr();
 }
 
 auto LetExpr::VisitAllBindings(ExpressionVisitor* vis) -> bool {
@@ -438,7 +439,9 @@ auto NewExpr::IsConstantExpr() const -> bool {
   const auto scope = GetRuntime()->GetScope();
   ASSERT(scope);
   for (const auto& arg : args_) {
-    if (expr::IsLiteralSymbol(arg)) {
+    if (!arg->IsConstantExpr()) {
+      return false;
+    } else if (expr::IsLiteralSymbol(arg)) {
       const auto literal = arg->AsLiteralExpr()->GetValue()->AsSymbol();
       ASSERT(literal);
       LocalVariable* local = nullptr;
@@ -446,20 +449,17 @@ auto NewExpr::IsConstantExpr() const -> bool {
         return false;
       if (!local || !local->HasValue())
         return false;
-    } else if (!arg->IsConstantExpr()) {
-      return false;
     }
   }
   return true;
 }
 
-auto NewExpr::EvalToConstant(LocalScope* scope) -> Object* {
-  ASSERT(scope);
+auto NewExpr::EvalToConstant(LocalScope* scope) const -> Object* {
   ObjectList values{};
   for (const auto& arg : args_) {
     if (!arg->IsConstantExpr()) {
       return nullptr;
-    } else if (expr::IsLiteralSymbol(arg)) {
+    } else if (expr::IsLiteralSymbol(arg) && scope) {
       const auto literal = arg->AsLiteralExpr()->GetValue()->AsSymbol();
       ASSERT(literal);
       LocalVariable* local = nullptr;
@@ -468,10 +468,10 @@ auto NewExpr::EvalToConstant(LocalScope* scope) -> Object* {
       if (!local || !local->HasValue())
         return nullptr;
       values.push_back(local->GetValue());
-    } else {
-      values.push_back(arg->EvalToConstant());
+      continue;
     }
+    values.push_back(arg->EvalToConstant());
   }
-  return Set::New(values);
+  return GetTargetClass()->NewInstance(values);
 }
 }  // namespace gel::expr

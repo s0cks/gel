@@ -129,7 +129,7 @@ class Parser {
 
   // Expressions
   auto ParseSetExpr() -> expr::SetExpr*;
-  auto ParseCallProcExpr() -> expr::Expression*;
+  auto ParseCallExpr() -> expr::Expression*;
   auto ParseLiteralExpr() -> expr::Expression*;
   auto ParseBeginExpr() -> expr::BeginExpr*;
   auto ParseUnaryExpr() -> expr::UnaryExpr*;
