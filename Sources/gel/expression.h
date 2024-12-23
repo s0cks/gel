@@ -1382,6 +1382,8 @@ class NewExpr : public Expression {
     return VisitArgs(vis);
   }
 
+  auto EvalToConstant(LocalScope* scope) -> Object*;
+  auto IsConstantExpr() const -> bool override;
   DECLARE_EXPRESSION(NewExpr);
 
  public:
@@ -1543,6 +1545,20 @@ class MacroDef : public TemplateDefinition<1> {
     return new MacroDef(symbol, args, body);
   }
 };
+
+static inline auto IsLiteralSymbol(Expression* rhs) -> bool {
+  if (!rhs || !rhs->IsLiteralExpr())
+    return false;
+  const auto literal = rhs->AsLiteralExpr()->GetValue();
+  return literal && literal->IsSymbol();
+}
+
+static inline auto IsLiteralSymbol(Expression* rhs, Symbol* value) -> bool {
+  if (!rhs || !rhs->IsLiteralExpr())
+    return false;
+  const auto literal = rhs->AsLiteralExpr()->GetValue();
+  return literal && literal->Equals(value);
+}
 }  // namespace expr
 
 using expr::BinaryOp;

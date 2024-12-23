@@ -2,6 +2,8 @@
 
 #include <glog/logging.h>
 
+#include <algorithm>
+
 #include "gel/common.h"
 #include "gel/expression.h"
 #include "gel/flags.h"
@@ -309,6 +311,18 @@ static inline auto IsInvokeReplaySubject(expr::Expression* expr) -> bool {
 
 auto EffectVisitor::VisitNewExpr(expr::NewExpr* expr) -> bool {
   ASSERT(expr);
+  if (expr->IsConstantExpr()) {
+    const auto constant = expr->EvalToConstant(GetOwner()->GetScope());
+    if (!constant) {
+      LOG(ERROR) << "failed to create new constant instance of " << expr->GetTargetClass() << " with args "
+                 << expr->GetNumberOfChildren() << " falling back to slow path.";
+      ReturnDefinition(ir::NewInstr::New(expr->GetTargetClass(), expr->GetNumberOfChildren()));
+      return true;
+    }
+    ReturnDefinition(ir::ConstantInstr::New(constant));
+    return true;
+  }
+
   uint64_t aidx = 0;
   while (IsOpen() && (aidx < expr->GetNumberOfChildren())) {
     const auto arg = expr->GetChildAt(aidx++);
@@ -796,7 +810,7 @@ auto EffectVisitor::VisitThrowExpr(expr::ThrowExpr* expr) -> bool {
   }
   Append(for_value);
   if (gel::IsPedantic())
-    AddInstanceOf(for_value.GetValue(), String::GetClass());
+    AddInstanceOf(for_value.GetValue(), Error::GetClass());
   Add(ir::ThrowInstr::New(for_value.GetValue()));
   return true;
 }
@@ -861,9 +875,8 @@ auto EffectVisitor::VisitScript(Script* script) -> bool {
 auto EffectVisitor::VisitLambda(Lambda* lambda) -> bool {
   const auto scope = GetOwner()->PushScope();
   ASSERT(scope);
-  const auto self_local = LocalVariable::New(scope, lambda->HasSymbol() ? lambda->GetSymbol() : Symbol::New("$"), lambda);
-  ASSERT(self_local);
-  LOG_IF(FATAL, !scope->Add(self_local)) << "failed to add " << (*self_local) << " to scope.";
+  if (lambda->HasScope())
+    LOG_IF(FATAL, !scope->Add(lambda->GetScope())) << "failed to add lambda scope to current scope.";
   for (const auto& arg : lambda->GetArgs()) {
     const auto local = LocalVariable::New(scope, Symbol::New(arg.GetName()));
     LOG_IF(FATAL, !scope->Add(local)) << "failed to add " << (*local) << " to current scope";

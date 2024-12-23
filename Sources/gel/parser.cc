@@ -71,7 +71,7 @@ auto Parser::ParseLiteralValue() -> Object* {
   }
 }
 
-auto Parser::ParseLiteralExpr() -> LiteralExpr* {
+auto Parser::ParseLiteralExpr() -> expr::Expression* {
   if (PeekEq(Token::kFn))
     return ParseLiteralLambda();
   const auto value = ParseLiteralValue();
@@ -84,15 +84,13 @@ auto Parser::ParseBeginExpr() -> BeginExpr* {
   PushScope();
   const auto begin = BeginExpr::New();
   while (!PeekEq(Token::kRParen)) {
-    begin->Append(ParseExpression());
+    const auto next = ParseExpression();
+    if (next)
+      begin->Append(next);
   }
   ASSERT(PeekEq(Token::kRParen));
   PopScope();
   return begin;
-}
-
-static inline auto IsLiteralSymbol(expr::Expression* expr) -> bool {
-  return expr && expr->IsLiteralExpr() && expr->AsLiteralExpr()->GetValue()->IsSymbol();
 }
 
 static inline auto IsClassReference(expr::Expression* expr) -> bool {
@@ -254,7 +252,6 @@ auto Parser::ParseExpressionList(expr::ExpressionList& expressions, const bool p
     const auto expr = ParseExpression();
     if (expr)
       expressions.push_back(expr);
-    DLOG_IF(WARNING, !expr) << "didn't parse an expression.";
     peek = PeekToken();
   }
   if (push_scope)
@@ -850,10 +847,12 @@ auto Parser::ParseNamespace() -> Namespace* {
 }
 
 auto Parser::ParseLambda(const Token::Kind kind) -> Lambda* {
+  ExpectNext(kind);
+  const auto scope = PushScope();
+  ASSERT(scope);
   const auto lambda = Lambda::New();
   ASSERT(lambda);
-  ExpectNext(kind);
-  PushScope();
+  lambda->SetScope(scope);
   {
     // name
     Symbol* name = nullptr;
@@ -866,7 +865,7 @@ auto Parser::ParseLambda(const Token::Kind kind) -> Lambda* {
     }
     if (name)
       lambda->SetSymbol(name);
-    const auto local = LocalVariable::New(GetScope(), name ? name : Symbol::New("$"), lambda);
+    const auto local = LocalVariable::New(scope, name ? name : Symbol::New("$"), lambda);
     ASSERT(local);
     LOG_IF(FATAL, !GetScope()->Add(local)) << "cannot add " << local << " to scope.";
     // arguments
@@ -882,7 +881,7 @@ auto Parser::ParseLambda(const Token::Kind kind) -> Lambda* {
     }
     // body
     expr::ExpressionList body{};
-    if (!ParseExpressionList(body)) {
+    if (!ParseExpressionList(body, false)) {
       LOG(FATAL) << "failed to parse lambda body.";
       return nullptr;
     }

@@ -581,6 +581,16 @@ auto PrintValue(std::ostream& stream, Object* value) -> std::ostream& {
       PrintValue(stream, next->AsPair()->GetCar());
       next = next->AsPair()->GetCdr();
     } while (true);
+  } else if (value->IsSet()) {
+    stream << "(";
+    auto remaining = value->AsSet()->GetSize();
+    for (const auto& value : value->AsSet()->data()) {
+      PrintValue(stream, value);
+      if (--remaining > 0)
+        stream << ", ";
+    }
+    stream << ")";
+    return stream;
   }
   return stream << value->ToString();
 }

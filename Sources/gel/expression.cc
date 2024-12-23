@@ -8,9 +8,11 @@
 
 #include "gel/common.h"
 #include "gel/heap.h"
+#include "gel/local.h"
 #include "gel/module.h"
 #include "gel/natives.h"
 #include "gel/object.h"
+#include "gel/runtime.h"
 #include "gel/to_string_helper.h"
 
 namespace gel::expr {
@@ -430,5 +432,46 @@ auto NewExpr::VisitArgs(ExpressionVisitor* vis) -> bool {
       return false;
   }
   return true;
+}
+
+auto NewExpr::IsConstantExpr() const -> bool {
+  const auto scope = GetRuntime()->GetScope();
+  ASSERT(scope);
+  for (const auto& arg : args_) {
+    if (expr::IsLiteralSymbol(arg)) {
+      const auto literal = arg->AsLiteralExpr()->GetValue()->AsSymbol();
+      ASSERT(literal);
+      LocalVariable* local = nullptr;
+      if (!scope->Lookup(literal, &local))
+        return false;
+      if (!local || !local->HasValue())
+        return false;
+    } else if (!arg->IsConstantExpr()) {
+      return false;
+    }
+  }
+  return true;
+}
+
+auto NewExpr::EvalToConstant(LocalScope* scope) -> Object* {
+  ASSERT(scope);
+  ObjectList values{};
+  for (const auto& arg : args_) {
+    if (!arg->IsConstantExpr()) {
+      return nullptr;
+    } else if (expr::IsLiteralSymbol(arg)) {
+      const auto literal = arg->AsLiteralExpr()->GetValue()->AsSymbol();
+      ASSERT(literal);
+      LocalVariable* local = nullptr;
+      if (!scope->Lookup(literal, &local))
+        return nullptr;
+      if (!local || !local->HasValue())
+        return nullptr;
+      values.push_back(local->GetValue());
+    } else {
+      values.push_back(arg->EvalToConstant());
+    }
+  }
+  return Set::New(values);
 }
 }  // namespace gel::expr

@@ -29,14 +29,9 @@ class Lambda : public Procedure, public Executable {
  private:
   Object* owner_ = nullptr;
   String* docstring_ = nullptr;
+  LocalScope* scope_ = nullptr;
   ArgumentSet args_;           // TODO: fails to copy during GC
   expr::ExpressionList body_;  // TODO: fails to copy during GC
-
- protected:
-  Lambda(Symbol* symbol, ArgumentSet args, const expr::ExpressionList& body) :  // NOLINT(modernize-pass-by-value)
-    Procedure(symbol),
-    args_(args),
-    body_(body) {}
 
   void SetArgs(const ArgumentSet& args) {
     args_ = args;
@@ -45,6 +40,17 @@ class Lambda : public Procedure, public Executable {
   void SetBody(const expr::ExpressionList& body) {
     body_ = body;
   }
+
+  void SetScope(LocalScope* scope) {
+    ASSERT(scope);
+    scope_ = scope;
+  }
+
+ protected:
+  Lambda(Symbol* symbol, ArgumentSet args, const expr::ExpressionList& body) :  // NOLINT(modernize-pass-by-value)
+    Procedure(symbol),
+    args_(args),
+    body_(body) {}
 
   auto VisitPointers(PointerVisitor* vis) -> bool override;
 
@@ -91,6 +97,14 @@ class Lambda : public Procedure, public Executable {
 
   auto GetNumberOfArgs() const -> uint64_t {
     return args_.size();
+  }
+
+  auto GetScope() const -> LocalScope* {
+    return scope_;
+  }
+
+  inline auto HasScope() const -> bool {
+    return GetScope() != nullptr;
   }
 
   DECLARE_TYPE(Lambda);

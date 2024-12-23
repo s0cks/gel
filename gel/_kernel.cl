@@ -69,6 +69,10 @@
     "Prints the heap's new zone information to the terminal.")
   (defnative gel:print-old-zone []
     "Prints the heap's old zone information to the terminal.")
+  (defn assert [test m] ;; TODO: convert to macro
+    "Assert that Bool [test] is true, if not throw an Error w/ message [m]."
+    (when (and (gel:debug?) (not test))
+      (throw (Error m))))
   ;; ---------------------------------------------------------------------------------
 
   ;; ---------------------------------------------------------------------------------
