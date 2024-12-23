@@ -100,6 +100,7 @@ class NativeProcedure : public Procedure {
 
  private:
   static NativeProcedureList all_;
+  static void InitNatives();
 
  protected:
   static void Register(NativeProcedure* native);

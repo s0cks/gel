@@ -195,7 +195,7 @@ void CastInstr::Compile(FlowGraphCompiler* compiler) {
 
 void NewInstr::Compile(FlowGraphCompiler* compiler) {
   ASSERT(compiler);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  __ New(GetTarget(), GetNumberOfArgs());
 }
 
 void InstanceOfInstr::Compile(FlowGraphCompiler* compiler) {

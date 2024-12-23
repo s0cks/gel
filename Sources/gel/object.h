@@ -453,6 +453,7 @@ class StringObject : public Datum {
   }
 
   auto HashCode() const -> uword override;
+  auto Equals(Object* rhs) const -> bool override;
   auto Equals(const std::string& rhs) const -> bool;
 };
 
@@ -505,7 +506,20 @@ class Symbol : public StringObject {
 
 class Set : public Object {
  public:
-  using StorageType = std::unordered_set<Object*>;
+  struct Hasher {
+    auto operator()(Object* rhs) const -> size_t {
+      ASSERT(rhs);
+      return rhs->HashCode();
+    }
+  };
+
+  struct Comparator {
+    auto operator()(Object* lhs, Object* rhs) const -> bool {
+      return lhs->Equals(rhs);
+    }
+  };
+
+  using StorageType = std::unordered_set<Object*, Hasher, Comparator>;
 
  private:
   StorageType data_;

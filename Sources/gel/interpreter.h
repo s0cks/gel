@@ -10,6 +10,7 @@
 #include "gel/platform.h"
 #include "gel/section.h"
 #include "gel/stack_frame.h"
+#include "gel/type.h"
 #include "gel/type_traits.h"
 
 namespace gel {
@@ -52,6 +53,12 @@ class BytecodeInterpreter {
     return (Object*)NextAddress();  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   }
 
+  inline auto NextClass() -> Class* {
+    const auto next_object = NextObjectPointer();
+    ASSERT(next_object && next_object->IsClass());
+    return next_object->AsClass();
+  }
+
   auto GetScope() const -> LocalScope*;
   void nop();
   void bt();
@@ -65,6 +72,7 @@ class BytecodeInterpreter {
   void StoreLocal(const uword idx);
   void ExecUnaryOp(const Bytecode code);
   void ExecBinaryOp(const Bytecode code);
+  void New(Class* cls, const uword num_args);
   void Cast(Class* cls);
   void CheckInstance(Class* cls);
   void Jump(const Bytecode code, const uword address);

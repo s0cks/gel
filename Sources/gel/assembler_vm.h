@@ -1,4 +1,3 @@
-#include "gel/object.h"
 #include "gel/platform.h"
 #ifndef GEL_ASSEMBLER_H
 #error "Please #include <gel/assembler.h> instead."
@@ -235,6 +234,13 @@ class Assembler {
     ASSERT(cls);
     EmitOp(Bytecode::kCheckInstance);
     EmitAddress(cls);
+  }
+
+  inline void New(Class* cls, const uword num_args = 0) {
+    ASSERT(cls);
+    EmitOp(Bytecode::kNew);
+    EmitAddress(cls);
+    Emit(num_args);
   }
 
   auto Assemble() const -> Region;

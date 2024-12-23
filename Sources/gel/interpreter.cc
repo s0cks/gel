@@ -25,9 +25,10 @@
 #include "gel/script.h"
 
 namespace gel {
-#define TOP         (GetRuntime()->StackTop())
-#define POP         (GetRuntime()->Pop())
-#define PUSH(Value) (GetRuntime()->Push(gel::IsNull((Value)) ? Null() : (Value)))
+#define TOP             (runtime_->StackTop())
+#define POP             (runtime_->Pop())
+#define POPN(N, Result) (runtime_->PopN((Result), (N), true));
+#define PUSH(Value)     (runtime_->Push(gel::IsNull((Value)) ? Null() : (Value)))
 
 auto BytecodeInterpreter::GetScope() const -> LocalScope* {
   return runtime_->GetScope();
@@ -300,6 +301,15 @@ void BytecodeInterpreter::Dup() {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
 }
 
+void BytecodeInterpreter::New(Class* cls, const uword num_args) {
+  ASSERT(cls);
+  ObjectList args{};
+  POPN(num_args, args);
+  const auto value = cls->NewInstance(args);
+  ASSERT(value);
+  PUSH(value);
+}
+
 void BytecodeInterpreter::Run(const uword address) {
   SetCurrentAddress(address);
   ASSERT(GetCurrentAddress() == address);
@@ -387,6 +397,12 @@ void BytecodeInterpreter::Run(const uword address) {
       case Bytecode::kJne: {
         const auto offset = NextWord();
         Jump(op, address + (pos + offset));
+        continue;
+      }
+      case Bytecode::kNew: {
+        const auto cls = NextClass();
+        ASSERT(cls);
+        New(cls, NextUWord());
         continue;
       }
       case Bytecode::kInvalid:

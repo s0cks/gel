@@ -127,6 +127,12 @@ void Disassembler::Disassemble(const Region& region, const char* label) {
         Pointer(cls);
         break;
       }
+      case Bytecode::kNew: {
+        const auto cls = decoder.NextObjectPointer();
+        ASSERT(cls && cls->IsClass());
+        Comment(cls) << ", num_args=" << decoder.NextUWord();
+        break;
+      }
       case Bytecode::kInvokeNative:
       case Bytecode::kInvokeDynamic: {
         const auto num_args = decoder.NextUWord();

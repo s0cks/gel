@@ -63,6 +63,7 @@ class Class : public Datum {
     return IsInstanceOf(T::GetClass());
   }
 
+  auto NewInstance(const ObjectList& args) -> Object*;
   auto GetAllocationSize() const -> uword;
   auto IsInstanceOf(Class* rhs) const -> bool;
   auto HasFunction(Symbol* symbol, const bool recursive = true) const -> bool;

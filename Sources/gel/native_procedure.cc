@@ -12,62 +12,7 @@ NativeProcedureList NativeProcedure::all_{};
 void NativeProcedure::Init() {
   using namespace proc;
   InitClass();
-  InitNative<hashcode>();
-  InitNative<gel_sizeof>();
-  InitNative<print>();
-  InitNative<type>();
-  InitNative<import>();
-  InitNative<exit>();
-  InitNative<format>();
-  InitNative<list>();
-  InitNative<set_car>();
-  InitNative<set_cdr>();
-  InitNative<random>();
-  InitNative<rand_range>();
-  InitNative<array_new>();
-  InitNative<array_get>();
-  InitNative<array_set>();
-  InitNative<array_length>();
-  InitNative<gel_docs>();
-
-#ifdef GEL_ENABLE_RX
-#define REGISTER_RX(Name) InitNative<rx_##Name>();
-  REGISTER_RX(observer);
-  REGISTER_RX(observable);
-  REGISTER_RX(subscribe);
-  REGISTER_RX(first);
-  REGISTER_RX(last);
-  REGISTER_RX(map);
-  REGISTER_RX(take);
-  REGISTER_RX(take_last);
-  REGISTER_RX(skip);
-  REGISTER_RX(buffer);
-  REGISTER_RX(filter);
-  REGISTER_RX(take_while);
-  REGISTER_RX(replay_subject);
-  REGISTER_RX(publish_subject);
-  REGISTER_RX(publish);
-  REGISTER_RX(complete);
-  REGISTER_RX(publish_error);
-#undef REGISTER_RX
-#endif  // GEL_ENABLE_RX
-
-#ifdef GEL_DEBUG
-  InitNative<gel_print_heap>();
-  InitNative<gel_print_new_zone>();
-  InitNative<gel_print_old_zone>();
-  InitNative<gel_get_roots>();
-  InitNative<gel_minor_gc>();
-  InitNative<gel_major_gc>();
-  InitNative<gel_get_frame>();
-  InitNative<gel_get_debug>();
-  InitNative<gel_get_target_triple>();
-  InitNative<gel_get_locals>();
-  InitNative<gel_get_classes>();
-  InitNative<gel_get_natives>();
-  InitNative<gel_get_compile_time>();
-  InitNative<gel_print_st>();
-#endif  // GEL_DEBUG
+  InitNatives();
 }
 
 void NativeProcedure::Register(NativeProcedure* native) {

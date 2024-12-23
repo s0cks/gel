@@ -95,6 +95,7 @@ void Object::Init() {
   Symbol::InitClass();
   // error type(s)
   Error::InitClass();
+  Set::InitClass();
 #ifdef GEL_ENABLE_RX
   Observable::InitClass();
   Observer::InitClass();
@@ -181,7 +182,11 @@ auto Bool::Equals(Object* rhs) const -> bool {
 }
 
 auto Bool::New(const ObjectList& args) -> Bool* {
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  if (args.empty())
+    return False();
+  else if (args.size() == 1)
+    return Box(gel::Truth(args[0]));
+  return Box(gel::Truth(gel::ToList(args)));
 }
 
 auto Bool::ToString() const -> std::string {
@@ -373,14 +378,17 @@ auto Pair::HashCode() const -> uword {
 }
 
 auto Symbol::Equals(Object* rhs) const -> bool {
-  if (!rhs->IsSymbol())
-    return false;
-  const auto other = rhs->AsSymbol();
-  return Get() == other->Get();
+  return StringObject::Equals(rhs);
 }
 
 auto Symbol::HashCode() const -> uword {
   return StringObject::HashCode();
+}
+
+auto StringObject::Equals(Object* rhs) const -> bool {
+  if (!rhs || !(rhs->IsString() || rhs->IsSymbol()))
+    return false;
+  return Get().compare(((StringObject*)rhs)->Get()) == 0;  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
 }
 
 auto StringObject::Equals(const std::string& rhs) const -> bool {
@@ -417,12 +425,7 @@ auto String::CreateClass() -> Class* {
 }
 
 auto String::Equals(Object* rhs) const -> bool {
-  ASSERT(rhs);
-  if (!rhs->IsString())
-    return false;
-  const auto other = rhs->AsString();
-  ASSERT(other);
-  return Get() == other->Get();
+  return StringObject::Equals(rhs);
 }
 
 auto String::New(const ObjectList& args) -> String* {

@@ -4,8 +4,13 @@
 			"path": "Sources/gel/parser.cc",
 			"bookmarks": [
 				{
-					"line": 582,
-					"column": 0,
+					"line": 300,
+					"column": 25,
+					"label": ""
+				},
+				{
+					"line": 540,
+					"column": 15,
 					"label": ""
 				}
 			]
@@ -14,18 +19,18 @@
 			"path": "Sources/gel/object.cc",
 			"bookmarks": [
 				{
-					"line": 74,
-					"column": 0,
+					"line": 73,
+					"column": 14,
 					"label": ""
 				}
 			]
 		},
 		{
-			"path": "Sources/gel/native_procedure.cc",
+			"path": "Sources/gel/natives.cc",
 			"bookmarks": [
 				{
-					"line": 11,
-					"column": 0,
+					"line": 33,
+					"column": 27,
 					"label": ""
 				}
 			]

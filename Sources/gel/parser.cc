@@ -91,7 +91,20 @@ auto Parser::ParseBeginExpr() -> BeginExpr* {
   return begin;
 }
 
-auto Parser::ParseCallProcExpr() -> CallProcExpr* {
+static inline auto IsLiteralSymbol(expr::Expression* expr) -> bool {
+  return expr && expr->IsLiteralExpr() && expr->AsLiteralExpr()->GetValue()->IsSymbol();
+}
+
+static inline auto IsClassReference(expr::Expression* expr) -> bool {
+  if (IsLiteralSymbol(expr)) {
+    const auto symbol = expr->AsLiteralExpr()->GetValue()->AsSymbol();
+    ASSERT(symbol);
+    return Class::FindClass(symbol) != nullptr;
+  }
+  return false;
+}
+
+auto Parser::ParseCallProcExpr() -> expr::Expression* {
   const auto target = ParseExpression();
   ASSERT(target);
   ExpressionList args;
@@ -99,6 +112,12 @@ auto Parser::ParseCallProcExpr() -> CallProcExpr* {
     const auto arg = ParseExpression();
     ASSERT(arg);
     args.push_back(arg);
+  }
+  if (IsClassReference(target)) {
+    const auto symbol = target->AsLiteralExpr()->GetValue()->AsSymbol();
+    const auto cls = Class::FindClass(symbol);
+    ASSERT(cls && cls->GetName()->Equals(symbol));
+    return expr::NewExpr::New(cls, args);
   }
   return CallProcExpr::New(target, args);
 }
@@ -328,9 +347,10 @@ auto Parser::ParseExpression() -> Expression* {
         expr = ParseThrowExpr();
         break;
       case Token::kLParen:
-      case Token::kIdentifier:
+      case Token::kIdentifier: {
         expr = ParseCallProcExpr();
         break;
+      }
       case Token::kQuote:
         expr = ParseQuotedExpr();
         break;

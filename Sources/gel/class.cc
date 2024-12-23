@@ -1,6 +1,11 @@
 #include "gel/common.h"
+#include "gel/macro.h"
+#include "gel/module.h"
+#include "gel/namespace.h"
+#include "gel/native_procedure.h"
 #include "gel/object.h"
 #include "gel/pointer.h"
+#include "gel/script.h"
 #include "gel/to_string_helper.h"
 
 namespace gel {
@@ -109,6 +114,20 @@ auto Class::FindClass(String* name) -> Class* {
 
 auto Class::FindClass(Symbol* name) -> Class* {
   return FindClass(name->Get());
+}
+
+auto Class::NewInstance(const ObjectList& args) -> Object* {
+  // clang-format off
+  if(Equals(Object::GetClass()))
+    LOG(FATAL) << "cannot create a new instance of Object.";
+#define INVOKE_NEW(Name) \
+  else if(Equals(Name::GetClass())) \
+    return Name::New(args);
+  // clang-format on
+  FOR_EACH_TYPE(INVOKE_NEW)
+#undef INVOKE_NEW
+  LOG(FATAL) << "cannot create a new instance of " << ToString();
+  return nullptr;
 }
 
 auto Class::GetFunction(Symbol* symbol, const bool recursive) const -> Procedure* {
