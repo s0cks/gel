@@ -29,6 +29,7 @@ class Definition;
   V(Script)                        \
   V(Error)                         \
   V(Namespace)                     \
+  V(Set)                           \
   V(Module)
 
 #define FOR_EACH_TYPE(V)     \

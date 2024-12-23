@@ -500,6 +500,31 @@ auto StringObject::HashCode() const -> uword {
   return hash;
 }
 
+auto Set::HashCode() const -> uword {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return 0;
+}
+
+auto Set::Equals(Object* rhs) const -> bool {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
+
+auto Set::ToString() const -> std::string {
+  ToStringHelper<Set> helper;
+  helper.AddField("size", GetSize());
+  return helper;
+}
+
+auto Set::New(const ObjectList& args) -> Set* {
+  StorageType data(args.begin(), args.end());
+  return Of(data);
+}
+
+auto Set::CreateClass() -> Class* {
+  return Class::New(Object::GetClass(), "Set");
+}
+
 auto PrintValue(std::ostream& stream, Object* value) -> std::ostream& {
   ASSERT(value);
   if (value->IsBool()) {

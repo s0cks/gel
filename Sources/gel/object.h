@@ -17,6 +17,7 @@
 #include <utility>
 
 #include "gel/common.h"
+#include "gel/platform.h"
 #include "gel/pointer.h"
 #include "gel/rx.h"
 #include "gel/section.h"
@@ -500,6 +501,45 @@ class Symbol : public StringObject {
 
  public:
   static auto New(const std::string& rhs) -> Symbol*;
+};
+
+class Set : public Object {
+ public:
+  using StorageType = std::unordered_set<Object*>;
+
+ private:
+  StorageType data_;
+
+ protected:
+  Set(const StorageType& data) :
+    Object(),
+    data_(data) {}
+
+ public:
+  ~Set() override = default;
+
+  auto Get() const -> const StorageType& {
+    return data_;
+  }
+
+  auto GetSize() const -> uword {
+    return data_.size();
+  }
+
+  inline auto IsEmpty() const -> uword {
+    return data_.empty();
+  }
+
+  DECLARE_TYPE(Set);
+
+ public:
+  static inline auto Of(const StorageType& data = {}) -> Set* {
+    return new Set(data);
+  }
+
+  static inline auto Empty() -> Set* {
+    return Of();
+  }
 };
 
 using SymbolList = std::vector<Symbol*>;
