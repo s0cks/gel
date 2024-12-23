@@ -98,10 +98,10 @@ void BytecodeInterpreter::Jump(const Bytecode code, const uword target) {
     }
     case Bytecode::kJne: {
       const auto rhs = POP;
-      ASSERT(rhs && rhs->IsDatum());
+      ASSERT(rhs);
       const auto lhs = POP;
-      ASSERT(lhs && lhs->IsDatum());
-      if (!lhs->AsDatum()->Equals(rhs->AsDatum()))
+      ASSERT(lhs);
+      if (!lhs->Equals(rhs))
         current_ = target;
       return;
     }
@@ -154,27 +154,27 @@ void BytecodeInterpreter::ExecBinaryOp(const Bytecode code) {
   ASSERT(lhs);
   switch (code.op()) {
     case Bytecode::kAdd: {
-      const auto value = lhs->AsDatum()->Add(rhs->AsDatum());
+      const auto value = lhs->Add(rhs);
       ASSERT(value);
       return PUSH(value);
     }
     case Bytecode::kSubtract: {
-      const auto value = lhs->AsDatum()->Sub(rhs->AsDatum());
+      const auto value = lhs->Sub(rhs);
       ASSERT(value);
       return PUSH(value);
     }
     case Bytecode::kDivide: {
-      const auto value = lhs->AsDatum()->Div(rhs->AsDatum());
+      const auto value = lhs->Div(rhs);
       ASSERT(value);
       return PUSH(value);
     }
     case Bytecode::kMultiply: {
-      const auto value = lhs->AsDatum()->Mul(rhs->AsDatum());
+      const auto value = lhs->Mul(rhs);
       ASSERT(value);
       return PUSH(value);
     }
     case Bytecode::kModulus: {
-      const auto value = lhs->AsDatum()->Mod(rhs->AsDatum());
+      const auto value = lhs->Mod(rhs);
       ASSERT(value);
       return PUSH(value);
     }
@@ -184,35 +184,35 @@ void BytecodeInterpreter::ExecBinaryOp(const Bytecode code) {
       return PUSH(value);
     }
     case Bytecode::kBinaryAnd: {
-      const auto value = lhs->AsDatum()->And(rhs->AsDatum());
+      const auto value = lhs->And(rhs);
       ASSERT(value);
       return PUSH(value);
     }
     case Bytecode::kBinaryOr: {
-      const auto value = lhs->AsDatum()->Or(rhs->AsDatum());
+      const auto value = lhs->Or(rhs);
       ASSERT(value);
       return PUSH(value);
     }
     case Bytecode::kLessThan: {
-      const auto comparison = lhs->AsDatum()->Compare(rhs->AsDatum());
+      const auto comparison = lhs->Compare(rhs);
       const auto value = Bool::Box(comparison < 0);
       ASSERT(value);
       return PUSH(value);
     }
     case Bytecode::kLessThanEqual: {
-      const auto comparison = lhs->AsDatum()->Compare(rhs->AsDatum());
+      const auto comparison = lhs->Compare(rhs);
       const auto value = Bool::Box(comparison <= 0);
       ASSERT(value);
       return PUSH(value);
     }
     case Bytecode::kGreaterThan: {
-      const auto comparison = lhs->AsDatum()->Compare(rhs->AsDatum());
+      const auto comparison = lhs->Compare(rhs);
       const auto value = Bool::Box(comparison > 0);
       ASSERT(value);
       return PUSH(value);
     }
     case Bytecode::kGreaterThanEqual: {
-      const auto comparison = lhs->AsDatum()->Compare(rhs->AsDatum());
+      const auto comparison = lhs->Compare(rhs);
       const auto value = Bool::Box(comparison >= 0);
       ASSERT(value);
       return PUSH(value);
@@ -236,7 +236,7 @@ void BytecodeInterpreter::ExecBinaryOp(const Bytecode code) {
 void BytecodeInterpreter::ExecUnaryOp(const Bytecode code) {
   ASSERT(code.IsUnaryOp());
   const auto value = POP;
-  ASSERT(value && value->IsDatum());
+  ASSERT(value);
   switch (code.op()) {
     case Bytecode::kNot: {
       const auto new_value = Bool::Box(!gel::Truth(value));

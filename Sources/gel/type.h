@@ -14,6 +14,7 @@ class Definition;
 }  // namespace ir
 
 #define FOR_EACH_PRIMITIVE_TYPE(V) \
+  V(Seq)                           \
   V(Class)                         \
   V(Bool)                          \
   V(Number)                        \

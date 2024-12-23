@@ -16,7 +16,7 @@ static inline auto HasNoValue(LocalVariable* rhs) -> AssertionResult {
   return AssertionSuccess();
 }
 
-static inline auto HasValue(LocalVariable* rhs, Datum* expected) -> AssertionResult {
+static inline auto HasValue(LocalVariable* rhs, Object* expected) -> AssertionResult {
   ASSERT(rhs);
   ASSERT(expected);
   if (!rhs->HasValue())

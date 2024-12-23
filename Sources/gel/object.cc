@@ -71,11 +71,52 @@ auto Object::raw_ptr() const -> Pointer* {
   return Pointer::At(address);
 }
 
+auto Object::Add(Object* rhs) const -> Object* {
+  NOT_IMPLEMENTED(ERROR);
+  return Null();
+}
+
+auto Object::Sub(Object* rhs) const -> Object* {
+  NOT_IMPLEMENTED(ERROR);
+  return Null();
+}
+
+auto Object::Mul(Object* rhs) const -> Object* {
+  NOT_IMPLEMENTED(ERROR);
+  return Null();
+}
+
+auto Object::Div(Object* rhs) const -> Object* {
+  NOT_IMPLEMENTED(ERROR);
+  return Null();
+}
+
+auto Object::Mod(Object* rhs) const -> Object* {
+  NOT_IMPLEMENTED(ERROR);
+  return Null();
+}
+
+auto Object::And(Object* rhs) const -> Object* {
+  NOT_IMPLEMENTED(ERROR);
+  return Null();
+}
+
+auto Object::Or(Object* rhs) const -> Object* {
+  NOT_IMPLEMENTED(ERROR);
+  return Null();
+}
+
+auto Object::Compare(Object* rhs) const -> int {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return 0;
+}
+
 void Object::Init() {
   InitClass();
   Class::InitClass();
   Namespace::InitClass();
   Module::InitClass();
+  Seq::InitClass();
   // exec
   Script::InitClass();
   Procedure::InitClass();
@@ -139,39 +180,6 @@ auto Double::HashCode() const -> uword {
   return hash;
 }
 
-auto Datum::Add(Datum* rhs) const -> Datum* {
-  return Pair::Empty();
-}
-
-auto Datum::Sub(Datum* rhs) const -> Datum* {
-  return Pair::Empty();
-}
-
-auto Datum::Mul(Datum* rhs) const -> Datum* {
-  return Pair::Empty();
-}
-
-auto Datum::Div(Datum* rhs) const -> Datum* {
-  return Pair::Empty();
-}
-
-auto Datum::Mod(Datum* rhs) const -> Datum* {
-  return Pair::Empty();
-}
-
-auto Datum::And(Datum* rhs) const -> Datum* {
-  return Pair::Empty();
-}
-
-auto Datum::Or(Datum* rhs) const -> Datum* {
-  return Pair::Empty();
-}
-
-auto Datum::Compare(Datum* rhs) const -> int {
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return 0;
-}
-
 static Bool* kTrue = nullptr;   // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 static Bool* kFalse = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
@@ -193,11 +201,11 @@ auto Bool::ToString() const -> std::string {
   return Get() ? "#T" : "#F";
 }
 
-auto Bool::And(Datum* rhs) const -> Datum* {
+auto Bool::And(Object* rhs) const -> Object* {
   return Box(Get() && Truth(rhs));
 }
 
-auto Bool::Or(Datum* rhs) const -> Datum* {
+auto Bool::Or(Object* rhs) const -> Object* {
   return Box(Get() || Truth(rhs));
 }
 
@@ -270,7 +278,7 @@ auto Number::ToString() const -> std::string {
   V(Div, /)
 
 #define DEFINE_BINARY_OP(Name, Op)                                                                                 \
-  auto Long::Name(Datum* rhs) const -> Datum* {                                                                    \
+  auto Long::Name(Object* rhs) const -> Object* {                                                                  \
     if (!rhs || !rhs->IsNumber()) {                                                                                \
       LOG(ERROR) << rhs << " is not a Number.";                                                                    \
       return Pair::Empty();                                                                                        \
@@ -284,7 +292,7 @@ FOR_EACH_NUMBER_BINARY_OP(DEFINE_BINARY_OP);
 DEFINE_BINARY_OP(Mod, %);
 #undef DEFINE_BINARY_OP
 
-auto Long::Compare(Datum* rhs) const -> int {
+auto Long::Compare(Object* rhs) const -> int {
   ASSERT(rhs && rhs->IsLong());
   if (Get() < rhs->AsLong()->Get())
     return -1;
@@ -308,7 +316,7 @@ auto Long::ToString() const -> std::string {
 }
 
 #define DEFINE_BINARY_OP(Name, Op)                                                          \
-  auto Double::Name(Datum* rhs) const -> Datum* {                                           \
+  auto Double::Name(Object* rhs) const -> Object* {                                         \
     if (!rhs || !rhs->IsNumber()) {                                                         \
       LOG(ERROR) << rhs << " is not a Number.";                                             \
       return Pair::Empty();                                                                 \
@@ -525,7 +533,29 @@ auto Set::New(const ObjectList& args) -> Set* {
 }
 
 auto Set::CreateClass() -> Class* {
+  ASSERT(kClass == nullptr);
   return Class::New(Object::GetClass(), "Set");
+}
+
+auto Seq::New(const ObjectList& args) -> Seq* {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return nullptr;
+}
+
+auto Seq::CreateClass() -> Class* {
+  ASSERT(kClass == nullptr);
+  return Class::New(Object::GetClass(), "Seq");
+}
+
+auto Seq::HashCode() const -> uword {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return 0;
+}
+
+auto Seq::Equals(Object* rhs) const -> bool {
+  ASSERT(rhs);
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
 }
 
 auto PrintValue(std::ostream& stream, Object* value) -> std::ostream& {

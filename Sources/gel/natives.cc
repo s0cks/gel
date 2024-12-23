@@ -276,18 +276,22 @@ NATIVE_PROCEDURE_F(format) {
 // (set-car! <seq> <value>)
 NATIVE_PROCEDURE_F(set_car) {
   NativeArgument<0, Pair> seq(args);
+  if (!seq)
+    return Throw(seq.GetError());
   NativeArgument<1> value(args);
-  if (!value->IsDatum())
-    return ThrowError(fmt::format("expected {} to be a Datum.", (*value)));
+  if (!value)
+    return Throw(value.GetError());
   SetCar(seq, value);
   return DoNothing();
 }
 
 NATIVE_PROCEDURE_F(set_cdr) {
   NativeArgument<0, Pair> seq(args);
+  if (!seq)
+    return Throw(seq.GetError());
   NativeArgument<1> value(args);
-  if (!value->IsDatum())
-    return ThrowError(fmt::format("expected {} to be a Datum.", (*value)));
+  if (!value)
+    return Throw(value.GetError());
   SetCdr(seq, value);
   return DoNothing();
 }

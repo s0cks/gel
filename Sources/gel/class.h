@@ -14,7 +14,7 @@ namespace gel {
 class Class;
 using ClassList = std::vector<Class*>;
 
-class Class : public Datum {
+class Class : public Object {
   friend class Object;
 
  private:
@@ -24,7 +24,7 @@ class Class : public Datum {
 
  protected:
   explicit Class(Class* parent, String* name) :
-    Datum(),
+    Object(),
     parent_(parent),
     name_(name) {
     ASSERT(name_);

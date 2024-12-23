@@ -30,7 +30,6 @@ find_package(units CONFIG REQUIRED)
 
 list(APPEND GEL_LIBRARIES Threads::Threads glog::glog gflags::gflags fmt::fmt units::units)
 
-
 if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
   add_compile_definitions(GEL_DEBUG)
 endif()

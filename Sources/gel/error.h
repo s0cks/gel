@@ -9,7 +9,7 @@
 #include "gel/pointer.h"
 
 namespace gel {
-class Error : public Datum {
+class Error : public Object {
  private:
   uword message_ = UNALLOCATED;
 
@@ -23,7 +23,7 @@ class Error : public Datum {
 
  public:
   explicit Error(String* message) :
-    Datum() {
+    Object() {
     SetMessage(message);
   }
 

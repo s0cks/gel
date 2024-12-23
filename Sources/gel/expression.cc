@@ -99,15 +99,15 @@ auto BinaryOpExpr::EvalToConstant() const -> Object* {
   ASSERT(right && right->IsAtom());
   switch (GetOp()) {
     case BinaryOp::kAdd:
-      return dynamic_cast<Datum*>(left)->Add(dynamic_cast<Datum*>(right));
+      return dynamic_cast<Object*>(left)->Add(dynamic_cast<Object*>(right));
     case BinaryOp::kSubtract:
-      return dynamic_cast<Datum*>(left)->Sub(dynamic_cast<Datum*>(right));
+      return dynamic_cast<Object*>(left)->Sub(dynamic_cast<Object*>(right));
     case BinaryOp::kMultiply:
-      return dynamic_cast<Datum*>(left)->Mul(dynamic_cast<Datum*>(right));
+      return dynamic_cast<Object*>(left)->Mul(dynamic_cast<Object*>(right));
     case BinaryOp::kDivide:
-      return dynamic_cast<Datum*>(left)->Div(dynamic_cast<Datum*>(right));
+      return dynamic_cast<Object*>(left)->Div(dynamic_cast<Object*>(right));
     case BinaryOp::kModulus:
-      return dynamic_cast<Datum*>(left)->Mod(dynamic_cast<Datum*>(right));
+      return dynamic_cast<Object*>(left)->Mod(dynamic_cast<Object*>(right));
     default:
       LOG(FATAL) << "invalid binary op: " << GetOp();
       return nullptr;

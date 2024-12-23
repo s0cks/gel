@@ -24,13 +24,13 @@ using namespace ::testing;
 FOR_EACH_TYPE(DEFINE_TYPE_ASSERTION)
 #undef DEFINE_TYPE_ASSERTION
 
-static inline auto IsNull(Datum* d) -> AssertionResult {
+static inline auto IsNull(Object* d) -> AssertionResult {
   if (!d || !(d->IsPair() && d->AsPair()->IsEmpty()))
     return AssertionFailure() << "expected " << d << " to be Null.";
   return AssertionSuccess();
 }
 
-static inline auto IsBool(Datum* rhs, const bool expected) -> AssertionResult {
+static inline auto IsBool(Object* rhs, const bool expected) -> AssertionResult {
   if (!rhs || !rhs->IsBool())
     return AssertionFailure() << "expected " << (rhs ? rhs->ToString() : "null") << " to be a Bool.";
   if (rhs->AsBool()->Get() != expected)
@@ -38,15 +38,15 @@ static inline auto IsBool(Datum* rhs, const bool expected) -> AssertionResult {
   return AssertionSuccess();
 }
 
-static inline auto IsTrue(Datum* rhs) -> AssertionResult {
+static inline auto IsTrue(Object* rhs) -> AssertionResult {
   return IsBool(rhs, true);
 }
 
-static inline auto IsFalse(Datum* rhs) -> AssertionResult {
+static inline auto IsFalse(Object* rhs) -> AssertionResult {
   return IsBool(rhs, false);
 }
 
-static inline auto IsSymbol(Datum* rhs, const char* expected) -> AssertionResult {
+static inline auto IsSymbol(Object* rhs, const char* expected) -> AssertionResult {
   if (!rhs || !rhs->IsSymbol())
     return AssertionFailure() << "expected " << (rhs ? rhs->ToString() : "null") << " to be a Symbol.";
   if (rhs->AsSymbol()->Get() != expected)

@@ -32,7 +32,7 @@ class rx_buffer;
 }  // namespace proc
 
 class Pointer;
-class Datum;
+class Object;
 class PointerVisitor;
 class Object {
   friend class Pointer;
@@ -64,10 +64,14 @@ class Object {
   virtual auto HashCode() const -> uword = 0;
   virtual auto Equals(Object* rhs) const -> bool = 0;
   virtual auto ToString() const -> std::string = 0;
-
-  auto AsObject() const -> Object* {
-    return ((Object*)this);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-  }
+  virtual auto Add(Object* rhs) const -> Object*;
+  virtual auto Sub(Object* rhs) const -> Object*;
+  virtual auto Mul(Object* rhs) const -> Object*;
+  virtual auto Div(Object* rhs) const -> Object*;
+  virtual auto Mod(Object* rhs) const -> Object*;
+  virtual auto And(Object* rhs) const -> Object*;
+  virtual auto Or(Object* rhs) const -> Object*;
+  virtual auto Compare(Object* rhs) const -> int;
 
   auto raw_ptr() const -> Pointer*;
 
@@ -77,14 +81,6 @@ class Object {
 
   inline auto GetStartingAddressPointer() const -> void* {
     return ((void*)GetStartingAddress());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-  }
-
-  virtual auto AsDatum() -> Datum* {
-    return nullptr;
-  }
-
-  auto IsDatum() -> bool {
-    return AsDatum() != nullptr;
   }
 
   virtual auto IsAtom() const -> bool {
@@ -197,47 +193,56 @@ static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream
   auto As##Name()->Name* override {                 \
     return this;                                    \
   }
-
-/**
- * @deprecated
- */
-class Datum : public Object {
-  DEFINE_NON_COPYABLE_TYPE(Datum);
-
- protected:
-  Datum() = default;
-
- public:
-  ~Datum() override = default;
-
-  auto IsAtom() const -> bool override {
-    return true;
-  }
-
-  auto AsDatum() -> Datum* override {
-    return this;
-  }
-
-  virtual auto Add(Datum* rhs) const -> Datum*;
-  virtual auto Sub(Datum* rhs) const -> Datum*;
-  virtual auto Mul(Datum* rhs) const -> Datum*;
-  virtual auto Div(Datum* rhs) const -> Datum*;
-  virtual auto Mod(Datum* rhs) const -> Datum*;
-  virtual auto And(Datum* rhs) const -> Datum*;
-  virtual auto Or(Datum* rhs) const -> Datum*;
-  virtual auto Compare(Datum* rhs) const -> int;
-};
 }  // namespace gel
 
 #include "gel/class.h"
 
 namespace gel {
-class Bool : public Datum {
+class Seq : public Object {
+  friend class Object;
+  DEFINE_NON_COPYABLE_TYPE(Seq);
+
+ private:
+ protected:
+  Seq() = default;
+
+ public:
+  ~Seq() override = default;
+  auto HashCode() const -> uword override;
+  auto Equals(Object* rhs) const -> bool override;
+
+  auto GetType() const -> Class* override {
+    return GetClass();
+  }
+
+  auto AsSeq() -> Seq* override {
+    return this;
+  }
+
+  static auto New(const ObjectList& args) -> Seq*;
+  static auto operator new(const size_t sz) -> void*;
+  static inline void operator delete(void* ptr) {
+    ASSERT(ptr);
+  }
+
+ private:
+  static Class* kClass;
+  static void InitClass();
+  static auto CreateClass() -> Class*;
+
+ public:
+  static inline auto GetClass() -> Class* {
+    ASSERT(kClass);
+    return kClass;
+  }
+};
+
+class Bool : public Object {
  private:
   bool value_;
 
   explicit Bool(const bool value) :
-    Datum(),
+    Object(),
     value_(value) {}
 
  public:
@@ -247,8 +252,8 @@ class Bool : public Datum {
     return value_;
   }
 
-  auto And(Datum* rhs) const -> Datum* override;
-  auto Or(Datum* rhs) const -> Datum* override;
+  auto And(Object* rhs) const -> Object* override;
+  auto Or(Object* rhs) const -> Object* override;
 
   DECLARE_TYPE(Bool);
 
@@ -279,7 +284,7 @@ class Bool : public Datum {
   }
 };
 
-class Number : public Datum {
+class Number : public Object {
   friend class Long;
   friend class Double;
 
@@ -288,10 +293,10 @@ class Number : public Datum {
 
  protected:
   explicit Number(const uint64_t value) :
-    Datum(),
+    Object(),
     value_(value) {}
   explicit Number(const double value) :
-    Datum(),
+    Object(),
     value_(value) {}
 
  public:
@@ -328,12 +333,12 @@ class Long : public Number {
     return GetLong();
   }
 
-  auto Add(Datum* rhs) const -> Datum* override;
-  auto Sub(Datum* rhs) const -> Datum* override;
-  auto Mul(Datum* rhs) const -> Datum* override;
-  auto Div(Datum* rhs) const -> Datum* override;
-  auto Mod(Datum* rhs) const -> Datum* override;
-  auto Compare(Datum* rhs) const -> int override;
+  auto Add(Object* rhs) const -> Object* override;
+  auto Sub(Object* rhs) const -> Object* override;
+  auto Mul(Object* rhs) const -> Object* override;
+  auto Div(Object* rhs) const -> Object* override;
+  auto Mod(Object* rhs) const -> Object* override;
+  auto Compare(Object* rhs) const -> int override;
   DECLARE_TYPE(Long);
 
  public:
@@ -356,10 +361,10 @@ class Double : public Number {
     return GetDouble();
   }
 
-  auto Add(Datum* rhs) const -> Datum* override;
-  auto Sub(Datum* rhs) const -> Datum* override;
-  auto Mul(Datum* rhs) const -> Datum* override;
-  auto Div(Datum* rhs) const -> Datum* override;
+  auto Add(Object* rhs) const -> Object* override;
+  auto Sub(Object* rhs) const -> Object* override;
+  auto Mul(Object* rhs) const -> Object* override;
+  auto Div(Object* rhs) const -> Object* override;
   DECLARE_TYPE(Double);
 
  public:
@@ -368,13 +373,14 @@ class Double : public Number {
   }
 };
 
-class Pair : public Datum {
+class Pair : public Seq {
  private:
   Object* car_;
   Object* cdr_;
 
  protected:
   explicit Pair(Object* car = nullptr, Object* cdr = nullptr) :
+    Seq(),
     car_(car),
     cdr_(cdr) {}
 
@@ -425,7 +431,7 @@ class Pair : public Datum {
   }
 };
 
-class StringObject : public Datum {
+class StringObject : public Object {
   DEFINE_NON_COPYABLE_TYPE(StringObject);
 
  private:
@@ -434,7 +440,7 @@ class StringObject : public Datum {
  protected:
   StringObject() = default;
   explicit StringObject(std::string value) :
-    Datum(),
+    Object(),
     value_(std::move(value)) {}
 
   inline void Set(const std::string& value) {
@@ -597,13 +603,13 @@ static inline auto IsNull(Object* rhs) -> bool {
   return !rhs || (rhs->IsPair() && rhs->AsPair()->IsEmpty());
 }
 
-static inline auto BinaryAnd(Object* lhs, Object* rhs) -> Datum* {
-  ASSERT(lhs && lhs->IsDatum());
-  ASSERT(rhs && rhs->IsDatum());
-  return lhs->AsDatum()->And(rhs->AsDatum());
+static inline auto BinaryAnd(Object* lhs, Object* rhs) -> Object* {
+  ASSERT(lhs);
+  ASSERT(rhs);
+  return lhs->And(rhs);
 }
 
-static inline auto Cons(Object* lhs, Object* rhs) -> Datum* {
+static inline auto Cons(Object* lhs, Object* rhs) -> Object* {
   ASSERT(lhs);
   ASSERT(rhs);
   return Pair::New(lhs, rhs);

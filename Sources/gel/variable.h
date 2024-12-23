@@ -12,10 +12,10 @@ class Variable {
 
  private:
   std::string name_;
-  Datum* value_;
+  Object* value_;
 
  public:
-  explicit Variable(std::string name, Datum* value = nullptr) :
+  explicit Variable(std::string name, Object* value = nullptr) :
     name_(std::move(name)),
     value_(value) {}
   ~Variable() = default;
@@ -24,7 +24,7 @@ class Variable {
     return name_;
   }
 
-  auto GetValue() const -> Datum* {
+  auto GetValue() const -> Object* {
     return value_;
   }
 

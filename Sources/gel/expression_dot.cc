@@ -15,7 +15,7 @@ ExpressionToDot::ExpressionToDot(const char* graph_name) :
   SetNodeAttr("xlabel", "");
 }
 
-static inline auto ToString(Datum* datum) -> std::string {
+static inline auto ToString(Object* datum) -> std::string {
   ASSERT(datum);
   std::stringstream ss;
   if (datum->IsLong()) {
