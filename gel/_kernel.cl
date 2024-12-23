@@ -2,6 +2,8 @@
   "The main namespace for gel."
   (defnative hashcode [v]
     "Returns the hashcode of value [v].")
+  (defnative sizeof [o]
+    "Returns the size of Object [o] in bytes.")
   (defnative gel:docs? [o]
     "Returns the docstring attached to the supplied Object [o].")
   (defnative format [pattern args...]

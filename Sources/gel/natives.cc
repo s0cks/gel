@@ -39,6 +39,14 @@ NATIVE_PROCEDURE_F(hashcode) {
   return ReturnNew<Long>(value->HashCode());
 }
 
+NATIVE_PROCEDURE_F(gel_sizeof) {
+  ASSERT(args.size() == 1);
+  NativeArgument<0> value(args);
+  if (!value)
+    return Throw(value.GetError());
+  return ReturnNew<Long>(value->GetType()->GetAllocationSize());
+}
+
 NATIVE_PROCEDURE_F(gel_docs) {
   if (args.empty())
     return DoNothing();

@@ -13,6 +13,7 @@ void NativeProcedure::Init() {
   using namespace proc;
   InitClass();
   InitNative<hashcode>();
+  InitNative<gel_sizeof>();
   InitNative<print>();
   InitNative<type>();
   InitNative<import>();

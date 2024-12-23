@@ -20,6 +20,7 @@ _DECLARE_NATIVE_PROCEDURE(array_get, "array:get");
 _DECLARE_NATIVE_PROCEDURE(array_set, "array:set!");
 _DECLARE_NATIVE_PROCEDURE(array_length, "array:length");
 DECLARE_NATIVE_PROCEDURE(hashcode);
+_DECLARE_NATIVE_PROCEDURE(gel_sizeof, "sizeof");
 
 #ifdef GEL_ENABLE_RX
 #define _DECLARE_NATIVE_RX_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(rx_##Name, "rx:" Sym)
