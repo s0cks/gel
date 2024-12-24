@@ -91,11 +91,12 @@ auto BinaryOpExpr::IsConstantExpr() const -> bool {
   return GetLeft()->IsConstantExpr() && GetRight()->IsConstantExpr();
 }
 
-auto BinaryOpExpr::EvalToConstant() const -> Object* {
+auto BinaryOpExpr::EvalToConstant(LocalScope* scope) const -> Object* {
+  ASSERT(scope);
   ASSERT(IsConstantExpr());
-  const auto left = GetLeft()->EvalToConstant();
+  const auto left = GetLeft()->EvalToConstant(scope);
   ASSERT(left && left->IsAtom());
-  const auto right = GetRight()->EvalToConstant();
+  const auto right = GetRight()->EvalToConstant(scope);
   ASSERT(right && right->IsAtom());
   switch (GetOp()) {
     case BinaryOp::kAdd:
@@ -353,10 +354,11 @@ auto InstanceOfExpr::ToString() const -> std::string {
   return helper;
 }
 
-auto InstanceOfExpr::EvalToConstant() const -> Object* {
+auto InstanceOfExpr::EvalToConstant(LocalScope* scope) const -> Object* {
   ASSERT(IsConstantExpr());
-  const auto value = GetValue()->EvalToConstant();
+  const auto value = GetValue()->EvalToConstant(scope);
   ASSERT(value);
+  DLOG(INFO) << "checking " << GetValue() << " is an instanceof " << GetTarget();
   return Bool::Box(value->GetType()->IsInstanceOf(GetTarget()));
 }
 
@@ -406,7 +408,7 @@ auto CastExpr::ToString() const -> std::string {
   return helper;
 }
 
-auto ListExpr::EvalToConstant() const -> Object* {
+auto ListExpr::EvalToConstant(LocalScope* scope) const -> Object* {
   ASSERT(IsConstantExpr());
   if (IsEmpty())
     return Pair::Empty();
@@ -414,7 +416,7 @@ auto ListExpr::EvalToConstant() const -> Object* {
   for (auto idx = GetNumberOfChildren(); idx > 0; idx--) {
     const auto child = GetChildAt(idx - 1);
     ASSERT(child && child->IsConstantExpr());
-    value = gel::Cons(child->EvalToConstant(), value);
+    value = gel::Cons(child->EvalToConstant(scope), value);
   }
   return value;
 }
@@ -455,6 +457,7 @@ auto NewExpr::IsConstantExpr() const -> bool {
 }
 
 auto NewExpr::EvalToConstant(LocalScope* scope) const -> Object* {
+  ASSERT(scope);
   ObjectList values{};
   for (const auto& arg : args_) {
     if (!arg->IsConstantExpr()) {
@@ -470,8 +473,25 @@ auto NewExpr::EvalToConstant(LocalScope* scope) const -> Object* {
       values.push_back(local->GetValue());
       continue;
     }
-    values.push_back(arg->EvalToConstant());
+    values.push_back(arg->EvalToConstant(scope));
   }
   return GetTargetClass()->NewInstance(values);
+}
+
+auto LoadInstanceMethodExpr::IsConstantExpr() const -> bool {
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return false;
+}
+
+auto LoadInstanceMethodExpr::EvalToConstant(LocalScope* scope) const -> Object* {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return nullptr;
+}
+
+auto LoadInstanceMethodExpr::ToString() const -> std::string {
+  ToStringHelper<LoadInstanceMethodExpr> helper;
+  helper.AddField("class", GetTargetClass());
+  helper.AddField("name", GetTargetName());
+  return helper;
 }
 }  // namespace gel::expr

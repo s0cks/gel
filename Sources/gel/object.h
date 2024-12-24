@@ -208,6 +208,8 @@ class Seq : public Object {
 
  public:
   ~Seq() override = default;
+  virtual auto IsEmpty() const -> bool = 0;
+
   auto HashCode() const -> uword override;
   auto Equals(Object* rhs) const -> bool override;
 
@@ -415,8 +417,12 @@ class Pair : public Seq {
     cdr_ = rhs;
   }
 
-  inline auto IsEmpty() const -> bool {
+  auto IsEmpty() const -> bool override {
     return !HasCar() && !HasCdr();
+  }
+
+  auto IsTuple() const -> bool {
+    return HasCdr() && !GetCdr()->IsPair();
   }
 
   DECLARE_TYPE(Pair);
@@ -562,6 +568,7 @@ class Set : public Object {
   DECLARE_TYPE(Set);
 
  public:
+  static auto Of(Object* value) -> Set*;
   static inline auto Of(const StorageType& data = {}) -> Set* {
     return new Set(data);
   }

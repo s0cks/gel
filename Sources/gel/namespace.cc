@@ -41,13 +41,13 @@ auto Namespace::HasPrefix(Symbol* rhs) const -> bool {
   ASSERT(rhs);
   const auto& s = rhs->Get();
   const auto& n = GetName()->Get();
-  return s.starts_with(n + ":");
+  return s.starts_with(n + kPrefixChar);
 }
 
 auto Namespace::Prefix(Symbol* rhs) const -> Symbol* {
   if (HasPrefix(rhs) || IsKernelNamespace())
     return rhs;
-  return Symbol::New(fmt::format("{0:s}:{1:s}", GetName()->Get(), rhs->Get()));
+  return Symbol::New(fmt::format("{0:s}{1:c}{2:s}", GetName()->Get(), kPrefixChar, rhs->Get()));
 }
 
 auto Namespace::ToString() const -> std::string {

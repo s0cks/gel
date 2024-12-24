@@ -3,6 +3,7 @@
 #include <glog/logging.h>
 
 #include <exception>
+#include <iterator>
 #include <rpp/observers/fwd.hpp>
 #include <rpp/observers/observer.hpp>
 #include <rpp/sources/fwd.hpp>
@@ -25,6 +26,7 @@
 #include "gel/rx.h"
 #include "gel/script.h"
 #include "gel/to_string_helper.h"
+#include "gel/type.h"
 
 namespace gel {
 #ifdef GEL_DISABLE_HEAP
@@ -381,8 +383,10 @@ auto Pair::Empty() -> Pair* {
 
 auto Pair::HashCode() const -> uword {
   uword hash = 0;
-  CombineHash(hash, HasCar() ? GetCar()->HashCode() : Null()->HashCode());
-  CombineHash(hash, HasCdr() ? GetCdr()->HashCode() : Null()->HashCode());
+  if (HasCar())
+    CombineHash(hash, GetCar());
+  if (HasCdr())
+    CombineHash(hash, GetCdr());
   return hash;
 }
 
@@ -528,7 +532,35 @@ auto Set::ToString() const -> std::string {
   return helper;
 }
 
+auto Set::Of(Object* value) -> Set* {
+  if (gel::IsNull(value))
+    return Set::Of();
+  else if (value->IsSet())
+    return value->AsSet();
+  else if (value->IsPair()) {
+    if (value->AsPair()->IsEmpty())
+      return Of();
+    else if (value->AsPair()->IsTuple())
+      return Of({
+          value->AsPair()->GetCar(),
+          value->AsPair()->GetCdr(),
+      });
+    ObjectList values;
+    auto v = value;
+    while (!gel::IsNull(v)) {
+      values.push_back(gel::Car(v));
+      v = gel::Cdr(v);
+    }
+    return Of(StorageType(std::begin(values), std::end(values)));
+  }
+  return Of(StorageType{value});
+}
+
 auto Set::New(const ObjectList& args) -> Set* {
+  if (args.empty())
+    return Of();
+  else if (args.size() == 1)
+    return Of(args[0]);
   StorageType data(args.begin(), args.end());
   return Of(data);
 }

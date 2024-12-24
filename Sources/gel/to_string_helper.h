@@ -170,9 +170,9 @@ class ToStringHelperBase {
     return fields_;
   }
 
-  virtual void AddField(const std::string& name, const std::string& value) {
+  virtual void AddField(std::string name, std::string value) {
     ASSERT(!name.empty());
-    fields_.emplace_back(name, value);
+    fields_.emplace_back(std::move(name), std::move(value));
   }
 
   void AddField(const std::string& name, const gel::Object* value);
@@ -214,8 +214,8 @@ class ToStringHelper : public ToStringHelperBase {
   ToStringHelper() = default;
   ~ToStringHelper() override = default;
 
-  void AddField(const std::string& name, const std::string& value) override {
-    return ToStringHelperBase::AddField(name, value);
+  void AddField(std::string name, std::string value) override {
+    return ToStringHelperBase::AddField(std::move(name), std::move(value));
   }
 
   template <typename V>

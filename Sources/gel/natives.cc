@@ -54,7 +54,7 @@ void NativeProcedure::InitNatives() {
 #define InitSetNative(Name) InitNative<set_##Name>()
   InitSetNative(contains);
   InitSetNative(empty);
-  InitSetNative(size);
+  InitSetNative(count);
 #undef InitSetNative
 
 #ifdef GEL_ENABLE_RX
@@ -232,7 +232,7 @@ SET_PROCEDURE_F(contains) {
   return Return(Bool::Box(set->Contains(value)));
 }
 
-SET_PROCEDURE_F(size) {
+SET_PROCEDURE_F(count) {
   NativeArgument<0, Set> set(args);
   if (!set)
     return Throw(set.GetError());

@@ -709,7 +709,7 @@ auto EffectVisitor::VisitLocalDef(LocalDef* expr) -> bool {
 auto EffectVisitor::VisitListExpr(expr::ListExpr* expr) -> bool {
   ASSERT(expr);
   if (expr->IsConstantExpr()) {
-    ReturnDefinition(ir::ConstantInstr::New(expr->EvalToConstant()));
+    ReturnDefinition(ir::ConstantInstr::New(expr->EvalToConstant(GetOwner()->GetScope())));
     return true;
   }
   SeqExprIterator<expr::ListExpr> iter(this, expr);
@@ -790,7 +790,7 @@ auto EffectVisitor::VisitBinaryOpExpr(BinaryOpExpr* expr) -> bool {
 auto EffectVisitor::VisitInstanceOfExpr(expr::InstanceOfExpr* expr) -> bool {
   ASSERT(expr);
   if (expr->IsConstantExpr()) {
-    const auto constant_value = expr->EvalToConstant();
+    const auto constant_value = expr->EvalToConstant(GetOwner()->GetScope());
     ASSERT(constant_value);
     ReturnDefinition(ir::ConstantInstr::New(constant_value));
     return true;
@@ -806,6 +806,12 @@ auto EffectVisitor::VisitInstanceOfExpr(expr::InstanceOfExpr* expr) -> bool {
   ASSERT(type);
   ReturnDefinition(ir::BinaryOpInstr::New(BinaryOp::kInstanceOf, for_value.GetValue(), type));
   return true;
+}
+
+auto EffectVisitor::VisitLoadInstanceMethodExpr(expr::LoadInstanceMethodExpr* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
 }
 
 auto EffectVisitor::VisitThrowExpr(expr::ThrowExpr* expr) -> bool {

@@ -26,6 +26,7 @@
   V(ImportExpr)                     \
   V(MacroDef)                       \
   V(CallProcExpr)                   \
+  V(LoadInstanceMethodExpr)         \
   V(SetExpr)                        \
   V(Binding)                        \
   V(LetExpr)                        \
@@ -130,7 +131,7 @@ class Expression : public Object {  // TODO: should Expression inherit from Obje
     return false;
   }
 
-  virtual auto EvalToConstant() const -> Object* {
+  virtual auto EvalToConstant(LocalScope* scope) const -> Object* {
     return nullptr;
   }
 
@@ -282,7 +283,7 @@ class LiteralExpr : public Expression {
     return true;
   }
 
-  auto EvalToConstant() const -> Object* override {
+  auto EvalToConstant(LocalScope* scope) const -> Object* override {
     return value_;
   }
 
@@ -413,7 +414,7 @@ class BinaryOpExpr : public TemplateOpExpression<BinaryOp, 2> {
 #undef DEFINE_OP_CHECK
 
   auto IsConstantExpr() const -> bool override;
-  auto EvalToConstant() const -> Object* override;
+  auto EvalToConstant(LocalScope* scope) const -> Object* override;
   auto VisitChildren(ExpressionVisitor* vis) -> bool override;
   DECLARE_EXPRESSION(BinaryOpExpr);
 
@@ -1254,7 +1255,7 @@ class ListExpr : public SequenceExpr {
   ~ListExpr() override = default;
 
   auto IsConstantExpr() const -> bool override;
-  auto EvalToConstant() const -> Object* override;
+  auto EvalToConstant(LocalScope* scope) const -> Object* override;
   DECLARE_EXPRESSION(ListExpr);
 
  public:
@@ -1295,7 +1296,7 @@ class InstanceOfExpr : public TemplateExpression<1> {
   }
 
   auto IsConstantExpr() const -> bool override;
-  auto EvalToConstant() const -> Object* override;
+  auto EvalToConstant(LocalScope* scope) const -> Object* override;
   DECLARE_EXPRESSION(InstanceOfExpr);
 
  public:
@@ -1384,17 +1385,48 @@ class NewExpr : public Expression {
     return VisitArgs(vis);
   }
 
-  auto EvalToConstant() const -> Object* override {
-    return EvalToConstant(nullptr);
-  }
-
-  auto EvalToConstant(LocalScope* scope) const -> Object*;
+  auto EvalToConstant(LocalScope* scope) const -> Object* override;
   auto IsConstantExpr() const -> bool override;
   DECLARE_EXPRESSION(NewExpr);
 
  public:
   static inline auto New(Class* target, const ExpressionList& args) -> NewExpr* {
     return new NewExpr(target, args);
+  }
+};
+
+class LoadInstanceMethodExpr : Expression {
+ private:
+  Class* class_;
+  Symbol* name_;
+
+  LoadInstanceMethodExpr(Class* cls, Symbol* name) :
+    Expression(),
+    class_(cls),
+    name_(name) {
+    ASSERT(class_);
+    ASSERT(name_);
+  }
+
+ public:
+  ~LoadInstanceMethodExpr() override = default;
+
+  auto GetTargetClass() const -> Class* {
+    return class_;
+  }
+
+  auto GetTargetName() const -> Symbol* {
+    return name_;
+  }
+
+  auto IsConstantExpr() const -> bool override;
+  auto EvalToConstant(LocalScope* scope) const -> Object* override;
+  DECLARE_EXPRESSION(LoadInstanceMethodExpr);
+
+ public:
+  static inline auto New(Class* cls, Symbol* name) -> LoadInstanceMethodExpr* {
+    ASSERT(cls);
+    return new LoadInstanceMethodExpr(cls, name);
   }
 };
 

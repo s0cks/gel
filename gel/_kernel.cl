@@ -4,7 +4,7 @@
     "Returns the hashcode of value [v].")
   (defnative sizeof [o]
     "Returns the size of Object [o] in bytes.")
-  (defnative gel:docs? [o]
+  (defnative gel/docs? [o]
     "Returns the docstring attached to the supplied Object [o].")
   (defnative format [pattern args...]
     "Returns a formatted String using the supplied [pattern] and [args...].")
@@ -24,54 +24,71 @@
     "Sets the first value of Pair [p] to [v].")
   (defnative set-cdr! [p v]
     "Sets the second value of Pair [p] to [v].")
+  (defn count [seq]
+    "Returns the count of Seq [seq]."
+    (print (format "{} := {} Set?: {}" seq (type? seq) (Set? seq)))
+    (cond (Set? seq) (Set/count (Set seq))
+      (throw "Invalid State")))
+
   ;; ---------------------------------------------------------------------------------
   ;; Sets
   ;; ---------------------------------------------------------------------------------
-  (defnative set:contains [s o]
+  (defnative Set/contains [s o]
     "Returns whether or not Object [o] is in Set [s].")
-  (defnative set:size [s]
-    "Returns the size of Set [s].")
-  (defnative set:empty? [s]
+  (defnative Set/count [s]
+    "Returns the number of items in Set [s].")
+  (defnative Set/empty? [s]
     "Returns whether or not Set [s] is empty.")
+  ;; ---------------------------------------------------------------------------------
+
+  ;; ---------------------------------------------------------------------------------
+  ;; Arrays
+  ;; ---------------------------------------------------------------------------------
+  (defnative Array/get [a i]
+    "Returns the value at index [i] for Array [a].")
+  (defnative Array/set! [a i v]
+    "Sets the value at index [i] in Array [a] to [v].")
+  (defnative Array/count [a]
+    "Returns the length of Array [a].")
   ;; ---------------------------------------------------------------------------------
 
   ;; ---------------------------------------------------------------------------------
   ;; Debug Only - TODO: Reduce visibility
   ;; ---------------------------------------------------------------------------------
-  (defnative gel:minor-gc! []
+  (defnative gel/minor-gc! []
     "Performs a minor garbage collection cycle.")
-  (defnative gel:major-gc! []
+  (defnative gel/major-gc! []
     "Performs a major garbage collection cycle.")
-  (defnative gel:debug? []
+  (defnative gel/debug? []
     "Returns whether or not this is a debug instance of gelrt.")
-  (defnative gel:get-frame []
+  (defnative gel/get-frame []
     "Returns the current StackFrame from gelrt.")
-  (defnative gel:print-st []
+  (defnative gel/print-st []
     "Prints the current StackTrace for the gelrt.")
-  (defnative gel:get-locals []
+  (defnative gel/get-locals []
     "Returns the current LocalScope from gelrt.")
-  (defnative gel:get-classes []
+  (defnative gel/get-classes []
     "Returns a list of the current register Classes in gelrt.")
-  (defnative gel:get-target-triple []
+  (defnative gel/get-target-triple []
     "Returns the current target triple for gelrt.")
-  (defnative gel:get-natives []
+  (defnative gel/get-natives []
     "Returns a list of native functions register in gelrt.")
-  (defnative gel:compile-time? [f]
+  (defnative gel/compile-time? [f]
     "Returns the compilation time of a function [f] in nanoseconds.")
-  (defnative gel:get-roots []
+  (defnative gel/get-roots []
     "Returns the roots for the GC.")
-  (defn gel:inspect [o]
+  (defn gel/inspect [o]
     (when (#Procedure? o)
       (print (format "compiled in {}ns." (gel:compile-time? o)))))
-  (defnative gel:print-heap []
+  (defnative gel/print-heap []
     "Prints the heap information to the terminal.")
-  (defnative gel:print-new-zone []
+  (defnative gel/print-new-zone []
     "Prints the heap's new zone information to the terminal.")
-  (defnative gel:print-old-zone []
+  (defnative gel/print-old-zone []
     "Prints the heap's old zone information to the terminal.")
   (defn assert [test m] ;; TODO: convert to macro
     "Assert that Bool [test] is true, if not throw an Error w/ message [m]."
-    (when (and (gel:debug?) (not test))
+    (when (and (gel/debug?) (not test))
       (throw (Error m))))
   ;; ---------------------------------------------------------------------------------
 

@@ -40,9 +40,10 @@ auto Parser::ParseLiteralString() -> String* {
 }
 
 auto Parser::ParseSymbol() -> Symbol* {
-  const auto& next = NextToken();
-  LOG_IF(FATAL, next.kind != Token::kIdentifier) << "unexpected: " << next << ", expected: " << Token::kIdentifier;
-  ASSERT(next.kind == Token::kIdentifier);
+  const auto& next = NextToken();  // TODO: fix the weird logic where kNewExpr check is needed
+  LOG_IF(FATAL, (next.kind != Token::kIdentifier && next.kind != Token::kNewExpr))
+      << "unexpected: " << next << ", expected: " << Token::kIdentifier;
+  ASSERT(next.kind == Token::kIdentifier || next.kind == Token::kNewExpr);
   return Symbol::New(next.text);
 }
 
@@ -1104,7 +1105,7 @@ auto Parser::ParseDef() -> expr::Expression* {
   const auto value = ParseExpression();
   ASSERT(value);
   if (value->IsConstantExpr()) {
-    local->SetValue(value->EvalToConstant());
+    local->SetValue(value->EvalToConstant(scope));
     return nullptr;
   }
   return expr::SetExpr::New(local, value);

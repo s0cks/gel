@@ -16,6 +16,9 @@ class Namespace : public Object {
   friend class Script;
   friend class Parser;
 
+ public:
+  static constexpr const auto kPrefixChar = '/';
+
  private:
   Object* owner_ = nullptr;
   String* name_;
