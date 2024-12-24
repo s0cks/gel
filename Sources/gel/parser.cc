@@ -2,6 +2,8 @@
 
 #include <glog/logging.h>
 
+#include <utility>
+
 #include "gel/argument.h"
 #include "gel/common.h"
 #include "gel/expression.h"
@@ -51,21 +53,62 @@ auto Parser::ParseLiteralLambda() -> expr::LiteralExpr* {
   return expr::LiteralExpr::New(ParseLambda(Token::kFn));
 }
 
-auto Parser::ParseLiteralValue() -> Object* {
+auto Parser::ParseMap() -> expr::Expression* {
+  ExpectNext(Token::kLBrace);
+  expr::NewMapExpr::EntryList data{};
+  while (!PeekEq(Token::kRBrace)) {
+    const auto key = ParseSymbol();
+    ASSERT(key);
+    const auto value = ParseExpression();
+    ASSERT(value);
+    if (PeekEq(Token::kComma))
+      NextToken();
+    data.emplace_back(key, value);
+  }
+  ExpectNext(Token::kRBrace);
+  return expr::NewMapExpr::New(data);
+}
+
+auto Parser::ParseLiteralBool() -> Bool* {
   const auto& next = NextToken();
   switch (next.kind) {
     case Token::kLiteralTrue:
       return Bool::True();
     case Token::kLiteralFalse:
       return Bool::False();
+    default:
+      Unexpected(next, Token::AnyBool());
+      return nullptr;
+  }
+}
+
+auto Parser::ParseLiteralNumber() -> Number* {
+  const auto& next = NextToken();
+  switch (next.kind) {
     case Token::kLiteralLong:
       return Long::New(next.AsLong());
     case Token::kLiteralDouble:
       return Double::New(next.AsDouble());
+    default:
+      Unexpected(next, Token::AnyNumber());
+      return nullptr;
+  }
+}
+
+auto Parser::ParseLiteralValue() -> Object* {
+  const auto& next = PeekToken();
+  switch (next.kind) {
+    case Token::kLiteralFalse:
+    case Token::kLiteralTrue:
+      return ParseLiteralBool();
+    case Token::kLiteralLong:
+    case Token::kLiteralDouble:
+      return ParseLiteralNumber();
+
     case Token::kLiteralString:
-      return String::New(next.text);
+      return String::New(NextToken().text);
     case Token::kIdentifier:
-      return Symbol::New(next.text);
+      return Symbol::New(NextToken().text);
     default:
       LOG(FATAL) << "unexpected: " << NextToken();
       return nullptr;
@@ -75,6 +118,8 @@ auto Parser::ParseLiteralValue() -> Object* {
 auto Parser::ParseLiteralExpr() -> expr::Expression* {
   if (PeekEq(Token::kFn))
     return ParseLiteralLambda();
+  else if (PeekEq(Token::kLBrace))
+    return ParseMap();
   const auto value = ParseLiteralValue();
   ASSERT(value);
   return LiteralExpr::New(value);
@@ -607,6 +652,15 @@ auto Parser::NextToken() -> const Token& {
     case ']':
       Advance();
       return NextToken(Token::kRBracket);
+    case ',':
+      Advance();
+      return NextToken(Token::kComma);
+    case '{':
+      Advance();
+      return NextToken(Token::kLBrace);
+    case '}':
+      Advance();
+      return NextToken(Token::kRBrace);
     case '#': {
       switch (tolower(PeekChar(1))) {
         case 'f':

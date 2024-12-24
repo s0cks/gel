@@ -57,6 +57,13 @@ void NativeProcedure::InitNatives() {
   InitSetNative(count);
 #undef InitSetNative
 
+#define InitMapNative(Name) InitNative<map_##Name>()
+  InitMapNative(contains);
+  InitMapNative(empty);
+  InitMapNative(size);
+  InitMapNative(get);
+#undef InitMapNative
+
 #ifdef GEL_ENABLE_RX
 #define REGISTER_RX(Name) InitNative<rx_##Name>();
   REGISTER_RX(observer);
@@ -247,6 +254,42 @@ SET_PROCEDURE_F(empty) {
 }
 
 #undef SET_PROCEDURE_F
+
+#define MAP_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(map_##Name)
+MAP_PROCEDURE_F(contains) {
+  NativeArgument<0, Map> m(args);
+  if (!m)
+    return Throw(m.GetError());
+  NativeArgument<1> key(args);
+  if (!key)
+    return Throw(key.GetError());
+  return ReturnBool(m->Contains(key));
+}
+
+MAP_PROCEDURE_F(get) {
+  NativeArgument<0, Map> m(args);
+  if (!m)
+    return Throw(m.GetError());
+  NativeArgument<1> key(args);
+  if (!key)
+    return Throw(key.GetError());
+  return Return(m->Get(key));
+}
+
+MAP_PROCEDURE_F(size) {
+  NativeArgument<0, Map> m(args);
+  if (!m)
+    return Throw(m.GetError());
+  return ReturnLong(m->GetSize());
+}
+
+MAP_PROCEDURE_F(empty) {
+  NativeArgument<0, Map> m(args);
+  if (!m)
+    return Throw(m.GetError());
+  return ReturnBool(m->IsEmpty());
+}
+#undef MAP_PROCEDURE_F
 
 NATIVE_PROCEDURE_F(list) {
   if (args.empty())

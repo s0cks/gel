@@ -20,6 +20,7 @@
 
 namespace gel {
 class Parser {
+  using Severity = google::LogSeverity;
   DEFINE_NON_COPYABLE_TYPE(Parser);
 
  public:
@@ -115,8 +116,6 @@ class Parser {
   auto ParseMacro(const Token::Kind kind) -> Macro*;
   auto ParseNamespace() -> Namespace*;
 
-  auto ParseLiteralString() -> String*;
-  auto ParseSymbol() -> Symbol*;
   auto ParseLoadSymbol() -> LoadLocalInstr*;
   auto ParseArguments(ArgumentSet& args) -> bool;
   auto ParseExpressionList(expr::ExpressionList& expressions, const bool push_scope = true) -> bool;
@@ -124,10 +123,18 @@ class Parser {
   auto ParseSymbolList(SymbolList& symbols) -> bool;
   auto ParseIdentifier(std::string& result) -> bool;
   auto ParseClauseList(expr::ClauseList& clauses) -> bool;
+
+  auto ParseSymbol() -> Symbol*;
+
+  auto ParseLiteralBool() -> Bool*;
+  auto ParseLiteralNumber() -> Number*;
+
   auto ParseLiteralValue() -> Object*;
+  auto ParseLiteralString() -> String*;
   auto ParseLiteralLambda() -> expr::LiteralExpr*;
 
   // Expressions
+  auto ParseMap() -> expr::Expression*;
   auto ParseSetExpr() -> expr::SetExpr*;
   auto ParseCallExpr() -> expr::Expression*;
   auto ParseLiteralExpr() -> expr::Expression*;
@@ -276,6 +283,16 @@ class Parser {
 
   void PopScope();
   auto PushScope() -> LocalScope*;
+
+  template <const Severity S = google::FATAL>
+  void Unexpected(const Token& actual, const Token::Kind expected) {
+    LOG_AT_LEVEL(S) << "unexpected " << actual << ", expected: " << expected;
+  }
+
+  template <const Severity S = google::FATAL>
+  void Unexpected(const Token& actual, const Token::KindSet& expected) {
+    LOG_AT_LEVEL(S) << "unexpected " << actual << ", expected: " << expected;
+  }
 
  public:
   explicit Parser(std::istream& stream, LocalScope* scope) :

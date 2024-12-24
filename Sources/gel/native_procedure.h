@@ -50,6 +50,14 @@ class NativeProcedure : public Procedure {
     return Return(T::New(args...));
   }
 
+  inline auto ReturnBool(const bool rhs) const -> bool {
+    return Return(Bool::Box(rhs));
+  }
+
+  inline auto ReturnLong(const uint64_t rhs) const -> bool {
+    return ReturnNew<Long>(rhs);
+  }
+
   inline auto Throw(Error* error) const -> bool {
     ASSERT(error);
     LOG(ERROR) << "error: " << error->ToString();

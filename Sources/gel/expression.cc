@@ -494,4 +494,30 @@ auto LoadInstanceMethodExpr::ToString() const -> std::string {
   helper.AddField("name", GetTargetName());
   return helper;
 }
+
+auto NewMapExpr::IsConstantExpr() const -> bool {
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return false;
+}
+
+auto NewMapExpr::EvalToConstant(LocalScope* scope) const -> Object* {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return nullptr;
+}
+
+auto NewMapExpr::ToString() const -> std::string {
+  ToStringHelper<NewMapExpr> helper;
+  helper.AddField("num_entries", GetNumberOfChildren());
+  return helper;
+}
+
+auto NewMapExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
+  ASSERT(vis);
+  for (const auto& e : data()) {
+    ASSERT(e.first && e.second);
+    if (!e.second->Accept(vis))
+      return false;
+  }
+  return true;
+}
 }  // namespace gel::expr

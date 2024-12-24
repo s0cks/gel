@@ -116,6 +116,19 @@ class Object {
   }
 };
 
+struct ObjectHasher {
+  auto operator()(Object* rhs) const -> size_t {
+    ASSERT(rhs);
+    return rhs->HashCode();
+  }
+};
+
+struct ObjectComparator {
+  auto operator()(Object* lhs, Object* rhs) const -> bool {
+    return lhs->Equals(rhs);
+  }
+};
+
 namespace ir {
 class GraphEntryInstr;
 }
@@ -518,20 +531,7 @@ class Symbol : public StringObject {
 
 class Set : public Object {
  public:
-  struct Hasher {
-    auto operator()(Object* rhs) const -> size_t {
-      ASSERT(rhs);
-      return rhs->HashCode();
-    }
-  };
-
-  struct Comparator {
-    auto operator()(Object* lhs, Object* rhs) const -> bool {
-      return lhs->Equals(rhs);
-    }
-  };
-
-  using StorageType = std::unordered_set<Object*, Hasher, Comparator>;
+  using StorageType = std::unordered_set<Object*, ObjectHasher, ObjectComparator>;
 
  private:
   StorageType data_;
@@ -556,7 +556,7 @@ class Set : public Object {
     return data().size();
   }
 
-  inline auto IsEmpty() const -> uword {
+  inline auto IsEmpty() const -> bool {
     return data().empty();
   }
 
@@ -575,6 +575,51 @@ class Set : public Object {
 
   static inline auto Empty() -> Set* {
     return Of();
+  }
+};
+
+class Map : public Object {
+ public:
+  using StorageType = std::unordered_map<Object*, Object*, ObjectHasher, ObjectComparator>;
+  using Iter = StorageType::iterator;
+  using ConstIter = StorageType::const_iterator;
+
+ private:
+  StorageType data_;
+
+  explicit Map(const StorageType& data) :
+    Object(),
+    data_(data) {}
+
+  inline auto Find(Object* rhs) const -> ConstIter {
+    return data().find(rhs);
+  }
+
+ public:
+  ~Map() override = default;
+
+  auto data() const -> const StorageType& {
+    return data_;
+  }
+
+  auto GetSize() const -> uword {
+    return data_.size();
+  }
+
+  auto IsEmpty() const -> bool {
+    return data_.empty();
+  }
+
+  auto Contains(Object* rhs) const -> bool {
+    return Find(rhs) != std::end(data());
+  }
+
+  auto Get(Object* key) const -> Object*;
+  DECLARE_TYPE(Map);
+
+ public:
+  static inline auto New(const StorageType& data = {}) -> Map* {
+    return new Map(data);
   }
 };
 

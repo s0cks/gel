@@ -22,16 +22,31 @@ _DECLARE_NATIVE_PROCEDURE(array_length, "Array/count");  // TODO: rename
 DECLARE_NATIVE_PROCEDURE(hashcode);
 _DECLARE_NATIVE_PROCEDURE(gel_sizeof, "sizeof");
 
+// ----------------------------------------------------------------------------------------------------
 // Set
 // ----------------------------------------------------------------------------------------------------
 #define _DECLARE_SET_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(set_##Name, "Set/" Sym)
 #define DECLARE_SET_PROCEDURE(Name)       _DECLARE_SET_PROCEDURE(Name, #Name);
-// procedures
-// ----------------------------------------------------------------------------------------------------
+
 DECLARE_SET_PROCEDURE(contains);
 DECLARE_SET_PROCEDURE(count);
 _DECLARE_SET_PROCEDURE(empty, "empty?");
+
+#undef _DECLARE_SET_PROCEDURE
+#undef DECLARE_SET_PROCEDURE
 // ----------------------------------------------------------------------------------------------------
+
+// ----------------------------------------------------------------------------------------------------
+// Map
+// ----------------------------------------------------------------------------------------------------
+#define _DECLARE_MAP_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(map_##Name, "Map/" Sym)
+#define DECLARE_MAP_PROCEDURE(Name)       _DECLARE_MAP_PROCEDURE(Name, #Name);
+
+DECLARE_MAP_PROCEDURE(contains);
+DECLARE_MAP_PROCEDURE(size);
+DECLARE_MAP_PROCEDURE(get);
+_DECLARE_MAP_PROCEDURE(empty, "empty?");
+
 #undef _DECLARE_SET_PROCEDURE
 #undef DECLARE_SET_PROCEDURE
 // ----------------------------------------------------------------------------------------------------

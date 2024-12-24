@@ -31,6 +31,7 @@ class Definition;
   V(Error)                         \
   V(Namespace)                     \
   V(Set)                           \
+  V(Map)                           \
   V(Module)
 
 #define FOR_EACH_TYPE(V)     \

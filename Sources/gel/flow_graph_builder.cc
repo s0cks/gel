@@ -276,6 +276,25 @@ auto EffectVisitor::VisitImportExpr(expr::ImportExpr* expr) -> bool {
   return true;
 }
 
+auto EffectVisitor::VisitNewMapExpr(expr::NewMapExpr* expr) -> bool {
+  ASSERT(expr);
+  for (const auto& e : expr->data()) {
+    ASSERT(e.first && e.second);
+    Do(ir::ConstantInstr::New(e.first));
+
+    ValueVisitor for_value(GetOwner());
+    if (!e.second->Accept(&for_value)) {
+      LOG(FATAL) << "failed to visit map entry: " << e.first << " := " << e.second;
+      return false;
+    }
+    Append(for_value);
+  }
+  const auto defn = Bind(ir::NewInstr::New(Map::GetClass(), expr->GetNumberOfChildren() * 2));
+  ASSERT(defn);
+  ReturnDefinition(defn);
+  return true;
+}
+
 static inline auto IsLiteralSymbol(expr::LiteralExpr* expr, Symbol* value) -> bool {
   return expr && expr->HasValue() && expr->GetValue()->IsSymbol() && expr->GetValue()->AsSymbol()->Equals(value);
 }
@@ -734,7 +753,8 @@ auto EffectVisitor::VisitLiteralExpr(LiteralExpr* p) -> bool {
   if (value->IsSymbol()) {
     LocalVariable* local = nullptr;
     if (!GetOwner()->GetScope()->Lookup(value->AsSymbol(), &local)) {
-      LOG(FATAL) << "failed to find local: " << value->AsSymbol();
+      ReturnDefinition(ir::ConstantInstr::New(value->AsSymbol()));
+      return true;
     }
     ASSERT(local);
     if (local->HasValue()) {

@@ -119,6 +119,7 @@ void Object::Init() {
   Namespace::InitClass();
   Module::InitClass();
   Seq::InitClass();
+  Map::InitClass();
   // exec
   Script::InitClass();
   Procedure::InitClass();
@@ -568,6 +569,52 @@ auto Set::New(const ObjectList& args) -> Set* {
 auto Set::CreateClass() -> Class* {
   ASSERT(kClass == nullptr);
   return Class::New(Seq::GetClass(), "Set");
+}
+
+auto Map::Get(Object* key) const -> Object* {
+  ASSERT(key);
+  const auto pos = Find(key);
+  if (pos == std::end(data()))
+    return Null();
+  return pos->second;
+}
+
+auto Map::HashCode() const -> uword {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return 0;
+}
+
+auto Map::Equals(Object* rhs) const -> bool {
+  if (!rhs || !rhs->IsMap())
+    return false;
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
+
+auto Map::ToString() const -> std::string {
+  ToStringHelper<Map> helper;
+  helper.AddField("size", GetSize());
+  return helper;
+}
+
+auto Map::New(const ObjectList& args) -> Map* {
+  ASSERT(args.empty() || (args.size() % 2 == 0));
+  if (args.empty())
+    return Map::New();
+  StorageType data{};
+  for (auto idx = 0; idx < args.size(); idx += 2) {
+    const auto key = args[idx];
+    ASSERT(key);
+    const auto value = args[idx + 1];
+    ASSERT(value);
+    data.insert({key, value});  // TODO: prolly should check this insertion
+  }
+  return Map::New(data);
+}
+
+auto Map::CreateClass() -> Class* {
+  ASSERT(kClass == nullptr);
+  return Class::New(Seq::GetClass(), "Map");
 }
 
 auto Seq::New(const ObjectList& args) -> Seq* {

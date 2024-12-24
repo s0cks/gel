@@ -45,9 +45,12 @@ struct Position {
   V(Dot)                      \
   V(Range)                    \
   V(Identifier)               \
+  V(LBrace)                   \
+  V(RBrace)                   \
   V(LBracket)                 \
   V(RBracket)                 \
   V(Question)                 \
+  V(Comma)                    \
   V(LiteralNumber)            \
   V(LiteralDouble)            \
   V(LiteralLong)              \
@@ -57,13 +60,17 @@ struct Position {
 
 struct Token {
  public:
+  // clang-format off
   enum Kind : int16_t {
     kEndOfStream = -1,
     kInvalid = 0,
-#define DEFINE_TOKEN(Name) k##Name,
+#define DEFINE_TOKEN(Name) \
+    k##Name,
     FOR_EACH_TOKEN(DEFINE_TOKEN)
 #undef DEFINE_TOKEN
+    kTotalNumberOfTokens,
   };
+  // clang-format on
 
   friend auto operator<<(std::ostream& stream, const Kind& rhs) -> std::ostream& {
     switch (rhs) {
@@ -77,6 +84,31 @@ struct Token {
       default:
         return stream << "Unknown Token::Kind: " << static_cast<uint16_t>(rhs);
     }
+  }
+
+  using KindSet = std::bitset<kTotalNumberOfTokens>;
+
+  static inline constexpr auto SetOf(const Token::Kind a, const Token::Kind b) -> KindSet {
+    KindSet data;
+    data.set(a);
+    data.set(b);
+    return data;
+  }
+
+  static inline constexpr auto SetOf(const std::vector<Token::Kind>& kinds) -> KindSet {
+    KindSet data;
+    std::ranges::for_each(kinds, [&data](Token::Kind kind) {
+      data.set(kind);
+    });
+    return data;
+  }
+
+  static inline constexpr auto AnyBool() -> KindSet {
+    return SetOf(Token::kLiteralTrue, Token::kLiteralFalse);
+  }
+
+  static inline constexpr auto AnyNumber() -> KindSet {
+    return SetOf(Token::kLiteralDouble, Token::kLiteralLong);
   }
 
  public:
@@ -94,6 +126,7 @@ struct Token {
 
   auto IsLiteral() const -> bool {
     switch (kind) {
+      case kLBrace:
       case kLiteralTrue:
       case kLiteralFalse:
       case kLiteralString:
@@ -174,6 +207,10 @@ struct Token {
     return atoi(text.data());
   }
 
+  auto Test(const KindSet& kinds) const -> bool {
+    return kinds.test(kind);
+  }
+
   auto operator==(const Token::Kind& rhs) const -> bool {
     return kind == rhs;
   }
@@ -188,6 +225,14 @@ struct Token {
     return stream;
   }
 };
+
+static inline auto operator<<(std::ostream& stream, const Token::KindSet& rhs) -> std::ostream& {
+  for (auto idx = 0; idx < Token::kTotalNumberOfTokens; idx++) {
+    if (rhs.test(idx))
+      stream << static_cast<Token::Kind>(idx) << " ";
+  }
+  return stream;
+}
 }  // namespace gel
 
 #endif  // GEL_TOKEN_H
