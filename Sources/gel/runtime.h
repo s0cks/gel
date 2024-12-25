@@ -94,6 +94,7 @@ class Runtime : public ExecutionStack {
   friend class Interpreter;
   friend class BytecodeInterpreter;
   friend class ModuleLoader;
+  friend class RuntimeTest;
   friend class NativeProcedure;
   friend class RuntimeScopeScope;
   friend class RuntimeStackIterator;

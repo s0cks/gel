@@ -7,6 +7,7 @@
 namespace gel {
 class Label {
   friend class Assembler;
+  friend class AssemblerTest;
   DEFINE_DEFAULT_COPYABLE_TYPE(Label);
 
  private:
@@ -21,8 +22,13 @@ class Label {
   }
 
  public:
-  Label() = default;
+  explicit Label(const word pos = 0) :
+    pos_(pos) {}
   ~Label() = default;
+
+  auto pos() const -> word {
+    return pos_;
+  }
 
   auto GetPos() const -> word {
     return IsBound() ? (-pos_ - static_cast<word>(kWordSize)) : (pos_ - static_cast<word>(kWordSize));
@@ -76,6 +82,10 @@ class AssemblerBuffer {
     return start_;
   }
 
+  auto GetStartingAddressPointer() const -> void* {
+    return (void*)GetStartingAddress();  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  }
+
   auto GetCurrentAddress() const -> uword {
     return current_;
   }
@@ -107,6 +117,10 @@ class AssemblerBuffer {
   void StoreAt(const uword pos, const T rhs) {
     ASSERT(pos >= 0 && pos <= GetAllocatedSize());
     *At<T>(pos) = rhs;
+  }
+
+  void Clear() {
+    memset(GetStartingAddressPointer(), 0, GetAllocatedSize());
   }
 };
 }  // namespace gel

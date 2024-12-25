@@ -12,6 +12,7 @@
 
 namespace gel {
 using namespace ::testing;
+using namespace gel::testing;
 
 class LocalVariableTest : public Test {};
 

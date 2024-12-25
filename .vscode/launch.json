@@ -41,7 +41,7 @@
         "test-new.cl",
         "test-docstring.cl",
         "test-namespaces.cl",
-        "test-array.cl"
+        "test-array.cl",
       ],
       "default": "while.cl",
       "description": "A value that is even."
@@ -61,7 +61,8 @@
         "Parser",
         "LocalVariable",
         "LocalScope",
-        "FlowGraph"
+        "FlowGraph",
+        "Assembler"
       ]
     },
     {
@@ -98,7 +99,7 @@
       "name": "Run Tests",
       "type": "lldb",
       "request": "launch",
-      "program": "${workspaceFolder}/build/Tests/scheme-tests",
+      "program": "${workspaceFolder}/build/Tests/gel-tests",
       "args": [
         "--gtest_filter=${input:test-filter}",
         "--gtest_color=yes",
@@ -114,7 +115,7 @@
       "name": "Run Test Suite",
       "type": "lldb",
       "request": "launch",
-      "program": "${workspaceFolder}/build/Tests/scheme-tests",
+      "program": "${workspaceFolder}/build/Tests/gel-tests",
       "args": [
         "--gtest_filter=${input:test-suite}Test*",
         "--gtest_color=yes",

@@ -5,7 +5,6 @@
 #include "gel/expression.h"  //TODO: remove include
 #include "gel/platform.h"
 
-namespace gel {
 #define FOR_EACH_BYTECODE(V) \
   V(Nop)                     \
   V(Pop)                     \
@@ -40,6 +39,7 @@ namespace gel {
   FOR_EACH_UNARY_OP(V)       \
   FOR_EACH_BINARY_OP(V)
 
+namespace gel::vm {
 using RawBytecode = uint8_t;
 class Bytecode {
   DEFINE_DEFAULT_COPYABLE_TYPE(Bytecode);
@@ -250,6 +250,6 @@ class Bytecode {
   }
 };
 static_assert(sizeof(Bytecode) == sizeof(uint8_t), "expected sizeof(Bytecode) to equal sizeof(uint8_t).");
-}  // namespace gel
+}  // namespace gel::vm
 
 #endif  // GEL_BYTECODE_H

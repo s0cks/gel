@@ -1,4 +1,3 @@
-#include "gel/bytecode.h"
 #include "gel/common.h"
 #include "gel/expression.h"
 #include "gel/flow_graph_compiler.h"

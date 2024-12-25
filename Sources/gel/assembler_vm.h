@@ -13,8 +13,11 @@
 #include "gel/to_string_helper.h"
 
 namespace gel {
+using namespace vm;
+
 class NativeProcedure;
 class Assembler {
+  friend class AssemblerTest;
   DEFINE_NON_COPYABLE_TYPE(Assembler);
 
  private:
@@ -80,6 +83,18 @@ class Assembler {
   inline void CastTo(Class* cls) {
     EmitOp(Bytecode::kCast);
     EmitAddress(cls);
+  }
+
+  inline void dup() {
+    return EmitOp(Bytecode::kDup);
+  }
+
+  inline void nop() {
+    return EmitOp(Bytecode::kNop);
+  }
+
+  inline void pop() {
+    return EmitOp(Bytecode::kPop);
   }
 
   inline void ret() {

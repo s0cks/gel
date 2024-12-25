@@ -24,11 +24,6 @@
     "Sets the first value of Pair [p] to [v].")
   (defnative set-cdr! [p v]
     "Sets the second value of Pair [p] to [v].")
-  (defn count [seq]
-    "Returns the count of Seq [seq]."
-    (print (format "{} := {} Set?: {}" seq (type? seq) (Set? seq)))
-    (cond (Set? seq) (Set/count (Set seq))
-      (throw "Invalid State")))
 
   ;; ---------------------------------------------------------------------------------
   ;; Sets
@@ -52,6 +47,8 @@
     "Returns the number of items in Map [m].")
   (defnative Map/empty? [m]
     "Returns whether or not Map [m] is empty.")
+  (defnative Map/remove [m k]
+    "Removes the value of key [k] from Map [m].")
   ;; ---------------------------------------------------------------------------------
 
   ;; ---------------------------------------------------------------------------------

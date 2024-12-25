@@ -6,13 +6,13 @@
 #include "gel/error.h"
 #include "gel/lambda.h"
 #include "gel/macro.h"
+#include "gel/module.h"
 #include "gel/native_procedure.h"
 #include "gel/object.h"
 #include "gel/rx.h"
 #include "gel/script.h"
-#include "gtest/gtest.h"
 
-namespace gel {
+namespace gel::testing {
 using namespace ::testing;
 
 #define DEFINE_TYPE_ASSERTION(Name)                                                                         \
@@ -53,6 +53,6 @@ static inline auto IsSymbol(Object* rhs, const char* expected) -> AssertionResul
     return AssertionFailure() << "expected " << rhs->ToString() << " value to be: " << expected;
   return AssertionSuccess();
 }
-}  // namespace gel
+}  // namespace gel::testing
 
 #endif  // GEL_TYPE_ASSERTIONS_H

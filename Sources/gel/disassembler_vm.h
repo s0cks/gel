@@ -11,6 +11,8 @@
 #include "gel/section.h"
 
 namespace gel {
+using namespace vm;
+
 class BytecodeDecoder {
   DEFINE_NON_COPYABLE_TYPE(BytecodeDecoder);
 
