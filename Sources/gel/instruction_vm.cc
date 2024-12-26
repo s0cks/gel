@@ -2,6 +2,7 @@
 #include "gel/expression.h"
 #include "gel/flow_graph_compiler.h"
 #include "gel/instruction.h"
+#include "gel/native_procedure.h"
 // TODO: add platform guard
 
 namespace gel::ir {
@@ -116,7 +117,7 @@ void InvokeInstr::Compile(FlowGraphCompiler* compiler) {
 
 void InvokeNativeInstr::Compile(FlowGraphCompiler* compiler) {
   ASSERT(compiler);
-  __ invokenative(GetNumberOfArgs());
+  __ invokenative(GetNativeProcedure());
 }
 
 void InvokeDynamicInstr::Compile(FlowGraphCompiler* compiler) {

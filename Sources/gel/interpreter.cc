@@ -134,9 +134,9 @@ void BytecodeInterpreter::InvokeDynamic() {
 }
 
 void BytecodeInterpreter::InvokeNative() {
-  const auto func = POP;
+  const auto func = NextObjectPointer();
   ASSERT(func && func->IsNativeProcedure());
-  const auto num_args = NextUWord();
+  const auto num_args = func->AsNativeProcedure()->GetNumberOfArgs();
   return GetRuntime()->CallWithNArgs(func->AsNativeProcedure(), num_args);
 }
 

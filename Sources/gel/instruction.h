@@ -36,6 +36,7 @@ namespace gel {
 class Assembler;
 class EffectVisitor;
 class ClauseVisitor;
+class NativeProcedure;
 class FlowGraphBuilder;
 class FlowGraphCompiler;
 
@@ -431,6 +432,16 @@ class ThrowInstr : public Instruction {
   }
 };
 
+class TemplateInvokeInstr : public Definition {
+  DEFINE_NON_COPYABLE_TYPE(TemplateInvokeInstr);
+
+ protected:
+  TemplateInvokeInstr() = default;
+
+ public:
+  ~TemplateInvokeInstr() override = default;
+};
+
 class InvokeInstr : public Definition {
  private:
   Definition* target_;
@@ -498,22 +509,25 @@ class InvokeDynamicInstr : public Definition {
     return new InvokeDynamicInstr(target, num_args);
   }
 };
-
 class InvokeNativeInstr : public InvokeInstr {
  protected:
-  explicit InvokeNativeInstr(Definition* target, const uint64_t num_args) :
-    InvokeInstr(target, num_args) {}
+  explicit InvokeNativeInstr(Definition* target) :
+    InvokeInstr(target, 0) {}
 
  public:
   ~InvokeNativeInstr() override = default;
 
+  auto GetNativeProcedure() const -> NativeProcedure* {
+    ASSERT(GetTarget()->IsConstantInstr() && GetTarget()->AsConstantInstr()->GetValue()->IsNativeProcedure());
+    return GetTarget()->AsConstantInstr()->GetValue()->AsNativeProcedure();
+  }
+
   DECLARE_INSTRUCTION(InvokeNativeInstr);
 
  public:
-  static inline auto New(Definition* target, const uint64_t num_args = 0) -> InvokeNativeInstr* {
+  static inline auto New(Definition* target) -> InvokeNativeInstr* {
     ASSERT(target);
-    ASSERT(num_args >= 0);
-    return new InvokeNativeInstr(target, num_args);
+    return new InvokeNativeInstr(target);
   }
 };
 

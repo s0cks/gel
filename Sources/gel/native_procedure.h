@@ -96,6 +96,10 @@ class NativeProcedure : public Procedure {
     return args_;
   }
 
+  inline auto GetNumberOfArgs() const -> uword {
+    return args_.size();
+  }
+
   auto GetDocs() const -> String* {
     return docs_;
   }

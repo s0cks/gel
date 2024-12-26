@@ -142,9 +142,10 @@ class Assembler {
     Emit(num_args);
   }
 
-  inline void invokenative(const uword num_args) {
+  inline void invokenative(Procedure* func) {
+    ASSERT(func);
     EmitOp(Bytecode::kInvokeNative);
-    Emit(num_args);
+    EmitAddress(func);
   }
 
   void th() {

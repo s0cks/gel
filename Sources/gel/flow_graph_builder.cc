@@ -86,23 +86,26 @@ void EffectVisitor::AddInstanceOf(ir::Definition* defn, Class* cls) {
 auto EffectVisitor::CreateCallFor(ir::Definition* defn, const uword num_args) -> ir::InvokeInstr* {
   ASSERT(defn);
   ASSERT(num_args >= 0);
+  if (IsNativeCall(defn)) {
+    const auto native = defn->AsConstantInstr()->GetValue()->AsNativeProcedure();
+    ASSERT(native);
+    return ir::InvokeNativeInstr::New(defn);
+  }
   Do(defn);
-  if (IsNativeCall(defn))
-    return ir::InvokeNativeInstr::New(defn, num_args);
   return ir::InvokeInstr::New(defn, num_args);
 }
 
 auto EffectVisitor::ReturnCall(ir::InvokeInstr* instr) -> bool {
-  if (gel::IsPedantic())
-    AddInstanceOf(instr, instr->IsInvokeNativeInstr() ? NativeProcedure::GetClass() : Procedure::GetClass());
+  if (gel::IsPedantic() && !instr->IsInvokeNativeInstr())
+    AddInstanceOf(instr, Procedure::GetClass());
   ReturnDefinition(instr);
   return true;
 }
 
 auto EffectVisitor::ReturnCallTo(ir::Definition* defn, const uword num_args) -> bool {
   const auto invoke = CreateCallFor(defn, num_args);
-  if (gel::IsPedantic())
-    AddInstanceOf(defn, invoke->IsInvokeNativeInstr() ? NativeProcedure::GetClass() : Procedure::GetClass());
+  if (gel::IsPedantic() && !invoke->IsInvokeNativeInstr())
+    AddInstanceOf(defn, Procedure::GetClass());
   ReturnDefinition(invoke);
   return true;
 }
@@ -128,7 +131,6 @@ auto EffectVisitor::VisitCallProcExpr(CallProcExpr* expr) -> bool {
     return false;
   }
   ASSERT(for_target.HasValue());
-  Append(for_target);
   return ReturnCallTo(for_target.GetValue(), expr->GetNumberOfArgs());
 }
 
@@ -398,7 +400,7 @@ auto RxEffectVisitor::VisitRxOpExpr(expr::RxOpExpr* expr) -> bool {
   if (IsNativeCall(call_target)) {
     if (IsPedantic())
       AddInstanceOf(call_target, NativeProcedure::GetClass());
-    Add(ir::InvokeNativeInstr::New(call_target, expr->GetNumberOfChildren() + 1));
+    Add(ir::InvokeNativeInstr::New(call_target));
   } else {
     if (gel::IsPedantic())
       AddInstanceOf(call_target, Procedure::GetClass());
