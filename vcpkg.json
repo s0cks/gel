@@ -5,8 +5,9 @@
     "gflags",
     "glog",
     "gtest",
+    "reactiveplusplus",
     "tracy",
     "units",
-    "reactiveplusplus"
+    "libuv"
   ]
 }

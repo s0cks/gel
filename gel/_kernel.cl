@@ -24,6 +24,8 @@
     "Sets the first value of Pair [p] to [v].")
   (defnative set-cdr! [p v]
     "Sets the second value of Pair [p] to [v].")
+  (defnative dlopen [p]
+    "Opens the shared library from file at path [p].")
 
   ;; ---------------------------------------------------------------------------------
   ;; Sets
@@ -47,8 +49,9 @@
     "Returns the number of items in Map [m].")
   (defnative Map/empty? [m]
     "Returns whether or not Map [m] is empty.")
-  (defnative Map/remove [m k]
-    "Removes the value of key [k] from Map [m].")
+  ; TODO:
+  ; (defnative Map/remove [m k]
+  ;   "Removes the value of key [k] from Map [m].")
   ;; ---------------------------------------------------------------------------------
 
   ;; ---------------------------------------------------------------------------------

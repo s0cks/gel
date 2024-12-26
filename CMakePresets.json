@@ -41,7 +41,7 @@
         "CPPFLAGS": "$penv{CPPFLAGS} -I$env{LLVM_HOME}/include"
       },
       "cacheVariables": {
-        "VCPKG_TARGET_TRIPLET": "arm64-osx",
+        "VCPKG_TARGET_TRIPLET": "arm64-osx-dynamic",
         "CMAKE_C_COMPILER": "clang",
         "CMAKE_CXX_COMPILER": "clang++"
       },

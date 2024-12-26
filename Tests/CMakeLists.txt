@@ -13,7 +13,7 @@ target_include_directories(gel-tests
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
          ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(gel-tests
-  PUBLIC gelle GTest::gtest GTest::gmock)
+  PUBLIC gelle GTest::gtest GTest::gmock gflags::gflags)
 
 if(ENABLE_COVERAGE)
   create_coverage_target(gel-tests ${SCHEME_TEST_SOURCES})

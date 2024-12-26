@@ -73,5 +73,4 @@ auto NativeProcedure::ToString() const -> std::string {
     helper.AddField("docs", GetDocs());
   return helper;
 }
-
 }  // namespace gel

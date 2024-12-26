@@ -4,6 +4,7 @@
 #include <fmt/base.h>
 #include <fmt/format.h>
 
+#include <cstdlib>
 #include <exception>
 #include <iostream>
 #include <random>
@@ -26,6 +27,7 @@
 #include "gel/procedure.h"
 #include "gel/runtime.h"
 #include "gel/rx.h"
+#include "gel/shared_lib.h"
 #include "gel/stack_frame.h"
 #include "gel/type.h"
 #include "gel/zone.h"
@@ -50,6 +52,7 @@ void NativeProcedure::InitNatives() {
   InitNative<array_set>();
   InitNative<array_length>();
   InitNative<gel_docs>();
+  InitNative<dlopen>();
 
 #define InitSetNative(Name) InitNative<set_##Name>()
   InitSetNative(contains);
@@ -194,6 +197,24 @@ NATIVE_PROCEDURE_F(import) {
 NATIVE_PROCEDURE_F(print) {
   ASSERT(!args.empty());
   PrintValue(std::cout, args[0]) << std::endl;
+  return ReturnNull();
+}
+
+NATIVE_PROCEDURE_F(dlopen) {
+  NativeArgument<0, String> filename(args);
+  if (!filename)
+    return Throw(filename.GetError());
+  SharedLibrary lib(filename->Get());
+  const auto get_plugin_name = lib.DlSym<PluginGetNameFunc>("GetPluginName");
+  const auto name = get_plugin_name();
+  DLOG(INFO) << "initializing " << name << " plugin....";
+  // TODO: better lib open error detection
+  const auto init_plugin = lib.DlSym<PluginInitCallback>("InitPlugin");
+  const auto status = init_plugin();
+  if (status != EXIT_SUCCESS) {
+    LOG(ERROR) << "failed to initialize the " << name << " plugin: " << status;
+    return ReturnLong(status);
+  }
   return ReturnNull();
 }
 

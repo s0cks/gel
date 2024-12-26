@@ -21,6 +21,7 @@ _DECLARE_NATIVE_PROCEDURE(array_set, "Array/set!");
 _DECLARE_NATIVE_PROCEDURE(array_length, "Array/count");  // TODO: rename
 DECLARE_NATIVE_PROCEDURE(hashcode);
 _DECLARE_NATIVE_PROCEDURE(gel_sizeof, "sizeof");
+DECLARE_NATIVE_PROCEDURE(dlopen);
 
 // ----------------------------------------------------------------------------------------------------
 // Set

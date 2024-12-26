@@ -387,6 +387,8 @@ using OptionalNativeArgument = NativeArgument<Index, T, false>;
 template <const uword Index, class T>
 using RequiredNativeArgument = NativeArgument<Index, T>;
 
+using PluginInitCallback = int (*)();
+using PluginGetNameFunc = const char* (*)();
 }  // namespace gel
 
 #endif  // GEL_NATIVE_PROCEDURE_H
