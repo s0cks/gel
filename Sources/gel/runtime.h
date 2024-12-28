@@ -17,6 +17,7 @@
 #include "gel/natives.h"
 #include "gel/object.h"
 #include "gel/stack_frame.h"
+#include "gel/type_traits.h"
 
 namespace gel {
 DECLARE_bool(log_script_instrs);
@@ -92,7 +93,7 @@ class Runtime : public ExecutionStack {
   friend class Repl;
   friend class Lambda;
   friend class Interpreter;
-  friend class BytecodeInterpreter;
+  friend class Interpreter;
   friend class ModuleLoader;
   friend class RuntimeTest;
   friend class NativeProcedure;
@@ -103,7 +104,7 @@ class Runtime : public ExecutionStack {
  private:
   LocalScope* init_scope_;
   LocalScope* curr_scope_;
-  BytecodeInterpreter interpreter_;
+  Interpreter interpreter_;
   std::stack<StackFrame> stack_{};
   bool executing_ = false;
 
@@ -119,22 +120,40 @@ class Runtime : public ExecutionStack {
       std::ranges::reverse(std::begin(result), std::end(result));
   }
 
-  inline void CallWithNArgs(Lambda* lambda, const uword num_args) {
-    ASSERT(lambda);
+  template <class E>
+  inline void CallWithNArgs(E* exec, const uword num_args, std::enable_if_t<gel::is_executable<E>::value>* = nullptr) {
+    ASSERT(exec);
     ASSERT(num_args >= 0);
     std::vector<Object*> args{};
-    PopN(args, num_args, true);
-    ASSERT(num_args == args.size());
-    return Call(lambda, args);
-  }
-
-  inline void CallWithNArgs(NativeProcedure* native, const uword num_args) {
-    ASSERT(native);
-    ASSERT(num_args >= 0);
-    std::vector<Object*> args{};
-    PopN(args, num_args, true);
-    ASSERT(num_args == args.size());
-    return Call(native, args);
+    word remaining = static_cast<word>(num_args);
+    for (const auto& arg : exec->GetArgs()) {
+      if (arg.IsVararg()) {
+        while (remaining > 0) {
+          const auto value = Pop();
+          args.push_back(value);
+          remaining--;
+        }
+        break;
+      } else if (remaining > 0) {
+        const auto value = Pop();
+        args.push_back(value);
+        remaining--;
+        continue;
+      }
+      ASSERT(remaining <= 0);
+      if (arg.IsOptional()) {
+        remaining--;
+        continue;
+      }
+      LOG(FATAL) << arg << " is not optional.";
+    }
+    std::ranges::reverse(std::begin(args), std::end(args));
+    while (remaining < 0) {
+      args.push_back(Null());
+      remaining++;
+    }
+    ASSERT(exec->GetNumberOfArgs() == args.size());
+    return Call(exec, args);
   }
 
   void Call(NativeProcedure* native, const ObjectList& args);

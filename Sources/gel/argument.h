@@ -13,11 +13,15 @@ class Argument {
  private:
   uint64_t index_;
   std::string name_;
+  bool optional_;
+  bool vararg_;
 
  public:
-  Argument(const uint64_t index, const std::string& name) :
+  Argument(const uint64_t index, const std::string& name, const bool optional, const bool vararg) :
     index_(index),
-    name_(name) {}
+    name_(name),
+    optional_(optional),
+    vararg_(vararg) {}
   ~Argument() = default;
 
   auto GetIndex() const -> uint64_t {
@@ -26,6 +30,14 @@ class Argument {
 
   auto GetName() const -> const std::string& {
     return name_;
+  }
+
+  auto IsOptional() const -> bool {
+    return optional_;
+  }
+
+  auto IsVararg() const -> bool {
+    return vararg_;
   }
 
   auto operator==(const Argument& rhs) const -> bool {
@@ -43,7 +55,9 @@ class Argument {
   friend auto operator<<(std::ostream& stream, const Argument& rhs) -> std::ostream& {
     stream << "Argument(";
     stream << "index=" << rhs.GetIndex() << ", ";
-    stream << "name=" << rhs.GetName();
+    stream << "name=" << rhs.GetName() << ", ";
+    stream << "optional=" << rhs.IsOptional() << ", ";
+    stream << "vararg=" << rhs.IsVararg();
     stream << ")";
     return stream;
   }

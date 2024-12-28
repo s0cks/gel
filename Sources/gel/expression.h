@@ -10,6 +10,7 @@
 #include "gel/local.h"
 #include "gel/local_scope.h"
 #include "gel/object.h"
+#include "gel/symbol.h"
 #include "gel/variable.h"
 
 #define FOR_EACH_EXPRESSION_NODE(V) \
@@ -24,7 +25,6 @@
   V(CaseExpr)                       \
   V(LocalDef)                       \
   V(ImportExpr)                     \
-  V(MacroDef)                       \
   V(CallProcExpr)                   \
   V(LoadInstanceMethodExpr)         \
   V(SetExpr)                        \
@@ -42,6 +42,7 @@
 
 namespace gel {
 class Parser;
+class MacroEffectVisitor;
 
 namespace expr {
 namespace proto {
@@ -150,6 +151,10 @@ class Expression : public Object {  // TODO: should Expression inherit from Obje
 
   virtual auto VisitChildren(ExpressionVisitor* vis) -> bool {
     return false;
+  }
+
+  auto AsExpression() -> Expression* override {
+    return this;
   }
 
   auto GetType() const -> Class* override {
@@ -645,6 +650,8 @@ class BeginExpr : public SequenceExpr {
 };
 
 class CallProcExpr : public Expression {
+  friend class gel::MacroEffectVisitor;
+
  private:
   Expression* target_ = nullptr;
   ExpressionList args_{};
@@ -661,6 +668,12 @@ class CallProcExpr : public Expression {
     target_ = target;
   }
 
+  void SetArgAt(const uint64_t idx, Expression* expr) {
+    ASSERT(idx >= 0 && idx <= GetNumberOfArgs());
+    ASSERT(expr);
+    args_[idx] = expr;
+  }
+
  public:
   ~CallProcExpr() override = default;
 
@@ -674,6 +687,10 @@ class CallProcExpr : public Expression {
 
   inline auto GetNumberOfArgs() const -> uint64_t {
     return args_.size();
+  }
+
+  auto GetArgs() const -> const ExpressionList& {
+    return args_;
   }
 
   auto GetNumberOfChildren() const -> uint64_t override {
@@ -700,6 +717,7 @@ class CallProcExpr : public Expression {
     return true;
   }
 
+  auto IsMacroCall(LocalScope* scope) const -> bool;
   DECLARE_EXPRESSION(CallProcExpr);
 
  public:
@@ -860,6 +878,8 @@ class CondExpr : public Expression {
 };
 
 class WhenExpr : public Expression {
+  friend class gel::MacroEffectVisitor;
+
  private:
   Expression* test_;
   ExpressionList actions_;
@@ -871,6 +891,21 @@ class WhenExpr : public Expression {
     actions_(actions) {
     ASSERT(test_);
     ASSERT(!actions_.empty());
+  }
+
+  void SetTest(Expression* test) {
+    ASSERT(test);
+    test_ = test;
+  }
+
+  void SetActions(const ExpressionList& actions) {
+    ASSERT(!actions.empty());
+    actions_ = actions;
+  }
+
+  void SetActionAt(const uint64_t idx, Expression* expr) {
+    ASSERT(idx >= 0 && idx <= GetNumberOfActions());
+    actions_[idx] = expr;
   }
 
  public:
@@ -989,6 +1024,8 @@ class WhileExpr : public SequenceExpr {
 };
 
 class SetExpr : public Expression {
+  friend class gel::MacroEffectVisitor;
+
  private:
   LocalVariable* local_;
   Expression* value_;
@@ -999,6 +1036,11 @@ class SetExpr : public Expression {
     local_(local),
     value_(value) {
     ASSERT(local_);
+  }
+
+  void SetValue(Expression* rhs) {
+    ASSERT(rhs);
+    value_ = rhs;
   }
 
  public:
@@ -1593,56 +1635,6 @@ class LocalDef : public TemplateDefinition<1> {
     ASSERT(local);
     ASSERT(value);
     return new LocalDef(local, value);
-  }
-};
-
-/**
- * @deprecated This is going to be removed. Return a literal Macro instance instead.
- */
-class MacroDef : public TemplateDefinition<1> {
- private:
-  Symbol* symbol_;
-  ArgumentSet args_;
-
- protected:
-  explicit MacroDef(Symbol* symbol, const ArgumentSet& args, Expression* body) :  // NOLINT(modernize-pass-by-value)
-    TemplateDefinition<1>(),
-    symbol_(symbol),
-    args_(args) {
-    if (body)
-      SetBody(body);
-  }
-
-  inline void SetBody(Expression* expr) {
-    ASSERT(expr);
-    SetChildAt(0, expr);
-  }
-
- public:
-  ~MacroDef() override = default;
-
-  auto GetSymbol() const -> Symbol* {
-    return symbol_;
-  }
-
-  auto GetArgs() const -> const ArgumentSet& {
-    return args_;
-  }
-
-  inline auto GetBody() const -> Expression* {
-    return GetChildAt(0);
-  }
-
-  inline auto HasBody() const -> bool {
-    return GetBody() != nullptr;
-  }
-
-  DECLARE_EXPRESSION(MacroDef);
-
- public:
-  static inline auto New(Symbol* symbol, const ArgumentSet& args = {}, Expression* body = nullptr) -> MacroDef* {
-    ASSERT(symbol);
-    return new MacroDef(symbol, args, body);
   }
 };
 

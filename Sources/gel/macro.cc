@@ -33,7 +33,10 @@ auto Macro::Equals(Object* rhs) const -> bool {
 
 auto Macro::ToString() const -> std::string {
   ToStringHelper<Macro> helper;
-  helper.AddField("symbol", GetSymbol()->Get());
+  helper.AddField("symbol", GetSymbol()->GetFullyQualifiedName());
+  helper.AddField("args", GetArgs());
+  if (HasDocstring())
+    helper.AddField("docs", GetDocstring()->Get());
   if (IsEmpty())
     helper.AddField("empty", IsEmpty());
   return helper;

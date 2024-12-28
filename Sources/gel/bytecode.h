@@ -19,6 +19,7 @@
   V(LoadLocal1)              \
   V(LoadLocal2)              \
   V(LoadLocal3)              \
+  V(Invoke)                  \
   V(InvokeDynamic)           \
   V(InvokeNative)            \
   V(CheckInstance)           \
@@ -133,6 +134,8 @@ class Bytecode {
         return "ll2";
       case kLoadLocal3:
         return "ll3";
+      case kInvoke:
+        return "invoke";
       case kInvokeDynamic:
         return "invokedynamic";
       case kInvokeNative:

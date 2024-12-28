@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include "gel/common.h"
+#include "gel/module.h"
 #include "gel/parser.h"
 #include "gel/runtime.h"
 
@@ -37,10 +39,14 @@ static inline auto IsClearCommand(const std::string& cmd) -> bool {
 auto Repl::RunRepl() -> int {
   const auto runtime = GetRuntime();
   ASSERT(runtime);
-  runtime->SetExecuting();
-  while (runtime->IsExecuting() && Prompt()) {
+  const auto fs = Module::Find("fs");
+  ASSERT(fs);
+  LOG_IF(FATAL, !runtime->Import(fs)) << "failed to import the fs module: " << fs;
+  SetRunning();
+  while (IsRunning() && Prompt()) {
     if (IsExitCommand(expression_)) {
-      break;
+      SetRunning(false);
+      continue;
     } else if (IsHelpCommand(expression_)) {
       // TODO: print help
       Respond("No help available.");
@@ -55,13 +61,17 @@ auto Repl::RunRepl() -> int {
       continue;
     }
 
-    try {
-      const auto result = Runtime::Eval(expression_);
-      if (result)
-        Respond(result);
-    } catch (const gel::Exception& exc) {
-      Respond(exc);
-    }
+    const auto [result, duration] = TimedExecution<Object*>([this]() {
+      try {
+        return Runtime::Eval(expression_);
+      } catch (const gel::Exception& exc) {
+        return (Object*)Error::New(exc.GetMessage());
+      }
+    });
+    if (!gel::IsNull(result))
+      Respond(result);
+    if (VLOG_IS_ON(10))
+      out() << "finished in " << units::time::nanosecond_t(static_cast<double>(duration.count())) << std::endl;
   }
   return EXIT_SUCCESS;
 }

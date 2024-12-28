@@ -1,10 +1,13 @@
 #ifndef GEL_DISASSEMBLER_H
 #define GEL_DISASSEMBLER_H
 
+#include <type_traits>
+
 #include "gel/common.h"
 #include "gel/disassembler_vm.h"
 #include "gel/local.h"
 #include "gel/local_scope.h"
+#include "gel/type_traits.h"
 
 namespace gel {
 class Disassembler {
@@ -27,11 +30,11 @@ class Disassembler {
 
  private:
   Config config_;
-  std::ostream& stream_;
+  std::stringstream stream_{};
   LocalScope* scope_;
   std::ostream::pos_type instr_startp_;
 
-  inline auto stream() const -> std::ostream& {
+  inline auto stream() -> std::stringstream& {
     return stream_;
   }
 
@@ -72,8 +75,8 @@ class Disassembler {
 
   inline auto Comment(const LocalVariable& rhs) -> std::ostream& {
     if (rhs.HasValue())
-      return Comment(rhs.GetValue());
-    return Comment(rhs.GetName());
+      return PrintValue(Comment(rhs.GetName()) << " idx=" << rhs.GetIndex(), rhs.GetValue());
+    return Comment(rhs.GetName()) << " idx=" << rhs.GetIndex();
   }
 
   inline auto Comment(const uint32_t rhs) -> std::ostream& {
@@ -86,13 +89,14 @@ class Disassembler {
     Comment(rhs);
   }
 
+  void Invoke(BytecodeDecoder& decoder, const Bytecode::Op op);
+
  public:
-  Disassembler(Config config, std::ostream& stream, LocalScope* scope) :
+  Disassembler(Config config, LocalScope* scope) :
     config_(config),
-    stream_(stream),
     scope_(scope) {}
-  Disassembler(std::ostream& stream, LocalScope* scope) :
-    Disassembler(kDefaultConfig, stream, scope) {}
+  Disassembler(LocalScope* scope) :
+    Disassembler(kDefaultConfig, scope) {}
   ~Disassembler() = default;
 
   auto config() const -> const Config& {
@@ -119,7 +123,29 @@ class Disassembler {
     return scope_;
   }
 
+  auto stream() const -> const std::stringstream& {
+    return stream_;
+  }
+
+  inline auto str() const -> std::string {
+    return stream().str();
+  }
+
   void Disassemble(const Region& region, const char* label = nullptr);
+
+  template <class T>
+  inline void Disassemble(T* exec, const std::string& label = {}, std::enable_if_t<gel::has_code<T>::value>* = nullptr) {
+    ASSERT(exec && exec->IsCompiled());
+    return Disassemble(exec->GetCode(), label.c_str());
+  }
+
+  friend auto operator<<(std::ostream& stream, const Disassembler& rhs) -> std::ostream& {
+    return stream << rhs.stream().rdbuf();
+  }
+
+ public:
+  static void DisassembleLambda(std::ostream& stream, Lambda* lambda, LocalScope* parent_scope);
+  static void DisassembleScript(std::ostream& stream, Script* script, LocalScope* parent_scope);
 };
 }  // namespace gel
 

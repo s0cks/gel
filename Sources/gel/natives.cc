@@ -14,9 +14,11 @@
 
 #include "gel/argument.h"
 #include "gel/array.h"
+#include "gel/buffer.h"
 #include "gel/collector.h"
 #include "gel/common.h"
 #include "gel/error.h"
+#include "gel/event_loop.h"
 #include "gel/gel.h"
 #include "gel/heap.h"
 #include "gel/local.h"
@@ -53,6 +55,23 @@ void NativeProcedure::InitNatives() {
   InitNative<array_length>();
   InitNative<gel_docs>();
   InitNative<dlopen>();
+  InitNative<get_event_loop>();
+
+  InitNative<get_classes>();
+  InitNative<get_class>();
+
+  InitNative<get_namespace>();
+  InitNative<ns_get>();
+
+  InitNative<create_timer>();
+#define InitTimerNative(Name) InitNative<timer_##Name>()
+  InitTimerNative(start);
+  InitTimerNative(stop);
+  InitTimerNative(again);
+  InitTimerNative(get_due_in);
+  InitTimerNative(get_repeat);
+  InitTimerNative(set_repeat);
+#undef InitTimerNative
 
 #define InitSetNative(Name) InitNative<set_##Name>()
   InitSetNative(contains);
@@ -66,6 +85,24 @@ void NativeProcedure::InitNatives() {
   InitMapNative(size);
   InitMapNative(get);
 #undef InitMapNative
+
+// TODO: add sandbox switch
+#define InitFsNative(Name) InitNative<fs_##Name>();
+  InitFsNative(get_cwd);
+  InitFsNative(stat);
+  InitFsNative(rename);
+  InitFsNative(mkdir);
+  InitFsNative(rmdir);
+  InitFsNative(fsync);
+  InitFsNative(ftruncate);
+  InitFsNative(access);
+  InitFsNative(chmod);
+  InitFsNative(link);
+  InitFsNative(symlink);
+  InitFsNative(readlink);
+  InitFsNative(chown);
+  InitFsNative(copy_file);
+#undef InitFsNative
 
 #ifdef GEL_ENABLE_RX
 #define REGISTER_RX(Name) InitNative<rx_##Name>();
@@ -90,6 +127,7 @@ void NativeProcedure::InitNatives() {
 #endif  // GEL_ENABLE_RX
 
 #ifdef GEL_DEBUG
+  InitNative<gel_print_args>();
   InitNative<gel_print_heap>();
   InitNative<gel_print_new_zone>();
   InitNative<gel_print_old_zone>();
@@ -100,7 +138,6 @@ void NativeProcedure::InitNatives() {
   InitNative<gel_get_debug>();
   InitNative<gel_get_target_triple>();
   InitNative<gel_get_locals>();
-  InitNative<gel_get_classes>();
   InitNative<gel_get_natives>();
   InitNative<gel_get_compile_time>();
   InitNative<gel_print_st>();
@@ -134,7 +171,7 @@ NATIVE_PROCEDURE_F(gel_docs) {
     const auto lambda = func->AsLambda();
     std::stringstream ss;
     if (lambda->HasSymbol())
-      ss << lambda->GetSymbol()->Get();
+      ss << lambda->GetSymbol()->GetFullyQualifiedName();
     ss << std::endl;
     ss << "([";
     const auto& args = lambda->GetArgs();
@@ -155,7 +192,7 @@ NATIVE_PROCEDURE_F(gel_docs) {
   } else if (func->IsNativeProcedure()) {
     const auto native = func->AsNativeProcedure();
     std::stringstream ss;
-    ss << native->GetSymbol()->Get() << std::endl;
+    ss << native->GetSymbol()->GetFullyQualifiedName() << std::endl;
     ss << "([";
     const auto& args = native->GetArgs();
     if (!args.empty()) {
@@ -409,7 +446,182 @@ NATIVE_PROCEDURE_F(array_length) {
   return ReturnNew<Long>(array->GetCapacity());
 }
 
+NATIVE_PROCEDURE_F(get_classes) {
+  ASSERT(HasRuntime());
+  ASSERT(args.empty());
+  Object* result = Null();
+  const auto visitor = [&result](Class* cls) {
+    result = Cons(cls, result);
+    return true;
+  };
+  LOG_IF(FATAL, !Class::VisitClasses(visitor, true)) << "failed to visit classes.";
+  return Return(result);
+}
+
+NATIVE_PROCEDURE_F(get_class) {
+  NativeArgument<0, Symbol> symbol(args);
+  if (!symbol)
+    return Throw(symbol.GetError());
+  return Return(Class::FindClass(symbol));
+}
+
+NATIVE_PROCEDURE_F(get_namespace) {
+  NativeArgument<0, Symbol> symbol(args);
+  if (!symbol)
+    return Throw(symbol.GetError());
+  return Return(Namespace::FindNamespace(symbol));
+}
+
+NATIVE_PROCEDURE_F(ns_get) {
+  NativeArgument<0> symOrNs(args);
+  if (!symOrNs)
+    return Throw(symOrNs.GetError());
+  const auto ns = symOrNs->IsSymbol() ? Namespace::FindNamespace(symOrNs->AsSymbol()) : symOrNs->AsNamespace();
+  ASSERT(ns);
+  NativeArgument<1, Symbol> symbol(args);
+  if (!symbol)
+    return Throw(symbol.GetError());
+  return Return(ns->Get(symbol));
+}
+
+// TODO: add switch for sandbox environments
+#define NATIVE_FS_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(fs_##Name)
+
+NATIVE_FS_PROCEDURE_F(get_cwd) {
+  ASSERT(args.empty());
+  return ReturnNew<String>(std::filesystem::current_path());
+}
+
+NATIVE_FS_PROCEDURE_F(stat) {
+  NativeArgument<0, String> path(args);
+  if (!path)
+    return Throw(path.GetError());
+  NativeArgument<1, Procedure> on_next(args);
+  if (!on_next)
+    return Throw(on_next.GetError());
+  OptionalNativeArgument<2, Procedure> on_error(args);
+  if (!on_error)
+    return Throw(on_error.GetError());
+  OptionalNativeArgument<3, Procedure> on_finished(args);
+  if (!on_finished)
+    return Throw(on_finished.GetError());
+  const auto loop = GetThreadEventLoop();
+  ASSERT(loop);
+  return ReturnBool(loop->Stat(path->Get(), on_next, on_error, on_finished));
+}
+
+NATIVE_FS_PROCEDURE_F(rename) {
+  NativeArgument<0, String> old_path(args);
+  if (!old_path)
+    return Throw(old_path.GetError());
+  NativeArgument<1, String> new_path(args);
+  if (!new_path)
+    return Throw(new_path.GetError());
+  OptionalNativeArgument<2, Procedure> on_error(args);
+  if (!on_error)
+    return Throw(on_error.GetError());
+  OptionalNativeArgument<3, Procedure> on_finished(args);
+  if (!on_finished)
+    return Throw(on_finished.GetError());
+  const auto loop = GetThreadEventLoop();
+  ASSERT(loop);
+  return ReturnBool(loop->Rename(old_path->Get(), new_path->Get(), on_error, on_finished));
+}
+
+NATIVE_FS_PROCEDURE_F(mkdir) {
+  NativeArgument<0, String> path(args);
+  if (!path)
+    return Throw(path.GetError());
+  NativeArgument<1, Long> mode(args);
+  if (!mode)
+    return Throw(mode.GetError());
+  OptionalNativeArgument<2, Procedure> on_success(args);
+  if (!on_success)
+    return Throw(on_success.GetError());
+  OptionalNativeArgument<3, Procedure> on_error(args);
+  if (!on_error)
+    return Throw(on_error.GetError());
+  OptionalNativeArgument<4, Procedure> on_finished(args);
+  if (!on_finished)
+    return Throw(on_finished.GetError());
+  const auto loop = GetThreadEventLoop();
+  ASSERT(loop);
+  return ReturnBool(loop->Mkdir(path->Get(), static_cast<int>(mode->Get()), on_success, on_error, on_finished));
+}
+
+NATIVE_FS_PROCEDURE_F(rmdir) {
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return ThrowError("not implemented");
+}
+
+NATIVE_FS_PROCEDURE_F(fsync) {
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return ThrowError("not implemented");
+}
+
+NATIVE_FS_PROCEDURE_F(ftruncate) {
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return ThrowNotImplementedError();
+}
+
+NATIVE_FS_PROCEDURE_F(access) {
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return ThrowNotImplementedError();
+}
+
+NATIVE_FS_PROCEDURE_F(chmod) {
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return ThrowNotImplementedError();
+}
+
+NATIVE_FS_PROCEDURE_F(link) {
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return ThrowNotImplementedError();
+}
+
+NATIVE_FS_PROCEDURE_F(symlink) {
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return ThrowNotImplementedError();
+}
+
+NATIVE_FS_PROCEDURE_F(readlink) {
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return ThrowNotImplementedError();
+}
+
+NATIVE_FS_PROCEDURE_F(chown) {
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return ThrowNotImplementedError();
+}
+
+NATIVE_FS_PROCEDURE_F(copy_file) {
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return ThrowNotImplementedError();
+}
+
+#undef NATIVE_FS_PROCEDURE_F
+
 #ifdef GEL_DEBUG
+
+NATIVE_PROCEDURE_F(gel_print_args) {
+  NativeArgument<0, Procedure> func(args);
+  if (!func)
+    return Throw(func);
+  if (func->IsLambda()) {
+    const auto& arguments = func->AsLambda()->GetArgs();
+    DLOG(INFO) << func->GetSymbol() << " arguments:";
+    for (const auto& arg : arguments) {
+      DLOG(INFO) << " - " << arg;
+    }
+  } else if (func->IsNativeProcedure()) {
+    const auto& arguments = func->AsNativeProcedure()->GetArgs();
+    DLOG(INFO) << func->GetSymbol() << " arguments:";
+    for (const auto& arg : arguments) {
+      DLOG(INFO) << " - " << arg;
+    }
+  }
+  return Return();
+}
 
 NATIVE_PROCEDURE_F(gel_print_heap) {
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
@@ -461,6 +673,117 @@ NATIVE_PROCEDURE_F(gel_get_debug) {
 #endif  // GEL_DEBUG
 }
 
+NATIVE_PROCEDURE_F(get_event_loop) {
+  return Return(GetThreadEventLoop());
+}
+
+#define TIMER_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(timer_##Name)
+
+TIMER_PROCEDURE_F(start) {
+  NativeArgument<0, Long> id(args);
+  if (!id)
+    return Throw(id.GetError());
+  NativeArgument<1, Long> timeout(args);
+  if (!timeout)
+    return Throw(timeout.GetError());
+  NativeArgument<2, Long> repeat(args);
+  if (!repeat)
+    return Throw(repeat.GetError());
+  const auto loop = GetThreadEventLoop();
+  ASSERT(loop);
+  const auto timer = loop->GetTimer(id->Get());
+  if (!timer)
+    return ThrowError(fmt::format("failed to find Timer w/ id {}", id->Get()));
+  timer->Start(timeout->Get(), repeat->Get());
+  return Return();
+}
+
+TIMER_PROCEDURE_F(stop) {
+  NativeArgument<0, Long> id(args);
+  if (!id)
+    return Throw(id.GetError());
+  const auto loop = GetThreadEventLoop();
+  ASSERT(loop);
+  const auto timer = loop->GetTimer(id->Get());
+  if (!timer)
+    return ThrowError(fmt::format("failed to find Timer w/ id {}", id->Get()));
+  timer->Stop();
+  return Return();
+}
+
+TIMER_PROCEDURE_F(again) {
+  NativeArgument<0, Long> id(args);
+  if (!id)
+    return Throw(id.GetError());
+  const auto loop = GetThreadEventLoop();
+  ASSERT(loop);
+  const auto timer = loop->GetTimer(id->Get());
+  if (!timer)
+    return ThrowError(fmt::format("failed to find Timer w/ id {}", id->Get()));
+  timer->Again();
+  return Return();
+}
+
+TIMER_PROCEDURE_F(get_repeat) {
+  NativeArgument<0, Long> id(args);
+  if (!id)
+    return Throw(id.GetError());
+  const auto loop = GetThreadEventLoop();
+  ASSERT(loop);
+  const auto timer = loop->GetTimer(id->Get());
+  if (!timer)
+    return ThrowError(fmt::format("failed to find Timer w/ id {}", id->Get()));
+  return ReturnNew<Long>(timer->GetRepeat());
+}
+
+TIMER_PROCEDURE_F(set_repeat) {
+  NativeArgument<0, Long> id(args);
+  if (!id)
+    return Throw(id.GetError());
+  NativeArgument<1, Long> repeat(args);
+  if (!repeat)
+    return Throw(repeat.GetError());
+  const auto loop = GetThreadEventLoop();
+  ASSERT(loop);
+  const auto timer = loop->GetTimer(id->Get());
+  if (!timer)
+    return ThrowError(fmt::format("failed to find Timer w/ id {}", id->Get()));
+  timer->SetRepeat(repeat->Get());
+  return Return();
+}
+
+TIMER_PROCEDURE_F(get_due_in) {
+  NativeArgument<0, Long> id(args);
+  if (!id)
+    return Throw(id.GetError());
+  const auto loop = GetThreadEventLoop();
+  ASSERT(loop);
+  const auto timer = loop->GetTimer(id->Get());
+  if (!timer)
+    return ThrowError(fmt::format("failed to find Timer w/ id {}", id->Get()));
+  return ReturnNew<Long>(timer->GetDueIn());
+}
+
+#undef TIMER_PROCEDURE_F
+
+NATIVE_PROCEDURE_F(create_timer) {
+  NativeArgument<0, Procedure> on_tick(args);
+  if (!on_tick)
+    return Throw(on_tick.GetError());
+  NativeArgument<1, Long> timeout(args);
+  if (!timeout)
+    return Throw(timeout.GetError());
+  NativeArgument<2, Long> repeat(args);
+  if (!repeat)
+    return Throw(repeat.GetError());
+  const auto loop = GetThreadEventLoop();
+  ASSERT(loop);
+  const auto timer = loop->CreateTimer(on_tick);
+  ASSERT(timer);
+  timer->Start(timeout->Get(), repeat->Get());
+  return ReturnNew<Long>(timer->GetId());
+}
+
 NATIVE_PROCEDURE_F(gel_get_frame) {
   const auto runtime = GetRuntime();
   ASSERT(runtime);
@@ -495,22 +818,6 @@ NATIVE_PROCEDURE_F(gel_get_locals) {
         String::New(local->GetName()),
     });
   }));
-}
-
-NATIVE_PROCEDURE_F(gel_get_classes) {
-  ASSERT(HasRuntime());
-  ASSERT(args.empty());
-  Object* result = Null();
-  const auto visitor = [&result](Class* cls) {
-    ObjectList meta;
-    meta.push_back(cls->GetName());
-    if (cls->HasParent())
-      meta.push_back(cls->GetParent()->GetName());
-    result = Pair::New(gel::ToList((const ObjectList&)meta, true), result);
-    return true;
-  };
-  LOG_IF(FATAL, !Class::VisitClasses(visitor, true)) << "failed to visit classes.";
-  return Return(result);
 }
 
 NATIVE_PROCEDURE_F(gel_get_target_triple) {

@@ -11,11 +11,11 @@ auto StackFrame::GetTargetName() const -> std::string {
   if (IsScriptFrame()) {
     return "Script";  // TODO: implement
   } else if (IsNativeFrame()) {
-    return GetNativeProcedure()->GetSymbol()->Get();
+    return GetNativeProcedure()->GetSymbol()->GetFullyQualifiedName();
   } else if (IsLambdaFrame()) {
     const auto lambda = GetLambda();
     ASSERT(lambda);
-    return lambda->HasSymbol() ? lambda->GetSymbol()->Get() : "Lambda";
+    return lambda->HasSymbol() ? lambda->GetSymbol()->GetFullyQualifiedName() : "Lambda";
   }
   return "Unknown";
 }

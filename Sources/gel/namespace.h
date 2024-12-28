@@ -21,16 +21,16 @@ class Namespace : public Object {
 
  private:
   Object* owner_ = nullptr;
-  String* name_;
+  Symbol* symbol_;
   LocalScope* scope_;
   String* docs_ = nullptr;
 
  protected:
-  explicit Namespace(String* name, LocalScope* scope) :
+  explicit Namespace(Symbol* symbol, LocalScope* scope) :
     Object(),
-    name_(name),
+    symbol_(symbol),
     scope_(scope) {
-    ASSERT(name_);
+    ASSERT(symbol_);
     ASSERT(scope_);
   }
 
@@ -44,16 +44,13 @@ class Namespace : public Object {
     owner_ = rhs;
   }
 
-  // TODO: remove this function
-  inline auto IsKernelNamespace() const -> bool {
-    return name_->Get() == "_kernel";
-  }
+  auto IsKernelNamespace() const -> bool;
 
  public:
   ~Namespace() override = default;
 
-  auto GetName() const -> String* {
-    return name_;
+  auto GetSymbol() const -> Symbol* {
+    return symbol_;
   }
 
   auto GetScope() const -> LocalScope* {
@@ -68,30 +65,29 @@ class Namespace : public Object {
     return owner_;
   }
 
-  auto Prefix(Symbol* rhs) const -> Symbol*;
-  auto HasPrefix(Symbol* rhs) const -> bool;
+  auto Get(Symbol* rhs) const -> Object*;
+  auto Get(const std::string& rhs) const -> Object*;
+  auto HasSymbol(Symbol* rhs) const -> bool;
+  auto HasSymbol(const std::string& rhs) const -> bool;
+  auto GetName() const -> const std::string&;
+  auto CreateSymbol(const std::string& value) -> Symbol*;
   DECLARE_TYPE(Namespace);
 
  private:
   static NamespaceList namespaces_;
 
  public:
-  static inline auto New(String* name, LocalScope* scope) -> Namespace* {
-    ASSERT(name);
+  static inline auto New(Symbol* symbol, LocalScope* scope) -> Namespace* {
+    ASSERT(symbol);
     ASSERT(scope);
-    const auto ns = new Namespace(name, scope);
+    const auto ns = new Namespace(symbol, scope);
     ASSERT(ns);
     namespaces_.push_back(ns);
     return ns;
   }
 
-  static auto Get(const std::string& name) -> Namespace*;
-
-  template <typename T>
-  static inline auto Get(T* name, std::enable_if_t<is_string_like<T>::value>* = nullptr) -> Namespace* {
-    ASSERT(name && !name->IsEmpty());
-    return Get(name->Get());
-  }
+  static auto FindNamespace(const std::string& name) -> Namespace*;
+  static auto FindNamespace(Symbol* rhs) -> Namespace*;
 };
 
 }  // namespace gel

@@ -68,12 +68,12 @@ class ThreadLocal : public ThreadLocalBase {
     return (T*)GetAddress();
   }
 
-  operator bool() const {
-    return Has();
+  operator T*() const {
+    return Get();
   }
 
   auto operator=(const T* value) -> ThreadLocal<T>& {
-    PRT_ASSERT(value);
+    ASSERT(value);
     Set(value);
     return *this;
   }
@@ -131,7 +131,7 @@ class LazyThreadLocal : public ThreadLocal<T> {
   }
 
   auto operator=(const T* value) -> LazyThreadLocal<T>& {
-    PRT_ASSERT(value);
+    ASSERT(value);
     ThreadLocalBase::operator=((uword)value);
     return *this;
   }

@@ -32,7 +32,10 @@ class Definition;
   V(Namespace)                     \
   V(Set)                           \
   V(Map)                           \
-  V(Module)
+  V(Module)                        \
+  V(EventLoop)                     \
+  V(Timer)                         \
+  V(Buffer)
 
 #define FOR_EACH_TYPE(V)     \
   FOR_EACH_PRIMITIVE_TYPE(V) \

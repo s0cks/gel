@@ -78,21 +78,34 @@ static inline auto IsNativeCall(ir::Instruction* instr) -> bool {
   return target->IsNativeProcedure();
 }
 
+static inline auto IsLambdaCall(ir::Instruction* instr) -> bool {
+  ASSERT(instr);
+  if (!instr->IsConstantInstr())
+    return false;
+  const auto target = instr->AsConstantInstr()->GetValue();
+  ASSERT(target);
+  return target->IsLambda();
+}
+
 void EffectVisitor::AddInstanceOf(ir::Definition* defn, Class* cls) {
   ASSERT(defn);
   return Add(ir::InstanceOfInstr::New(defn, cls));
 }
 
-auto EffectVisitor::CreateCallFor(ir::Definition* defn, const uword num_args) -> ir::InvokeInstr* {
+auto EffectVisitor::CreateCallFor(ir::Definition* defn, const uword num_args) -> ir::Definition* {
   ASSERT(defn);
   ASSERT(num_args >= 0);
   if (IsNativeCall(defn)) {
     const auto native = defn->AsConstantInstr()->GetValue()->AsNativeProcedure();
     ASSERT(native);
-    return ir::InvokeNativeInstr::New(defn);
+    return ir::InvokeNativeInstr::New(defn, num_args);
+  } else if (IsLambdaCall(defn)) {
+    const auto lambda = defn->AsConstantInstr()->GetValue()->AsLambda();
+    ASSERT(lambda);
+    return ir::InvokeInstr::New(defn, num_args);
   }
   Do(defn);
-  return ir::InvokeInstr::New(defn, num_args);
+  return ir::InvokeDynamicInstr::New(defn, num_args);
 }
 
 auto EffectVisitor::ReturnCall(ir::InvokeInstr* instr) -> bool {
@@ -104,7 +117,7 @@ auto EffectVisitor::ReturnCall(ir::InvokeInstr* instr) -> bool {
 
 auto EffectVisitor::ReturnCallTo(ir::Definition* defn, const uword num_args) -> bool {
   const auto invoke = CreateCallFor(defn, num_args);
-  if (gel::IsPedantic() && !invoke->IsInvokeNativeInstr())
+  if (gel::IsPedantic() && !(invoke->IsInvokeNativeInstr() || invoke->IsInvokeInstr()))
     AddInstanceOf(defn, Procedure::GetClass());
   ReturnDefinition(invoke);
   return true;
@@ -228,12 +241,6 @@ auto EffectVisitor::VisitWhenExpr(expr::WhenExpr* expr) -> bool {
   Add(branch);
   SetExitInstr(join);
   GetOwner()->GetCurrentBlock()->AddDominated(join);
-  return true;
-}
-
-auto EffectVisitor::VisitMacroDef(MacroDef* expr) -> bool {
-  ASSERT(expr);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement @s0cks
   return true;
 }
 
@@ -371,18 +378,10 @@ auto EffectVisitor::VisitRxOpExpr(expr::RxOpExpr* expr) -> bool {
   return false;
 }
 
-static inline auto CreateRxOpTarget(Symbol* symbol, LocalScope* scope) -> ir::Definition* {
-  LocalVariable* local = nullptr;
-  LOG_IF(FATAL, !scope->Lookup(symbol, &local)) << "failed to find LocalVariable: " << symbol;
-  ASSERT(local);
-  if (local->HasValue())
-    return ir::ConstantInstr::New(local->GetValue());
-  return ir::LoadLocalInstr::New(local);
-}
-
 auto RxEffectVisitor::VisitRxOpExpr(expr::RxOpExpr* expr) -> bool {
   ASSERT(expr);
-  Do(GetObservable());
+  const auto src = Bind(CreateLoadSource());
+  ASSERT(src);
   uint64_t aidx = 0;
   while (IsOpen() && (aidx < expr->GetNumberOfChildren())) {
     const auto arg = expr->GetChildAt(aidx++);
@@ -395,16 +394,23 @@ auto RxEffectVisitor::VisitRxOpExpr(expr::RxOpExpr* expr) -> bool {
     Append(for_arg);
   }
 
-  const auto call_target = CreateRxOpTarget(expr->GetSymbol(), GetOwner()->GetScope());
-  Add(call_target);
-  if (IsNativeCall(call_target)) {
-    if (IsPedantic())
-      AddInstanceOf(call_target, NativeProcedure::GetClass());
-    Add(ir::InvokeNativeInstr::New(call_target));
+  const auto scope = GetOwner()->GetScope();
+  LocalVariable* local = nullptr;
+  LOG_IF(FATAL, !scope->Lookup(expr->GetSymbol(), &local)) << "failed to find LocalVariable: " << expr->GetSymbol();
+  ASSERT(local && local->HasValue() && local->GetValue()->IsProcedure());
+
+  const auto target = ir::ConstantInstr::New(local->GetValue());
+  ASSERT(target);
+  if (IsNativeCall(target)) {
+    // if (IsPedantic())
+    //   AddInstanceOf(target, NativeProcedure::GetClass());
+    Add(ir::InvokeNativeInstr::New(target, expr->GetNumberOfChildren()));
+  } else if (IsLambdaCall(target)) {
+    Add(ir::InvokeInstr::New(target, expr->GetNumberOfChildren()));
   } else {
     if (gel::IsPedantic())
-      AddInstanceOf(call_target, Procedure::GetClass());
-    Add(ir::InvokeInstr::New(call_target, expr->GetNumberOfChildren()) + 1);
+      AddInstanceOf(target, Procedure::GetClass());
+    Add(ir::InvokeDynamicInstr::New(target, expr->GetNumberOfChildren()) + 1);
   }
   return true;
 }
@@ -490,7 +496,7 @@ auto EffectVisitor::VisitLetRxExpr(expr::LetRxExpr* expr) -> bool {
   while (IsOpen() && (idx < expr->GetNumberOfChildren())) {
     const auto oper_expr = expr->GetOperatorAt(idx++);
     ASSERT(oper_expr);
-    RxEffectVisitor for_effect(GetOwner(), ir::LoadLocalInstr::New(local));
+    RxEffectVisitor for_effect(GetOwner(), local);
     if (!oper_expr->Accept(&for_effect)) {
       LOG(FATAL) << "failed to visit: " << oper_expr;
       return false;
@@ -914,7 +920,7 @@ auto EffectVisitor::VisitLambda(Lambda* lambda) -> bool {
     LOG_IF(FATAL, !scope->Add(lambda->GetScope())) << "failed to add lambda scope to current scope.";
   for (const auto& arg : lambda->GetArgs()) {
     const auto local = LocalVariable::New(scope, Symbol::New(arg.GetName()));
-    LOG_IF(FATAL, !scope->Add(local)) << "failed to add " << (*local) << " to current scope";
+    LOG_IF(ERROR, !scope->Add(local)) << "failed to add " << (*local) << " to current scope";
   }
   auto index = 0;
   const auto& body = lambda->GetBody();

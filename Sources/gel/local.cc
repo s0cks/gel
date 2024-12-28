@@ -3,6 +3,7 @@
 #include "gel/local_scope.h"
 #include "gel/platform.h"
 #include "gel/pointer.h"
+#include "gel/symbol.h"
 
 namespace gel {
 auto LocalVariable::Accept(PointerVisitor* vis) -> bool {
@@ -37,6 +38,6 @@ auto LocalVariable::New(LocalScope* owner, const std::string& name, Object* valu
 auto LocalVariable::New(LocalScope* owner, const Symbol* symbol, Object* value) -> LocalVariable* {
   ASSERT(owner);
   ASSERT(symbol);
-  return New(owner, owner->GetNumberOfLocals(), symbol->Get(), value);
+  return New(owner, owner->GetNumberOfLocals(), symbol->GetFullyQualifiedName(), value);
 }
 }  // namespace gel

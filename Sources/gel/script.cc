@@ -11,6 +11,7 @@
 #include "gel/flow_graph_compiler.h"
 #include "gel/flow_graph_dot.h"
 #include "gel/lambda.h"
+#include "gel/macro.h"
 #include "gel/namespace.h"
 #include "gel/parser.h"
 
@@ -21,6 +22,12 @@ auto Script::New(const ObjectList& args) -> Script* {
 
 auto Script::CreateClass() -> Class* {
   return Class::New(Object::GetClass(), "Script");
+}
+
+void Script::Append(Macro* macro) {
+  ASSERT(macro);
+  macros_.push_back(macro);
+  macro->SetOwner(this);
 }
 
 void Script::Append(Lambda* lambda) {

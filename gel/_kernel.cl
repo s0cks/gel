@@ -1,3 +1,56 @@
+;; ---------------------------------------------------------------------------------
+;; Timers
+;; ---------------------------------------------------------------------------------
+(ns Timer
+  (defnative start [idx]
+    "Starts Timer [idx].")
+  (defnative stop [idx]
+    "Stops Timer [idx].")
+  (defnative again [idx]
+    "Runs Timer [idx] again.")
+  (defnative get-due-in [idx]
+    "Returns the number of milliseconds Timer [idx] is due in.")
+  (defnative get-repeat [idx]
+    "Returns the repeat value of Timer [idx].")
+  (defnative set-repeat! [idx repeat]
+    "Sets the repeat value of Timer [idx] to [repeat]."))
+;; ---------------------------------------------------------------------------------
+;; Maps
+;; ---------------------------------------------------------------------------------
+(ns Map
+  (defnative get [m k]
+    "Returns the value of key [k] in Map [m].")
+  (defnative contains [m k]
+    "Returns whether or not key [k] is in Map [m].")
+  (defnative size [m]
+    "Returns the number of items in Map [m].")
+  (defnative empty? [m]
+    "Returns whether or not Map [m] is empty."))
+;; ---------------------------------------------------------------------------------
+;; Sets
+;; ---------------------------------------------------------------------------------
+(ns Set
+  (defnative contains [s o]
+    "Returns whether or not Object [o] is in Set [s].")
+  (defnative count [s]
+    "Returns the number of items in Set [s].")
+  (defnative empty? [s]
+    "Returns whether or not Set [s] is empty."))
+;; ---------------------------------------------------------------------------------
+;; Arrays
+;; ---------------------------------------------------------------------------------
+(ns Array
+  (defnative Array/get [a i]
+    "Returns the value at index [i] for Array [a].")
+  (defnative Array/set! [a i v]
+    "Sets the value at index [i] in Array [a] to [v].")
+  (defnative Array/count [a]
+    "Returns the length of Array [a]."))
+;; ---------------------------------------------------------------------------------
+
+;; ---------------------------------------------------------------------------------
+;; _kernel
+;; ---------------------------------------------------------------------------------
 (ns _kernel
   "The main namespace for gel."
   (defnative hashcode [v]
@@ -26,48 +79,35 @@
     "Sets the second value of Pair [p] to [v].")
   (defnative dlopen [p]
     "Opens the shared library from file at path [p].")
+  (defnative create-timer [on_tick timeout repeat]
+    "Starts a new Timer on the EventLoop.")
+  (defmacro interval [on_tick repeat]
+    (create-timer on_tick 0 repeat))
+  (defmacro timeout [on_tick timeout]
+    (create-timer on_tick timeout 0))
 
   ;; ---------------------------------------------------------------------------------
-  ;; Sets
+  ;; Event Loop
   ;; ---------------------------------------------------------------------------------
-  (defnative Set/contains [s o]
-    "Returns whether or not Object [o] is in Set [s].")
-  (defnative Set/count [s]
-    "Returns the number of items in Set [s].")
-  (defnative Set/empty? [s]
-    "Returns whether or not Set [s] is empty.")
-  ;; ---------------------------------------------------------------------------------
-
-  ;; ---------------------------------------------------------------------------------
-  ;; Maps
-  ;; ---------------------------------------------------------------------------------
-  (defnative Map/get [m k]
-    "Returns the value of key [k] in Map [m].")
-  (defnative Map/contains [m k]
-    "Returns whether or not key [k] is in Map [m].")
-  (defnative Map/size [m]
-    "Returns the number of items in Map [m].")
-  (defnative Map/empty? [m]
-    "Returns whether or not Map [m] is empty.")
-  ; TODO:
-  ; (defnative Map/remove [m k]
-  ;   "Removes the value of key [k] from Map [m].")
+  (defnative get-event-loop []
+    "Returns the EventLoop for the current thread.")
   ;; ---------------------------------------------------------------------------------
 
   ;; ---------------------------------------------------------------------------------
-  ;; Arrays
+  ;; Buffers
   ;; ---------------------------------------------------------------------------------
-  (defnative Array/get [a i]
-    "Returns the value at index [i] for Array [a].")
-  (defnative Array/set! [a i v]
-    "Sets the value at index [i] in Array [a] to [v].")
-  (defnative Array/count [a]
-    "Returns the length of Array [a].")
+  (defnative Buffer:get-capacity [b]
+    "Returns the capacity of Buffer [b].")
+  (defnative Buffer:get-length [b]
+    "Returns the number of written bytes in Buffer [b].")
   ;; ---------------------------------------------------------------------------------
+
 
   ;; ---------------------------------------------------------------------------------
   ;; Debug Only - TODO: Reduce visibility
   ;; ---------------------------------------------------------------------------------
+  (defnative gel/print-args [func]
+    "Pretty prints the arguments of function [func].")
   (defnative gel/minor-gc! []
     "Performs a minor garbage collection cycle.")
   (defnative gel/major-gc! []
@@ -80,8 +120,14 @@
     "Prints the current StackTrace for the gelrt.")
   (defnative gel/get-locals []
     "Returns the current LocalScope from gelrt.")
-  (defnative gel/get-classes []
+  (defnative get-classes []
     "Returns a list of the current register Classes in gelrt.")
+  (defnative get-class [s]
+    "Returns the Class for Symbol [s].")
+  (defnative get-namespace [s]
+    "Returns the Namespace for Symbol [s].")
+  (defnative ns:get [nsOrSym s]
+    "Returns the value for Symbol [s] in Namespace [nsOrSym].")
   (defnative gel/get-target-triple []
     "Returns the current target triple for gelrt.")
   (defnative gel/get-natives []
@@ -99,7 +145,7 @@
     "Prints the heap's new zone information to the terminal.")
   (defnative gel/print-old-zone []
     "Prints the heap's old zone information to the terminal.")
-  (defn assert [test m] ;; TODO: convert to macro
+  (defmacro assert [test m]
     "Assert that Bool [test] is true, if not throw an Error w/ message [m]."
     (when (and (gel/debug?) (not test))
       (throw (Error m))))
@@ -170,7 +216,7 @@
   ;; ---------------------------------------------------------------------------------
   ;; Misc
   ;; ---------------------------------------------------------------------------------
-  (defn newline [] ;; TODO: convert to defmacro
+  (defmacro newline []
     "Prints a platform specific newline to the console."
     (print ""))
   (defn inc [x]
@@ -182,26 +228,24 @@
   ;;TODO:
   ;; - (def PI 3.14159)
   ;; - (def TAU (* 2 PI))
-  (defn sq [x]
-    "Returns x * x."
+  (defmacro sq [x]
+    "[x] * [x]"
     (* x x))
-  (defn zero? [x]
+  (defmacro zero? [x]
     "Returns true if x is 0."
     (eq? x 0))
-  (defn even? [x]
+  (defmacro even? [x]
     "Returns true if x is even."
     (zero? (% x 2)))
-  (defn odd? [x]
+  (defmacro odd? [x]
     "Returns true if x is even."
     (not (zero? (% x 2))))
-  (defn false? [x]
+  (defmacro false? [x]
     "Returns true if [x] is an instanceof false."
     (and (#Bool? x) (not x)))
-  (defn true? [x]
+  (defmacro true? [x]
     "Returns true if [x] is an instanceof true."
     (and (#Bool? x) x))
-  (defn constantly [x] ;; TODO: implement
-    "Returns a function that constantly returns [x].")
   (defn min [seq]
     "Returns the min value in Seq [seq]."
     ((fn [candidate tail]

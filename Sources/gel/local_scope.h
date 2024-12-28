@@ -159,12 +159,20 @@ class LocalScope {
   virtual auto VisitAllLocals(LocalVariableVisitor* vis) -> bool;
   virtual auto ToString() const -> std::string;
 
+  template <class T>
+  inline auto Add(T* value, std::enable_if_t<gel::is_object<T>::value && gel::has_symbol<T>::value>* = nullptr) -> bool {
+    ASSERT(value);
+    return Add(value->GetSymbol(), value);
+  }
+
  public:
   static inline auto New(LocalScope* parent = nullptr) -> LocalScope* {
     return new LocalScope(parent);
   }
 
   static inline auto Union(const std::vector<LocalScope*>& scopes, LocalScope* parent = nullptr) -> LocalScope* {
+    if (scopes.empty())
+      return New(parent);
     LocalList locals{};
     std::ranges::for_each(std::begin(scopes), std::end(scopes), [&locals](LocalScope* scope) {
       locals.insert(std::end(locals), std::begin(scope->locals_), std::end(scope->locals_));
@@ -264,7 +272,7 @@ class LocalScopePrinter : public LocalVariableVisitor {
 };
 
 #define PRINT_SCOPE_AT_LEVEL(Severity, Scope) LocalScopePrinter::Print<Severity>((Scope), __FILE__, __LINE__)
-#define PRINT_SCOPE(Severity, Scope) PRINT_SCOPE_AT_LEVEL(google::Severity, Scope)
+#define PRINT_SCOPE(Severity, Scope)          PRINT_SCOPE_AT_LEVEL(google::Severity, Scope)
 
 }  // namespace gel
 

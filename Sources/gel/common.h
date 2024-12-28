@@ -234,6 +234,11 @@ static inline auto GetFilename(const std::filesystem::path& p) -> std::string {
   return filename.substr(0, filename.length() - (filename.length() - dotpos));
 }
 
+static inline auto Contains(const std::string& value, const char c) -> bool {
+  const auto pos = value.find(c);
+  return pos != std::string::npos;
+}
+
 #ifdef GEL_DEBUG
 
 #define TIMER_START                   \

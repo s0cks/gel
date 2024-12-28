@@ -141,7 +141,7 @@ class EffectVisitor : public ExpressionVisitor {
   }
 
   void AddInstanceOf(ir::Definition* defn, Class* expected);
-  auto CreateCallFor(ir::Definition* defn, const uword num_args) -> ir::InvokeInstr*;
+  auto CreateCallFor(ir::Definition* defn, const uword num_args) -> ir::Definition*;
   auto CreateStoreLoad(LocalVariable* local, ir::Definition* value) -> ir::Definition*;
   auto CreateCastTo(ir::Definition* value, Class* target) -> ir::Definition*;
 
@@ -282,18 +282,22 @@ class RxEffectVisitor : public EffectVisitor {
   DEFINE_NON_COPYABLE_TYPE(RxEffectVisitor);
 
  private:
-  ir::Definition* observable_;
+  LocalVariable* local_;
 
  public:
-  RxEffectVisitor(FlowGraphBuilder* owner, ir::Definition* observable) :
+  RxEffectVisitor(FlowGraphBuilder* owner, LocalVariable* local) :
     EffectVisitor(owner),
-    observable_(observable) {
-    ASSERT(observable_);
+    local_(local) {
+    ASSERT(local_);
   }
   ~RxEffectVisitor() override = default;
 
-  auto GetObservable() const -> ir::Definition* {
-    return observable_;
+  auto GetSource() const -> LocalVariable* {
+    return local_;
+  }
+
+  auto CreateLoadSource() const -> ir::Definition* {
+    return ir::LoadLocalInstr::New(GetSource());
   }
 
   auto VisitRxOpExpr(expr::RxOpExpr* expr) -> bool override;

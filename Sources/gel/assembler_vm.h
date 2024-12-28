@@ -137,15 +137,23 @@ class Assembler {
     return pushq(value->GetStartingAddress());
   }
 
+  inline void invoke(Lambda* func, const uword num_args) {
+    ASSERT(func);
+    EmitOp(Bytecode::kInvoke);
+    EmitAddress(func);
+    Emit(num_args);
+  }
+
   inline void invokedynamic(const uword num_args) {
     EmitOp(Bytecode::kInvokeDynamic);
     Emit(num_args);
   }
 
-  inline void invokenative(Procedure* func) {
+  inline void invokenative(Procedure* func, const uword num_args) {
     ASSERT(func);
     EmitOp(Bytecode::kInvokeNative);
     EmitAddress(func);
+    Emit(num_args);
   }
 
   void th() {

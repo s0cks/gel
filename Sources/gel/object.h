@@ -91,6 +91,14 @@ class Object {
     return false;
   }
 
+  virtual auto AsExpression() -> expr::Expression* {
+    return nullptr;
+  }
+
+  virtual auto IsExpression() -> bool {
+    return AsExpression() != nullptr;
+  }
+
 #define DEFINE_TYPE_CHECK(Name)    \
   virtual auto As##Name()->Name* { \
     return nullptr;                \
@@ -495,6 +503,7 @@ class String : public StringObject {
 
  public:
   static auto New() -> String*;
+  static auto New(Symbol* rhs) -> String*;
   static inline auto New(const std::string& value) -> String* {
     return new String(value);
   }
@@ -505,28 +514,6 @@ class String : public StringObject {
 
   static auto Empty() -> String*;
   static auto ValueOf(Object* rhs) -> String*;
-};
-
-class Symbol : public StringObject {
- public:
-  struct Comparator {
-    auto operator()(Symbol* lhs, Symbol* rhs) const -> bool {
-      ASSERT(lhs && rhs);
-      return lhs->Get() < rhs->Get();
-    }
-  };
-
- private:
-  explicit Symbol(const std::string& value) :
-    StringObject(value) {}
-
- public:
-  ~Symbol() override = default;
-
-  DECLARE_TYPE(Symbol);
-
- public:
-  static auto New(const std::string& rhs) -> Symbol*;
 };
 
 class Set : public Object {
@@ -623,9 +610,6 @@ class Map : public Object {
   }
 };
 
-using SymbolList = std::vector<Symbol*>;
-using SymbolSet = std::unordered_set<Symbol*, Symbol::Comparator>;
-
 auto PrintValue(std::ostream& stream, Object* value) -> std::ostream&;
 
 #define DEFINE_TYPE_PRED(Name)                     \
@@ -642,10 +626,6 @@ FOR_EACH_TYPE(DEFINE_TYPE_PRED)
   }
 FOR_EACH_TYPE(DEFINE_TYPE_CAST)
 #undef DEFINE_TYPE_CAST
-
-static inline auto ToString(Symbol* rhs) -> String* {
-  return String::New(rhs->Get());
-}
 
 static inline auto Null() -> Object* {
   return Pair::Empty();
@@ -773,14 +753,6 @@ static inline auto operator<<(std::ostream& stream, const ObjectList& values) ->
 #endif  // GEL_ENABLE_RX
 
 namespace fmt {
-template <>
-struct formatter<gel::Symbol> : public formatter<std::string> {
-  template <typename FormatContext>
-  constexpr auto format(const gel::Symbol& value, FormatContext& ctx) const -> decltype(ctx.out()) {
-    return format_to(ctx.out(), "{}", value.Get());
-  }
-};
-
 template <>
 struct formatter<gel::String> : public formatter<std::string> {
   template <typename FormatContext>

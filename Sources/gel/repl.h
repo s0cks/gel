@@ -15,8 +15,13 @@ class Repl {
   std::ostream& out_;
   LocalScope* scope_;
   std::string expression_{};
+  bool running_ = false;
 
   auto Prompt() -> bool;
+
+  void SetRunning(const bool rhs = true) {
+    running_ = rhs;
+  }
 
   inline void Respond(Error* rhs) {
     out() << std::endl;
@@ -33,6 +38,8 @@ class Repl {
     if (rhs->IsError())
       return Respond(rhs->AsError());
     out() << std::endl;
+    if (VLOG_IS_ON(10))
+      out() << "Result: ";
     PrintValue(out(), rhs) << std::endl;
   }
 
@@ -65,6 +72,10 @@ class Repl {
 
   auto GetScope() const -> LocalScope* {
     return scope_;
+  }
+
+  auto IsRunning() const -> bool {
+    return running_;
   }
 
   auto RunRepl() -> int;

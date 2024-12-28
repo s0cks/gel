@@ -1,4 +1,6 @@
+#include "gel/buffer.h"
 #include "gel/common.h"
+#include "gel/event_loop.h"
 #include "gel/macro.h"
 #include "gel/module.h"
 #include "gel/namespace.h"
@@ -113,7 +115,7 @@ auto Class::FindClass(String* name) -> Class* {
 }
 
 auto Class::FindClass(Symbol* name) -> Class* {
-  return FindClass(name->Get());
+  return FindClass(name->GetSymbolName());
 }
 
 auto Class::NewInstance(const ObjectList& args) -> Object* {
@@ -122,11 +124,28 @@ auto Class::NewInstance(const ObjectList& args) -> Object* {
     LOG(FATAL) << "cannot create a new instance of Object.";
 #define INVOKE_NEW(Name)              \
   else if(Equals(Name::GetClass()))   \
-    return Name::New(args);           \
+    return Name::New(args); \
   // clang-format on
   FOR_EACH_TYPE(INVOKE_NEW)
 #undef INVOKE_NEW
   LOG(FATAL) << "cannot create a new instance of " << ToString();
+  return nullptr;
+}
+
+auto Class::GetFunction(const std::string& name, const bool recursive) const -> Procedure* {
+  for (const auto& func : funcs_) {
+    if (func->GetSymbol()->GetSymbolName() == name)
+      return func;
+  }
+  if (recursive && HasParent()) {
+    auto cls = GetParent();
+    do {
+      const auto func = cls->GetFunction(name, false);
+      if (func)
+        return func;
+      cls = cls->GetParent();
+    } while (cls);
+  }
   return nullptr;
 }
 

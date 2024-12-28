@@ -1,25 +1,81 @@
 #include "gel/namespace.h"
 
+#include <algorithm>
+
+#include "gel/common.h"
+#include "gel/local.h"
 #include "gel/to_string_helper.h"
 
 namespace gel {
 NamespaceList Namespace::namespaces_{};
 
+auto Namespace::IsKernelNamespace() const -> bool {
+  return GetName() == "_kernel";
+}
+
 auto Namespace::HashCode() const -> uword {
   uword hash = 0;
-  CombineHash(hash, GetName()->HashCode());
+  CombineHash(hash, GetSymbol()->HashCode());
   return hash;
 }
 
-auto Namespace::Get(const std::string& name) -> Namespace* {
-  ASSERT(!name.empty());
-  for (const auto& ns : namespaces_) {
+auto Namespace::FindNamespace(const std::string& name) -> Namespace* {
+  const auto pos = std::ranges::find_if(namespaces_, [&name](Namespace* ns) {
     ASSERT(ns);
-    const auto& ns_name = ns->GetName()->Get();
-    if (ns_name == name)
-      return ns;
+    return ns->GetSymbol()->Equals(name);
+  });
+  return pos != std::end(namespaces_) ? (*pos) : nullptr;
+}
+
+auto Namespace::FindNamespace(Symbol* rhs) -> Namespace* {
+  ASSERT(rhs);
+  return FindNamespace(rhs->GetSymbolName());
+}
+
+auto Namespace::HasSymbol(const std::string& rhs) const -> bool {
+  ASSERT(!rhs.empty());
+  LocalVariable* local = nullptr;
+  return GetScope()->Lookup(rhs, &local, false);
+}
+
+auto Namespace::Get(const std::string& rhs) const -> Object* {
+  ASSERT(!rhs.empty());
+  LocalVariable* local = nullptr;
+  if (!GetScope()->Lookup(rhs, &local, false))
+    return nullptr;
+  ASSERT(local);
+  return local->GetValue();
+}
+
+auto Namespace::Get(Symbol* rhs) const -> Object* {
+  ASSERT(rhs);
+  LocalVariable* local = nullptr;
+  if (!GetScope()->Lookup(rhs, &local, false))
+    return nullptr;
+  ASSERT(local);
+  return local->GetValue();
+}
+
+auto Namespace::HasSymbol(Symbol* rhs) const -> bool {
+  ASSERT(rhs);
+  LocalVariable* local = nullptr;
+  return GetScope()->Lookup(rhs, &local, false);
+}
+
+auto Namespace::GetName() const -> const std::string& {
+  return GetSymbol()->GetSymbolName();
+}
+
+auto Namespace::CreateSymbol(const std::string& rhs) -> Symbol* {
+  ASSERT(!rhs.empty());
+  if (IsKernelNamespace())
+    return Symbol::New(rhs);
+  if (Contains(rhs, '/')) {
+    const auto last = rhs.find_last_of('/');
+    ASSERT(last != std::string::npos);
+    return Symbol::New(GetSymbol()->GetSymbolName(), rhs.substr(last + 1));
   }
-  return nullptr;
+  return Symbol::New(GetSymbol()->GetSymbolName(), rhs);
 }
 
 auto Namespace::CreateClass() -> Class* {
@@ -34,25 +90,14 @@ auto Namespace::New(const ObjectList& args) -> Namespace* {
 auto Namespace::Equals(Object* rhs) const -> bool {
   if (!rhs || !rhs->IsNamespace())
     return false;
-  return GetName()->Equals(rhs->AsNamespace()->GetName());
-}
-
-auto Namespace::HasPrefix(Symbol* rhs) const -> bool {
-  ASSERT(rhs);
-  const auto& s = rhs->Get();
-  const auto& n = GetName()->Get();
-  return s.starts_with(n + kPrefixChar);
-}
-
-auto Namespace::Prefix(Symbol* rhs) const -> Symbol* {
-  if (HasPrefix(rhs) || IsKernelNamespace())
-    return rhs;
-  return Symbol::New(fmt::format("{0:s}{1:c}{2:s}", GetName()->Get(), kPrefixChar, rhs->Get()));
+  const auto other = rhs->AsNamespace();
+  ASSERT(other);
+  return GetSymbol()->Equals(other->GetSymbol());
 }
 
 auto Namespace::ToString() const -> std::string {
   ToStringHelper<Namespace> helper;
-  helper.AddField("name", GetName()->Get());
+  helper.AddField("symbol", GetSymbol()->GetFullyQualifiedName());
   helper.AddField("scope", GetScope());
   return helper;
 }

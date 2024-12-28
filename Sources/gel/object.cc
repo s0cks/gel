@@ -12,7 +12,9 @@
 #include <utility>
 
 #include "gel/array.h"
+#include "gel/buffer.h"
 #include "gel/common.h"
+#include "gel/event_loop.h"
 #include "gel/expression.h"
 #include "gel/heap.h"
 #include "gel/macro.h"
@@ -25,9 +27,9 @@
 #include "gel/runtime.h"
 #include "gel/rx.h"
 #include "gel/script.h"
+#include "gel/symbol.h"
 #include "gel/to_string_helper.h"
 #include "gel/type.h"
-
 namespace gel {
 #ifdef GEL_DISABLE_HEAP
 
@@ -120,11 +122,12 @@ void Object::Init() {
   Module::InitClass();
   Seq::InitClass();
   Map::InitClass();
-  // exec
-  Script::InitClass();
   Procedure::InitClass();
   Lambda::InitClass();
   NativeProcedure::Init();
+  Buffer::Init();
+  // exec
+  Script::InitClass();
   // types
   // numeric type(s)
   Number::InitClass();
@@ -141,6 +144,7 @@ void Object::Init() {
   Error::InitClass();
   Set::InitClass();
   Expression::Init();
+  EventLoop::Init();
 #ifdef GEL_ENABLE_RX
   Observable::InitClass();
   Observer::InitClass();
@@ -391,14 +395,6 @@ auto Pair::HashCode() const -> uword {
   return hash;
 }
 
-auto Symbol::Equals(Object* rhs) const -> bool {
-  return StringObject::Equals(rhs);
-}
-
-auto Symbol::HashCode() const -> uword {
-  return StringObject::HashCode();
-}
-
 auto StringObject::Equals(Object* rhs) const -> bool {
   if (!rhs || !(rhs->IsString() || rhs->IsSymbol()))
     return false;
@@ -409,29 +405,15 @@ auto StringObject::Equals(const std::string& rhs) const -> bool {
   return Get().compare(rhs) == 0;
 }
 
-auto Symbol::CreateClass() -> Class* {
-  return Class::New(Object::GetClass(), kClassName);
-}
-
-auto Symbol::New(const ObjectList& args) -> Symbol* {
-  NOT_IMPLEMENTED(FATAL);
-}
-
-auto Symbol::ToString() const -> std::string {
-  ToStringHelper<Symbol> helper;
-  helper.AddField("value", Get());
-  return helper;
-}
-
-auto Symbol::New(const std::string& rhs) -> Symbol* {
-  ASSERT(!rhs.empty());
-  return new Symbol(rhs);
-}
-
 auto String::New() -> String* {
   static auto kEmptyString = new String();
   ASSERT(kEmptyString);
   return kEmptyString;
+}
+
+auto String::New(Symbol* rhs) -> String* {
+  ASSERT(rhs);
+  return New(rhs->GetFullyQualifiedName());
 }
 
 auto String::CreateClass() -> Class* {
@@ -447,6 +429,12 @@ auto String::New(const ObjectList& args) -> String* {
     return New();
   if (args[0]->IsString())
     return String::New(args[0]->AsString()->Get());
+  else if (gel::IsBuffer(args[0])) {
+    const auto buffer = args[0]->AsBuffer();
+    ASSERT(buffer);
+    std::string value((const char*)buffer->data(), buffer->GetLength());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+    return String::New(value);
+  }
   return ValueOf(args[0]);
 }
 
@@ -466,7 +454,7 @@ auto String::ValueOf(Object* rhs) -> String* {
   if (rhs->IsString())
     return rhs->AsString();
   else if (rhs->IsSymbol())
-    return String::New(rhs->AsSymbol()->Get());
+    return String::New(rhs->AsSymbol()->GetFullyQualifiedName());
   std::stringstream ss;
   if (rhs->IsBool()) {
     ss << (Bool::Unbox(rhs->AsBool()) ? "#t" : "#f");
@@ -475,7 +463,7 @@ auto String::ValueOf(Object* rhs) -> String* {
   } else if (rhs->IsDouble()) {
     ss << rhs->AsDouble()->Get();
   } else if (rhs->IsSymbol()) {
-    ss << rhs->AsSymbol()->Get();
+    ss << rhs->AsSymbol()->GetFullyQualifiedName();
   } else if (rhs->IsPair()) {
     const auto pair = rhs->AsPair();
     ASSERT(pair);
@@ -649,10 +637,10 @@ auto PrintValue(std::ostream& stream, Object* value) -> std::ostream& {
   } else if (value->IsString()) {
     return stream << value->AsString()->Get();
   } else if (value->IsSymbol()) {
-    return stream << value->AsSymbol()->Get();
+    return stream << value->AsSymbol()->GetFullyQualifiedName();
   } else if (value->IsNativeProcedure()) {
     const auto native = value->AsNativeProcedure();
-    const auto& symbol = native->GetSymbol()->Get();
+    const auto& symbol = native->GetSymbol()->GetFullyQualifiedName();
     return stream << "NativeProcedure(" << symbol << ")";
   } else if (value->IsClass()) {
     const auto cls = value->AsClass();
@@ -663,7 +651,7 @@ auto PrintValue(std::ostream& stream, Object* value) -> std::ostream& {
     const auto lambda = value->AsLambda();
     stream << "Lambda(";
     if (lambda->HasSymbol())
-      stream << lambda->GetSymbol()->Get();
+      stream << lambda->GetSymbol()->GetFullyQualifiedName();
     stream << ")";
     return stream;
   } else if (value->IsPair()) {

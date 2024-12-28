@@ -15,9 +15,9 @@
 
 namespace gel {
 class Runtime;
-class BytecodeInterpreter {
+class Interpreter {
   friend class Runtime;
-  DEFINE_NON_COPYABLE_TYPE(BytecodeInterpreter);
+  DEFINE_NON_COPYABLE_TYPE(Interpreter);
 
  private:
   Runtime* runtime_;
@@ -65,8 +65,7 @@ class BytecodeInterpreter {
   void Pop();
   void Dup();
   void Throw();
-  void InvokeNative();
-  void InvokeDynamic();
+  void Invoke(const Bytecode::Op op);
   void Push(const Bytecode code);
   void LoadLocal(const uword idx);
   void StoreLocal(const uword idx);
@@ -78,7 +77,7 @@ class BytecodeInterpreter {
   void Jump(const Bytecode code, const uword address);
 
  protected:
-  explicit BytecodeInterpreter(Runtime* runtime) :
+  explicit Interpreter(Runtime* runtime) :
     runtime_(runtime) {}
 
   inline auto GetCurrentAddress() const -> uword {
@@ -94,7 +93,7 @@ class BytecodeInterpreter {
   }
 
  public:
-  virtual ~BytecodeInterpreter() = default;
+  virtual ~Interpreter() = default;
   void Run(const uword address);
 };
 }  // namespace gel

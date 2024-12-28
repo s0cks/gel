@@ -3,7 +3,9 @@
 
 #include <gtest/gtest.h>
 
+#include "gel/buffer.h"
 #include "gel/error.h"
+#include "gel/event_loop.h"
 #include "gel/lambda.h"
 #include "gel/macro.h"
 #include "gel/module.h"
@@ -11,6 +13,7 @@
 #include "gel/object.h"
 #include "gel/rx.h"
 #include "gel/script.h"
+#include "gel/symbol.h"
 
 namespace gel::testing {
 using namespace ::testing;
@@ -49,7 +52,7 @@ static inline auto IsFalse(Object* rhs) -> AssertionResult {
 static inline auto IsSymbol(Object* rhs, const char* expected) -> AssertionResult {
   if (!rhs || !rhs->IsSymbol())
     return AssertionFailure() << "expected " << (rhs ? rhs->ToString() : "null") << " to be a Symbol.";
-  if (rhs->AsSymbol()->Get() != expected)
+  if (rhs->AsSymbol()->GetFullyQualifiedName() != expected)
     return AssertionFailure() << "expected " << rhs->ToString() << " value to be: " << expected;
   return AssertionSuccess();
 }

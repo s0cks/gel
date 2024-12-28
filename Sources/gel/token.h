@@ -43,6 +43,7 @@ struct Position {
   V(LParen)                   \
   V(RParen)                   \
   V(Dot)                      \
+  V(DotDotDot)                \
   V(Range)                    \
   V(Identifier)               \
   V(LBrace)                   \
@@ -51,6 +52,8 @@ struct Position {
   V(RBracket)                 \
   V(Question)                 \
   V(Comma)                    \
+  V(Dollar)                   \
+  V(Dispatch)                 \
   V(LiteralNumber)            \
   V(LiteralDouble)            \
   V(LiteralLong)              \

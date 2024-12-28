@@ -14,6 +14,7 @@
 
 namespace gel {
 class Parser;
+class MacroExpander;
 namespace expr {
 class LambdaExpr;
 class Expression;
@@ -24,6 +25,7 @@ class GraphEntryInstr;
 
 class Lambda : public Procedure, public Executable {
   friend class Parser;
+  friend class MacroExpander;
   friend class FlowGraphCompiler;
 
  private:
@@ -32,6 +34,27 @@ class Lambda : public Procedure, public Executable {
   LocalScope* scope_ = nullptr;
   ArgumentSet args_;           // TODO: fails to copy during GC
   expr::ExpressionList body_;  // TODO: fails to copy during GC
+
+  inline auto at(const uint64_t idx) const -> expr::ExpressionList::const_iterator {
+    return std::begin(body_) + static_cast<expr::ExpressionList::difference_type>(idx);
+  }
+
+  inline void Append(expr::Expression* expr) {
+    ASSERT(expr);
+    body_.push_back(expr);
+  }
+
+  inline void InsertAt(const uint64_t idx, expr::Expression* expr) {
+    ASSERT(idx >= 0 && idx <= GetNumberOfExpressions());
+    ASSERT(expr);
+    body_.insert(at(idx), expr);
+  }
+
+  inline void InsertAt(const uint64_t idx, const expr::ExpressionList& exprs) {
+    ASSERT(idx >= 0 && idx <= GetNumberOfExpressions());
+    ASSERT(!exprs.empty());
+    body_.insert(at(idx), std::begin(exprs), std::end(exprs));
+  }
 
   void SetArgs(const ArgumentSet& args) {
     args_ = args;
@@ -44,6 +67,31 @@ class Lambda : public Procedure, public Executable {
   void SetScope(LocalScope* scope) {
     ASSERT(scope);
     scope_ = scope;
+  }
+
+  void SetExpressionAt(const uint64_t idx, expr::Expression* expr) {
+    ASSERT(idx >= 0 && idx <= GetNumberOfExpressions());
+    ASSERT(expr);
+    body_[idx] = expr;
+  }
+
+  void RemoveExpressionAt(const uint64_t idx) {
+    ASSERT(idx >= 0 && idx <= GetNumberOfExpressions());
+    body_.erase(at(idx));
+  }
+
+  void ReplaceExpressionAt(const uint64_t idx, expr::Expression* expr) {
+    ASSERT(idx >= 0 && idx <= GetNumberOfExpressions());
+    ASSERT(expr);
+    RemoveExpressionAt(idx);
+    InsertAt(idx, expr);
+  }
+
+  void ReplaceExpressionAt(const uint64_t idx, const expr::ExpressionList& body) {
+    ASSERT(idx >= 0 && idx <= GetNumberOfExpressions());
+    ASSERT(!body.empty());
+    RemoveExpressionAt(idx);
+    InsertAt(idx, body);
   }
 
  protected:
@@ -91,8 +139,17 @@ class Lambda : public Procedure, public Executable {
     return body_;
   }
 
+  auto GetNumberOfExpressions() const -> uint64_t {
+    return body_.size();
+  }
+
   inline auto IsEmpty() const -> bool {
     return body_.empty();
+  }
+
+  auto GetExpressionAt(const uint64_t idx) const -> expr::Expression* {
+    ASSERT(idx >= 0 && idx <= GetNumberOfExpressions());
+    return body_[idx];
   }
 
   auto GetNumberOfArgs() const -> uint64_t {

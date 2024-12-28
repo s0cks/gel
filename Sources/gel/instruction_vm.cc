@@ -112,17 +112,18 @@ void UnaryOpInstr::Compile(FlowGraphCompiler* compiler) {
 
 void InvokeInstr::Compile(FlowGraphCompiler* compiler) {
   ASSERT(compiler);
-  __ invokedynamic(GetNumberOfArgs());
+  ASSERT(GetProcedure()->IsLambda());
+  __ invoke(GetProcedure()->AsLambda(), GetNumberOfArgs());
 }
 
 void InvokeNativeInstr::Compile(FlowGraphCompiler* compiler) {
   ASSERT(compiler);
-  __ invokenative(GetNativeProcedure());
+  __ invokenative(GetNativeProcedure(), GetNumberOfArgs());
 }
 
 void InvokeDynamicInstr::Compile(FlowGraphCompiler* compiler) {
   ASSERT(compiler);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  __ invokedynamic(GetNumberOfArgs());
 }
 
 void ReturnInstr::Compile(FlowGraphCompiler* compiler) {

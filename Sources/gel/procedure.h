@@ -4,6 +4,7 @@
 #include "gel/common.h"
 #include "gel/local_scope.h"
 #include "gel/object.h"
+#include "gel/symbol.h"
 
 namespace gel {
 class Procedure : public Object {
@@ -42,7 +43,7 @@ class Procedure : public Object {
   auto HashCode() const -> uword override {
     uword hash = 0;
     if (HasSymbol())
-      CombineHash(hash, GetSymbol()->Get());
+      CombineHash(hash, GetSymbol()->HashCode());
     return hash;
   }
 

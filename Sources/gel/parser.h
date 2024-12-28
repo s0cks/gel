@@ -12,6 +12,7 @@
 #include "gel/expression.h"
 #include "gel/instruction.h"
 #include "gel/lambda.h"
+#include "gel/local.h"
 #include "gel/local_scope.h"
 #include "gel/namespace.h"
 #include "gel/runtime.h"
@@ -43,6 +44,8 @@ class Parser {
   std::stack<Object*> owner_stack_{};
   Script* script_ = nullptr;
   Namespace* namespace_ = nullptr;
+  word dispatched_ = -1;
+  bool args_ = false;
 
   inline void SetScript(Script* script) {
     ASSERT(script);
@@ -58,7 +61,19 @@ class Parser {
     namespace_ = nullptr;
   }
 
+  inline void SetParsingArgs(const bool rhs = true) {
+    args_ = rhs;
+  }
+
+  inline void ClearParsingArgs() {
+    return SetParsingArgs(false);
+  }
+
  protected:
+  inline auto IsParsingArgs() const -> bool {
+    return args_;
+  }
+
   inline void SetScope(LocalScope* scope) {
     ASSERT(scope);
     scope_ = scope;
@@ -74,6 +89,22 @@ class Parser {
 
   inline auto InNamespace() const -> bool {
     return GetNamespace() != nullptr;
+  }
+
+  inline auto IsDispatching() const -> bool {
+    return dispatched_ >= 0;
+  }
+
+  inline void SetDispatched(const word rhs) {
+    dispatched_ = rhs;
+  }
+
+  inline void SetDispatching() {
+    return SetDispatched(0);
+  }
+
+  inline void ClearDispatched() {
+    return SetDispatched(-1);
   }
 
   // Definitions
@@ -100,9 +131,13 @@ class Parser {
     return false;
   }
 
+  inline auto PeekKind() -> Token::Kind {
+    const auto& token = PeekToken();
+    return token.kind;
+  }
+
   inline auto PeekEq(const Token::Kind rhs) -> bool {
-    const auto& peek = PeekToken();
-    return peek.kind == rhs;
+    return PeekKind() == rhs;
   }
 
   inline auto ExpectNext(const Token::Kind rhs) -> const Token& {
@@ -112,8 +147,9 @@ class Parser {
     return next;
   }
 
+  auto IsValidIdentifierChar(const char c, const bool initial = false) const -> bool;
   auto ParseLambda(const Token::Kind kind) -> Lambda*;
-  auto ParseMacro(const Token::Kind kind) -> Macro*;
+  auto ParseMacro() -> Macro*;
   auto ParseNamespace() -> Namespace*;
 
   auto ParseLoadSymbol() -> LoadLocalInstr*;
@@ -131,7 +167,7 @@ class Parser {
 
   auto ParseLiteralValue() -> Object*;
   auto ParseLiteralString() -> String*;
-  auto ParseLiteralLambda() -> expr::LiteralExpr*;
+  auto ParseLiteralLambda(const Token::Kind kind) -> expr::LiteralExpr*;
 
   // Expressions
   auto ParseMap() -> expr::Expression*;
@@ -158,6 +194,7 @@ class Parser {
   auto ParseImportExpr() -> expr::ImportExpr*;
   auto ParseDef() -> expr::Expression*;
   auto ParseDefn(LocalVariable** local) -> bool;
+  auto ParseMacroDef(LocalVariable** local) -> bool;
   auto ParseDefmacro() -> expr::Expression*;
 
   inline auto PeekChar(const uint64_t offset = 0) const -> char {

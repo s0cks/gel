@@ -10,6 +10,7 @@
 #include "gel/common.h"
 #include "gel/disassembler.h"
 #include "gel/error.h"
+#include "gel/event_loop.h"
 #include "gel/expression.h"
 #include "gel/instruction.h"
 #include "gel/lambda.h"
@@ -30,18 +31,18 @@ namespace gel {
 #define POPN(N, Result) (runtime_->PopN((Result), (N), true));
 #define PUSH(Value)     (runtime_->Push(gel::IsNull((Value)) ? Null() : (Value)))
 
-auto BytecodeInterpreter::GetScope() const -> LocalScope* {
+auto Interpreter::GetScope() const -> LocalScope* {
   return runtime_->GetScope();
 }
 
-void BytecodeInterpreter::LoadLocal(const uword idx) {
+void Interpreter::LoadLocal(const uword idx) {
   ASSERT(idx >= 0 && idx <= GetScope()->GetNumberOfLocals());
   const auto local = GetScope()->GetLocalAt(idx);
   ASSERT(local && local->HasValue());
   return PUSH(local->GetValue());
 }
 
-void BytecodeInterpreter::StoreLocal(const uword idx) {
+void Interpreter::StoreLocal(const uword idx) {
   ASSERT(idx >= 0 && idx <= GetScope()->GetNumberOfLocals());
   const auto local = GetScope()->GetLocalAt(idx);
   ASSERT(local);
@@ -50,7 +51,7 @@ void BytecodeInterpreter::StoreLocal(const uword idx) {
   local->SetValue(value);
 }
 
-void BytecodeInterpreter::Push(const Bytecode code) {
+void Interpreter::Push(const Bytecode code) {
   switch (code.op()) {
     case Bytecode::kPushQ: {
       const auto value = NextObjectPointer();
@@ -87,7 +88,7 @@ void BytecodeInterpreter::Push(const Bytecode code) {
   }
 }
 
-void BytecodeInterpreter::Jump(const Bytecode code, const uword target) {
+void Interpreter::Jump(const Bytecode code, const uword target) {
   switch (code.op()) {
     case Bytecode::kJnz: {
       const auto value = POP;
@@ -113,40 +114,38 @@ void BytecodeInterpreter::Jump(const Bytecode code, const uword target) {
   }
 }
 
-void BytecodeInterpreter::nop() {
+void Interpreter::nop() {
   // do nothing
 }
 
-void BytecodeInterpreter::bt() {
+void Interpreter::bt() {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
 }
 
-void BytecodeInterpreter::InvokeDynamic() {
-  const auto procedure = POP;
-  ASSERT(procedure && procedure->IsProcedure());
+void Interpreter::Invoke(const Bytecode::Op op) {
+  const auto func = op != Bytecode::kInvokeDynamic ? NextObjectPointer() : POP;
+  ASSERT(func && func->IsProcedure());
   const auto num_args = NextUWord();
-  if (procedure->IsLambda()) {
-    return GetRuntime()->CallWithNArgs(procedure->AsLambda(), num_args);
-  } else if (procedure->IsNativeProcedure()) {
-    return GetRuntime()->CallWithNArgs(procedure->AsNativeProcedure(), num_args);
+  if (func->IsNativeProcedure()) {
+    ASSERT(op == Bytecode::kInvokeNative || op == Bytecode::kInvokeDynamic);
+    return GetRuntime()->CallWithNArgs(func->AsNativeProcedure(), num_args);
+  } else if (func->IsLambda()) {
+    ASSERT(op == Bytecode::kInvoke || op == Bytecode::kInvokeDynamic);
+    return GetRuntime()->CallWithNArgs(func->AsLambda(), num_args);
   }
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  const auto error = Error::New(fmt::format("cannot invoke {}", (*func)));
+  ASSERT(error);
+  PUSH(error);
+  return Throw();
 }
 
-void BytecodeInterpreter::InvokeNative() {
-  const auto func = NextObjectPointer();
-  ASSERT(func && func->IsNativeProcedure());
-  const auto num_args = func->AsNativeProcedure()->GetNumberOfArgs();
-  return GetRuntime()->CallWithNArgs(func->AsNativeProcedure(), num_args);
-}
-
-void BytecodeInterpreter::Throw() {
+void Interpreter::Throw() {
   const auto err = POP;
   ASSERT(err && err->IsError());
   throw std::runtime_error(err->AsError()->GetMessage()->Get());
 }
 
-void BytecodeInterpreter::ExecBinaryOp(const Bytecode code) {
+void Interpreter::ExecBinaryOp(const Bytecode code) {
   ASSERT(code.IsBinaryOp());
   const auto rhs = POP;
   ASSERT(rhs);
@@ -233,7 +232,7 @@ void BytecodeInterpreter::ExecBinaryOp(const Bytecode code) {
   }
 }
 
-void BytecodeInterpreter::ExecUnaryOp(const Bytecode code) {
+void Interpreter::ExecUnaryOp(const Bytecode code) {
   ASSERT(code.IsUnaryOp());
   const auto value = POP;
   ASSERT(value);
@@ -273,14 +272,14 @@ void BytecodeInterpreter::ExecUnaryOp(const Bytecode code) {
   }
 }
 
-void BytecodeInterpreter::CheckInstance(Class* cls) {
+void Interpreter::CheckInstance(Class* cls) {
   ASSERT(cls);
   const auto top = GetRuntime()->StackTop();
   LOG_IF(FATAL, !top) << "expected " << Null() << " to be an instanceof " << cls;
   LOG_IF(FATAL, !(*top)->GetType()->IsInstanceOf(cls->AsClass())) << "expected " << (*top) << " to be an instanceof " << cls;
 }
 
-void BytecodeInterpreter::Cast(Class* cls) {
+void Interpreter::Cast(Class* cls) {
   ASSERT(cls);
   const auto value = POP;
   ASSERT(value);
@@ -292,16 +291,16 @@ void BytecodeInterpreter::Cast(Class* cls) {
   }
 }
 
-void BytecodeInterpreter::Pop() {
+void Interpreter::Pop() {
   const auto value = POP;
   ASSERT(value);
 }
 
-void BytecodeInterpreter::Dup() {
+void Interpreter::Dup() {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
 }
 
-void BytecodeInterpreter::New(Class* cls, const uword num_args) {
+void Interpreter::New(Class* cls, const uword num_args) {
   ASSERT(cls);
   ObjectList args{};
   POPN(num_args, args);
@@ -310,14 +309,13 @@ void BytecodeInterpreter::New(Class* cls, const uword num_args) {
   PUSH(value);
 }
 
-void BytecodeInterpreter::Run(const uword address) {
+void Interpreter::Run(const uword address) {
   SetCurrentAddress(address);
   ASSERT(GetCurrentAddress() == address);
   while (true) {
     const auto start_address = GetCurrentAddress();
     const auto pos = (start_address - address);
     const auto op = NextBytecode();
-    // DLOG(INFO) << "executing " << op << " (" << ((void*)start_address) << ")....";
     switch (op.op()) {
       case Bytecode::kPushN:
       case Bytecode::kPushT:
@@ -352,11 +350,10 @@ void BytecodeInterpreter::Run(const uword address) {
       case Bytecode::kStoreLocal3:
         StoreLocal(op - Bytecode::kStoreLocal0);
         continue;
-      case Bytecode::kInvokeDynamic:
-        InvokeDynamic();
-        continue;
+      case Bytecode::kInvoke:
       case Bytecode::kInvokeNative:
-        InvokeNative();
+      case Bytecode::kInvokeDynamic:
+        Invoke(op.op());
         continue;
       case Bytecode::kThrow:
         return Throw();
@@ -388,8 +385,12 @@ void BytecodeInterpreter::Run(const uword address) {
         ExecUnaryOp(op);
         continue;
 #undef DECLARE_CASE
-      case Bytecode::kRet:
+      case Bytecode::kRet: {
+        const auto event_loop = GetThreadEventLoop();
+        ASSERT(event_loop);
+        while (event_loop->Run(UV_RUN_NOWAIT) != 0);  // do nothing
         return;
+      }
       case Bytecode::kJump:
       case Bytecode::kJz:
       case Bytecode::kJnz:

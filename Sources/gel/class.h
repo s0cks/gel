@@ -33,13 +33,13 @@ class Class : public Object {
   auto VisitPointers(PointerVisitor* vis) -> bool override;
   auto VisitPointers(PointerPointerVisitor* vis) -> bool override;
 
+ public:
+  ~Class() override = default;
+
   void AddFunction(Procedure* func) {
     ASSERT(func);
     funcs_.push_back(func);
   }
-
- public:
-  ~Class() override = default;
 
   auto GetParent() const -> Class* {
     return parent_;
@@ -67,6 +67,7 @@ class Class : public Object {
   auto GetAllocationSize() const -> uword;
   auto IsInstanceOf(Class* rhs) const -> bool;
   auto HasFunction(Symbol* symbol, const bool recursive = true) const -> bool;
+  auto GetFunction(const std::string& name, const bool recursive = true) const -> Procedure*;
   auto GetFunction(Symbol* symbol, const bool recursive = true) const -> Procedure*;
   DECLARE_TYPE(Class);
 

@@ -20,12 +20,23 @@ class FlowGraph;
     static constexpr const auto value = true; \
   }
 
+DECLARE_TRAIT(is_object);
+#define DECLARE_IS_OBJECT(Name) DECLARE_HAS_TRAIT(is_object, Name);
+FOR_EACH_TYPE(DECLARE_IS_OBJECT)
+#undef DECLARE_IS_OBJECT
+
 DECLARE_TRAIT(is_executable);
 #define DECLARE_IS_EXECUTABLE(Name) DECLARE_HAS_TRAIT(is_executable, Name)
 DECLARE_IS_EXECUTABLE(Script);
 DECLARE_IS_EXECUTABLE(Lambda);
 DECLARE_IS_EXECUTABLE(Procedure);
 DECLARE_IS_EXECUTABLE(NativeProcedure);
+#undef DECLARE_IS_EXECUTABLE
+
+DECLARE_TRAIT(has_code);
+#define DECLARE_HAS_CODE(Name) DECLARE_HAS_TRAIT(has_code, Name)
+DECLARE_HAS_CODE(Script);
+DECLARE_HAS_CODE(Lambda);
 #undef DECLARE_IS_EXECUTABLE
 
 DECLARE_TRAIT(has_entry);
@@ -36,6 +47,14 @@ DECLARE_HAS_ENTRY(Procedure);
 DECLARE_HAS_ENTRY(FlowGraph);
 DECLARE_HAS_ENTRY(NativeProcedure);
 #undef DECLARE_HAS_ENTRY
+
+DECLARE_TRAIT(has_symbol);
+#define DECLARE_HAS_SYMBOL(Name) DECLARE_HAS_TRAIT(has_symbol, Name)
+DECLARE_HAS_SYMBOL(Macro);
+DECLARE_HAS_SYMBOL(Lambda);
+DECLARE_HAS_SYMBOL(Namespace);
+DECLARE_HAS_SYMBOL(NativeProcedure);
+#undef DECLARE_HAS_SYMBOL
 
 DECLARE_TRAIT(is_iterable);
 #define DECLARE_IS_ITERABLE(Name) DECLARE_HAS_TRAIT(is_iterable, Name)

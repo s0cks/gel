@@ -1,8 +1,6 @@
 #ifndef GEL_NATIVE_PROCEDURE_H
 #define GEL_NATIVE_PROCEDURE_H
 
-#include <__type_traits/remove_pointer.h>
-
 #include <type_traits>
 #include <variant>
 
@@ -14,6 +12,90 @@
 #include "gel/procedure.h"
 
 namespace gel {
+
+template <const uword Index, class T = Object, const bool Required = true>
+class NativeArgument {
+  DEFINE_NON_COPYABLE_TYPE(NativeArgument);
+
+ private:
+  gel::Object* value_ = nullptr;
+
+  void SetValue(T* rhs) {
+    ASSERT(rhs);
+    value_ = rhs;
+  }
+
+ public:
+  explicit NativeArgument(const ObjectList& args) {
+    ASSERT(Index >= 0 && (Index <= args.size() || !Required));
+    const auto value = args[Index];
+    if (!value) {
+      if (Required) {
+        value_ = Error::New(fmt::format("arg #{} to not be '()", Index));
+      }
+      return;
+    }
+
+    if (!value->GetType()->IsInstanceOf(T::GetClass())) {
+      value_ = Error::New(
+          fmt::format("arg #{} `{}` is expected to be an instance of: `{}`", Index, (*value), T::GetClass()->GetName()->Get()));
+      return;
+    }
+    SetValue((T*)value);
+  }
+  virtual ~NativeArgument() = default;
+
+  inline auto HasValue() const -> bool {
+    return value_ != nullptr;
+  }
+
+  auto HasError() const -> bool {
+    return (Required && !HasValue()) || (HasValue() && value_->IsError());
+  }
+
+  virtual auto GetValue() const -> T* {
+    return (T*)value_;
+  }
+
+  auto GetIndex() const -> uword {
+    return Index;
+  }
+
+  auto IsRequired() const -> bool {
+    return Required;
+  }
+
+  auto IsOptional() const -> bool {
+    return !Required;
+  }
+
+  auto GetType() const -> Class* {
+    return T::GetClass();
+  }
+
+  auto GetError() const -> Error* {
+    return value_ && value_->IsError() ? value_->AsError() : Error::New("value is null");
+  }
+
+  operator bool() const {
+    return !HasError();
+  }
+
+  operator T*() const {
+    return GetValue();
+  }
+
+  auto operator->() -> T* {
+    return GetValue();
+  }
+};
+
+template <const uword Index, class T>
+using OptionalNativeArgument = NativeArgument<Index, T, false>;
+
+template <const uword Index, class T>
+using RequiredNativeArgument = NativeArgument<Index, T>;
+
 class Runtime;
 class NativeProcedure;
 using NativeProcedureList = std::vector<NativeProcedure*>;
@@ -68,8 +150,18 @@ class NativeProcedure : public Procedure {
     return Throw(Error::New(message));
   }
 
+  inline auto ThrowNotImplementedError() const -> bool {
+    return ThrowError(fmt::format("{} is not implemented!", GetSymbol()->GetFullyQualifiedName()));
+  }
+
   inline auto DoNothing() const -> bool {
     return true;
+  }
+
+  template <const uword Index, class T, const bool Required = true>
+  inline auto Throw(const NativeArgument<Index, T, Required>& arg) const -> bool {
+    ASSERT(!arg);
+    return Throw(arg.GetError());
   }
 
   void SetArgs(const ArgumentSet& args) {
@@ -143,9 +235,9 @@ class NativeProcedure : public Procedure {
  private:                                                    \
   static Symbol* kSymbol;                                    \
   static Name* kInstance;                                    \
-  static void Init();                                        \
                                                              \
  public:                                                     \
+  static void Init();                                        \
   static constexpr const auto kSymbolString = (Sym);         \
   static inline auto Get() -> Name* {                        \
     ASSERT(kInstance);                                       \
@@ -301,95 +393,6 @@ using RequiredVariantNativeArgument = VariantNativeArgument<Index, true, Types..
 
 template <const uword Index, class... Types>
 using OptionalVariadicNativeArgument = VariantNativeArgument<Index, false, Types...>;
-
-template <const uword Index, class T = Object, const bool Required = true>
-class NativeArgument {
-  DEFINE_NON_COPYABLE_TYPE(NativeArgument);
-
- private:
-  gel::Object* value_ = nullptr;
-
-  void SetValue(T* rhs) {
-    ASSERT(rhs);
-    value_ = rhs;
-  }
-
- public:
-  explicit NativeArgument(const ObjectList& args) {
-    if (Index < 0 || Index >= args.size()) {
-      if (Required) {
-        value_ = Error::New("Hello World");
-        return;
-      }
-      return;
-    }
-    const auto value = args[Index];
-    if (!value) {
-      if (Required) {
-        value_ = Error::New(fmt::format("arg #{} to not be '()", Index));
-      }
-      return;
-    }
-
-    if (!value->GetType()->IsInstanceOf(T::GetClass())) {
-      value_ = Error::New(
-          fmt::format("arg #{} `{}` is expected to be an instance of: `{}`", Index, (*value), T::GetClass()->GetName()->Get()));
-      return;
-    }
-    SetValue((T*)value);
-  }
-  virtual ~NativeArgument() = default;
-
-  inline auto HasValue() const -> bool {
-    return value_ != nullptr;
-  }
-
-  auto HasError() const -> bool {
-    return (Required && !HasValue()) || (HasValue() && value_->IsError());
-  }
-
-  virtual auto GetValue() const -> T* {
-    return (T*)value_;
-  }
-
-  auto GetIndex() const -> uword {
-    return Index;
-  }
-
-  auto IsRequired() const -> bool {
-    return Required;
-  }
-
-  auto IsOptional() const -> bool {
-    return !Required;
-  }
-
-  auto GetType() const -> Class* {
-    return T::GetClass();
-  }
-
-  auto GetError() const -> Error* {
-    return value_ && value_->IsError() ? value_->AsError() : Error::New("value is null");
-  }
-
-  operator bool() const {
-    return !HasError();
-  }
-
-  operator T*() const {
-    return GetValue();
-  }
-
-  auto operator->() -> T* {
-    return GetValue();
-  }
-};
-
-template <const uword Index, class T>
-using OptionalNativeArgument = NativeArgument<Index, T, false>;
-
-template <const uword Index, class T>
-using RequiredNativeArgument = NativeArgument<Index, T>;
 
 using PluginInitCallback = int (*)();
 using PluginGetNameFunc = const char* (*)();

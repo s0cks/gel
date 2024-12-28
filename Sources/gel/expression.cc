@@ -139,6 +139,19 @@ auto BeginExpr::ToString() const -> std::string {
   return helper;
 }
 
+auto CallProcExpr::IsMacroCall(LocalScope* scope) const -> bool {
+  ASSERT(scope);
+  if (!expr::IsLiteralSymbol(GetTarget()))
+    return false;
+  const auto symbol = GetTarget()->AsLiteralExpr()->GetValue()->AsSymbol();
+  ASSERT(symbol);
+  LocalVariable* local = nullptr;
+  if (!scope->Lookup(symbol, &local))
+    return false;
+  ASSERT(local);
+  return local->HasValue() && local->GetValue()->IsMacro();
+}
+
 auto CallProcExpr::ToString() const -> std::string {
   ToStringHelper<CallProcExpr> helper;
   helper.AddField("target", GetTarget());
@@ -199,13 +212,6 @@ auto LocalDef::ToString() const -> std::string {
 auto ImportExpr::ToString() const -> std::string {
   ToStringHelper<ImportExpr> helper;
   helper.AddField("module", GetModule());
-  return helper;
-}
-
-auto MacroDef::ToString() const -> std::string {
-  ToStringHelper<MacroDef> helper;
-  helper.AddField("symbol", GetSymbol());
-  helper.AddField("body", GetBody());
   return helper;
 }
 

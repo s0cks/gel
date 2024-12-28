@@ -24,7 +24,7 @@ auto NativeProcedure::Find(const std::string& name) -> NativeProcedure* {
   ASSERT(!name.empty());
   for (const auto& native : all_) {
     ASSERT(native);
-    const auto symbol = native->GetSymbol()->Get();
+    const auto symbol = native->GetSymbol()->GetFullyQualifiedName();
     if (name == symbol)
       return native;
   }
@@ -67,7 +67,7 @@ auto NativeProcedure::Equals(Object* rhs) const -> bool {
 
 auto NativeProcedure::ToString() const -> std::string {
   ToStringHelper<NativeProcedure> helper;
-  helper.AddField("symbol", GetSymbol()->Get());
+  helper.AddField("symbol", GetSymbol()->GetFullyQualifiedName());
   helper.AddField("args", GetArgs());
   if (HasDocs())
     helper.AddField("docs", GetDocs());

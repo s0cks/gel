@@ -42,7 +42,7 @@ auto LocalScope::Has(const std::string& name, const bool recursive) -> bool {
 
 auto LocalScope::Has(const Symbol* symbol, const bool recursive) -> bool {
   ASSERT(symbol);
-  return Has(symbol->Get(), recursive);
+  return Has(symbol->GetFullyQualifiedName(), recursive);
 }
 
 auto LocalScope::Add(LocalVariable* local) -> bool {
@@ -59,7 +59,7 @@ auto LocalScope::Add(LocalVariable* local) -> bool {
 
 auto LocalScope::Add(Symbol* symbol, Object* value) -> bool {
   ASSERT(symbol);
-  return Add(symbol->Get(), value);
+  return Add(symbol->GetFullyQualifiedName(), value);
 }
 
 auto LocalScope::Add(LocalScope* scope) -> bool {
@@ -86,7 +86,7 @@ auto LocalScope::Lookup(const std::string& name, LocalVariable** result, const b
 
 auto LocalScope::Lookup(const Symbol* symbol, LocalVariable** result, const bool recursive) -> bool {
   ASSERT(symbol);
-  return Lookup(symbol->Get(), result, recursive);
+  return Lookup(symbol->GetFullyQualifiedName(), result, recursive);
 }
 
 static inline auto operator<<(std::ostream& stream, const std::vector<LocalVariable*>& rhs) -> std::ostream& {

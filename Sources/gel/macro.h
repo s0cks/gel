@@ -7,29 +7,89 @@
 #include "gel/object.h"
 
 namespace gel {
+class Parser;
 class Macro : public Object {
+  friend class Script;
+  friend class Parser;
+
  private:
-  Symbol* symbol_;
-  ArgumentSet args_;
+  Object* owner_ = nullptr;
+  Symbol* symbol_ = nullptr;
+  String* docstring_ = nullptr;
+  LocalScope* scope_ = nullptr;
+  ArgumentSet args_{};
   expr::ExpressionList body_{};
 
  protected:
-  explicit Macro(Symbol* symbol, const ArgumentSet& args, const expr::ExpressionList& body) :  // NOLINT(modernize-pass-by-value)
+  Macro() = default;
+  Macro(Symbol* symbol, const ArgumentSet& args, const expr::ExpressionList& body) :  // NOLINT(modernize-pass-by-value)
     symbol_(symbol),
     args_(args),
     body_(body) {
     ASSERT(symbol);
   }
 
+  void SetSymbol(Symbol* rhs) {
+    ASSERT(rhs);
+    symbol_ = rhs;
+  }
+
+  void SetOwner(Object* rhs) {
+    ASSERT(rhs);
+    owner_ = rhs;
+  }
+
+  void SetScope(LocalScope* rhs) {
+    ASSERT(rhs);
+    scope_ = rhs;
+  }
+
+  void SetArgs(const ArgumentSet& rhs) {
+    args_ = rhs;
+  }
+
+  void SetBody(const expr::ExpressionList& rhs) {
+    body_ = rhs;
+  }
+
+  void SetDocstring(String* rhs) {
+    ASSERT(rhs);
+    docstring_ = rhs;
+  }
+
  public:
   ~Macro() override = default;
+
+  auto GetOwner() const -> Object* {
+    return owner_;
+  }
+
+  inline auto HasOwner() const -> bool {
+    return GetOwner() != nullptr;
+  }
 
   auto GetSymbol() const -> Symbol* {
     return symbol_;
   }
 
+  auto GetDocstring() const -> String* {
+    return docstring_;
+  }
+
+  inline auto HasDocstring() const -> bool {
+    return GetDocstring() != nullptr;
+  }
+
   auto GetArgs() const -> const ArgumentSet& {
     return args_;
+  }
+
+  auto GetNumberOfArgs() const -> uint64_t {
+    return args_.size();
+  }
+
+  inline auto HasArgs() const -> bool {
+    return !args_.empty();
   }
 
   auto GetBody() const -> const expr::ExpressionList& {
@@ -41,6 +101,11 @@ class Macro : public Object {
   }
 
   DECLARE_TYPE(Macro);
+
+ private:
+  static inline auto New() -> Macro* {
+    return new Macro();
+  }
 
  public:
   static inline auto New(Symbol* symbol, const ArgumentSet& args = {}, const expr::ExpressionList& body = {}) -> Macro* {

@@ -466,6 +466,11 @@ class InvokeInstr : public Definition {
     return target_;
   }
 
+  auto GetProcedure() const -> Procedure* {
+    ASSERT(GetTarget()->IsConstantInstr() && GetTarget()->AsConstantInstr()->GetValue()->IsProcedure());
+    return GetTarget()->AsConstantInstr()->GetValue()->AsProcedure();
+  }
+
   DECLARE_INSTRUCTION(InvokeInstr);
 
  public:
@@ -511,23 +516,23 @@ class InvokeDynamicInstr : public Definition {
 };
 class InvokeNativeInstr : public InvokeInstr {
  protected:
-  explicit InvokeNativeInstr(Definition* target) :
-    InvokeInstr(target, 0) {}
+  explicit InvokeNativeInstr(Definition* target, const uword num_args) :
+    InvokeInstr(target, num_args) {}
 
  public:
   ~InvokeNativeInstr() override = default;
 
   auto GetNativeProcedure() const -> NativeProcedure* {
-    ASSERT(GetTarget()->IsConstantInstr() && GetTarget()->AsConstantInstr()->GetValue()->IsNativeProcedure());
-    return GetTarget()->AsConstantInstr()->GetValue()->AsNativeProcedure();
+    ASSERT(GetProcedure()->IsNativeProcedure());
+    return GetProcedure()->AsNativeProcedure();
   }
 
   DECLARE_INSTRUCTION(InvokeNativeInstr);
 
  public:
-  static inline auto New(Definition* target) -> InvokeNativeInstr* {
+  static inline auto New(Definition* target, const uword num_args) -> InvokeNativeInstr* {
     ASSERT(target);
-    return new InvokeNativeInstr(target);
+    return new InvokeNativeInstr(target, num_args);
   }
 };
 

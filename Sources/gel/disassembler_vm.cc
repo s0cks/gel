@@ -42,6 +42,30 @@ auto Disassembler::Comment() -> std::ostream& {
   return stream() << ";; ";
 }
 
+void Disassembler::Invoke(BytecodeDecoder& decoder, const Bytecode::Op op) {
+  switch (op) {
+    case Bytecode::kInvoke: {
+      const auto lambda = decoder.NextObjectPointer();
+      ASSERT(lambda && lambda->IsLambda());
+      Comment(lambda) << ", num_args=" << decoder.NextUWord();
+      break;
+    }
+    case Bytecode::kInvokeNative: {
+      const auto native = decoder.NextObjectPointer();
+      ASSERT(native && native->IsNativeProcedure());
+      Comment(native) << ", num_args=" << decoder.NextUWord();
+      break;
+    }
+    case Bytecode::kInvokeDynamic: {
+      const auto num_args = decoder.NextUWord();
+      Comment() << "num_args=" << num_args;
+      break;
+    }
+    default:
+      LOG(FATAL) << "";
+  }
+}
+
 void Disassembler::Disassemble(const Region& region, const char* label) {
   stream() << std::endl;
   if (ShouldShowLabels() && label && (strlen(label) > 0))
@@ -133,17 +157,11 @@ void Disassembler::Disassemble(const Region& region, const char* label) {
         Comment(cls) << ", num_args=" << decoder.NextUWord();
         break;
       }
-      case Bytecode::kInvokeNative: {
-        const auto native = decoder.NextObjectPointer();
-        ASSERT(native && native->IsNativeProcedure());
-        Comment(native);
+      case Bytecode::kInvoke:
+      case Bytecode::kInvokeNative:
+      case Bytecode::kInvokeDynamic:
+        Invoke(decoder, op.op());
         break;
-      }
-      case Bytecode::kInvokeDynamic: {
-        const auto num_args = decoder.NextUWord();
-        Comment() << "num_args=" << num_args;
-        break;
-      }
       default:
         break;
     }

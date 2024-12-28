@@ -43,7 +43,7 @@ auto Lambda::New(const ObjectList& args) -> Lambda* {
 auto Lambda::ToString() const -> std::string {
   ToStringHelper<Lambda> helper;
   if (HasSymbol())
-    helper.AddField("name", GetSymbol()->Get());
+    helper.AddField("name", GetSymbol()->GetFullyQualifiedName());
   if (HasOwner())
     helper.AddField("owner", GetOwner());
   helper.AddField("args", GetArgs());

@@ -10,6 +10,7 @@
 #include "gel/instruction.h"
 #include "gel/local.h"
 #include "gel/local_scope.h"
+#include "gel/macro_expander.h"
 #include "gel/script.h"
 #include "gel/tracing.h"
 
@@ -59,10 +60,16 @@ auto FlowGraphCompiler::BuildFlowGraph(Script* script) -> FlowGraph* {
 }
 
 auto FlowGraphCompiler::CompileLambda(Lambda* lambda) -> bool {
+  ASSERT(lambda);
+  if (lambda->IsEmpty()) {
+    DLOG(ERROR) << "cannot compile empty lambda: " << lambda;
+    return false;
+  }
+
   TRACE_MARK;
   TRACE_ZONE_NAMED("CompileLambda");
-  ASSERT(lambda);
   TIMER_START;
+  MacroExpander::ExpandAll(lambda, GetScope());
   const auto flow_graph = BuildFlowGraph(lambda);
   ASSERT(flow_graph && flow_graph->HasEntry());
   AssembleFlowGraph(flow_graph);
@@ -70,33 +77,25 @@ auto FlowGraphCompiler::CompileLambda(Lambda* lambda) -> bool {
   const auto code = assembler_.Assemble();
   lambda->SetCodeRegion(code);
 #ifdef GEL_DEBUG
-  DVLOG(1000) << lambda << " compiled in " << units::time::nanosecond_t(static_cast<double>(total_ns));
+  DVLOG(10) << lambda << " compiled in " << units::time::nanosecond_t(static_cast<double>(total_ns));
   lambda->SetCompileTime(total_ns);
-  if (VLOG_IS_ON(10)) {
-    const auto scope = LocalScope::New(GetScope());
-    const auto self_local = LocalVariable::New(scope, lambda->HasSymbol() ? lambda->GetSymbol() : Symbol::New("$"), lambda);
-    ASSERT(self_local);
-    LOG_IF(FATAL, !scope->Add(self_local)) << "failed to add " << (*self_local) << " to scope.";
-    for (const auto& arg : lambda->GetArgs()) {
-      const auto local = LocalVariable::New(scope, arg.GetName());
-      ASSERT(local);
-      LOG_IF(FATAL, !scope->Add(local)) << "failed to add " << local << " to scope.";
-    }
-    const auto label = lambda->HasSymbol() ? lambda->GetSymbol()->Get().c_str() : "lambda";
-    std::stringstream ss;
-    Disassembler disassembler(ss, scope);
-    disassembler.Disassemble(code, label);
-    std::cout << ss.str();
-  }
+  if (VLOG_IS_ON(10))
+    Disassembler::DisassembleLambda(std::cout, lambda, GetScope());
 #endif  // GEL_DEBUG
-  return lambda;
+  return lambda->IsCompiled();
 }
 
 auto FlowGraphCompiler::CompileScript(Script* script) -> bool {
+  ASSERT(script);
+  if (script->IsEmpty()) {
+    DLOG(ERROR) << "cannot compile empty script: " << script;
+    return false;
+  }
+
   TRACE_MARK;
   TRACE_ZONE_NAMED("CompileScript");
-  ASSERT(script);
   TIMER_START;
+  MacroExpander::ExpandAll(script, GetScope());
   const auto flow_graph = BuildFlowGraph(script);
   ASSERT(flow_graph && flow_graph->HasEntry());
   AssembleFlowGraph(flow_graph);
@@ -104,17 +103,12 @@ auto FlowGraphCompiler::CompileScript(Script* script) -> bool {
   const auto code = assembler_.Assemble();
   script->SetCodeRegion(code);
 #ifdef GEL_DEBUG
-  DVLOG(1000) << script << " compiled in " << units::time::nanosecond_t(static_cast<double>(total_ns));
+  DVLOG(10) << script << " compiled in " << units::time::nanosecond_t(static_cast<double>(total_ns));
   script->SetCompileTime(total_ns);
-  if (VLOG_IS_ON(10)) {
-    const auto scope = LocalScope::New(GetScope());
-    std::stringstream ss;
-    Disassembler disassembler(ss, scope);
-    disassembler.Disassemble(code, "Script");
-    std::cout << ss.str();
-  }
+  if (VLOG_IS_ON(10))
+    Disassembler::DisassembleScript(std::cout, script, GetScope());
 #endif  // GEL_DEBUG
-  return script;
+  return script->IsCompiled();
 }
 
 auto FlowGraphCompiler::Compile(Lambda* lambda, LocalScope* scope) -> bool {

@@ -42,6 +42,12 @@
         "test-docstring.cl",
         "test-namespaces.cl",
         "test-array.cl",
+        "test-macro.cl",
+        "test-timeout.cl",
+        "test-interval.cl",
+        "test-stat.cl",
+        "test-dispatch.cl",
+        "test-optional.cl"
       ],
       "default": "while.cl",
       "description": "A value that is even."
