@@ -7,8 +7,6 @@
 #include "gel/module.h"
 
 namespace gel {
-auto GetGelPathEnvVar() -> const EnvironmentVariable&;
-
 class ModuleLoader {
   DEFINE_NON_COPYABLE_TYPE(ModuleLoader);
 

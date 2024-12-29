@@ -456,9 +456,6 @@ using RequiredVariantNativeArgument = VariantNativeArgument<Index, true, Types..
 
 template <const uword Index, class... Types>
 using OptionalVariadicNativeArgument = VariantNativeArgument<Index, false, Types...>;
-
-using PluginInitCallback = int (*)();
-using PluginGetNameFunc = const char* (*)();
 }  // namespace gel
 
 #endif  // GEL_NATIVE_PROCEDURE_H

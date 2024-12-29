@@ -6,11 +6,14 @@
 
 #include <cstdlib>
 #include <exception>
+#include <filesystem>
 #include <iostream>
 #include <random>
 #include <ranges>
+#include <rpp/observables/dynamic_observable.hpp>
 #include <rpp/operators/fwd.hpp>
 #include <rpp/operators/subscribe.hpp>
+#include <rpp/sources/create.hpp>
 
 #include "gel/argument.h"
 #include "gel/array.h"
@@ -23,6 +26,8 @@
 #include "gel/heap.h"
 #include "gel/local.h"
 #include "gel/local_scope.h"
+#include "gel/module_loader.h"
+#include "gel/native_bindings.h"
 #include "gel/native_procedure.h"
 #include "gel/object.h"
 #include "gel/parser.h"
@@ -55,7 +60,7 @@ void NativeProcedure::InitNatives() {
   InitNative<array_set>();
   InitNative<array_length>();
   InitNative<gel_docs>();
-  InitNative<dlopen>();
+  InitNative<gel_load_bindings>();
   InitNative<get_event_loop>();
 
   InitNative<get_classes>();
@@ -245,21 +250,18 @@ NATIVE_PROCEDURE_F(print) {
   return ReturnNull();
 }
 
-NATIVE_PROCEDURE_F(dlopen) {
+NATIVE_PROCEDURE_F(gel_load_bindings) {
   NativeArgument<0, String> filename(args);
   if (!filename)
     return Throw(filename.GetError());
-  SharedLibrary lib(filename->Get());
-  const auto get_plugin_name = lib.DlSym<PluginGetNameFunc>("GetPluginName");
-  const auto name = get_plugin_name();
-  DVLOG(100) << "initializing " << name << " plugin....";
-  // TODO: better lib open error detection
-  const auto init_plugin = lib.DlSym<PluginInitCallback>("InitPlugin");
-  const auto status = init_plugin();
-  if (status != EXIT_SUCCESS) {
-    LOG(ERROR) << "failed to initialize the " << name << " plugin: " << status;
-    return ReturnLong(status);
-  }
+  const auto filter = rx::operators::filter([&filename](std::filesystem::path p) {
+    return std::filesystem::is_regular_file(p) && p.filename() == filename->Get();
+  });
+  LsGelPath() | filter | rx::operators::first() | rx::operators::as_blocking() |
+      rx::operators::subscribe([](std::filesystem::path p) {
+        const auto status = NativeBindings::LoadFrom(p);
+        LOG_IF(ERROR, status != EXIT_SUCCESS) << "failed to load bindings from " << p << ": " << status;
+      });
   return ReturnNull();
 }
 

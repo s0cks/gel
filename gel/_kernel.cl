@@ -2,6 +2,8 @@
   "Returns the current version of the gelrt.")
 (defnative gel/debug? []
   "Returns whether or not this is a debug instance of gelrt.")
+(defnative gel/load-bindings [filename]
+  "Opens the bindings from shared library at path [filename].")
 (defnative format [pattern args...] ;; TODO: move to gel/ namespace
     "Returns a formatted String using the supplied [pattern] and [args...].")
 (defnative print [value] ;; TODO: move to gel/ namespace
@@ -87,8 +89,6 @@
     "Sets the first value of Pair [p] to [v].")
   (defnative set-cdr! [p v]
     "Sets the second value of Pair [p] to [v].")
-  (defnative dlopen [p]
-    "Opens the shared library from file at path [p].")
   (defnative create-timer [on_tick timeout repeat]
     "Starts a new Timer on the EventLoop.")
   (defmacro interval [on_tick repeat]

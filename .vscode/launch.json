@@ -430,7 +430,8 @@
         "command source ${workspaceFolder}/.lldbinit"
       ],
       "env": {
-        "GEL_HOME": "${workspaceFolder}/gel"
+        "GEL_HOME": "${workspaceFolder}/gel",
+        "GEL_PATH": "${workspaceFolder}/build/Sources/"
       }
     },
     {

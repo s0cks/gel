@@ -20,6 +20,7 @@
 #include "gel/heap.h"
 #include "gel/instruction.h"
 #include "gel/local_scope.h"
+#include "gel/module_loader.h"
 #include "gel/object.h"
 #include "gel/parser.h"
 #include "gel/repl.h"

@@ -88,6 +88,11 @@ void Runtime::LoadKernelModule() {
   }
 }
 
+auto GetGelPathEnvVar() -> const EnvironmentVariable& {
+  static EnvironmentVariable kVar("GEL_PATH");
+  return kVar;
+}
+
 static inline auto FileExists(const std::string& filename) -> bool {  // TODO: remove this
   std::ifstream file(filename);
   return file.good();

@@ -22,7 +22,7 @@ _DECLARE_NATIVE_PROCEDURE(array_set, "Array/set!");
 _DECLARE_NATIVE_PROCEDURE(array_length, "Array/count");  // TODO: rename
 DECLARE_NATIVE_PROCEDURE(hashcode);
 _DECLARE_NATIVE_PROCEDURE(gel_sizeof, "sizeof");
-DECLARE_NATIVE_PROCEDURE(dlopen);
+_DECLARE_NATIVE_PROCEDURE(gel_load_bindings, "gel/load-bindings");
 _DECLARE_NATIVE_PROCEDURE(get_event_loop, "get-event-loop");
 
 // ----------------------------------------------------------------------------------------------------
@@ -186,6 +186,8 @@ _DECLARE_FS_PROCEDURE(copy_file, "copy-file");
 #undef DECLARE_FS_PROCEDURE
 #undef _DECLARE_FS_PROCEDURE
 
+_DECLARE_NATIVE_PROCEDURE(gel_get_debug, "gel/debug?");
+
 #ifdef GEL_DEBUG
 _DECLARE_NATIVE_PROCEDURE(gel_print_args, "gel/print-args");
 _DECLARE_NATIVE_PROCEDURE(gel_get_roots, "gel/get-roots");
@@ -194,7 +196,6 @@ _DECLARE_NATIVE_PROCEDURE(gel_major_gc, "gel/major-gc!");
 _DECLARE_NATIVE_PROCEDURE(gel_print_heap, "gel/print-heap");
 _DECLARE_NATIVE_PROCEDURE(gel_print_new_zone, "gel/print-new-zone");
 _DECLARE_NATIVE_PROCEDURE(gel_print_old_zone, "gel/print-old-zone");
-_DECLARE_NATIVE_PROCEDURE(gel_get_debug, "gel/debug?");
 _DECLARE_NATIVE_PROCEDURE(gel_get_frame, "gel/get-frame");
 _DECLARE_NATIVE_PROCEDURE(gel_print_st, "gel/print-st");
 _DECLARE_NATIVE_PROCEDURE(gel_get_locals, "gel/get-locals");

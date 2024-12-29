@@ -9,11 +9,6 @@
 namespace gel {
 namespace fs = std::filesystem;
 
-auto GetGelPathEnvVar() -> const EnvironmentVariable& {
-  static EnvironmentVariable kVar("GEL_PATH");
-  return kVar;
-}
-
 auto ModuleLoader::LoadModule(const fs::path& p) -> Module* {
   ASSERT(fs::is_regular_file(p));
   const auto module_name = GetFilename(p);

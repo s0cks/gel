@@ -3,6 +3,8 @@
 
 #include <gflags/gflags_declare.h>
 
+#include <rpp/observers/dynamic_observer.hpp>
+#include <rpp/sources/fwd.hpp>
 #include <stack>
 #include <type_traits>
 #include <utility>
@@ -207,6 +209,49 @@ auto GetRuntime() -> Runtime*;
 
 inline auto HasRuntime() -> bool {
   return GetRuntime() != nullptr;
+}
+
+auto GetGelPathEnvVar() -> const EnvironmentVariable&;
+
+static inline auto LsGelPath() -> rx::dynamic_observable<std::filesystem::path> {
+  std::unordered_set<std::string> paths;
+  const auto home = GetHomeEnvVar().value();
+  paths.insert(fmt::format("{}/lib", (*home)));
+  const auto path = GetGelPathEnvVar();
+  if (path)
+    Split(*(path.value()), ';', paths);
+  return rx::source::from_iterable(paths) | rx::operators::flat_map([](std::string p) {
+           return rx::source::create<std::filesystem::path>([p](const auto& s) {
+             for (const auto& entry : std::filesystem::directory_iterator(p)) {
+               s.on_next(entry);
+             }
+             s.on_completed();
+           });
+         });
+}
+
+static inline auto SearchGelPath(const std::string& filename) -> rx::dynamic_observable<std::filesystem::path> {
+  std::unordered_set<std::string> paths;
+  const auto home = GetHomeEnvVar().value();
+  paths.insert(fmt::format("{}/lib", (*home)));
+  const auto path = GetGelPathEnvVar();
+  if (path)
+    Split(*(path.value()), ';', paths);
+  return rx::source::create<std::filesystem::path>([&paths, filename](const auto& s) {
+    for (const auto& dir : paths) {
+      DLOG(INFO) << "searching: " << dir << "....";
+      for (const auto& entry : std::filesystem::directory_iterator(dir)) {
+        if (!std::filesystem::is_regular_file(entry)) {
+          DVLOG(1000) << "skipping: " << entry.path();
+          continue;
+        }
+        const auto& path = entry.path();
+        if (path == filename)
+          s.on_next(path);
+      }
+    }
+    s.on_completed();
+  });
 }
 }  // namespace gel
 
