@@ -26,6 +26,7 @@
 #include "gel/os_thread.h"
 #include "gel/parser.h"
 #include "gel/procedure.h"
+#include "gel/script.h"
 #include "gel/stack_frame.h"
 #include "gel/thread_local.h"
 #include "gel/tracing.h"
@@ -68,7 +69,14 @@ void Runtime::LoadKernelModule() {
   }
   const auto kernel = Module::LoadFrom(fmt::format("{}/_kernel.cl", (*home)));
   LOG_IF(FATAL, !kernel) << "failed to load the _kernel Module.";
-  LOG_IF(FATAL, !GetInitScope()->Add(kernel->GetScope())) << "failed to import the _kernel Module.";
+  if (VLOG_IS_ON(100)) {
+    DLOG(INFO) << "_kernel Module scope: ";
+    PRINT_SCOPE(INFO, kernel->GetScope());
+  }
+  LOG_IF(ERROR, !GetInitScope()->Add(kernel->GetScope())) << "failed to import the _kernel Module.";
+  if (kernel->HasInit())
+    LOG_IF(FATAL, !kernel->Init(this)) << "failed to initialize the _kernel Module: " << kernel;
+
   std::unordered_set<std::string> paths;
   paths.insert(fmt::format("{}/lib", (*home)));
   if (kPathVar) {
@@ -171,7 +179,7 @@ void Runtime::Call(Lambda* lambda, const ObjectList& args) {
 }
 
 void Runtime::Call(NativeProcedure* native, const ObjectList& args) {
-  ASSERT(native);
+  ASSERT(native && native->HasEntry());
   const auto locals = PushScope();
   ASSERT(locals);
   {
@@ -181,7 +189,7 @@ void Runtime::Call(NativeProcedure* native, const ObjectList& args) {
     StackFrameGuard<NativeProcedure> guard(native);
     {
       PushStackFrame(native, locals);
-      LOG_IF(FATAL, !native->Apply(args)) << "failed to apply: " << native->ToString() << " with args: " << args;
+      LOG_IF(FATAL, !native->GetEntry()->Apply(args)) << "failed to apply: " << native->ToString() << " with args: " << args;
       const auto frame = PopStackFrame();
       if (frame.HasReturnAddress())
         interpreter_.SetCurrentAddress(frame.GetReturnAddress());
@@ -236,15 +244,15 @@ void Runtime::Init() {
 #endif  // GEL_DEBUG
 
   DVLOG(10) << "initializing runtime....";
-  Object::Init();
   const auto runtime = new Runtime();
   runtime_.Set(runtime);
+  Object::Init();
   runtime->LoadKernelModule();
 
 #ifdef GEL_DEBUG
   const auto stop_ts = Clock::now();
   const auto total_ms = std::chrono::duration_cast<std::chrono::milliseconds>((stop_ts - start_ts)).count();
-  LOG(INFO) << "runtime initialized in " << units::time::millisecond_t(static_cast<double>(total_ms));
+  DVLOG(1) << "runtime initialized in " << units::time::millisecond_t(static_cast<double>(total_ms));
 #endif  // GEL_DEBUG
 }
 

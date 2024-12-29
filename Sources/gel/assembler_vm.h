@@ -137,6 +137,10 @@ class Assembler {
     return pushq(value->GetStartingAddress());
   }
 
+  inline void lookup() {
+    EmitOp(Bytecode::kLookup);
+  }
+
   inline void invoke(Lambda* func, const uword num_args) {
     ASSERT(func);
     EmitOp(Bytecode::kInvoke);

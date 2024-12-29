@@ -9,6 +9,7 @@
   V(Nop)                     \
   V(Pop)                     \
   V(Dup)                     \
+  V(Lookup)                  \
   V(StoreLocal)              \
   V(StoreLocal0)             \
   V(StoreLocal1)             \
@@ -160,6 +161,8 @@ class Bytecode {
         return "car";
       case kCdr:
         return "cdr";
+      case kLookup:
+        return "lookup";
       case kNonnull:
         return "neqnull";
       case kNull:

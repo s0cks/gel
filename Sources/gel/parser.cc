@@ -396,7 +396,7 @@ auto Parser::ParseSetExpr() -> SetExpr* {
   return SetExpr::New(local, value);
 }
 
-auto Parser::ParseExpression() -> Expression* {
+auto Parser::ParseExpression(const int depth) -> Expression* {
   {
     auto next = PeekToken();
     if (next.IsLiteral() || next.kind == Token::kIdentifier || next.kind == Token::kDispatch || next.kind == Token::kFn)
@@ -416,6 +416,33 @@ auto Parser::ParseExpression() -> Expression* {
     expr = ParseListExpr();
   } else {
     switch (next.kind) {
+      case Token::kDefNamespace: {
+        LOG_IF(FATAL, depth != 0) << "unexpected: " << NextToken() << ", expected: <expression>";
+        const auto ns = ParseNamespace();
+        ASSERT(ns);
+        if (scope_)
+          LOG_IF(FATAL, !scope_->Add(ns)) << "failed to add " << ns << " to scope.";
+        if (script_)
+          script_->Append(ns);
+        if (module_)
+          module_->Append(ns);
+        break;
+      }
+      case Token::kDefMacro: {
+        LocalVariable* local = nullptr;
+        LOG_IF(FATAL, !ParseMacroDef(&local)) << "failed to parse macrodef.";
+        ASSERT(local && local->HasValue() && local->GetValue()->IsMacro());
+        if (script_)
+          script_->Append(local->GetValue()->AsMacro());
+        if (module_)
+          module_->Append(local->GetValue()->AsMacro());
+        break;
+      }
+      case Token::kDefNative: {
+        LocalVariable* local = nullptr;
+        LOG_IF(FATAL, !ParseDefNative(&local)) << "failed to parse defnative.";
+        break;
+      }
       case Token::kDef: {
         expr = ParseDef();
         break;
@@ -950,9 +977,7 @@ auto Parser::ParseNamespace() -> Namespace* {
   ExpectNext(Token::kDefNamespace);
   const auto name = ParseSymbol();
   ASSERT(name);
-  const auto parent_scope = GetScope();
-  const auto scope = LocalScope::New();
-  ASSERT(scope);
+  const auto scope = PushScope();
   const auto ns = Namespace::New(name, scope);
   ASSERT(ns);
   SetNamespace(ns);
@@ -977,25 +1002,9 @@ auto Parser::ParseNamespace() -> Namespace* {
         break;
       }
       case Token::kDefNative: {
-        ExpectNext(Token::kDefNative);
-        const auto symbol = ParseSymbol();
-        ASSERT(symbol);
-        const auto native = NativeProcedure::Find(symbol);
-        LOG_IF(FATAL, !native) << "failed to find native named: " << symbol;
-        LOG_IF(FATAL, !scope->Add(symbol, native)) << "failed to add " << native << " to scope.";
-        // arguments
-        ArgumentSet args;
-        if (!ParseArguments(args))
-          throw Exception("failed to parse ArgumentSet");
-        native->SetArgs(args);
-        // docstring
-        String* docs = nullptr;
-        if (PeekEq(Token::kLiteralString)) {
-          docs = ParseLiteralString();
-          ASSERT(docs);
-        }
-        if (docs)
-          native->SetDocs(docs);
+        LocalVariable* local = nullptr;
+        LOG_IF(FATAL, !ParseDefNative(&local)) << "failed to parse defnative in: " << ns;
+        ASSERT(local && local->HasValue() && local->GetValue()->IsNativeProcedure());
         break;
       }
       default:
@@ -1005,8 +1014,48 @@ auto Parser::ParseNamespace() -> Namespace* {
     ExpectNext(Token::kRParen);
   }
   ClearNamespace();
-  SetScope(parent_scope);
+  PopScope();
   return ns;
+}
+
+auto Parser::ParseDefNative(LocalVariable** local) -> bool {
+  ASSERT(local);
+  ExpectNext(Token::kDefNative);
+  const auto symbol = ParseSymbol();
+  ASSERT(symbol);
+  const auto native = NativeProcedure::FindOrCreate(symbol);
+  if (!native) {
+    (*local) = nullptr;
+    LOG(ERROR) << "failed to find NativeProcedure w/ Symbol: " << symbol;
+    return false;
+  }
+  // arguments
+  ArgumentSet args;
+  if (!ParseArguments(args)) {
+    (*local) = nullptr;
+    LOG(ERROR) << "failed to parse NativeProcedure arguments.";
+    return false;
+  }
+  native->SetArgs(args);
+  // docstring
+  if (PeekEq(Token::kLiteralString)) {
+    const auto docs = ParseLiteralString();
+    ASSERT(docs);
+    native->SetDocs(docs);
+  }
+  if (!((*local) = LocalVariable::New(GetScope(), symbol, native))) {
+    (*local) = nullptr;
+    LOG(ERROR) << "failed to create local for NativeProcedure: " << native;
+    return false;
+  }
+  ASSERT((*local));
+  if (!GetScope()->Add((*local))) {
+    LOG(ERROR) << "failed to add local " << *(*local) << " to current scope.";
+    (*local) = nullptr;
+    return false;
+  }
+  DVLOG(1000) << "created local " << *(*local) << " for native: " << native;
+  return true;
 }
 
 auto Parser::ParseMacro() -> Macro* {
@@ -1059,7 +1108,6 @@ auto Parser::ParseMacro() -> Macro* {
   return macro;
 }
 
-// $((def x $) (print x))
 auto Parser::ParseLambda(const Token::Kind kind) -> Lambda* {
   const auto lambda = Lambda::New();
   ASSERT(lambda);
@@ -1172,23 +1220,22 @@ auto Parser::ParseModule(const std::string& name) -> Module* {
   ASSERT(scope);
   const auto new_module = Module::New(String::New(name), scope);
   ASSERT(new_module);
+  SetModule(new_module);
+  expr::ExpressionList init_body{};
   while (!PeekEq(Token::kEndOfStream)) {
-    ExpectNext(Token::kLParen);
-    switch (PeekKind()) {
-      case Token::kDefNamespace: {
-        const auto ns = ParseNamespace();
-        ASSERT(ns);
-        LOG_IF(FATAL, !scope->Add<Namespace>(ns)) << "failed to add " << ns << " to scope.";
-        LOG_IF(FATAL, !scope->Add(ns->GetScope())) << "failed to add " << ns << " to scope.";
-        break;
-      }
-      default:
-        Unexpected(NextToken());
-        return nullptr;
-    }
-    ExpectNext(Token::kRParen);
+    const auto expr = ParseExpression();
+    if (expr)
+      init_body.push_back(expr);
   }
+
+  if (!init_body.empty()) {
+    const auto init = new_module->CreateInitFunc(init_body);
+    ASSERT(init);
+    DVLOG(1000) << "created init function for " << new_module << ": " << init;
+  }
+
   PopScope();
+  ClearModule();
   return new_module;
 }
 

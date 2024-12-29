@@ -92,10 +92,12 @@ class Runtime : public ExecutionStack {
 #endif  // GEL_DEBUG
   friend class Repl;
   friend class Lambda;
+  friend class Module;
   friend class Interpreter;
   friend class Interpreter;
-  friend class ModuleLoader;
   friend class RuntimeTest;
+  friend class ModuleLoader;
+  friend class DirModuleLoader;
   friend class NativeProcedure;
   friend class RuntimeScopeScope;
   friend class RuntimeStackIterator;
@@ -152,7 +154,6 @@ class Runtime : public ExecutionStack {
       args.push_back(Null());
       remaining++;
     }
-    ASSERT(exec->GetNumberOfArgs() == args.size());
     return Call(exec, args);
   }
 

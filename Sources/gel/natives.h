@@ -4,6 +4,7 @@
 #include "gel/native_procedure.h"
 
 namespace gel::proc {
+_DECLARE_NATIVE_PROCEDURE(gel_get_version, "gel/get-version");
 _DECLARE_NATIVE_PROCEDURE(gel_docs, "gel/docs?");
 DECLARE_NATIVE_PROCEDURE(print);
 DECLARE_NATIVE_PROCEDURE(import);
@@ -169,6 +170,9 @@ DECLARE_FS_PROCEDURE(stat);
 DECLARE_FS_PROCEDURE(rename);
 DECLARE_FS_PROCEDURE(mkdir);
 DECLARE_FS_PROCEDURE(rmdir);
+DECLARE_FS_PROCEDURE(open);
+DECLARE_FS_PROCEDURE(close);
+DECLARE_FS_PROCEDURE(unlink);
 DECLARE_FS_PROCEDURE(fsync);
 DECLARE_FS_PROCEDURE(ftruncate);
 DECLARE_FS_PROCEDURE(access);

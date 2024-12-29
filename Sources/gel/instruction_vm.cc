@@ -126,6 +126,11 @@ void InvokeDynamicInstr::Compile(FlowGraphCompiler* compiler) {
   __ invokedynamic(GetNumberOfArgs());
 }
 
+void LookupInstr::Compile(FlowGraphCompiler* compiler) {
+  ASSERT(compiler);
+  __ lookup();
+}
+
 void ReturnInstr::Compile(FlowGraphCompiler* compiler) {
   ASSERT(compiler);
   __ ret();

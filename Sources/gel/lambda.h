@@ -25,6 +25,7 @@ class GraphEntryInstr;
 
 class Lambda : public Procedure, public Executable {
   friend class Parser;
+  friend class Module;
   friend class MacroExpander;
   friend class FlowGraphCompiler;
 

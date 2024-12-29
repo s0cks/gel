@@ -7,9 +7,11 @@
 #include "gel/common.h"
 #include "gel/expression.h"
 #include "gel/flags.h"
+#include "gel/gel.h"
 #include "gel/instruction.h"
 #include "gel/lambda.h"
 #include "gel/local.h"
+#include "gel/local_scope.h"
 #include "gel/module.h"
 #include "gel/native_procedure.h"
 #include "gel/natives.h"
@@ -105,7 +107,11 @@ auto EffectVisitor::CreateCallFor(ir::Definition* defn, const uword num_args) ->
     return ir::InvokeInstr::New(defn, num_args);
   }
   Do(defn);
-  return ir::InvokeDynamicInstr::New(defn, num_args);
+  if (gel::IsPedantic())
+    AddInstanceOf(defn, Symbol::GetClass());
+  const auto lookup = Bind(ir::LookupInstr::New(defn));
+  ASSERT(lookup);
+  return ir::InvokeDynamicInstr::New(lookup, num_args);
 }
 
 auto EffectVisitor::ReturnCall(ir::InvokeInstr* instr) -> bool {
@@ -708,7 +714,7 @@ auto EffectVisitor::VisitUnaryExpr(expr::UnaryExpr* expr) -> bool {
   switch (expr->GetOp()) {
     case expr::kCar:
     case expr::kCdr:
-      if (IsPedantic())
+      if (gel::IsPedantic())
         AddInstanceOf(for_value.GetValue(), Pair::GetClass());
     default:
       ReturnDefinition(ir::UnaryOpInstr::New(expr->GetOp(), for_value.GetValue()));
@@ -751,7 +757,7 @@ auto EffectVisitor::VisitListExpr(expr::ListExpr* expr) -> bool {
     const auto value = for_value.GetValue();
     ASSERT(value);
   }
-  return ReturnCallTo(gel::proc::list::Get(), expr->GetNumberOfChildren());
+  return ReturnCallTo(gel::proc::list::Get()->GetNative(), expr->GetNumberOfChildren());
 }
 
 auto EffectVisitor::VisitLiteralExpr(LiteralExpr* p) -> bool {
@@ -916,11 +922,13 @@ auto EffectVisitor::VisitScript(Script* script) -> bool {
 auto EffectVisitor::VisitLambda(Lambda* lambda) -> bool {
   const auto scope = GetOwner()->PushScope();
   ASSERT(scope);
-  if (lambda->HasScope())
+  if (lambda->HasScope()) {
     LOG_IF(FATAL, !scope->Add(lambda->GetScope())) << "failed to add lambda scope to current scope.";
+  }
   for (const auto& arg : lambda->GetArgs()) {
     const auto local = LocalVariable::New(scope, Symbol::New(arg.GetName()));
-    LOG_IF(ERROR, !scope->Add(local)) << "failed to add " << (*local) << " to current scope";
+    if (!scope->Add(local))
+      LOG_IF(ERROR, local->GetName() != "this") << "failed to add " << (*local) << " to current scope";
   }
   auto index = 0;
   const auto& body = lambda->GetBody();

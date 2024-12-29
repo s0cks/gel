@@ -47,10 +47,8 @@ auto LocalScope::Has(const Symbol* symbol, const bool recursive) -> bool {
 
 auto LocalScope::Add(LocalVariable* local) -> bool {
   ASSERT(local);
-  if (Has(local->GetName())) {
-    DLOG(ERROR) << "cannot add duplicate local: " << (*local);
+  if (Has(local->GetName()))
     return false;
-  }
   locals_.push_back(local);
   if (!local->HasOwner())
     local->SetOwner(this);
@@ -64,13 +62,21 @@ auto LocalScope::Add(Symbol* symbol, Object* value) -> bool {
 
 auto LocalScope::Add(LocalScope* scope) -> bool {
   ASSERT(scope);
+  auto num_added = 0;
   for (const auto& local : scope->locals_) {
+    if (local->IsNativeProcedure()) {
+      num_added++;
+      continue;
+    }
     if (!Add(local->GetName(), local->GetValue())) {
       LOG(ERROR) << "failed to add local " << local->GetName() << " to scope.";
-      return false;
+      continue;
     }
+    num_added++;
   }
-  return true;
+  DLOG_IF(ERROR, num_added != scope->GetNumberOfLocals())
+      << "failed to add " << (scope->GetNumberOfLocals() - num_added) << " locals to scope.";
+  return num_added == scope->GetNumberOfLocals();
 }
 
 auto LocalScope::Lookup(const std::string& name, LocalVariable** result, const bool recursive) -> bool {

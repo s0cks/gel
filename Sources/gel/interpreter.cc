@@ -122,6 +122,12 @@ void Interpreter::bt() {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
 }
 
+void Interpreter::PopLookup() {
+  const auto symbol = POP;
+  LOG_IF(FATAL, !symbol || !symbol->IsSymbol()) << "expected " << (symbol ? symbol : Null()) << " to be a Symbol.";
+  return Lookup(symbol->AsSymbol());
+}
+
 void Interpreter::Invoke(const Bytecode::Op op) {
   const auto func = op != Bytecode::kInvokeDynamic ? NextObjectPointer() : POP;
   ASSERT(func && func->IsProcedure());
@@ -291,6 +297,16 @@ void Interpreter::Cast(Class* cls) {
   }
 }
 
+void Interpreter::Lookup(Symbol* rhs) {
+  ASSERT(rhs);
+  const auto scope = GetScope();
+  ASSERT(scope);
+  LocalVariable* local = nullptr;
+  LOG_IF(FATAL, !scope->Lookup(rhs, &local)) << "failed to resolve " << rhs;
+  const auto value = local->HasValue() ? local->GetValue() : Null();
+  PUSH(value);
+}
+
 void Interpreter::Pop() {
   const auto value = POP;
   ASSERT(value);
@@ -329,6 +345,9 @@ void Interpreter::Run(const uword address) {
         continue;
       case Bytecode::kDup:
         Dup();
+        continue;
+      case Bytecode::kLookup:
+        PopLookup();
         continue;
       case Bytecode::kLoadLocal:
         LoadLocal(NextUWord());

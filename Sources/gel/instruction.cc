@@ -88,6 +88,12 @@ auto JoinEntryInstr::ToString() const -> std::string {
   return helper;
 }
 
+auto LookupInstr::ToString() const -> std::string {
+  ToStringHelper<LookupInstr> helper;
+  helper.AddField("symbol", GetSymbol());
+  return helper;
+}
+
 auto ReturnInstr::ToString() const -> std::string {
   ToStringHelper<ReturnInstr> helper;
   if (HasValue())

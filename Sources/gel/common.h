@@ -23,6 +23,16 @@
 
 #endif  // GEL_DEBUG
 
+#ifdef __cplusplus
+
+#define GEL_EXTERN extern "C"
+
+#else
+
+#define GEL_EXTERN
+
+#endif  // GEL_EXTERN
+
 #define DEFINE_NON_COPYABLE_TYPE(Name)             \
  public:                                           \
   Name(Name&& rhs) = delete;                       \

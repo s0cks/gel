@@ -66,6 +66,8 @@ class Symbol : public Object {
         return fmt::format("{}/{}:{}", GetNamespace(), GetSymbolType(), GetSymbolName());
       return fmt::format("{}/{}", GetNamespace(), GetSymbolName());
     }
+    if (HasSymbolType())
+      return fmt::format("{}:{}", GetSymbolType(), GetSymbolName());
     return GetSymbolName();
   }
 

@@ -16,6 +16,6 @@
 
 namespace gel {
 auto GetVersion() -> std::string;
-}
+}  // namespace gel
 
 #endif  // GEL_H

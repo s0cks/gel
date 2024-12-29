@@ -8,6 +8,14 @@
     "reactiveplusplus",
     "tracy",
     "units",
-    "libuv"
+    "libuv",
+    {
+      "name": "ncurses",
+      "platform": "!windows | mingw"
+    },
+    {
+      "name": "pdcurses",
+      "platform": "windows & !uwp & !mingw"
+    }
   ]
 }

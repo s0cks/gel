@@ -21,6 +21,7 @@
   V(GraphEntry)                 \
   V(TargetEntry)                \
   V(JoinEntry)                  \
+  V(Lookup)                     \
   V(Invoke)                     \
   V(InvokeDynamic)              \
   V(InvokeNative)               \
@@ -533,6 +534,32 @@ class InvokeNativeInstr : public InvokeInstr {
   static inline auto New(Definition* target, const uword num_args) -> InvokeNativeInstr* {
     ASSERT(target);
     return new InvokeNativeInstr(target, num_args);
+  }
+};
+
+class LookupInstr : public Definition {
+ private:
+  Definition* symbol_;
+
+  explicit LookupInstr(Definition* symbol) :
+    Definition(),
+    symbol_(symbol) {
+    ASSERT(symbol_);
+  }
+
+ public:
+  ~LookupInstr() override = default;
+
+  auto GetSymbol() const -> Definition* {
+    return symbol_;
+  }
+
+  DECLARE_INSTRUCTION(LookupInstr);
+
+ public:
+  static inline auto New(Definition* defn) -> LookupInstr* {
+    ASSERT(defn);
+    return new LookupInstr(defn);
   }
 };
 

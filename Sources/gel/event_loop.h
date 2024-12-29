@@ -59,13 +59,23 @@ class EventLoop : public Object {
             const OnFinishedCallback& on_finished = {}) -> bool;
   auto Stat(const std::string& path, Procedure* on_next, Procedure* on_error, Procedure* on_finished) -> bool;
 
-  auto Rename(const std::string& old_path, const std::string& new_path, const OnErrorCallback& on_error = {},
-              const OnFinishedCallback& on_finished = {}) -> bool;
-  auto Rename(const std::string& old_path, const std::string& new_path, Procedure* on_error, Procedure* on_finished) -> bool;
+  auto Rename(const std::string& old_path, const std::string& new_path, const OnSuccessCallback& on_success = {},
+              const OnErrorCallback& on_error = {}, const OnFinishedCallback& on_finished = {}) -> bool;
+  auto Rename(const std::string& old_path, const std::string& new_path, Procedure* on_success, Procedure* on_error,
+              Procedure* on_finished) -> bool;
 
   auto Mkdir(const std::string& path, const int mode, const OnSuccessCallback& on_success = {},
              const OnErrorCallback& on_error = {}, const OnFinishedCallback& on_finished = {}) -> bool;
   auto Mkdir(const std::string& path, const int mode, Procedure* on_success, Procedure* on_error, Procedure* on_finished) -> bool;
+
+  auto Rmdir(const std::string& path, const OnSuccessCallback& on_success = {}, const OnErrorCallback& on_error = {},
+             const OnFinishedCallback& on_finished = {}) -> bool;
+  auto Rmdir(const std::string& path, Procedure* on_success, Procedure* on_error, Procedure* on_finished) -> bool;
+
+  auto Open(const std::string& path, const int flags, const int mode, const OnSuccessCallback& on_success = {},
+            const OnErrorCallback& on_error = {}, const OnFinishedCallback& on_finished = {}) -> bool;
+  auto Open(const std::string& path, const int flags, const int mode, Procedure* on_success, Procedure* on_error,
+            Procedure* on_finished) -> bool;
 
   auto GetTimer(const uword idx) const -> Timer*;
   auto Run(const uv_run_mode mode) -> int;
@@ -132,6 +142,7 @@ class RequestBase {
  public:
   virtual ~RequestBase() = default;
   virtual auto GetName() const -> const char* = 0;
+  virtual auto GetRequestName() const -> const char* = 0;
 
   auto GetPath() const -> const std::string& {
     return path_;
@@ -145,7 +156,7 @@ class RequestBase {
     return uv_handle_get_data((uv_handle_t*)&handle());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   }
 
-  auto GetResult() const -> uword {
+  auto GetResult() const -> word {
     return uv_fs_get_result(&handle());
   }
 
@@ -179,19 +190,20 @@ class TemplateRequest : public RequestBase {
   ~TemplateRequest() override = default;
 };
 
-#define DECLARE_FS_REQUEST_TYPE(Name)            \
-  friend class gel::EventLoop;                   \
-  DEFINE_NON_COPYABLE_TYPE(Name);                \
-                                                 \
- private:                                        \
-  static void On##Name(uv_fs_t* handle);         \
-                                                 \
- protected:                                      \
-  auto Execute(EventLoop* loop) -> int override; \
-                                                 \
- public:                                         \
-  auto GetName() const -> const char* override { \
-    return #Name;                                \
+#define DECLARE_FS_REQUEST_TYPE(Name)                  \
+  friend class gel::EventLoop;                         \
+  DEFINE_NON_COPYABLE_TYPE(Name);                      \
+                                                       \
+ private:                                              \
+  static void On##Name(uv_fs_t* handle);               \
+                                                       \
+ protected:                                            \
+  auto Execute(EventLoop* loop) -> int override;       \
+                                                       \
+ public:                                               \
+  auto GetRequestName() const -> const char* override; \
+  auto GetName() const -> const char* override {       \
+    return #Name;                                      \
   }
 
 #define FS_REQUEST_CALLBACK_F(Name) void Name::On##Name(uv_fs_t* handle)
@@ -237,13 +249,24 @@ class MkdirRequest : public SimpleRequest {
   DECLARE_FS_REQUEST_TYPE(MkdirRequest);
 };
 
-class RenameRequest : public RequestBase {
+class RmdirRequest : public SimpleRequest {
+ private:
+  RmdirRequest(const std::string& path, const OnSuccessCallback& on_success, const OnErrorCallback& on_error,
+               const OnFinishedCallback& on_finished) :
+    SimpleRequest(path, on_success, on_error, on_finished) {}
+
+ public:
+  ~RmdirRequest() override = default;
+  DECLARE_FS_REQUEST_TYPE(RmdirRequest);
+};
+
+class RenameRequest : public SimpleRequest {
  private:
   std::string new_path_;
 
-  RenameRequest(const std::string& old_path, const std::string& new_path, const OnErrorCallback& on_error,
-                const OnFinishedCallback& on_finished) :
-    RequestBase(old_path, on_error, on_finished),
+  RenameRequest(const std::string& old_path, const std::string& new_path, const OnSuccessCallback on_success,
+                const OnErrorCallback& on_error, const OnFinishedCallback& on_finished) :
+    SimpleRequest(old_path, on_success, on_error, on_finished),
     new_path_(new_path) {}
 
  public:
@@ -265,6 +288,31 @@ class StatRequest : public TemplateRequest<uword> {
  public:
   ~StatRequest() override = default;
   DECLARE_FS_REQUEST_TYPE(StatRequest);
+};
+
+class OpenRequest : public SimpleRequest {
+ private:
+  int flags_;
+  int mode_;
+
+  OpenRequest(const std::string& path, const int flags, const int mode, const OnSuccessCallback& on_success,
+              const OnErrorCallback& on_error, const OnSuccessCallback& on_finished) :
+    SimpleRequest(path, on_success, on_error, on_finished),
+    flags_(flags),
+    mode_(mode) {}
+
+ public:
+  ~OpenRequest() override = default;
+
+  auto GetFlags() const -> int {
+    return flags_;
+  }
+
+  auto GetMode() const -> int {
+    return mode_;
+  }
+
+  DECLARE_FS_REQUEST_TYPE(OpenRequest);
 };
 }  // namespace fs
 

@@ -57,8 +57,8 @@ auto Buffer::CreateClass() -> Class* {
   ASSERT(kClass == nullptr);
   const auto cls = Class::New(Object::GetClass(), "Buffer");
   ASSERT(cls);
-  cls->AddFunction(proc::buffer_get_capacity::Get());
-  cls->AddFunction(proc::buffer_get_length::Get());
+  cls->AddFunction(proc::buffer_get_capacity::Get()->GetNative());
+  cls->AddFunction(proc::buffer_get_length::Get()->GetNative());
   return cls;
 }
 

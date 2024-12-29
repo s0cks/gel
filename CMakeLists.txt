@@ -30,7 +30,7 @@ find_package(fmt CONFIG REQUIRED)
 find_package(units CONFIG REQUIRED)
 find_package(libuv CONFIG REQUIRED)
 
-list(APPEND GEL_LIBRARIES Threads::Threads gflags::gflags glog::glog fmt::fmt units::units $<IF:$<TARGET_EXISTS:libuv::uv_a>,libuv::uv_a,libuv::uv>)
+list(APPEND GEL_LIBRARIES)
 
 if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
   add_compile_definitions(GEL_DEBUG)

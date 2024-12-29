@@ -692,4 +692,70 @@ auto PrintValue(std::ostream& stream, Object* value) -> std::ostream& {
   }
   return stream << value->ToString();
 }
+
+namespace proc {
+#define SET_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(set_##Name)
+
+SET_PROCEDURE_F(contains) {
+  NativeArgument<0, Set> set(args);
+  if (!set)
+    return Throw(set);
+  NativeArgument<1> value(args);
+  if (!value)
+    return Throw(value);
+  return ReturnBool(set->Contains(value));
+}
+
+SET_PROCEDURE_F(count) {
+  NativeArgument<0, Set> set(args);
+  if (!set)
+    return Throw(set);
+  return ReturnLong(set->GetSize());
+}
+
+SET_PROCEDURE_F(empty) {
+  NativeArgument<0, Set> set(args);
+  if (!set)
+    return Throw(set);
+  return ReturnBool(set->IsEmpty());
+}
+
+#undef SET_PROCEDURE_F
+
+#define MAP_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(map_##Name)
+MAP_PROCEDURE_F(contains) {
+  NativeArgument<0, Map> m(args);
+  if (!m)
+    return Throw(m);
+  NativeArgument<1> key(args);
+  if (!key)
+    return Throw(key);
+  return ReturnBool(m->Contains(key));
+}
+
+MAP_PROCEDURE_F(get) {
+  NativeArgument<0, Map> m(args);
+  if (!m)
+    return Throw(m);
+  NativeArgument<1> key(args);
+  if (!key)
+    return Throw(key);
+  return Return(m->Get(key));
+}
+
+MAP_PROCEDURE_F(size) {
+  NativeArgument<0, Map> m(args);
+  if (!m)
+    return Throw(m);
+  return ReturnLong(m->GetSize());
+}
+
+MAP_PROCEDURE_F(empty) {
+  NativeArgument<0, Map> m(args);
+  if (!m)
+    return Throw(m);
+  return ReturnBool(m->IsEmpty());
+}
+#undef MAP_PROCEDURE_F
+}  // namespace proc
 }  // namespace gel

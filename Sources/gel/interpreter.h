@@ -65,6 +65,8 @@ class Interpreter {
   void Pop();
   void Dup();
   void Throw();
+  void Lookup(Symbol* rhs);
+  void PopLookup();
   void Invoke(const Bytecode::Op op);
   void Push(const Bytecode code);
   void LoadLocal(const uword idx);

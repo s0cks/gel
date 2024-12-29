@@ -1,6 +1,7 @@
 #include "gel/module.h"
 
 #include "gel/common.h"
+#include "gel/macro.h"
 #include "gel/parser.h"
 #include "gel/to_string_helper.h"
 
@@ -11,6 +12,40 @@ static inline auto Register(Module* m) -> Module* {
   ASSERT(m);
   modules_.push_back(m->raw_ptr());
   return m;
+}
+
+auto Module::CreateInitFunc(const expr::ExpressionList& body) -> Lambda* {
+  ASSERT(!body.empty());
+  const ArgumentSet args = {Argument(0, "this", false, false)};
+  const auto init = Lambda::New(args, body);
+  const auto scope = LocalScope::New();
+  ASSERT(scope);
+  const auto self = LocalVariable::New(scope, "this", this);
+  LOG_IF(FATAL, !scope->Add(self)) << "failed to add " << (*self) << " to scope.";
+  init->SetScope(scope);
+  SetInit(init);
+  return init;
+}
+
+auto Module::Init(Runtime* runtime) -> bool {
+  ASSERT(runtime);
+  ASSERT(!IsInitialized());
+  runtime->Call(GetInit(), {this});
+  SetInitialized();  // TODO: move to _kernel script
+  return IsInitialized();
+}
+
+void Module::Append(Macro* macro) {
+  ASSERT(macro);
+  macros_.push_back(macro);
+  macro->SetOwner(this);
+}
+
+void Module::Append(Namespace* ns) {
+  ASSERT(ns);
+  namespaces_.push_back(ns);
+  if (scope_ && ns->GetScope())
+    scope_->Add(ns->GetScope());
 }
 
 auto Module::IsLoaded(const std::string& name) -> bool {

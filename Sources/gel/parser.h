@@ -43,9 +43,27 @@ class Parser {
   Token peek_{};
   std::stack<Object*> owner_stack_{};
   Script* script_ = nullptr;
+  Module* module_ = nullptr;
   Namespace* namespace_ = nullptr;
   word dispatched_ = -1;
   bool args_ = false;
+
+  inline void SetModule(Module* m) {
+    ASSERT(m);
+    module_ = m;
+  }
+
+  inline void ClearModule() {
+    module_ = nullptr;
+  }
+
+  inline auto GetModule() const -> Module* {
+    return module_;
+  }
+
+  inline auto HasModule() const -> bool {
+    return GetModule() != nullptr;
+  }
 
   inline void SetScript(Script* script) {
     ASSERT(script);
@@ -193,6 +211,7 @@ class Parser {
   auto ParseNewExpr() -> expr::NewExpr*;
   auto ParseImportExpr() -> expr::ImportExpr*;
   auto ParseDef() -> expr::Expression*;
+  auto ParseDefNative(LocalVariable** local) -> bool;
   auto ParseDefn(LocalVariable** local) -> bool;
   auto ParseMacroDef(LocalVariable** local) -> bool;
   auto ParseDefmacro() -> expr::Expression*;
@@ -344,7 +363,7 @@ class Parser {
   }
   ~Parser() = default;
 
-  auto ParseExpression() -> Expression*;
+  auto ParseExpression(const int depth = 0) -> Expression*;
   auto ParseScript() -> Script*;
   auto ParseModule(const std::string& name) -> Module*;
 

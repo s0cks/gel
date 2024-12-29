@@ -1,6 +1,7 @@
 #include "gel/heap.h"
 
 #include "gel/collector.h"
+#include "gel/common.h"
 #include "gel/os_thread.h"
 #include "gel/platform.h"
 #include "gel/section.h"
@@ -63,9 +64,11 @@ void Heap::Init() {
   heap_.Set(new Heap());
   ASSERT(heap_);
 #ifdef GEL_DEBUG
-  DLOG(INFO) << "heap initialized.";
-  PrintNewZone(GetHeap()->GetNewZone());
-  PrintOldZone(GetHeap()->GetOldZone());
+  DVLOG(100) << "heap initialized.";
+  if (VLOG_IS_ON(100)) {
+    PrintNewZone(GetHeap()->GetNewZone());
+    PrintOldZone(GetHeap()->GetOldZone());
+  }
 #endif  // GEL_DEBUG
 }
 

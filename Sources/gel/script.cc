@@ -40,6 +40,8 @@ void Script::Append(Namespace* ns) {
   ASSERT(ns);
   namespaces_.push_back(ns);
   ns->SetOwner(this);
+  if (scope_)
+    LOG_IF(FATAL, !scope_->Add(ns)) << "failed to add " << ns << " to scope.";
 }
 
 auto Script::Equals(Object* rhs) const -> bool {

@@ -1,3 +1,17 @@
+(defnative gel/get-version []
+  "Returns the current version of the gelrt.")
+(defnative gel/debug? []
+  "Returns whether or not this is a debug instance of gelrt.")
+(defnative format [pattern args...] ;; TODO: move to gel/ namespace
+    "Returns a formatted String using the supplied [pattern] and [args...].")
+(defnative print [value] ;; TODO: move to gel/ namespace
+  "Prints the supplied [value] to the console.")
+(defmacro debug-only [expr]
+  (when (gel/debug?)
+    expr))
+(print (format "gel v{}" (gel/get-version)))
+(debug-only
+  (print "debug mode enabled."))
 ;; ---------------------------------------------------------------------------------
 ;; Timers
 ;; ---------------------------------------------------------------------------------
@@ -59,10 +73,6 @@
     "Returns the size of Object [o] in bytes.")
   (defnative gel/docs? [o]
     "Returns the docstring attached to the supplied Object [o].")
-  (defnative format [pattern args...]
-    "Returns a formatted String using the supplied [pattern] and [args...].")
-  (defnative print [value]
-    "Prints the supplied [value] to the console.")
   ;; TODO: remove (list ...)
   (defnative list [values...]
     "Returns a new list using the supplied [values...]")
@@ -112,8 +122,6 @@
     "Performs a minor garbage collection cycle.")
   (defnative gel/major-gc! []
     "Performs a major garbage collection cycle.")
-  (defnative gel/debug? []
-    "Returns whether or not this is a debug instance of gelrt.")
   (defnative gel/get-frame []
     "Returns the current StackFrame from gelrt.")
   (defnative gel/print-st []

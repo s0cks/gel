@@ -5,23 +5,31 @@
 #include <filesystem>
 
 #include "gel/common.h"
+#include "gel/expression.h"
 #include "gel/namespace.h"
 #include "gel/object.h"
 #include "gel/pointer.h"
 
 namespace gel {
 class Module;
+using MacroList = std::vector<Macro*>;
 using ModuleList = std::vector<Module*>;
 class Module : public Object {
+  friend class Parser;
+  friend class Runtime;  // TODO: revoke
+  friend class ModuleLoader;
+
  private:
   String* name_;
   LocalScope* scope_;
   NamespaceList namespaces_{};
+  MacroList macros_{};
+  Lambda* init_ = nullptr;
+  bool initialized_ = false;
 
-  void Append(Namespace* ns) {
-    ASSERT(ns);
-    namespaces_.push_back(ns);
-  }
+  void Append(Namespace* ns);
+  void Append(Macro* macro);
+  auto CreateInitFunc(const expr::ExpressionList& body) -> Lambda*;
 
  protected:
   explicit Module(String* name, LocalScope* scope) :
@@ -32,10 +40,28 @@ class Module : public Object {
     ASSERT(scope_);
   }
 
+  void SetInit(Lambda* rhs) {
+    ASSERT(rhs);
+    init_ = rhs;
+  }
+
+  void SetInitialized(const bool rhs = true) {
+    initialized_ = rhs;
+  }
+
+  inline void ClearInitialized() {
+    return SetInitialized(false);
+  }
+
+  auto Init(Runtime* runtime) -> bool;
   auto VisitPointers(PointerPointerVisitor* vis) -> bool override;
 
  public:
   ~Module() override = default;
+
+  auto IsInitialized() const -> bool {
+    return initialized_;
+  }
 
   auto GetName() const -> String* {
     return name_;
@@ -43,6 +69,15 @@ class Module : public Object {
 
   auto GetScope() const -> LocalScope* {
     return scope_;
+  }
+
+  auto GetNamespace(const std::string& name) const -> Namespace* {
+    ASSERT(!name.empty());
+    for (const auto& ns : namespaces_) {
+      if (ns->GetName() == name)
+        return ns;
+    }
+    return nullptr;
   }
 
   auto GetNamespaces() const -> const NamespaceList& {
@@ -56,6 +91,14 @@ class Module : public Object {
   auto GetNamespaceAt(const uword idx) const -> Namespace* {
     ASSERT(idx >= 0 && idx <= GetNumberOfNamespaces());
     return namespaces_[idx];
+  }
+
+  auto GetInit() const -> Lambda* {
+    return init_;
+  }
+
+  inline auto HasInit() const -> bool {
+    return GetInit() != nullptr;
   }
 
   DECLARE_TYPE(Module);

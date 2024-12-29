@@ -8,7 +8,7 @@ namespace gel {
   extern "C" auto GetPluginName() -> const char* { \
     return #Name;                                  \
   }                                                \
-  extern "C" int InitPlugin()
+  extern "C" auto InitPlugin() -> int
 
 }  // namespace gel
 

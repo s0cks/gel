@@ -4,6 +4,7 @@
 
 #include "gel/common.h"
 #include "gel/error.h"
+#include "gel/procedure.h"
 #include "gel/runtime.h"
 #include "gel/thread_local.h"
 #include "gel/to_string_helper.h"
@@ -69,20 +70,20 @@ auto EventLoop::Stat(const std::string& path, const std::function<void(uword)>& 
   return request->Execute(this) == 0;
 }
 
-auto EventLoop::Rename(const std::string& old_path, const std::string& new_path, const OnErrorCallback& on_error,
-                       const OnFinishedCallback& on_finished) -> bool {
+auto EventLoop::Rename(const std::string& old_path, const std::string& new_path, const OnSuccessCallback& on_success,
+                       const OnErrorCallback& on_error, const OnFinishedCallback& on_finished) -> bool {
   ASSERT(!old_path.empty());
   ASSERT(!new_path.empty());
-  const auto request = new fs::RenameRequest(old_path, new_path, on_error, on_finished);
+  const auto request = new fs::RenameRequest(old_path, new_path, on_success, on_error, on_finished);
   ASSERT(request);
   return request->Execute(this) == 0;
 }
 
-auto EventLoop::Rename(const std::string& old_path, const std::string& new_path, Procedure* on_error, Procedure* on_finished)
-    -> bool {
+auto EventLoop::Rename(const std::string& old_path, const std::string& new_path, Procedure* on_success, Procedure* on_error,
+                       Procedure* on_finished) -> bool {
   ASSERT(!old_path.empty());
   ASSERT(!new_path.empty());
-  return Rename(old_path, new_path, WrapOnError(on_error), WrapOnFinished(on_finished));
+  return Rename(old_path, new_path, WrapOnSuccess(on_success), WrapOnError(on_error), WrapOnFinished(on_finished));
 }
 
 auto EventLoop::Mkdir(const std::string& path, const int mode, const OnSuccessCallback& on_success,
@@ -97,6 +98,32 @@ auto EventLoop::Mkdir(const std::string& path, const int mode, Procedure* on_suc
     -> bool {
   ASSERT(!path.empty());
   return Mkdir(path, mode, WrapOnSuccess(on_success), WrapOnError(on_error), WrapOnFinished(on_finished));
+}
+
+auto EventLoop::Rmdir(const std::string& path, const OnSuccessCallback& on_success, const OnErrorCallback& on_error,
+                      const OnFinishedCallback& on_finished) -> bool {
+  ASSERT(!path.empty());
+  const auto request = new fs::RmdirRequest(path, on_success, on_error, on_finished);
+  ASSERT(request);
+  return request->Execute(this) == 0;
+}
+
+auto EventLoop::Rmdir(const std::string& path, Procedure* on_success, Procedure* on_error, Procedure* on_finished) -> bool {
+  ASSERT(!path.empty());
+  return Rmdir(path, WrapOnSuccess(on_success), WrapOnError(on_error), WrapOnFinished(on_finished));
+}
+
+auto EventLoop::Open(const std::string& path, const int flags, const int mode, const OnSuccessCallback& on_success,
+                     const OnErrorCallback& on_error, const OnFinishedCallback& on_finished) -> bool {
+  ASSERT(!path.empty());
+  const auto request = new fs::OpenRequest(path, flags, mode, on_success, on_error, on_finished);
+  ASSERT(request);
+  return request->Execute(this) == 0;
+}
+
+auto EventLoop::Open(const std::string& path, const int flags, const int mode, Procedure* on_success, Procedure* on_error,
+                     Procedure* on_finished) -> bool {
+  return Open(path, flags, mode, WrapOnSuccess(on_success), WrapOnError(on_error), WrapOnSuccess(on_finished));
 }
 
 auto EventLoop::ToString() const -> std::string {
@@ -182,49 +209,45 @@ void Timer::OnTick(uv_timer_t* handle) {
 }
 
 namespace fs {
-FS_REQUEST_CALLBACK_F(RenameRequest) {
-  ASSERT(handle);
-  const auto request = From<RenameRequest>(handle);
-  ASSERT(request);
-  const auto result = request->handle()->result;
-  if (result == -1) {
-    const auto message =
-        fmt::format("error reading stats of file {}: {}", request->GetPath(), uv_strerror(static_cast<int>(result)));
-    return request->OnError(Error::New(message));
+#define FS_REQUEST_CALL_UV(Name, Func, ...) Func(loop->Get(), handle(), GetPath().c_str() __VA_OPT__(, ) __VA_ARGS__, &On##Name)
+
+#define FS_REQUEST_CALL_F(Name, Func, ...)              \
+  auto Name::GetRequestName() const -> const char* {    \
+    return #Func;                                       \
+  }                                                     \
+  FS_REQUEST_EXECUTE_F(Name) {                          \
+    ASSERT(loop);                                       \
+    return FS_REQUEST_CALL_UV(Name, Func, __VA_ARGS__); \
   }
-  uv_fs_req_cleanup(handle);
-  request->OnFinished();
-}
 
-FS_REQUEST_EXECUTE_F(RenameRequest) {
-  ASSERT(loop);
-  const auto& path = GetPath();
-  const auto& new_path = GetNewPath();
-  return uv_fs_rename(loop->Get(), handle(), path.c_str(), new_path.c_str(), &OnRenameRequest);
-}
-
-FS_REQUEST_CALLBACK_F(MkdirRequest) {
-  ASSERT(handle);
-  const auto request = From<MkdirRequest>(handle);
-  ASSERT(request);
-  const auto result = request->GetResult();
-  if (result == -1) {
-    const auto message =
-        fmt::format("error reading stats of file {}: {}", request->GetPath(), uv_strerror(static_cast<int>(result)));
-    request->OnError(Error::New(message));
-  } else {
-    request->OnSuccess();
+#define FS_REQUEST_SIMPLE_CALLBACK_F(Name)                                                                           \
+  FS_REQUEST_CALLBACK_F(Name) {                                                                                      \
+    ASSERT(handle);                                                                                                  \
+    const auto request = From<Name>(handle);                                                                         \
+    ASSERT(request);                                                                                                 \
+    const auto result = request->GetResult();                                                                        \
+    if (result < 0) {                                                                                                \
+      const auto request_name = request->GetRequestName();                                                           \
+      const auto error_message = std::string(uv_strerror(static_cast<int>(result)));                                 \
+      const auto message = fmt::format("{} error for file {}: {}", request_name, request->GetPath(), error_message); \
+      request->OnError(Error::New(message));                                                                         \
+    } else {                                                                                                         \
+      request->OnSuccess();                                                                                          \
+    }                                                                                                                \
+    uv_fs_req_cleanup(handle);                                                                                       \
+    request->OnFinished();                                                                                           \
   }
-  uv_fs_req_cleanup(handle);
-  request->OnFinished();
-}
 
-FS_REQUEST_EXECUTE_F(MkdirRequest) {
-  ASSERT(loop);
-  const auto& path = GetPath();
-  return uv_fs_mkdir(loop->Get(), handle(), path.c_str(), GetMode(), &OnMkdirRequest);
-}
+FS_REQUEST_CALL_F(RenameRequest, uv_fs_rename, GetNewPath().c_str());
+FS_REQUEST_SIMPLE_CALLBACK_F(RenameRequest);
 
+FS_REQUEST_CALL_F(RmdirRequest, uv_fs_rmdir);
+FS_REQUEST_SIMPLE_CALLBACK_F(RmdirRequest);
+
+FS_REQUEST_CALL_F(MkdirRequest, uv_fs_mkdir, GetMode());
+FS_REQUEST_SIMPLE_CALLBACK_F(MkdirRequest);
+
+FS_REQUEST_CALL_F(StatRequest, uv_fs_stat);
 FS_REQUEST_CALLBACK_F(StatRequest) {
   ASSERT(handle);
   const auto request = From<StatRequest>(handle);
@@ -240,10 +263,7 @@ FS_REQUEST_CALLBACK_F(StatRequest) {
   request->OnFinished();
 }
 
-FS_REQUEST_EXECUTE_F(StatRequest) {
-  ASSERT(loop);
-  const auto& path = GetPath();
-  return uv_fs_stat(loop->Get(), handle(), path.c_str(), &OnStatRequest);
-}
+FS_REQUEST_CALL_F(OpenRequest, uv_fs_open, GetFlags(), GetMode());
+FS_REQUEST_SIMPLE_CALLBACK_F(OpenRequest);
 }  // namespace fs
 }  // namespace gel

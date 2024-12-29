@@ -11,6 +11,7 @@ class Parser;
 class Macro : public Object {
   friend class Script;
   friend class Parser;
+  friend class Module;
 
  private:
   Object* owner_ = nullptr;

@@ -7,8 +7,6 @@
 #include "gel/argument.h"
 #include "gel/common.h"
 #include "gel/error.h"
-#include "gel/instruction.h"
-#include "gel/object.h"
 #include "gel/procedure.h"
 
 namespace gel {
@@ -99,30 +97,26 @@ using RequiredNativeArgument = NativeArgument<Index, T>;
 class Runtime;
 class NativeProcedure;
 using NativeProcedureList = std::vector<NativeProcedure*>;
-class NativeProcedure : public Procedure {
-  friend class Parser;
+
+class NativeProcedureEntry {
   friend class Runtime;
-  friend class Interpreter;
+  friend class EffectVisitor;
+  friend class NativeProcedure;
+  DEFINE_NON_COPYABLE_TYPE(NativeProcedureEntry);
 
  private:
-  ArgumentSet args_{};
-  String* docs_ = nullptr;
+  NativeProcedure* native_ = nullptr;
 
-  template <class Native>
-  static inline void InitNative() {
-    Native::Init();
-    const auto native = Native::Get();
+  void SetNative(NativeProcedure* native) {
     ASSERT(native);
-    DVLOG(1000) << "initialized " << native;
+    native_ = native;
   }
 
  protected:
-  explicit NativeProcedure(Symbol* symbol) :
-    Procedure(symbol) {}
-
-  auto Return(Object* rhs = Null()) const -> bool;
+  NativeProcedureEntry() = default;
   virtual auto Apply(const ObjectList& args) const -> bool = 0;
 
+  auto Return(Object* rhs = Null()) const -> bool;
   inline auto ReturnNull() const -> bool {
     return Return(Null());
   }
@@ -134,6 +128,14 @@ class NativeProcedure : public Procedure {
 
   inline auto ReturnBool(const bool rhs) const -> bool {
     return Return(Bool::Box(rhs));
+  }
+
+  inline auto ReturnTrue() const -> bool {
+    return Return(Bool::True());
+  }
+
+  inline auto ReturnFalse() const -> bool {
+    return Return(Bool::False());
   }
 
   inline auto ReturnLong(const uint64_t rhs) const -> bool {
@@ -151,7 +153,7 @@ class NativeProcedure : public Procedure {
   }
 
   inline auto ThrowNotImplementedError() const -> bool {
-    return ThrowError(fmt::format("{} is not implemented!", GetSymbol()->GetFullyQualifiedName()));
+    return ThrowError("not implemented");
   }
 
   inline auto DoNothing() const -> bool {
@@ -163,6 +165,61 @@ class NativeProcedure : public Procedure {
     ASSERT(!arg);
     return Throw(arg.GetError());
   }
+
+ public:
+  virtual ~NativeProcedureEntry() = default;
+
+  auto GetNative() const -> NativeProcedure* {
+    return native_;
+  }
+
+  inline auto HasNative() const -> bool {
+    return GetNative() != nullptr;
+  }
+
+  inline auto IsBound() const -> bool {
+    return HasNative();
+  }
+
+  friend auto operator<<(std::ostream& stream, const NativeProcedureEntry& rhs) -> std::ostream& {
+    NOT_IMPLEMENTED(ERROR);
+    return stream << "NativeProcedureEntry()";
+  }
+};
+
+class NativeProcedure : public Procedure {
+  friend class Parser;
+  friend class Runtime;
+  friend class Interpreter;
+  friend class NativeProcedureEntry;
+
+ private:
+  ArgumentSet args_{};
+  String* docs_ = nullptr;
+  NativeProcedureEntry* entry_ = nullptr;
+
+  inline void SetEntry(NativeProcedureEntry* entry) {
+    LOG_IF(FATAL, HasEntry()) << "cannot relink " << this << " to: " << (*entry);
+    ASSERT(entry);
+    entry_ = entry;
+  }
+
+  template <class Native>
+  static inline void InitNative() {
+    Native::Init();
+    const auto native = Native::Get();
+    ASSERT(native);
+    DVLOG(1000) << "initialized " << native;
+  }
+
+  static auto FindOrCreate(Symbol* symbol) -> NativeProcedure*;
+
+ public:
+  static void Link(Symbol* symbol, NativeProcedureEntry* entry);
+
+ protected:
+  explicit NativeProcedure(Symbol* symbol) :
+    Procedure(symbol) {}
 
   void SetArgs(const ArgumentSet& args) {
     args_ = args;
@@ -180,12 +237,16 @@ class NativeProcedure : public Procedure {
     return true;
   }
 
-  auto GetEntry() const -> ir::TargetEntryInstr* {
-    return nullptr;  // TODO: remove this stupid function
-  }
-
   auto GetArgs() const -> const ArgumentSet& {
     return args_;
+  }
+
+  auto GetEntry() const -> NativeProcedureEntry* {
+    return entry_;
+  }
+
+  auto HasEntry() const -> bool {
+    return GetEntry() != nullptr;
   }
 
   inline auto GetNumberOfArgs() const -> uword {
@@ -229,16 +290,16 @@ class NativeProcedure : public Procedure {
                                                              \
  public:                                                     \
   Name() :                                                   \
-    NativeProcedure(kSymbol) {}                              \
+    NativeProcedureEntry() {}                                \
   ~Name() override = default;                                \
                                                              \
  private:                                                    \
+  static constexpr const auto kSymbolString = (Sym);         \
   static Symbol* kSymbol;                                    \
   static Name* kInstance;                                    \
                                                              \
  public:                                                     \
   static void Init();                                        \
-  static constexpr const auto kSymbolString = (Sym);         \
   static inline auto Get() -> Name* {                        \
     ASSERT(kInstance);                                       \
     return kInstance;                                        \
@@ -249,7 +310,7 @@ class NativeProcedure : public Procedure {
   }
 
 #define DEFINE_NATIVE_PROCEDURE_TYPE(Name) _DEFINE_NATIVE_PROCEDURE_TYPE(Name, #Name)
-#define _NATIVE_PROCEDURE_NAMED(Name)      class Name : public NativeProcedure
+#define _NATIVE_PROCEDURE_NAMED(Name)      class Name : public NativeProcedureEntry
 
 #define _DECLARE_NATIVE_PROCEDURE(Name, Sym)  \
   _NATIVE_PROCEDURE_NAMED(Name) {             \
@@ -262,14 +323,16 @@ class NativeProcedure : public Procedure {
   };
 
 #define NATIVE_PROCEDURE_F(Name)                        \
-  Name* Name::kInstance = nullptr;                      \
   Symbol* Name::kSymbol = nullptr;                      \
+  Name* Name::kInstance = nullptr;                      \
   void Name::Init() {                                   \
     ASSERT(kInstance == nullptr && kSymbol == nullptr); \
-    kSymbol = Symbol::New(kSymbolString);               \
+    DVLOG(100) << "initializing " << #Name << "....";   \
     kInstance = new Name();                             \
-    NativeProcedure::Register(kInstance);               \
-    ASSERT(kInstance&& kSymbol);                        \
+    ASSERT(kInstance);                                  \
+    kSymbol = Symbol::New(kSymbolString);               \
+    ASSERT(kSymbol);                                    \
+    NativeProcedure::Link(kSymbol, kInstance);          \
   }                                                     \
   auto Name::Apply(const ObjectList& args) const -> bool
 
