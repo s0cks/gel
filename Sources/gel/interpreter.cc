@@ -26,13 +26,13 @@
 #include "gel/script.h"
 
 namespace gel {
-#define TOP             (GetExecutionStack()->StackTop())
-#define POP             (GetExecutionStack()->Pop())
-#define POPN(N, Result) (GetExecutionStack()->PopN((Result), (N), true));
-#define PUSH(Value)     (GetExecutionStack()->Push(gel::IsNull((Value)) ? Null() : (Value)))
+#define TOP             (GetOperationStack()->StackTop())
+#define POP             (GetOperationStack()->Pop())
+#define POPN(N, Result) (GetOperationStack()->PopN((Result), (N), true));
+#define PUSH(Value)     (GetOperationStack()->Push(gel::IsNull((Value)) ? Null() : (Value)))
 
-auto Interpreter::GetExecutionStack() -> ExecutionStack* {
-  return runtime_->GetExecutionStack();
+auto Interpreter::GetOperationStack() -> OperationStack* {
+  return runtime_->GetOperationStack();
 }
 
 auto Interpreter::GetScope() const -> LocalScope* {

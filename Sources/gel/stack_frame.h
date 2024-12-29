@@ -11,91 +11,13 @@
 #include "gel/instruction.h"
 #include "gel/native_procedure.h"
 #include "gel/object.h"
+#include "gel/operation_stack.h"
 #include "gel/platform.h"
 #include "gel/procedure.h"
 #include "gel/type_traits.h"
 #include "gel/util.h"
 
 namespace gel {
-
-using Stack = std::stack<Object*>;
-
-class ExecutionStack {
-  friend class Runtime;
-  friend class StackFrame;
-  friend class Interpreter;
-  DEFINE_DEFAULT_COPYABLE_TYPE(ExecutionStack);
-
- private:
-  Stack stack_{};
-
- protected:
-  ExecutionStack() = default;
-
-  inline void SetStack(const Stack& rhs) {
-    ASSERT(!rhs.empty());
-    stack_ = rhs;
-  }
-
-  inline auto StackTop() const -> std::optional<Stack::value_type> {
-    if (stack_.empty())
-      return std::nullopt;
-    return {stack_.top()};
-  }
-
-  inline auto stack() const -> const Stack& {
-    return stack_;
-  }
-
- public:
-  virtual ~ExecutionStack() = default;
-
-  auto top() const -> const Stack::value_type& {
-    return stack_.top();
-  }
-
-  auto IsEmpty() const -> bool {
-    return stack_.empty();
-  }
-
-  auto GetStackSize() const -> uint64_t {
-    return stack_.size();
-  }
-
-  auto GetError() const -> Error* {
-    ASSERT(HasError());
-    return stack_.top()->AsError();
-  }
-
-  inline auto HasError() const -> bool {
-    if (stack_.empty())
-      return false;
-    return stack_.top()->IsError();
-  }
-
-  auto Pop() -> Stack::value_type {
-    if (stack_.empty())
-      return nullptr;
-    const auto next = stack_.top();
-    ASSERT(next);
-    stack_.pop();
-    return next;
-  }
-
-  void Push(Stack::value_type value) {
-    ASSERT(value);
-    stack_.push(value);
-  }
-
-  inline void PopN(std::vector<Object*>& result, const uword num, const bool reverse = false) {
-    for (auto idx = 0; idx < num; idx++) {
-      result.push_back(Pop());
-    }
-    if (reverse)
-      std::ranges::reverse(std::begin(result), std::end(result));
-  }
-};
-
 class StackFrame {
   friend class Runtime;
   friend class Interpreter;
@@ -109,7 +31,7 @@ class StackFrame {
   TargetVariant target_;
   LocalScope* locals_;
   uword return_address_;
-  ExecutionStack stack_{};
+  OperationStack stack_{};
 
   StackFrame(const uword id, const TargetVariant target, LocalScope* locals, const uword return_address = UNALLOCATED) :
     id_(id),
@@ -131,11 +53,11 @@ class StackFrame {
     return_address_(UNALLOCATED) {}
   ~StackFrame() = default;
 
-  auto stack() const -> const ExecutionStack& {
+  auto stack() const -> const OperationStack& {
     return stack_;
   }
 
-  auto GetExecutionStack() -> ExecutionStack* {
+  auto GetOperationStack() -> OperationStack* {
     return &stack_;
   }
 

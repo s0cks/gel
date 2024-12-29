@@ -141,7 +141,7 @@ void Runtime::Call(Lambda* lambda, const ObjectList& args) {
       if (!stack_.empty()) {
         const auto result = !frame.stack().IsEmpty() ? frame.stack().top() : Null();
         ASSERT(result);
-        stack_.top().GetExecutionStack()->Push(result);
+        stack_.top().GetOperationStack()->Push(result);
       }
       if (frame.HasReturnAddress())
         interpreter_.SetCurrentAddress(frame.GetReturnAddress());
@@ -166,7 +166,7 @@ void Runtime::Call(NativeProcedure* native, const ObjectList& args) {
       if (!stack_.empty()) {
         const auto result = !frame.stack().IsEmpty() ? frame.stack().top() : Null();
         ASSERT(result);
-        stack_.top().GetExecutionStack()->Push(result);
+        stack_.top().GetOperationStack()->Push(result);
       }
       if (frame.HasReturnAddress())
         interpreter_.SetCurrentAddress(frame.GetReturnAddress());
@@ -189,7 +189,7 @@ void Runtime::Call(Script* script, const ObjectList& args) {
       if (!stack_.empty()) {
         const auto result = !frame.stack().IsEmpty() ? frame.stack().top() : Null();
         ASSERT(result);
-        stack_.top().GetExecutionStack()->Push(result);
+        stack_.top().GetOperationStack()->Push(result);
       }
       if (frame.HasReturnAddress())
         interpreter_.SetCurrentAddress(frame.GetReturnAddress());

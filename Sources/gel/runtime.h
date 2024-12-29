@@ -57,16 +57,16 @@ class Runtime {
     executing_ = value;
   }
 
-  inline auto GetExecutionStack() -> ExecutionStack* {
+  inline auto GetOperationStack() -> OperationStack* {
     ASSERT(!stack_.empty());
-    return stack_.top().GetExecutionStack();
+    return stack_.top().GetOperationStack();
   }
 
   template <class E>
   inline void CallWithNArgs(E* exec, const uword num_args, std::enable_if_t<gel::is_executable<E>::value>* = nullptr) {
     ASSERT(exec);
     ASSERT(num_args >= 0);
-    const auto stack = GetExecutionStack();
+    const auto stack = GetOperationStack();
     ASSERT(stack);
     std::vector<Object*> args{};
     word remaining = static_cast<word>(num_args);
@@ -143,7 +143,7 @@ class Runtime {
   // Stack
   inline void PushError(Error* error) {
     ASSERT(error);
-    const auto stack = GetExecutionStack();
+    const auto stack = GetOperationStack();
     ASSERT(stack);
     return stack->Push(error);
   }
@@ -183,7 +183,7 @@ class Runtime {
     Call(exec, args);
     if (stack_.empty())
       return Null();
-    const auto stack = GetExecutionStack();
+    const auto stack = GetOperationStack();
     ASSERT(stack);
     return stack->Pop();
   }
