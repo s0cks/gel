@@ -254,14 +254,9 @@ NATIVE_PROCEDURE_F(gel_load_bindings) {
   NativeArgument<0, String> filename(args);
   if (!filename)
     return Throw(filename.GetError());
-  const auto filter = rx::operators::filter([&filename](std::filesystem::path p) {
-    return std::filesystem::is_regular_file(p) && p.filename() == filename->Get();
+  NativeBindings::Load(filename->Get()) | rx::operators::as_blocking() | rx::operators::subscribe([&filename](const int status) {
+    LOG_IF(ERROR, status != EXIT_SUCCESS) << "failed to load bindings from " << filename->Get() << ": " << status;
   });
-  LsGelPath() | filter | rx::operators::first() | rx::operators::as_blocking() |
-      rx::operators::subscribe([](std::filesystem::path p) {
-        const auto status = NativeBindings::LoadFrom(p);
-        LOG_IF(ERROR, status != EXIT_SUCCESS) << "failed to load bindings from " << p << ": " << status;
-      });
   return ReturnNull();
 }
 
