@@ -4,6 +4,7 @@
 #include <gflags/gflags_declare.h>
 
 #include <stack>
+#include <type_traits>
 #include <utility>
 
 #include "gel/common.h"
@@ -22,70 +23,12 @@
 namespace gel {
 DECLARE_bool(log_script_instrs);
 
-using Stack = std::stack<Object*>;
-
-class ExecutionStack {
-  DEFINE_NON_COPYABLE_TYPE(ExecutionStack);
-
- private:
-  Stack stack_{};
-
- protected:
-  ExecutionStack() = default;
-
-  inline void SetStack(const Stack& rhs) {
-    ASSERT(!rhs.empty());
-    stack_ = rhs;
-  }
-
-  inline auto StackTop() const -> std::optional<Stack::value_type> {
-    if (stack_.empty())
-      return std::nullopt;
-    return {stack_.top()};
-  }
-
-  inline auto stack() const -> const Stack& {
-    return stack_;
-  }
-
- public:
-  virtual ~ExecutionStack() = default;
-
-  auto GetStackSize() const -> uint64_t {
-    return stack_.size();
-  }
-
-  auto GetError() const -> Error* {
-    ASSERT(HasError());
-    return stack_.top()->AsError();
-  }
-
-  inline auto HasError() const -> bool {
-    if (stack_.empty())
-      return false;
-    return stack_.top()->IsError();
-  }
-
-  auto Pop() -> Stack::value_type {
-    if (stack_.empty())
-      return nullptr;
-    const auto next = stack_.top();
-    ASSERT(next);
-    stack_.pop();
-    return next;
-  }
-
-  void Push(Stack::value_type value) {
-    ASSERT(value);
-    stack_.push(value);
-  }
-};
-
 class Module;
-class Runtime : public ExecutionStack {
+class Runtime {
   friend class proc::import;
   friend class proc::exit;
   friend class proc::format;  // TODO: remove
+  friend class proc::rx_take_while;
 #ifdef GEL_DEBUG
   friend class proc::gel_get_frame;
   friend class proc::gel_print_st;
@@ -100,7 +43,7 @@ class Runtime : public ExecutionStack {
   friend class DirModuleLoader;
   friend class NativeProcedure;
   friend class RuntimeScopeScope;
-  friend class RuntimeStackIterator;
+  friend class NativeProcedureEntry;
   DEFINE_NON_COPYABLE_TYPE(Runtime);
 
  private:
@@ -114,30 +57,29 @@ class Runtime : public ExecutionStack {
     executing_ = value;
   }
 
-  inline void PopN(std::vector<Object*>& result, const uword num, const bool reverse = false) {
-    for (auto idx = 0; idx < num; idx++) {
-      result.push_back(Pop());
-    }
-    if (reverse)
-      std::ranges::reverse(std::begin(result), std::end(result));
+  inline auto GetExecutionStack() -> ExecutionStack* {
+    ASSERT(!stack_.empty());
+    return stack_.top().GetExecutionStack();
   }
 
   template <class E>
   inline void CallWithNArgs(E* exec, const uword num_args, std::enable_if_t<gel::is_executable<E>::value>* = nullptr) {
     ASSERT(exec);
     ASSERT(num_args >= 0);
+    const auto stack = GetExecutionStack();
+    ASSERT(stack);
     std::vector<Object*> args{};
     word remaining = static_cast<word>(num_args);
     for (const auto& arg : exec->GetArgs()) {
       if (arg.IsVararg()) {
         while (remaining > 0) {
-          const auto value = Pop();
+          const auto value = stack->Pop();
           args.push_back(value);
           remaining--;
         }
         break;
       } else if (remaining > 0) {
-        const auto value = Pop();
+        const auto value = stack->Pop();
         args.push_back(value);
         remaining--;
         continue;
@@ -157,21 +99,9 @@ class Runtime : public ExecutionStack {
     return Call(exec, args);
   }
 
-  void Call(NativeProcedure* native, const ObjectList& args);
-  void Call(Lambda* lambda, const ObjectList& args);
-  void Call(Script* script);
-
-  inline auto CallPop(Lambda* lambda) -> Object* {
-    ASSERT(lambda);
-    Call(lambda, {});
-    return Pop();
-  }
-
-  inline auto CallPop(Script* script) -> Object* {
-    ASSERT(script);
-    Call(script);
-    return Pop();
-  }
+  void Call(NativeProcedure* native, const ObjectList& args = {});
+  void Call(Lambda* lambda, const ObjectList& args = {});
+  void Call(Script* script, const ObjectList& args = {});
 
   inline auto PushScope() -> LocalScope* {
     const auto new_scope = LocalScope::New(curr_scope_);
@@ -203,9 +133,6 @@ class Runtime : public ExecutionStack {
 
  protected:
   explicit Runtime(LocalScope* init_scope = CreateInitScope());
-  auto StoreSymbol(Symbol* symbol, Object* value) -> bool;
-  auto DefineSymbol(Symbol* symbol, Object* value) -> bool;
-  auto LookupSymbol(Symbol* symbol, Object** result) -> bool;
   auto Import(Module* module) -> bool;
   auto Import(Symbol* symbol, LocalScope* scope) -> bool;
 
@@ -216,7 +143,9 @@ class Runtime : public ExecutionStack {
   // Stack
   inline void PushError(Error* error) {
     ASSERT(error);
-    return Push(error);
+    const auto stack = GetExecutionStack();
+    ASSERT(stack);
+    return stack->Push(error);
   }
 
   inline void PushError(const std::string& message) {
@@ -225,7 +154,7 @@ class Runtime : public ExecutionStack {
   }
 
  public:
-  ~Runtime() override = default;
+  ~Runtime() = default;
 
   auto GetInitScope() const -> LocalScope* {
     return init_scope_;
@@ -243,8 +172,20 @@ class Runtime : public ExecutionStack {
     return !stack_.empty();
   }
 
-  auto GetCurrentStackFrame() -> const StackFrame& {
+  auto GetCurrentStackFrame() const -> const StackFrame& {
     return stack_.top();
+  }
+
+  template <class E>
+  inline auto CallPop(E* exec, const ObjectList& args = {}, std::enable_if_t<gel::is_executable<E>::value>* = nullptr)
+      -> Object* {
+    ASSERT(exec);
+    Call(exec, args);
+    if (stack_.empty())
+      return Null();
+    const auto stack = GetExecutionStack();
+    ASSERT(stack);
+    return stack->Pop();
   }
 
  private:
@@ -260,29 +201,6 @@ class Runtime : public ExecutionStack {
 
  public:
   static void Init();
-};
-
-class RuntimeStackIterator {
-  DEFINE_NON_COPYABLE_TYPE(RuntimeStackIterator);
-
- private:
-  Stack stack_;
-
- public:
-  RuntimeStackIterator(Runtime* runtime) :
-    stack_(runtime->stack()) {}
-  ~RuntimeStackIterator() = default;
-
-  auto HasNext() const -> bool {
-    return !stack_.empty();
-  }
-
-  auto Next() -> Stack::value_type {
-    const auto next = stack_.top();
-    ASSERT(next);
-    stack_.pop();
-    return next;
-  }
 };
 
 auto GetRuntime() -> Runtime*;

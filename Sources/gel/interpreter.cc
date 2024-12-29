@@ -26,10 +26,14 @@
 #include "gel/script.h"
 
 namespace gel {
-#define TOP             (runtime_->StackTop())
-#define POP             (runtime_->Pop())
-#define POPN(N, Result) (runtime_->PopN((Result), (N), true));
-#define PUSH(Value)     (runtime_->Push(gel::IsNull((Value)) ? Null() : (Value)))
+#define TOP             (GetExecutionStack()->StackTop())
+#define POP             (GetExecutionStack()->Pop())
+#define POPN(N, Result) (GetExecutionStack()->PopN((Result), (N), true));
+#define PUSH(Value)     (GetExecutionStack()->Push(gel::IsNull((Value)) ? Null() : (Value)))
+
+auto Interpreter::GetExecutionStack() -> ExecutionStack* {
+  return runtime_->GetExecutionStack();
+}
 
 auto Interpreter::GetScope() const -> LocalScope* {
   return runtime_->GetScope();
@@ -280,7 +284,7 @@ void Interpreter::ExecUnaryOp(const Bytecode code) {
 
 void Interpreter::CheckInstance(Class* cls) {
   ASSERT(cls);
-  const auto top = GetRuntime()->StackTop();
+  const auto top = TOP;
   LOG_IF(FATAL, !top) << "expected " << Null() << " to be an instanceof " << cls;
   LOG_IF(FATAL, !(*top)->GetType()->IsInstanceOf(cls->AsClass())) << "expected " << (*top) << " to be an instanceof " << cls;
 }

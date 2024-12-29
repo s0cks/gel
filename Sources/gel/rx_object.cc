@@ -348,8 +348,7 @@ NATIVE_RX_PROCEDURE_F(take_while) {
   CHECK_ARG_TYPE(0, source, Observable::GetClass());
   CHECK_ARG_TYPE(1, predicate, Procedure::GetClass());
   source->AsObservable()->Apply(rx::operators::take_while([predicate, runtime](Object* value) {
-    runtime->Call(predicate->AsProcedure(), {value});
-    return gel::Truth(runtime->Pop());
+    return gel::Truth(runtime->CallPop(predicate->AsProcedure(), {value}));
   }));
   return DoNothing();
 }

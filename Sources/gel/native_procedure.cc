@@ -10,7 +10,9 @@
 namespace gel {
 auto NativeProcedureEntry::Return(Object* rhs) const -> bool {
   ASSERT(rhs);
-  GetRuntime()->Push(rhs);
+  const auto stack = GetRuntime()->GetExecutionStack();
+  ASSERT(stack);
+  stack->Push(rhs);
   return DoNothing();
 }
 

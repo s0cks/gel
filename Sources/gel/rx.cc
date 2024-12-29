@@ -23,8 +23,7 @@ auto CallPredicate(Runtime* runtime, Procedure* predicate) -> Predicate {
   ASSERT(runtime);
   ASSERT(predicate);
   return [runtime, predicate](gel::Object* value) {
-    runtime->Call(predicate->AsProcedure(), {value});
-    return gel::Truth(runtime->Pop());
+    return gel::Truth(runtime->CallPop(predicate, {value}));
   };
 }
 
@@ -87,8 +86,7 @@ auto CallOnComplete(Runtime* runtime, Procedure* proc) -> OnCompleteFunc {
 
 auto map(Runtime* runtime, Procedure* proc) -> rpp::operators::details::map_t<std::decay_t<MapFunc>> {
   const MapFunc func = [runtime, proc](Object* value) {
-    runtime->Call(proc, {value});
-    return runtime->Pop();
+    return runtime->CallPop(proc, {value});
   };
   return rpp::operators::map(func);
 }

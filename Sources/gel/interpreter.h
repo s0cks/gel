@@ -23,6 +23,8 @@ class Interpreter {
   Runtime* runtime_;
   uword current_ = 0;
 
+  auto GetExecutionStack() -> ExecutionStack*;
+
   inline auto NextBytecode() -> Bytecode {
     const auto next = *((RawBytecode*)current_);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
     current_ += sizeof(RawBytecode);

@@ -49,7 +49,6 @@ auto GetRuntime() -> Runtime* {
 }
 
 Runtime::Runtime(LocalScope* scope) :
-  ExecutionStack(),
   init_scope_(scope),
   curr_scope_(scope),
   interpreter_(this) {
@@ -113,38 +112,6 @@ auto Runtime::CreateInitScope() -> LocalScope* {
   return scope;
 }
 
-auto Runtime::DefineSymbol(Symbol* symbol, Object* value) -> bool {
-  ASSERT(symbol);
-  ASSERT(value);
-  const auto locals = GetScope();
-  ASSERT(locals);
-  return locals->Add(symbol, value);
-}
-
-auto Runtime::LookupSymbol(Symbol* symbol, Object** result) -> bool {
-  ASSERT(symbol);
-  const auto scope = GetScope();
-  ASSERT(scope);
-  LocalVariable* local = nullptr;
-  if (!scope->Lookup(symbol, &local))
-    return false;
-  ASSERT(local);
-  (*result) = local->GetValue();
-  return true;
-}
-
-auto Runtime::StoreSymbol(Symbol* symbol, Object* value) -> bool {
-  ASSERT(symbol);
-  ASSERT(value);
-  const auto locals = GetScope();
-  ASSERT(locals);
-  LocalVariable* local = nullptr;
-  if (!locals->Lookup(symbol, &local))
-    return locals->Add(symbol, value);
-  local->SetValue(value);
-  return true;
-}
-
 void Runtime::Call(Lambda* lambda, const ObjectList& args) {
   ASSERT(lambda);
   const auto locals = PushScope();
@@ -171,6 +138,11 @@ void Runtime::Call(Lambda* lambda, const ObjectList& args) {
       PushStackFrame(lambda, locals);
       interpreter_.Run(lambda->GetCode().GetStartingAddress());
       const auto frame = PopStackFrame();
+      if (!stack_.empty()) {
+        const auto result = !frame.stack().IsEmpty() ? frame.stack().top() : Null();
+        ASSERT(result);
+        stack_.top().GetExecutionStack()->Push(result);
+      }
       if (frame.HasReturnAddress())
         interpreter_.SetCurrentAddress(frame.GetReturnAddress());
     }
@@ -191,6 +163,11 @@ void Runtime::Call(NativeProcedure* native, const ObjectList& args) {
       PushStackFrame(native, locals);
       LOG_IF(FATAL, !native->GetEntry()->Apply(args)) << "failed to apply: " << native->ToString() << " with args: " << args;
       const auto frame = PopStackFrame();
+      if (!stack_.empty()) {
+        const auto result = !frame.stack().IsEmpty() ? frame.stack().top() : Null();
+        ASSERT(result);
+        stack_.top().GetExecutionStack()->Push(result);
+      }
       if (frame.HasReturnAddress())
         interpreter_.SetCurrentAddress(frame.GetReturnAddress());
     }
@@ -198,7 +175,7 @@ void Runtime::Call(NativeProcedure* native, const ObjectList& args) {
   PopScope();
 }
 
-void Runtime::Call(Script* script) {
+void Runtime::Call(Script* script, const ObjectList& args) {
   ASSERT(script && script->IsCompiled());
   const auto locals = PushScope();
   ASSERT(locals);
@@ -209,6 +186,11 @@ void Runtime::Call(Script* script) {
       PushStackFrame(script, locals);
       interpreter_.Run(script->GetCode().GetStartingAddress());
       const auto frame = PopStackFrame();
+      if (!stack_.empty()) {
+        const auto result = !frame.stack().IsEmpty() ? frame.stack().top() : Null();
+        ASSERT(result);
+        stack_.top().GetExecutionStack()->Push(result);
+      }
       if (frame.HasReturnAddress())
         interpreter_.SetCurrentAddress(frame.GetReturnAddress());
     }
