@@ -922,14 +922,8 @@ auto EffectVisitor::VisitScript(Script* script) -> bool {
 auto EffectVisitor::VisitLambda(Lambda* lambda) -> bool {
   const auto scope = GetOwner()->PushScope();
   ASSERT(scope);
-  if (lambda->HasScope()) {
+  if (lambda->HasScope())
     LOG_IF(FATAL, !scope->Add(lambda->GetScope())) << "failed to add lambda scope to current scope.";
-  }
-  for (const auto& arg : lambda->GetArgs()) {
-    const auto local = LocalVariable::New(scope, Symbol::New(arg.GetName()));
-    if (!scope->Add(local))
-      LOG_IF(ERROR, local->GetName() != "this") << "failed to add " << (*local) << " to current scope";
-  }
   auto index = 0;
   const auto& body = lambda->GetBody();
   while (IsOpen() && (index < body.size())) {

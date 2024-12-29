@@ -311,8 +311,10 @@ auto Parser::ParseLetExpr() -> expr::LetExpr* {
   return LetExpr::New(scope, bindings, body);
 }
 
-auto Parser::ParseArguments(ArgumentSet& args) -> bool {
+auto Parser::ParseArguments(ArgumentSet& args, const bool bind) -> bool {  // TODO: remove bind?
   ExpectNext(Token::kLBracket);
+  const auto scope = GetScope();
+  ASSERT(scope);
   uint64_t num_args = 0;
   SetParsingArgs();
   while (!PeekEq(Token::kRBracket)) {
@@ -338,7 +340,14 @@ auto Parser::ParseArguments(ArgumentSet& args) -> bool {
       default:
         LOG(FATAL) << "invalid: " << NextToken();
     }
-    args.insert(Argument(idx, name, optional, vararg));
+    const auto arg = Argument(idx, name, optional, vararg);
+    const auto [_, success] = args.insert(arg);
+    LOG_IF(FATAL, !success) << "failed to insert " << arg;
+    if (bind) {
+      const auto local = LocalVariable::New(scope, Symbol::New(name));
+      ASSERT(local);
+      LOG_IF(FATAL, !scope->Add(local)) << "failed to add " << (*local) << " to current scope.";
+    }
   }
   ClearParsingArgs();
   ExpectNext(Token::kRBracket);
@@ -1129,8 +1138,12 @@ auto Parser::ParseLambda(const Token::Kind kind) -> Lambda* {
     if (dispatched_ > 0) {
       for (auto idx = 0; idx < dispatched_; idx++) {
         const auto name = fmt::format("${}", idx);
-        LOG_IF(FATAL, !args.insert(Argument(idx, name, false, false)).second)
-            << "failed to create arg " << name << " for lambda.";
+        const auto arg = Argument(idx, name, false, false);
+        const auto [_, success] = args.insert(arg);
+        LOG_IF(FATAL, !success) << "failed to insert: " << arg;
+        const auto local = LocalVariable::New(scope, Symbol::New(name));
+        ASSERT(local);
+        LOG_IF(FATAL, !scope->Add(local)) << "failed to add " << (*local) << " to current scope.";
       }
     }
 
@@ -1160,7 +1173,7 @@ auto Parser::ParseLambda(const Token::Kind kind) -> Lambda* {
     LOG_IF(FATAL, !GetScope()->Add(local)) << "cannot add " << local << " to scope.";
     // arguments
     ArgumentSet args{};
-    if (!ParseArguments(args))
+    if (!ParseArguments(args, true))
       throw Exception("failed to parse ArgumentSet");
     lambda->SetArgs(args);
     // docstring

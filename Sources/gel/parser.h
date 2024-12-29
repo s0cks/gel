@@ -171,7 +171,7 @@ class Parser {
   auto ParseNamespace() -> Namespace*;
 
   auto ParseLoadSymbol() -> LoadLocalInstr*;
-  auto ParseArguments(ArgumentSet& args) -> bool;
+  auto ParseArguments(ArgumentSet& args, const bool bind = false) -> bool;
   auto ParseExpressionList(expr::ExpressionList& expressions, const bool push_scope = true) -> bool;
   auto ParseRxOpList(expr::RxOpList& operators) -> bool;
   auto ParseSymbolList(SymbolList& symbols) -> bool;

@@ -11,11 +11,6 @@ void Disassembler::DisassembleLambda(std::ostream& stream, Lambda* lambda, Local
   ASSERT(scope);
   if (lambda->HasScope())
     LOG_IF(FATAL, !scope->Add(lambda->GetScope())) << "failed to add " << lambda << " scope to current scope.";
-  for (const auto& arg : lambda->GetArgs()) {
-    const auto local = LocalVariable::New(scope, arg.GetName());
-    ASSERT(local);
-    LOG_IF(ERROR, !scope->Add(local)) << "failed to add " << (*local) << " to scope.";
-  }
   const auto label = lambda->HasSymbol() ? lambda->GetSymbol()->GetFullyQualifiedName() : "lambda";
   Disassembler disassembler(scope);
   disassembler.Disassemble(lambda, label);
