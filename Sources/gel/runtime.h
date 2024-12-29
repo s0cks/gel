@@ -54,6 +54,7 @@ class Runtime {
   Interpreter interpreter_;
   std::stack<StackFrame> stack_{};
   bool executing_ = false;
+  Object* result_ = nullptr;
 
   inline void SetExecuting(const bool value = true) {
     executing_ = value;
@@ -187,7 +188,10 @@ class Runtime {
     Call(exec, args);
     if (!stack_.empty())
       return GetOperationStack()->PopOr(Null());
-    return Null();  // TODO: don't implicitly return null
+    const auto result = result_ ? result_ : Null();
+    ASSERT(result);
+    result_ = nullptr;
+    return result;
   }
 
  private:

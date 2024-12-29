@@ -15,7 +15,6 @@ NATIVE_PROCEDURE_F(say_hello) {
 }
 
 DEFINE_PLUGIN(Test) {
-  LOG(INFO) << "initializing....";
   say_hello::Init();  // TODO: convert to InitNative<>();
   return EXIT_SUCCESS;
 }

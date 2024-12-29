@@ -31,32 +31,13 @@ target_include_directories(gelle
 target_link_libraries(gelle
   PUBLIC ${GEL_LIBRARIES} gelle-api gflags::gflags)
 
-add_library(test-plugin SHARED
-  test_plugin.cc)
-target_link_libraries(test-plugin PUBLIC gelle)
+add_library(test-bindings SHARED
+  bindings_test.cc)
+target_link_libraries(test-bindings PUBLIC gelle)
 
-if(WIN32)
-
-else()
-  set(CURSES_NEED_NCURSES TRUE)
-  find_package(Curses REQUIRED)
-endif()
-
-add_executable(test-repl
-  test_repl.cc)
-
-if(WIN32)
-
-else()
-
-target_include_directories(test-repl
-  PRIVATE ${CURSES_INCLUDE_DIRS})
-target_compile_options(test-repl
-  PRIVATE ${CURSES_CFLAGS})
-target_link_libraries(test-repl
-  PRIVATE ncurses)
-
-endif()
+add_library(env-bindings SHARED
+  bindings_env.cc)
+target_link_libraries(env-bindings PUBLIC gelle)
 
 add_executable(gelrt
   main.cc)

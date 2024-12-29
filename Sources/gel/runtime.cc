@@ -143,10 +143,12 @@ void Runtime::Call(Lambda* lambda, const ObjectList& args) {
       PushStackFrame(lambda, locals);
       interpreter_.Run(lambda->GetCode().GetStartingAddress());
       const auto frame = PopStackFrame();
+      const auto result = !frame.stack().IsEmpty() ? frame.stack().top() : Null();
+      ASSERT(result);
       if (!stack_.empty()) {
-        const auto result = !frame.stack().IsEmpty() ? frame.stack().top() : Null();
-        ASSERT(result);
         stack_.top().GetOperationStack()->Push(result);
+      } else {
+        result_ = result;
       }
       if (frame.HasReturnAddress())
         interpreter_.SetCurrentAddress(frame.GetReturnAddress());
@@ -168,10 +170,12 @@ void Runtime::Call(NativeProcedure* native, const ObjectList& args) {
       PushStackFrame(native, locals);
       LOG_IF(FATAL, !native->GetEntry()->Apply(args)) << "failed to apply: " << native->ToString() << " with args: " << args;
       const auto frame = PopStackFrame();
+      const auto result = !frame.stack().IsEmpty() ? frame.stack().top() : Null();
+      ASSERT(result);
       if (!stack_.empty()) {
-        const auto result = !frame.stack().IsEmpty() ? frame.stack().top() : Null();
-        ASSERT(result);
         stack_.top().GetOperationStack()->Push(result);
+      } else {
+        result_ = result;
       }
       if (frame.HasReturnAddress())
         interpreter_.SetCurrentAddress(frame.GetReturnAddress());
@@ -191,10 +195,12 @@ void Runtime::Call(Script* script, const ObjectList& args) {
       PushStackFrame(script, locals);
       interpreter_.Run(script->GetCode().GetStartingAddress());
       const auto frame = PopStackFrame();
+      const auto result = !frame.stack().IsEmpty() ? frame.stack().top() : Null();
+      ASSERT(result);
       if (!stack_.empty()) {
-        const auto result = !frame.stack().IsEmpty() ? frame.stack().top() : Null();
-        ASSERT(result);
         stack_.top().GetOperationStack()->Push(result);
+      } else {
+        result_ = result;
       }
       if (frame.HasReturnAddress())
         interpreter_.SetCurrentAddress(frame.GetReturnAddress());

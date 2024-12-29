@@ -42,11 +42,11 @@ class NativeBinding {
 
 auto NativeBindings::CreateFilterFor(const std::string& name) -> PathPredicate {
 #if defined(OS_IS_OSX)
-  const auto target_filename = fmt::format("lib{}.dylib", name);
+  const auto target_filename = fmt::format("lib{}-bindings.dylib", name);
 #elif defined(OS_IS_LINUX)
-  const auto target_filename = fmt::format("lib{}.so", name);
+  const auto target_filename = fmt::format("lib{}-bindings.so", name);
 #elif defined(OS_IS_WINDOWS)
-  const auto target_filename = fmt::format("{}.dll", name);
+  const auto target_filename = fmt::format("{}-bindings.dll", name);
 #else
 #error "Unsupported Operating System"
 #endif
