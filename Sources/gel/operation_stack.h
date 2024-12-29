@@ -3,11 +3,10 @@
 
 #include <stack>
 
+#include "gel/common.h"
 #include "gel/object.h"
 
 namespace gel {
-
-using Stack = std::stack<Object*>;
 
 class OperationStack {
   friend class Runtime;
@@ -15,31 +14,31 @@ class OperationStack {
   friend class Interpreter;
   DEFINE_DEFAULT_COPYABLE_TYPE(OperationStack);
 
+ public:
+  using Value = Object*;
+  using ValueStack = std::stack<Value>;
+  using OptionalValue = std::optional<Value>;
+
  private:
-  Stack stack_{};
+  ValueStack stack_{};
 
  protected:
   OperationStack() = default;
 
-  inline void SetStack(const Stack& rhs) {
-    ASSERT(!rhs.empty());
-    stack_ = rhs;
+ public:
+  virtual ~OperationStack() = default;
+
+  auto data() const -> const ValueStack& {
+    return stack_;
   }
 
-  inline auto StackTop() const -> std::optional<Stack::value_type> {
+  auto GetTop() const -> OptionalValue {
     if (stack_.empty())
       return std::nullopt;
     return {stack_.top()};
   }
 
-  inline auto stack() const -> const Stack& {
-    return stack_;
-  }
-
- public:
-  virtual ~OperationStack() = default;
-
-  auto top() const -> const Stack::value_type& {
+  auto top() const -> const Value& {
     return stack_.top();
   }
 
@@ -62,23 +61,29 @@ class OperationStack {
     return stack_.top()->IsError();
   }
 
-  auto Pop() -> Stack::value_type {
+  auto Pop() -> OptionalValue {
     if (stack_.empty())
-      return nullptr;
+      return std::nullopt;
     const auto next = stack_.top();
     ASSERT(next);
     stack_.pop();
-    return next;
+    return {next};
   }
 
-  void Push(Stack::value_type value) {
+  inline auto PopOr(Value value) -> Value {
+    ASSERT(value);
+    const auto result = Pop();
+    return result ? (*result) : value;
+  }
+
+  void Push(Value value) {
     ASSERT(value);
     stack_.push(value);
   }
 
-  inline void PopN(std::vector<Object*>& result, const uword num, const bool reverse = false) {
+  inline void PopN(std::vector<Value>& result, const uword num, const bool reverse = false) {
     for (auto idx = 0; idx < num; idx++) {
-      result.push_back(Pop());
+      result.push_back(PopOr(Null()));
     }
     if (reverse)
       std::ranges::reverse(std::begin(result), std::end(result));

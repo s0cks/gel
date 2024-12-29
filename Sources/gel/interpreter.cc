@@ -26,7 +26,7 @@
 #include "gel/script.h"
 
 namespace gel {
-#define TOP             (GetOperationStack()->StackTop())
+#define TOP             (GetOperationStack()->GetTop())
 #define POP             (GetOperationStack()->Pop())
 #define POPN(N, Result) (GetOperationStack()->PopN((Result), (N), true));
 #define PUSH(Value)     (GetOperationStack()->Push(gel::IsNull((Value)) ? Null() : (Value)))
@@ -52,7 +52,7 @@ void Interpreter::StoreLocal(const uword idx) {
   ASSERT(local);
   const auto value = POP;
   ASSERT(value);
-  local->SetValue(value);
+  local->SetValue((*value));
 }
 
 void Interpreter::Push(const Bytecode code) {
@@ -97,7 +97,7 @@ void Interpreter::Jump(const Bytecode code, const uword target) {
     case Bytecode::kJnz: {
       const auto value = POP;
       ASSERT(value);
-      if (!gel::Truth(value))
+      if (!gel::Truth((*value)))
         current_ = target;
       return;
     }
@@ -106,7 +106,7 @@ void Interpreter::Jump(const Bytecode code, const uword target) {
       ASSERT(rhs);
       const auto lhs = POP;
       ASSERT(lhs);
-      if (!lhs->Equals(rhs))
+      if (!(*lhs)->Equals((*rhs)))
         current_ = target;
       return;
     }
@@ -127,13 +127,13 @@ void Interpreter::bt() {
 }
 
 void Interpreter::PopLookup() {
-  const auto symbol = POP;
+  const auto symbol = (*POP);
   LOG_IF(FATAL, !symbol || !symbol->IsSymbol()) << "expected " << (symbol ? symbol : Null()) << " to be a Symbol.";
   return Lookup(symbol->AsSymbol());
 }
 
 void Interpreter::Invoke(const Bytecode::Op op) {
-  const auto func = op != Bytecode::kInvokeDynamic ? NextObjectPointer() : POP;
+  const auto func = op != Bytecode::kInvokeDynamic ? NextObjectPointer() : (*POP);
   ASSERT(func && func->IsProcedure());
   const auto num_args = NextUWord();
   if (func->IsNativeProcedure()) {
@@ -150,16 +150,16 @@ void Interpreter::Invoke(const Bytecode::Op op) {
 }
 
 void Interpreter::Throw() {
-  const auto err = POP;
+  const auto err = (*POP);
   ASSERT(err && err->IsError());
   throw std::runtime_error(err->AsError()->GetMessage()->Get());
 }
 
 void Interpreter::ExecBinaryOp(const Bytecode code) {
   ASSERT(code.IsBinaryOp());
-  const auto rhs = POP;
+  const auto rhs = (*POP);
   ASSERT(rhs);
-  const auto lhs = POP;
+  const auto lhs = (*POP);
   ASSERT(lhs);
   switch (code.op()) {
     case Bytecode::kAdd: {
@@ -244,7 +244,7 @@ void Interpreter::ExecBinaryOp(const Bytecode code) {
 
 void Interpreter::ExecUnaryOp(const Bytecode code) {
   ASSERT(code.IsUnaryOp());
-  const auto value = POP;
+  const auto value = (*POP);
   ASSERT(value);
   switch (code.op()) {
     case Bytecode::kNot: {
@@ -291,7 +291,7 @@ void Interpreter::CheckInstance(Class* cls) {
 
 void Interpreter::Cast(Class* cls) {
   ASSERT(cls);
-  const auto value = POP;
+  const auto value = (*POP);
   ASSERT(value);
   if (cls->Equals(Observable::GetClass())) {
     const auto new_value = Observable::New(value);

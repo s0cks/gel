@@ -74,13 +74,15 @@ class Runtime {
       if (arg.IsVararg()) {
         while (remaining > 0) {
           const auto value = stack->Pop();
-          args.push_back(value);
+          ASSERT(value);
+          args.push_back((*value));
           remaining--;
         }
         break;
       } else if (remaining > 0) {
         const auto value = stack->Pop();
-        args.push_back(value);
+        ASSERT(value);
+        args.push_back((*value));
         remaining--;
         continue;
       }
@@ -181,11 +183,9 @@ class Runtime {
       -> Object* {
     ASSERT(exec);
     Call(exec, args);
-    if (stack_.empty())
-      return Null();
-    const auto stack = GetOperationStack();
-    ASSERT(stack);
-    return stack->Pop();
+    if (!stack_.empty())
+      return GetOperationStack()->PopOr(Null());
+    return Null();  // TODO: don't implicitly return null
   }
 
  private:
