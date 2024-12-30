@@ -16,6 +16,7 @@ class Definition;
 #define FOR_EACH_PRIMITIVE_TYPE(V) \
   V(Seq)                           \
   V(Class)                         \
+  V(Field)                         \
   V(Bool)                          \
   V(Number)                        \
   V(Double)                        \

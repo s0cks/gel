@@ -203,14 +203,20 @@ auto Runtime::Eval(const std::string& expr) -> Object* {
   DVLOG(10) << "evaluating expression:" << std::endl << expr;
   const auto runtime = GetRuntime();
   ASSERT(runtime);
-  const auto scope = runtime->GetScope();
+  const auto scope = runtime->PushScope();
   ArgumentSet args{};
-  expr::ExpressionList body = {
-      Parser::ParseExpr(expr),
-  };
-  const auto lambda = Lambda::New(args, body);
+  const auto lambda = Lambda::New(args, {});
+  ASSERT(lambda);
+  const auto this_local = LocalVariable::New(scope, "this", lambda);
+  ASSERT(this_local);
+  LOG_IF(FATAL, !scope->Add(this_local)) << "failed to add " << (*this_local) << " to scope.";
+  const auto parsed = Parser::ParseExpr(expr, scope);
+  if (parsed)
+    lambda->SetBody(parsed);
   LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, scope)) << "failed to compile: " << expr;
-  return GetRuntime()->CallPop(lambda);
+  const auto result = runtime->CallPop(lambda);
+  runtime->PopScope();
+  return result ? result : Null();
 }
 
 auto Runtime::Exec(Script* script) -> Object* {

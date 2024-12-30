@@ -14,6 +14,9 @@
 (print (format "gel v{}" (gel/get-version)))
 (debug-only
   (print "debug mode enabled."))
+(set! Module:initialized this #t)
+(when (Module:initialized this)
+  (print (format "{} initialized!" this)))
 ;; ---------------------------------------------------------------------------------
 ;; Timers
 ;; ---------------------------------------------------------------------------------
@@ -153,6 +156,8 @@
     "Prints the heap's new zone information to the terminal.")
   (defnative gel/print-old-zone []
     "Prints the heap's old zone information to the terminal.")
+  (defnative gel/get-fields [cls]
+    "Returns a list of Fields for Class [cls].")
   (defmacro assert [test m]
     "Assert that Bool [test] is true, if not throw an Error w/ message [m]."
     (when (and (gel/debug?) (not test))

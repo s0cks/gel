@@ -26,6 +26,7 @@ class GraphEntryInstr;
 class Lambda : public Procedure, public Executable {
   friend class Parser;
   friend class Module;
+  friend class Runtime;
   friend class MacroExpander;
   friend class FlowGraphCompiler;
 
@@ -63,6 +64,11 @@ class Lambda : public Procedure, public Executable {
 
   void SetBody(const expr::ExpressionList& body) {
     body_ = body;
+  }
+
+  inline void SetBody(expr::Expression* expr) {
+    ASSERT(expr);
+    return SetBody(expr::ExpressionList{expr});
   }
 
   void SetScope(LocalScope* scope) {

@@ -33,8 +33,10 @@ auto NewZone::TryAllocate(const uword size) -> uword {
   if ((GetCurrentAddress() + total_size) >= (fromspace() + semisize())) {
     LOG(FATAL) << "cannot allocate " << byte_t(static_cast<double>(total_size)) << " in: " << (*this);
   }
-  const auto ptr = Pointer::New(GetCurrentAddress(), size);
+  const auto new_address = GetCurrentAddress();
   current_ += total_size;
+  memset((void*)new_address, 0, total_size);
+  const auto ptr = Pointer::New(new_address, size);
   return ptr->GetObjectAddress();
 }
 

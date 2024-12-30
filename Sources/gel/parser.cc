@@ -161,15 +161,18 @@ auto Parser::ParseCallExpr() -> expr::Expression* {
       if (cls) {
         ASSERT(cls);
         const auto func = cls->GetFunction(symbol);
-        if (!func)
-          LOG(FATAL) << "cannot find function: " << symbol;
-        ExpressionList args;
-        while (!PeekEq(Token::kRParen)) {
-          const auto arg = ParseExpression();
-          ASSERT(arg);
-          args.push_back(arg);
+        if (func) {
+          ExpressionList args;
+          while (!PeekEq(Token::kRParen)) {
+            const auto arg = ParseExpression();
+            ASSERT(arg);
+            args.push_back(arg);
+          }
+          return expr::CallProcExpr::New(expr::LiteralExpr::New(func), args);
         }
-        return expr::CallProcExpr::New(expr::LiteralExpr::New(func), args);
+        const auto field = cls->GetField(symbol);
+        if (field)
+          return expr::LoadFieldExpr::New(ParseExpression(), field);
       }
     }
 
@@ -385,10 +388,26 @@ auto Parser::ParseThrowExpr() -> ThrowExpr* {
   return ThrowExpr::New(value);
 }
 
-auto Parser::ParseSetExpr() -> SetExpr* {
-  ExpectNext(Token::kSetExpr);
+auto Parser::ParseSetExpr() -> expr::Expression* {
+  ExpectNext(Token::kSet);
   const auto symbol = ParseSymbol();
   ASSERT(symbol);
+  if (symbol->HasSymbolType()) {
+    const auto cls = Class::FindClass(symbol->GetSymbolType());
+    if (cls) {
+      ASSERT(cls);
+      const auto field = cls->GetField(symbol);
+      if (field) {
+        ASSERT(field);
+        const auto instance = ParseExpression();
+        ASSERT(instance);
+        const auto value = ParseExpression();
+        ASSERT(value);
+        return expr::SetFieldExpr::New(field, instance, value);
+      }
+    }
+  }
+
   const auto scope = GetScope();
   ASSERT(scope);
   LocalVariable* local = nullptr;
@@ -402,7 +421,7 @@ auto Parser::ParseSetExpr() -> SetExpr* {
   }
   const auto value = ParseExpression();
   ASSERT(value);
-  return SetExpr::New(local, value);
+  return expr::SetLocalExpr::New(local, value);
 }
 
 auto Parser::ParseExpression(const int depth) -> Expression* {
@@ -468,7 +487,7 @@ auto Parser::ParseExpression(const int depth) -> Expression* {
       case Token::kBeginExpr:
         expr = ParseBeginExpr();
         break;
-      case Token::kSetExpr:
+      case Token::kSet:
         expr = ParseSetExpr();
         break;
       case Token::kCond:
@@ -932,7 +951,7 @@ auto Parser::NextToken() -> const Token& {
     else if (ident == "null?")
       return NextToken(Token::kNull);
     else if (ident == "set!")
-      return NextToken(Token::kSetExpr);
+      return NextToken(Token::kSet);
     else if (ident == "cond")
       return NextToken(Token::kCond);
     else if (ident == "when")
@@ -1302,7 +1321,7 @@ auto Parser::ParseScript() -> Script* {
         case Token::kBeginExpr:
           expr = ParseBeginExpr();
           break;
-        case Token::kSetExpr:
+        case Token::kSet:
           expr = ParseSetExpr();
           break;
         case Token::kCond:
@@ -1399,6 +1418,6 @@ auto Parser::ParseDef() -> expr::Expression* {
     local->SetValue(value->EvalToConstant(scope));
     return nullptr;
   }
-  return expr::SetExpr::New(local, value);
+  return expr::SetLocalExpr::New(local, value);
 }
 }  // namespace gel

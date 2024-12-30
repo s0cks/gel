@@ -58,11 +58,32 @@ auto Class::ToString() const -> std::string {
 }
 
 auto Class::GetAllocationSize() const -> uword {
-#define GET_ALLOCATION_SIZE(Name) \
-  if (Equals(Name::GetClass()))   \
-    return sizeof(Name);
-  FOR_EACH_TYPE(GET_ALLOCATION_SIZE);
+  if (Equals(Class::kClass))
+    return sizeof(Class);
+  else if (Equals(Field::kClass))
+    return sizeof(Field);
+  else if (Equals(String::kClass))
+    return sizeof(String);
+  else if (Equals(Module::kClass)) {
+    const auto cls = Module::GetClass();
+    ASSERT(cls);
+    uword total_size = sizeof(Module);
+    for (const auto& field : cls->GetFields()) {
+      ASSERT(field);
+      field->SetOffset(total_size);
+      total_size += sizeof(uword);
+    }
+    return total_size;
+  }
   return 0;
+}
+
+auto Class::AddField(const std::string& name) -> Field* {
+  ASSERT(!name.empty());
+  const auto field = Field::New(this, String::New(name));
+  ASSERT(field);
+  Add(field);
+  return field;
 }
 
 auto Class::VisitPointers(PointerVisitor* vis) -> bool {
@@ -151,6 +172,23 @@ auto Class::GetFunction(const std::string& name, const bool recursive) const -> 
   return nullptr;
 }
 
+auto Class::GetField(Symbol* symbol, const bool recursive) const -> Field* {
+  for (const auto& field : fields_) {
+    if (field->GetName()->Equals(symbol->GetSymbolName()))
+      return field;
+  }
+  if (recursive && HasParent()) {
+    auto cls = GetParent();
+    do {
+      const auto field = cls->GetField(symbol, false);
+      if (field)
+        return field;
+      cls = cls->GetParent();
+    } while (cls);
+  }
+  return nullptr;
+}
+
 auto Class::GetFunction(Symbol* symbol, const bool recursive) const -> Procedure* {
   for (const auto& func : funcs_) {
     if (func->GetSymbol()->Equals(symbol))
@@ -205,5 +243,34 @@ auto Class::VisitClassPointers(const std::function<bool(Pointer**)>& vis) -> boo
       return false;
   }
   return true;
+}
+
+auto Field::CreateClass() -> Class* {
+  ASSERT(kClass == nullptr);
+  return Class::New(Object::GetClass(), "Field");
+}
+
+auto Field::ToString() const -> std::string {
+  ToStringHelper<Field> helper;
+  helper.AddField("name", GetName());
+  helper.AddField("owner", GetOwner());
+  return helper;
+}
+
+auto Field::HashCode() const -> uword {
+  uword hash = 0;
+  CombineHash(hash, GetName()->HashCode());
+  CombineHash(hash, GetOwner()->HashCode());
+  return hash;
+}
+
+auto Field::Equals(Object* rhs) const -> bool {
+  ASSERT(rhs);
+  return false;
+}
+
+auto Field::New(const ObjectList& args) -> Field* {
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return nullptr;
 }
 }  // namespace gel

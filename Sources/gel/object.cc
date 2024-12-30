@@ -40,13 +40,14 @@ namespace gel {
 
 #else
 
-#define DEFINE_NEW_OPERATOR(Name)                     \
-  auto Name::operator new(const size_t sz) -> void* { \
-    const auto heap = Heap::GetHeap();                \
-    ASSERT(heap);                                     \
-    const auto address = heap->TryAllocate(sz);       \
-    ASSERT(address != UNALLOCATED);                   \
-    return reinterpret_cast<void*>(address);          \
+#define DEFINE_NEW_OPERATOR(Name)                                             \
+  auto Name::operator new(const size_t sz) -> void* {                         \
+    const auto alloc_size = Name::kClass ? kClass->GetAllocationSize() : sz;  \
+    const auto heap = Heap::GetHeap();                                        \
+    ASSERT(heap);                                                             \
+    const auto address = heap->TryAllocate(alloc_size > 0 ? alloc_size : sz); \
+    ASSERT(address != UNALLOCATED);                                           \
+    return reinterpret_cast<void*>(address);                                  \
   }
 
 #endif  // GEL_DISABLE_HEAP
@@ -118,6 +119,9 @@ auto Object::Compare(Object* rhs) const -> int {
 void Object::Init() {
   InitClass();
   Class::InitClass();
+  Field::InitClass();
+  String::InitClass();
+  Symbol::InitClass();
   Namespace::InitClass();
   Module::InitClass();
   Seq::InitClass();
@@ -126,10 +130,7 @@ void Object::Init() {
   Lambda::InitClass();
   NativeProcedure::Init();
   Buffer::Init();
-  // exec
   Script::InitClass();
-  // types
-  // numeric type(s)
   Number::InitClass();
   Long::InitClass();
   Double::InitClass();
@@ -137,10 +138,6 @@ void Object::Init() {
   Bool::Init();
   ArrayBase::InitClass();
   Macro::InitClass();
-  // string-like type(s)
-  String::InitClass();
-  Symbol::InitClass();
-  // error type(s)
   Error::InitClass();
   Set::InitClass();
   Expression::Init();
@@ -239,6 +236,11 @@ auto Bool::True() -> Bool* {
 auto Bool::False() -> Bool* {
   ASSERT(kFalse);
   return kFalse;
+}
+
+auto Object::FieldAddr(Field* field) const -> Object** {
+  ASSERT(field && field->GetOffset() > 0);
+  return FieldAddrAtOffset(field->GetOffset());
 }
 
 auto Bool::HashCode() const -> uword {
@@ -418,6 +420,10 @@ auto String::New(Symbol* rhs) -> String* {
 
 auto String::CreateClass() -> Class* {
   return Class::New(Object::GetClass(), kClassName);
+}
+
+auto String::Equals(const std::string& rhs) const -> bool {
+  return StringObject::Equals(rhs);
 }
 
 auto String::Equals(Object* rhs) const -> bool {

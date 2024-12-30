@@ -821,6 +821,19 @@ auto EffectVisitor::VisitBinaryOpExpr(BinaryOpExpr* expr) -> bool {
   return true;
 }
 
+auto EffectVisitor::VisitLoadFieldExpr(expr::LoadFieldExpr* expr) -> bool {
+  ASSERT(expr);
+  const auto field = expr->GetField();
+  ASSERT(field);
+  ValueVisitor for_instance(GetOwner());
+  if (!expr->GetInstance()->Accept(&for_instance)) {
+    LOG(FATAL) << "failed to visit: " << expr->GetInstance();
+  }
+  Append(for_instance);
+  ReturnDefinition(ir::LoadFieldInstr::New(for_instance.GetValue(), field));
+  return true;
+}
+
 auto EffectVisitor::VisitInstanceOfExpr(expr::InstanceOfExpr* expr) -> bool {
   ASSERT(expr);
   if (expr->IsConstantExpr()) {
@@ -862,7 +875,7 @@ auto EffectVisitor::VisitThrowExpr(expr::ThrowExpr* expr) -> bool {
   return true;
 }
 
-auto EffectVisitor::VisitSetExpr(expr::SetExpr* expr) -> bool {
+auto EffectVisitor::VisitSetLocalExpr(expr::SetLocalExpr* expr) -> bool {
   ASSERT(expr && expr->HasValue());
   LocalVariable* local = expr->GetLocal();
   ASSERT(local);
@@ -874,6 +887,31 @@ auto EffectVisitor::VisitSetExpr(expr::SetExpr* expr) -> bool {
   Append(for_value);
   ASSERT(for_value.HasValue());
   Add(ir::StoreLocalInstr::New(local, for_value.GetValue()));
+  return true;
+}
+
+auto EffectVisitor::VisitSetFieldExpr(expr::SetFieldExpr* expr) -> bool {
+  ASSERT(expr && expr->HasValue() && expr->HasInstance());
+  const auto field = expr->GetField();
+  ASSERT(field);
+
+  ValueVisitor for_value(GetOwner());
+  if (!expr->GetValue()->Accept(&for_value)) {
+    LOG(FATAL) << "failed to visit SetExpr value: " << expr->GetValue()->ToString();
+    return false;
+  }
+  ASSERT(for_value.HasValue());
+  Append(for_value);
+
+  ValueVisitor for_instance(GetOwner());
+  if (!expr->GetInstance()->Accept(&for_instance)) {
+    LOG(FATAL) << "failed to visit: " << expr->GetInstance()->ToString();
+    return false;
+  }
+  ASSERT(for_instance.HasValue());
+  Append(for_instance);
+
+  Add(ir::StoreFieldInstr::New(field, for_instance.GetValue(), for_value.GetValue()));
   return true;
 }
 

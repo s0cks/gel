@@ -25,7 +25,6 @@ class Module : public Object {
   NamespaceList namespaces_{};
   MacroList macros_{};
   Lambda* init_ = nullptr;
-  bool initialized_ = false;
 
   void Append(Namespace* ns);
   void Append(Macro* macro);
@@ -46,7 +45,8 @@ class Module : public Object {
   }
 
   void SetInitialized(const bool rhs = true) {
-    initialized_ = rhs;
+    ASSERT(kFieldInitialized);
+    SetField(kFieldInitialized, Bool::Box(rhs));
   }
 
   inline void ClearInitialized() {
@@ -60,7 +60,8 @@ class Module : public Object {
   ~Module() override = default;
 
   auto IsInitialized() const -> bool {
-    return initialized_;
+    ASSERT(kFieldInitialized);
+    return GetField(kFieldInitialized)->AsBool()->Get();
   }
 
   auto GetName() const -> String* {
@@ -104,6 +105,7 @@ class Module : public Object {
   DECLARE_TYPE(Module);
 
  private:
+  static Field* kFieldInitialized;
   static inline auto IsNamed(std::string name) -> std::function<bool(Module*)> {
     return [name](Module* m) {
       ASSERT(m);
@@ -112,6 +114,7 @@ class Module : public Object {
   }
 
  public:
+  static void GetAllLoadedModules(std::vector<Module*>& modules);
   static auto IsLoaded(const std::string& name) -> bool;
   static auto Find(const std::string& name) -> Module*;
   static auto New(String* name, LocalScope* scope) -> Module*;

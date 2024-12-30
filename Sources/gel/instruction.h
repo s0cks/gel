@@ -21,6 +21,8 @@
   V(GraphEntry)                 \
   V(TargetEntry)                \
   V(JoinEntry)                  \
+  V(LoadField)                  \
+  V(StoreField)                 \
   V(Lookup)                     \
   V(Invoke)                     \
   V(InvokeDynamic)              \
@@ -956,6 +958,82 @@ class NewInstr : public Definition {
   static inline auto New(Class* target, const uword num_args) -> NewInstr* {
     ASSERT(target);
     return new NewInstr(target, num_args);
+  }
+};
+
+class LoadFieldInstr : public Definition {
+ private:
+  Definition* instance_;
+  Field* field_;
+
+  LoadFieldInstr(Definition* instance, Field* field) :
+    Definition(),
+    instance_(instance),
+    field_(field) {
+    ASSERT(instance_);
+    ASSERT(field_);
+  }
+
+ public:
+  ~LoadFieldInstr() override = default;
+
+  auto GetInstance() const -> Definition* {
+    return instance_;
+  }
+
+  auto GetField() const -> Field* {
+    return field_;
+  }
+
+  DECLARE_INSTRUCTION(LoadFieldInstr);
+
+ public:
+  static inline auto New(Definition* instance, Field* field) -> LoadFieldInstr* {
+    ASSERT(instance);
+    ASSERT(field);
+    return new LoadFieldInstr(instance, field);
+  }
+};
+
+class StoreFieldInstr : public Definition {
+ private:
+  Field* field_;
+  Definition* instance_;
+  Definition* value_;
+
+  StoreFieldInstr(Field* field, Definition* instance, Definition* value) :
+    Definition(),
+    field_(field),
+    instance_(instance),
+    value_(value) {
+    ASSERT(instance_);
+    ASSERT(field_);
+    ASSERT(value_);
+  }
+
+ public:
+  ~StoreFieldInstr() override = default;
+
+  auto GetField() const -> Field* {
+    return field_;
+  }
+
+  auto GetInstance() const -> Definition* {
+    return instance_;
+  }
+
+  auto GetValue() const -> Definition* {
+    return value_;
+  }
+
+  DECLARE_INSTRUCTION(StoreFieldInstr);
+
+ public:
+  static inline auto New(Field* field, Definition* instance, Definition* value) -> StoreFieldInstr* {
+    ASSERT(field);
+    ASSERT(instance);
+    ASSERT(value);
+    return new StoreFieldInstr(field, instance, value);
   }
 };
 }  // namespace ir

@@ -33,6 +33,7 @@ struct Position {
   V(DefNamespace)             \
   V(DefNative)                \
   V(DefMacro)                 \
+  V(Set)                      \
   V(Def)                      \
   V(Defn)                     \
   V(Comment)                  \

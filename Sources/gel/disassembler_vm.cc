@@ -89,6 +89,18 @@ void Disassembler::Disassemble(const Region& region, const char* label) {
         stream() << value;
         break;
       }
+      case Bytecode::kStoreField: {
+        const auto field = decoder.NextObjectPointer();
+        ASSERT(field && field->IsField());
+        Comment(field);
+        break;
+      }
+      case Bytecode::kLoadField: {
+        const auto field = decoder.NextObjectPointer();
+        ASSERT(field && field->IsField());
+        Comment(field);
+        break;
+      }
       case Bytecode::kLoadLocal: {
         const auto index = decoder.NextAddress();
         const auto local = GetScope()->GetLocalAt(index);

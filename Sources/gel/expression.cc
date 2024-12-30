@@ -159,9 +159,16 @@ auto CallProcExpr::ToString() const -> std::string {
   return helper;
 }
 
-auto SetExpr::ToString() const -> std::string {
-  ToStringHelper<SetExpr> helper;
+auto SetLocalExpr::ToString() const -> std::string {
+  ToStringHelper<SetLocalExpr> helper;
   helper.AddField("local", (*GetLocal()));
+  helper.AddField("value", GetValue());
+  return helper;
+}
+
+auto SetFieldExpr::ToString() const -> std::string {
+  ToStringHelper<SetFieldExpr> helper;
+  helper.AddField("field", GetField());
   helper.AddField("value", GetValue());
   return helper;
 }
@@ -525,5 +532,12 @@ auto NewMapExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
       return false;
   }
   return true;
+}
+
+auto LoadFieldExpr::ToString() const -> std::string {
+  ToStringHelper<LoadFieldExpr> helper;
+  helper.AddField("instance", GetInstance());
+  helper.AddField("field", GetField());
+  return helper;
 }
 }  // namespace gel::expr

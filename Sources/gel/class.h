@@ -1,3 +1,6 @@
+#include <set>
+#include <variant>
+
 #include "gel/common.h"
 #ifndef GEL_OBJECT_H
 #error "Please #include <gel/object.h> instead."
@@ -14,6 +17,87 @@ namespace gel {
 class Class;
 using ClassList = std::vector<Class*>;
 
+class Field : public Object {
+  friend class Class;
+
+ private:
+  Class* owner_;
+  String* name_;
+  std::variant<uword, Object*> value_;
+
+  Field(Class* owner, String* name) :
+    Object(),
+    owner_(owner),
+    name_(name) {
+    ASSERT(owner_);
+    ASSERT(name_);
+  }
+
+  void SetValue(Object* rhs) {
+    ASSERT(rhs);
+    value_ = rhs;
+  }
+
+  void SetOffset(const uword offset) {
+    value_ = offset;
+  }
+
+ public:
+  ~Field() override = default;
+
+  auto GetOwner() const -> Class* {
+    return owner_;
+  }
+
+  auto GetName() const -> String* {
+    return name_;
+  }
+
+  auto IsInstance() const -> bool {
+    return std::holds_alternative<uword>(value_);
+  }
+
+  auto GetOffset() const -> uword {
+    return std::get<uword>(value_);
+  }
+
+  auto IsStatic() const -> bool {
+    return std::holds_alternative<Object*>(value_);
+  }
+
+  auto GetValue() const -> Object* {
+    return std::get<Object*>(value_);
+  }
+
+  DECLARE_TYPE(Field);
+
+ public:
+  static inline auto New(Class* owner, String* name) -> Field* {
+    ASSERT(owner);
+    ASSERT(name);
+    return new Field(owner, name);
+  }
+
+  static inline auto New(Class* owner, String* name, const uword offset) -> Field* {
+    ASSERT(owner);
+    ASSERT(name);
+    const auto field = New(owner, name);
+    ASSERT(field);
+    field->SetOffset(offset);
+    return field;
+  }
+
+  static inline auto New(Class* owner, String* name, Object* value) -> Field* {
+    ASSERT(owner);
+    ASSERT(name);
+    ASSERT(value);
+    const auto field = New(owner, name);
+    ASSERT(field);
+    field->SetValue(value);
+    return field;
+  }
+};
+
 class Class : public Object {
   friend class Object;
 
@@ -21,6 +105,7 @@ class Class : public Object {
   Class* parent_;
   String* name_;
   std::vector<Procedure*> funcs_{};
+  std::vector<Field*> fields_{};
 
  protected:
   explicit Class(Class* parent, String* name) :
@@ -40,6 +125,17 @@ class Class : public Object {
     ASSERT(func);
     funcs_.push_back(func);
   }
+
+  auto GetFields() const -> const std::vector<Field*>& {
+    return fields_;
+  }
+
+  void Add(Field* field) {
+    ASSERT(field);
+    fields_.push_back(field);
+  }
+
+  auto AddField(const std::string& name) -> Field*;
 
   auto GetParent() const -> Class* {
     return parent_;
@@ -69,6 +165,7 @@ class Class : public Object {
   auto HasFunction(Symbol* symbol, const bool recursive = true) const -> bool;
   auto GetFunction(const std::string& name, const bool recursive = true) const -> Procedure*;
   auto GetFunction(Symbol* symbol, const bool recursive = true) const -> Procedure*;
+  auto GetField(Symbol* symbol, const bool recursive = true) const -> Field*;
   DECLARE_TYPE(Class);
 
  private:

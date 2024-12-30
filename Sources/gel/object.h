@@ -58,6 +58,13 @@ class Object {
     seed ^= hasher(rhs) + 0x9e3779b9 + (seed << 6) + (seed >> 2);  // NOLINT(cppcoreguidelines-avoid-magic-numbers)
   }
 
+  auto FieldAddrAtOffset(const uword offset) const -> Object** {
+    const auto address = ((uword)this) + offset;  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+    return ((Object**)address);                   // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  }
+
+  auto FieldAddr(Field* field) const -> Object**;
+
  public:
   virtual ~Object() = default;
   virtual auto GetType() const -> Class* = 0;
@@ -72,6 +79,15 @@ class Object {
   virtual auto And(Object* rhs) const -> Object*;
   virtual auto Or(Object* rhs) const -> Object*;
   virtual auto Compare(Object* rhs) const -> int;
+
+  auto GetField(Field* field) const -> Object* {
+    ASSERT(field);
+    return (*FieldAddr(field));
+  }
+
+  void SetField(Field* field, Object* rhs) {
+    (*FieldAddr(field)) = rhs;
+  }
 
   auto raw_ptr() const -> Pointer*;
 
@@ -185,6 +201,7 @@ static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream
 }
 
 #define DECLARE_TYPE(Name)                          \
+  friend class Class;                               \
   friend class Object;                              \
   DEFINE_NON_COPYABLE_TYPE(Name)                    \
  private:                                           \
@@ -499,6 +516,7 @@ class String : public StringObject {
  public:
   ~String() override = default;
 
+  auto Equals(const std::string& rhs) const -> bool;
   DECLARE_TYPE(String);
 
  public:

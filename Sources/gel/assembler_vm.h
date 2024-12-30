@@ -101,6 +101,18 @@ class Assembler {
     return EmitOp(Bytecode::kRet);
   }
 
+  inline void ldfield(Field* field) {
+    ASSERT(field);
+    EmitOp(Bytecode::kLoadField);
+    EmitAddress(field);
+  }
+
+  inline void stfield(Field* field) {
+    ASSERT(field);
+    EmitOp(Bytecode::kStoreField);
+    EmitAddress(field);
+  }
+
   inline void pushq(const uword value) {
     EmitOp(Bytecode::kPushQ);
     Emit(value);

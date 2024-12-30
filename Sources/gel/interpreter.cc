@@ -320,6 +320,27 @@ void Interpreter::Dup() {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
 }
 
+void Interpreter::LoadField(Field* field) {
+  ASSERT(field);
+  const auto instance = POP;
+  ASSERT(instance);
+  const auto value = (*instance)->GetField(field);
+  if (!value) {
+    PUSH(Null());
+    return;
+  }
+  PUSH(value);
+}
+
+void Interpreter::StoreField(Field* field) {
+  ASSERT(field);
+  const auto instance = POP;
+  ASSERT(instance);
+  const auto value = POP;
+  ASSERT(value);
+  (*instance)->SetField(field, (*value));
+}
+
 void Interpreter::New(Class* cls, const uword num_args) {
   ASSERT(cls);
   ObjectList args{};
@@ -423,6 +444,12 @@ void Interpreter::Run(const uword address) {
         Jump(op, address + (pos + offset));
         continue;
       }
+      case Bytecode::kStoreField:
+        StoreField(NextField());
+        continue;
+      case Bytecode::kLoadField:
+        LoadField(NextField());
+        continue;
       case Bytecode::kNew: {
         const auto cls = NextClass();
         ASSERT(cls);

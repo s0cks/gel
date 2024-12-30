@@ -14,6 +14,12 @@ static inline auto Register(Module* m) -> Module* {
   return m;
 }
 
+void Module::GetAllLoadedModules(std::vector<Module*>& modules) {
+  for (const auto& m : modules_) {
+    modules.push_back(m->As<Module>());
+  }
+}
+
 auto Module::CreateInitFunc(const expr::ExpressionList& body) -> Lambda* {
   ASSERT(!body.empty());
   const ArgumentSet args = {Argument(0, "this", false, false)};
@@ -31,7 +37,6 @@ auto Module::Init(Runtime* runtime) -> bool {
   ASSERT(runtime);
   ASSERT(!IsInitialized());
   runtime->Call(GetInit(), {this});
-  SetInitialized();  // TODO: move to _kernel script
   return IsInitialized();
 }
 
@@ -94,7 +99,10 @@ auto Module::FindOrLoad(const std::string& name) -> Module* {
 auto Module::New(String* name, LocalScope* scope) -> Module* {
   ASSERT(name);
   ASSERT(scope);
-  return Register(new Module(name, scope));
+  const auto m = new Module(name, scope);
+  ASSERT(m && kFieldInitialized->GetOffset() > 0);
+  m->SetField(kFieldInitialized, Bool::False());
+  return Register(m);
 }
 
 auto Module::LoadFrom(const std::filesystem::path& abs_path) -> Module* {
@@ -143,9 +151,14 @@ auto Module::VisitPointers(PointerPointerVisitor* vis) -> bool {
   return true;
 }
 
+Field* Module::kFieldInitialized = nullptr;
 auto Module::CreateClass() -> Class* {
   ASSERT(kClass == nullptr);
-  return Class::New(Object::GetClass(), "Module");
+  const auto cls = Class::New(Object::GetClass(), "Module");
+  ASSERT(cls);
+  kFieldInitialized = cls->AddField("initialized");
+  ASSERT(kFieldInitialized);
+  return cls;
 }
 
 auto Module::New(const ObjectList& args) -> Module* {

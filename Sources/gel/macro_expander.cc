@@ -104,6 +104,12 @@ static inline auto IsMacroCall(LocalScope* scope, expr::Expression* expr, Macro*
   return true;
 }
 
+auto MacroEffectVisitor::VisitLoadFieldExpr(expr::LoadFieldExpr* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return false;
+}
+
 auto MacroEffectVisitor::VisitCallProcExpr(expr::CallProcExpr* expr) -> bool {
   ASSERT(expr);
   Macro* macro = nullptr;
@@ -265,7 +271,7 @@ auto MacroEffectVisitor::VisitRxOpExpr(expr::RxOpExpr* expr) -> bool {
   return false;
 }
 
-auto MacroEffectVisitor::VisitSetExpr(expr::SetExpr* expr) -> bool {
+auto MacroEffectVisitor::VisitSetLocalExpr(expr::SetLocalExpr* expr) -> bool {
   ASSERT(expr);
   const auto value = expr->GetValue();
   ASSERT(value);
@@ -277,6 +283,12 @@ auto MacroEffectVisitor::VisitSetExpr(expr::SetExpr* expr) -> bool {
   return for_value.HasResult();
 }
 
+auto MacroEffectVisitor::VisitSetFieldExpr(expr::SetFieldExpr* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return false;
+}
+
 auto MacroEffectVisitor::VisitThrowExpr(expr::ThrowExpr* expr) -> bool {
   ASSERT(expr);
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
@@ -285,7 +297,7 @@ auto MacroEffectVisitor::VisitThrowExpr(expr::ThrowExpr* expr) -> bool {
 
 auto MacroEffectVisitor::VisitUnaryExpr(expr::UnaryExpr* expr) -> bool {
   ASSERT(expr);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return false;
 }
 

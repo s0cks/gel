@@ -136,6 +136,16 @@ void ReturnInstr::Compile(FlowGraphCompiler* compiler) {
   __ ret();
 }
 
+void LoadFieldInstr::Compile(FlowGraphCompiler* compiler) {
+  ASSERT(compiler);
+  __ ldfield(GetField());
+}
+
+void StoreFieldInstr::Compile(FlowGraphCompiler* compiler) {
+  ASSERT(compiler);
+  __ stfield(GetField());
+}
+
 void BranchInstr::Compile(FlowGraphCompiler* compiler) {
   ASSERT(compiler);
   Label* tbranch = compiler->GetBlockLabel(GetTrueTarget());

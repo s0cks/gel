@@ -27,7 +27,8 @@
   V(ImportExpr)                     \
   V(CallProcExpr)                   \
   V(LoadInstanceMethodExpr)         \
-  V(SetExpr)                        \
+  V(SetFieldExpr)                   \
+  V(SetLocalExpr)                   \
   V(Binding)                        \
   V(LetExpr)                        \
   V(RxOpExpr)                       \
@@ -38,7 +39,8 @@
   V(InstanceOfExpr)                 \
   V(CastExpr)                       \
   V(NewExpr)                        \
-  V(NewMapExpr)
+  V(NewMapExpr)                     \
+  V(LoadFieldExpr)
 
 namespace gel {
 class Parser;
@@ -1023,7 +1025,7 @@ class WhileExpr : public SequenceExpr {
   }
 };
 
-class SetExpr : public Expression {
+class SetLocalExpr : public Expression {
   friend class gel::MacroEffectVisitor;
 
  private:
@@ -1031,7 +1033,7 @@ class SetExpr : public Expression {
   Expression* value_;
 
  protected:
-  SetExpr(LocalVariable* local, Expression* value) :
+  SetLocalExpr(LocalVariable* local, Expression* value) :
     Expression(),
     local_(local),
     value_(value) {
@@ -1044,7 +1046,7 @@ class SetExpr : public Expression {
   }
 
  public:
-  ~SetExpr() override = default;
+  ~SetLocalExpr() override = default;
 
   auto GetLocal() const -> LocalVariable* {
     return local_;
@@ -1065,12 +1067,77 @@ class SetExpr : public Expression {
     return GetValue()->Accept(vis);
   }
 
-  DECLARE_EXPRESSION(SetExpr);
+  DECLARE_EXPRESSION(SetLocalExpr);
 
  public:
-  static inline auto New(LocalVariable* local, Expression* value) -> SetExpr* {
+  static inline auto New(LocalVariable* local, Expression* value) -> SetLocalExpr* {
     ASSERT(local);
-    return new SetExpr(local, value);
+    return new SetLocalExpr(local, value);
+  }
+};
+
+class SetFieldExpr : public Expression {
+  friend class gel::MacroEffectVisitor;
+
+ private:
+  Field* field_;
+  Expression* instance_;
+  Expression* value_;
+
+ protected:
+  SetFieldExpr(Field* field, Expression* instance, Expression* value) :
+    Expression(),
+    field_(field),
+    instance_(instance),
+    value_(value) {
+    ASSERT(field_);
+    ASSERT(instance_);
+    ASSERT(value_);
+  }
+
+  void SetValue(Expression* rhs) {
+    ASSERT(rhs);
+    value_ = rhs;
+  }
+
+ public:
+  ~SetFieldExpr() override = default;
+
+  auto GetField() const -> Field* {
+    return field_;
+  }
+
+  auto GetInstance() const -> Expression* {
+    return instance_;
+  }
+
+  inline auto HasInstance() const -> bool {
+    return GetInstance() != nullptr;
+  }
+
+  auto GetValue() const -> Expression* {
+    return value_;
+  }
+
+  inline auto HasValue() const -> bool {
+    return GetValue() != nullptr;
+  }
+
+  auto VisitChildren(ExpressionVisitor* vis) -> bool override {
+    ASSERT(vis);
+    if (HasInstance() && !GetInstance()->Accept(vis))
+      return false;
+    if (!HasValue() && !GetValue()->Accept(vis))
+      return false;
+    return true;
+  }
+
+  DECLARE_EXPRESSION(SetFieldExpr);
+
+ public:
+  static inline auto New(Field* field, Expression* instance, Expression* value) -> SetFieldExpr* {
+    ASSERT(field);
+    return new SetFieldExpr(field, instance, value);
   }
 };
 
@@ -1100,6 +1167,48 @@ class Binding : public Expression {
  public:
   static inline auto New(LocalVariable* local, Expression* value) -> Binding* {
     return new Binding(local, value);
+  }
+};
+
+class LoadFieldExpr : public TemplateExpression<1> {
+ private:
+  Field* field_;
+
+  LoadFieldExpr(Expression* instance, Field* field) :
+    TemplateExpression(),
+    field_(field) {
+    SetInstance(instance);
+    ASSERT(field_);
+    ASSERT(HasInstance());
+  }
+
+  void SetInstance(Expression* expr) {
+    ASSERT(expr);
+    SetChildAt(0, expr);
+  }
+
+ public:
+  ~LoadFieldExpr() override = default;
+
+  auto GetField() const -> Field* {
+    return field_;
+  }
+
+  inline auto GetInstance() const -> Expression* {
+    return GetChildAt(0);
+  }
+
+  inline auto HasInstance() const -> bool {
+    return GetInstance() != nullptr;
+  }
+
+  DECLARE_EXPRESSION(LoadFieldExpr);
+
+ public:
+  static inline auto New(Expression* instance, Field* field) -> LoadFieldExpr* {
+    ASSERT(instance);
+    ASSERT(field);
+    return new LoadFieldExpr(instance, field);
   }
 };
 

@@ -1,12 +1,24 @@
+#include "gel/native_procedure.h"
 #include "gel/natives.h"
 #ifdef GEL_DEBUG
 
 #include "gel/collector.h"
 #include "gel/gel.h"
 #include "gel/heap.h"
+#include "gel/module.h"
 #include "gel/runtime.h"
 
 namespace gel::proc {
+NATIVE_PROCEDURE_F(gel_get_fields) {
+  NativeArgument<0, Class> cls(args);
+  if (!cls)
+    return Throw(cls);
+  Object* result = Null();
+  for (const auto& field : cls->GetFields()) {
+    result = Cons(Cons(field->GetName(), Long::New(field->GetOffset())), result);
+  }
+  return Return(result);
+}
 
 NATIVE_PROCEDURE_F(gel_print_args) {
   NativeArgument<0, Procedure> func(args);
@@ -31,6 +43,12 @@ NATIVE_PROCEDURE_F(gel_print_args) {
 NATIVE_PROCEDURE_F(gel_print_heap) {
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return Return();
+}
+
+NATIVE_PROCEDURE_F(gel_get_modules) {
+  std::vector<Module*> modules{};
+  Module::GetAllLoadedModules(modules);
+  return Return(ToList((const ObjectList&)modules));  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
 }
 
 NATIVE_PROCEDURE_F(gel_print_new_zone) {

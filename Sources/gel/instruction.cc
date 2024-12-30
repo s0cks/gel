@@ -137,6 +137,21 @@ auto ThrowInstr::ToString() const -> std::string {
   return helper;
 }
 
+auto LoadFieldInstr::ToString() const -> std::string {
+  ToStringHelper<LoadFieldInstr> helper;
+  helper.AddField("instance", GetInstance());
+  helper.AddField("field", GetField());
+  return helper;
+}
+
+auto StoreFieldInstr::ToString() const -> std::string {
+  ToStringHelper<StoreFieldInstr> helper;
+  helper.AddField("field", GetField());
+  helper.AddField("instance", GetInstance());
+  helper.AddField("value", GetValue());
+  return helper;
+}
+
 auto InvokeInstr::ToString() const -> std::string {
   ToStringHelper<InvokeInstr> helper;
   helper.AddField("target", GetTarget());

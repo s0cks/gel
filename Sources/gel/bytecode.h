@@ -38,6 +38,8 @@
   V(Cast)                    \
   V(New)                     \
   V(Throw)                   \
+  V(LoadField)               \
+  V(StoreField)              \
   FOR_EACH_UNARY_OP(V)       \
   FOR_EACH_BINARY_OP(V)
 
@@ -155,6 +157,10 @@ class Bytecode {
         return "pusht";
       case kPushF:
         return "pushf";
+      case kStoreField:
+        return "stfield";
+      case kLoadField:
+        return "ldfield";
       case kNot:
         return "negate";
       case kCar:

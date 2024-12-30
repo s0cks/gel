@@ -61,6 +61,12 @@ class Interpreter {
     return next_object->AsClass();
   }
 
+  inline auto NextField() -> Field* {
+    const auto next_object = NextObjectPointer();
+    ASSERT(next_object && next_object->IsField());
+    return next_object->AsField();
+  }
+
   auto GetScope() const -> LocalScope*;
   void nop();
   void bt();
@@ -69,6 +75,8 @@ class Interpreter {
   void Throw();
   void Lookup(Symbol* rhs);
   void PopLookup();
+  void LoadField(Field* field);
+  void StoreField(Field* field);
   void Invoke(const Bytecode::Op op);
   void Push(const Bytecode code);
   void LoadLocal(const uword idx);

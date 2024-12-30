@@ -193,6 +193,8 @@ _DECLARE_NATIVE_PROCEDURE(gel_print_heap, "gel/print-heap");
 _DECLARE_NATIVE_PROCEDURE(gel_print_new_zone, "gel/print-new-zone");
 _DECLARE_NATIVE_PROCEDURE(gel_print_old_zone, "gel/print-old-zone");
 _DECLARE_NATIVE_PROCEDURE(gel_get_frame, "gel/get-frame");
+_DECLARE_NATIVE_PROCEDURE(gel_get_modules, "gel/get-modules");
+_DECLARE_NATIVE_PROCEDURE(gel_get_fields, "gel/get-fields");
 _DECLARE_NATIVE_PROCEDURE(gel_print_st, "gel/print-st");
 _DECLARE_NATIVE_PROCEDURE(gel_get_locals, "gel/get-locals");
 _DECLARE_NATIVE_PROCEDURE(gel_get_target_triple, "gel/get-target-triple");
