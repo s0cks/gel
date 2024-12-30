@@ -1,13 +1,3 @@
-(defnative gel/get-version []
-  "Returns the current version of the gelrt.")
-(defnative gel/debug? []
-  "Returns whether or not this is a debug instance of gelrt.")
-(defnative gel/load-bindings [filename]
-  "Opens the bindings from shared library at path [filename].")
-(defnative format [pattern args...] ;; TODO: move to gel/ namespace
-    "Returns a formatted String using the supplied [pattern] and [args...].")
-(defnative print [value] ;; TODO: move to gel/ namespace
-  "Prints the supplied [value] to the console.")
 (defmacro debug-only [expr]
   (when (gel/debug?)
     expr))
@@ -15,8 +5,6 @@
 (debug-only
   (print "debug mode enabled."))
 (set! Module:initialized this #t)
-(when (Module:initialized this)
-  (print (format "{} initialized!" this)))
 ;; ---------------------------------------------------------------------------------
 ;; Timers
 ;; ---------------------------------------------------------------------------------
@@ -72,6 +60,16 @@
 ;; ---------------------------------------------------------------------------------
 (ns _kernel
   "The main namespace for gel."
+  (defnative gel/get-version []
+    "Returns the current version of the gelrt.")
+  (defnative gel/debug? []
+    "Returns whether or not this is a debug instance of gelrt.")
+  (defnative gel/load-bindings [filename]
+    "Opens the bindings from shared library at path [filename].")
+  (defnative format [pattern args...] ;; TODO: move to gel/ namespace
+      "Returns a formatted String using the supplied [pattern] and [args...].")
+  (defnative print [value] ;; TODO: move to gel/ namespace
+    "Prints the supplied [value] to the console.")
   (defnative hashcode [v]
     "Returns the hashcode of value [v].")
   (defnative sizeof [o]
