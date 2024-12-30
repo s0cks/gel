@@ -2,6 +2,7 @@
 
 #include "gel/common.h"
 #include "gel/heap.h"
+#include "gel/runtime.h"
 
 namespace gel {
 #ifdef GEL_DISABLE_HEAP
@@ -77,4 +78,63 @@ auto ArrayBase::VisitPointers(const std::function<bool(Pointer**)>& vis) -> bool
   }
   return true;
 }
+
+void ArrayBase::Init() {
+  InitClass();
+  InitNative<proc::array_new>();
+  InitNative<proc::array_get>();
+  InitNative<proc::array_set>();
+  InitNative<proc::array_length>();
+}
+
+namespace proc {
+NATIVE_PROCEDURE_F(array_new) {
+  ASSERT(HasRuntime());
+  if (args.empty())
+    return ThrowError(fmt::format("expected args to not be empty"));
+  const auto length = args.size();
+  const auto result = Array<Object*>::New(length);
+  ASSERT(result);
+  for (auto idx = 0; idx < length; idx++) {
+    ASSERT(args[idx]);
+    result->Set(idx, args[idx]);
+  }
+  return Return(result);
+}
+
+NATIVE_PROCEDURE_F(array_get) {
+  ASSERT(HasRuntime());
+  if (args.size() != 2)
+    return ThrowError(fmt::format("expected args to be: `<array> <index>`"));
+  NativeArgument<0, ArrayBase> array(args);
+  NativeArgument<1, Long> index(args);
+  if (index->Get() > array->GetCapacity())
+    return ThrowError(fmt::format("index `{}` is out of bounds for `{}`", index->Get(), (const gel::Object&)*array));
+  const auto result = array->Get(index->Get());
+  return Return(result ? result : Null());
+}
+
+NATIVE_PROCEDURE_F(array_set) {
+  ASSERT(HasRuntime());
+  if (args.size() != 3)
+    return ThrowError(fmt::format("expected args to be: `<array> <index>`"));
+  if (!gel::IsArray(args[0]))
+    return ThrowError(fmt::format("expected `{}` to be an Array", (*args[0])));
+  const auto array = (ArrayBase*)args[0];  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  ASSERT(array);
+  if (!gel::IsLong(args[1]))
+    return ThrowError(fmt::format("expected `{}` to be a Long.", (*args[1])));
+  const auto index = Long::Unbox(args[1]);
+  if (index > array->GetCapacity())
+    return ThrowError(fmt::format("index `{}` is out of bounds for `{}`", index, (const gel::Object&)*array));
+  array->Set(index, args[2]);
+  return DoNothing();
+}
+
+NATIVE_PROCEDURE_F(array_length) {
+  ASSERT(HasRuntime());
+  NativeArgument<0, ArrayBase> array(args);
+  return ReturnNew<Long>(array->GetCapacity());
+}
+}  // namespace proc
 }  // namespace gel

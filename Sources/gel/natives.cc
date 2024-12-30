@@ -55,10 +55,6 @@ void NativeProcedure::InitNatives() {
   InitNative<set_cdr>();
   InitNative<random>();
   InitNative<rand_range>();
-  InitNative<array_new>();
-  InitNative<array_get>();
-  InitNative<array_set>();
-  InitNative<array_length>();
   InitNative<gel_docs>();
   InitNative<gel_load_bindings>();
   InitNative<get_event_loop>();
@@ -170,8 +166,10 @@ NATIVE_PROCEDURE_F(gel_sizeof) {
   ASSERT(args.size() == 1);
   NativeArgument<0> value(args);
   if (!value)
-    return Throw(value.GetError());
-  return ReturnNew<Long>(value->GetType()->GetAllocationSize());
+    return Throw(value);
+  else if (value->IsClass())
+    return ReturnLong(value->AsClass()->GetAllocationSize());
+  return ReturnLong(value->GetType()->GetAllocationSize());
 }
 
 NATIVE_PROCEDURE_F(gel_docs) {
@@ -336,55 +334,6 @@ NATIVE_PROCEDURE_F(set_cdr) {
     return Throw(value.GetError());
   SetCdr(seq, value);
   return DoNothing();
-}
-
-NATIVE_PROCEDURE_F(array_new) {
-  ASSERT(HasRuntime());
-  if (args.empty())
-    return ThrowError(fmt::format("expected args to not be empty"));
-  const auto length = args.size();
-  const auto result = Array<Object*>::New(length);
-  ASSERT(result);
-  for (auto idx = 0; idx < length; idx++) {
-    ASSERT(args[idx]);
-    result->Set(idx, args[idx]);
-  }
-  return Return(result);
-}
-
-NATIVE_PROCEDURE_F(array_get) {
-  ASSERT(HasRuntime());
-  if (args.size() != 2)
-    return ThrowError(fmt::format("expected args to be: `<array> <index>`"));
-  NativeArgument<0, ArrayBase> array(args);
-  NativeArgument<1, Long> index(args);
-  if (index->Get() > array->GetCapacity())
-    return ThrowError(fmt::format("index `{}` is out of bounds for `{}`", index->Get(), (const gel::Object&)*array));
-  const auto result = array->Get(index->Get());
-  return Return(result ? result : Null());
-}
-
-NATIVE_PROCEDURE_F(array_set) {
-  ASSERT(HasRuntime());
-  if (args.size() != 3)
-    return ThrowError(fmt::format("expected args to be: `<array> <index>`"));
-  if (!gel::IsArray(args[0]))
-    return ThrowError(fmt::format("expected `{}` to be an Array", (*args[0])));
-  const auto array = (ArrayBase*)args[0];  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-  ASSERT(array);
-  if (!gel::IsLong(args[1]))
-    return ThrowError(fmt::format("expected `{}` to be a Long.", (*args[1])));
-  const auto index = Long::Unbox(args[1]);
-  if (index > array->GetCapacity())
-    return ThrowError(fmt::format("index `{}` is out of bounds for `{}`", index, (const gel::Object&)*array));
-  array->Set(index, args[2]);
-  return DoNothing();
-}
-
-NATIVE_PROCEDURE_F(array_length) {
-  ASSERT(HasRuntime());
-  NativeArgument<0, ArrayBase> array(args);
-  return ReturnNew<Long>(array->GetCapacity());
 }
 
 NATIVE_PROCEDURE_F(get_classes) {

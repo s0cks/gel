@@ -58,8 +58,10 @@ auto Class::ToString() const -> std::string {
 }
 
 auto Class::GetAllocationSize() const -> uword {
-  if (Equals(Class::GetClass()))
-    return sizeof(Class);
+#define GET_ALLOCATION_SIZE(Name) \
+  if (Equals(Name::GetClass()))   \
+    return sizeof(Name);
+  FOR_EACH_TYPE(GET_ALLOCATION_SIZE);
   return 0;
 }
 

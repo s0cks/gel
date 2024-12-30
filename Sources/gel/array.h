@@ -4,6 +4,7 @@
 #include <string>
 
 #include "gel/common.h"
+#include "gel/native_procedure.h"
 #include "gel/object.h"
 
 namespace gel {
@@ -117,6 +118,7 @@ class ArrayBase : public Object {
   auto ToString() const -> std::string override;
 
  public:
+  static void Init();
   static inline auto GetClass() -> Class* {
     ASSERT(kClass);
     return kClass;
@@ -165,6 +167,13 @@ class Array : public ArrayBase {
     return ((Array<T>*)new (init_cap) ArrayBase(init_cap));
   }
 };
+
+namespace proc {
+_DECLARE_NATIVE_PROCEDURE(array_new, "Array/new");
+_DECLARE_NATIVE_PROCEDURE(array_get, "Array/get");
+_DECLARE_NATIVE_PROCEDURE(array_set, "Array/set!");
+_DECLARE_NATIVE_PROCEDURE(array_length, "Array/count");  // TODO: rename
+}  // namespace proc
 }  // namespace gel
 
 #endif  // GEL_ARRAY_H

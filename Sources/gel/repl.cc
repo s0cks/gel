@@ -39,9 +39,7 @@ static inline auto IsClearCommand(const std::string& cmd) -> bool {
 auto Repl::RunRepl() -> int {
   const auto runtime = GetRuntime();
   ASSERT(runtime);
-  const auto fs = Module::Find("fs");
-  ASSERT(fs);
-  LOG_IF(FATAL, !runtime->Import(fs)) << "failed to import the fs module: " << fs;
+  // TODO: handle imports
   SetRunning();
   while (IsRunning() && Prompt()) {
     if (IsExitCommand(expression_)) {

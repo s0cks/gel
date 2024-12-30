@@ -16,10 +16,6 @@ _DECLARE_NATIVE_PROCEDURE(type, "type?");
 _DECLARE_NATIVE_PROCEDURE(rand_range, "random:range");
 _DECLARE_NATIVE_PROCEDURE(set_car, "set-car!");
 _DECLARE_NATIVE_PROCEDURE(set_cdr, "set-cdr!");
-_DECLARE_NATIVE_PROCEDURE(array_new, "Array/new");
-_DECLARE_NATIVE_PROCEDURE(array_get, "Array/get");
-_DECLARE_NATIVE_PROCEDURE(array_set, "Array/set!");
-_DECLARE_NATIVE_PROCEDURE(array_length, "Array/count");  // TODO: rename
 DECLARE_NATIVE_PROCEDURE(hashcode);
 _DECLARE_NATIVE_PROCEDURE(gel_sizeof, "sizeof");
 _DECLARE_NATIVE_PROCEDURE(gel_load_bindings, "gel/load-bindings");

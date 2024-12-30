@@ -204,14 +204,6 @@ class NativeProcedure : public Procedure {
     entry_ = entry;
   }
 
-  template <class Native>
-  static inline void InitNative() {
-    Native::Init();
-    const auto native = Native::Get();
-    ASSERT(native);
-    DVLOG(1000) << "initialized " << native;
-  }
-
   static auto FindOrCreate(Symbol* symbol) -> NativeProcedure*;
 
  public:
@@ -279,6 +271,15 @@ class NativeProcedure : public Procedure {
     return all_;
   }
 };
+
+template <class Native>
+static inline auto InitNative() -> Native* {
+  Native::Init();
+  const auto native = Native::Get();
+  ASSERT(native);
+  DVLOG(1000) << "initialized " << native;
+  return native;
+}
 
 #define _DEFINE_NATIVE_PROCEDURE_TYPE(Name, Sym)             \
   friend class gel::Runtime;                                 \

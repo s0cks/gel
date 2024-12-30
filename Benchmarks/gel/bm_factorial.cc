@@ -14,10 +14,11 @@ void BM_Factorial_Execution(benchmark::State& state) {
     const auto start = Clock::now();
     const auto value = runtime->Eval(expr);
     const auto end = Clock::now();
+    LOG_IF(ERROR, gel::IsNull(value)) << expr << " returned '()!";
     state.SetIterationTime(std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count());
   }
 }
 
-BENCHMARK(BM_Factorial_Execution)->Arg(7)->Arg(10);
+BENCHMARK(BM_Factorial_Execution)->Arg(7)->Arg(10);  // NOLINT(cppcoreguidelines-avoid-magic-numbers)
 
 }  // namespace gel

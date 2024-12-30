@@ -105,7 +105,7 @@ NATIVE_FS_PROCEDURE_F(open) {
   OptionalNativeArgument<4, Procedure> on_error(args);
   if (!on_error)
     return Throw(on_error.GetError());
-  OptionalNativeArgument<5, Procedure> on_finished(args);
+  OptionalNativeArgument<5, Procedure> on_finished(args);  // NOLINT(cppcoreguidelines-avoid-magic-numbers)
   if (!on_finished)
     return Throw(on_finished.GetError());
   const auto loop = GetThreadEventLoop();
