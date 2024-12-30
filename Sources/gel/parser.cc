@@ -544,13 +544,10 @@ auto Parser::ParseQuotedExpr() -> expr::Expression* {
 
 auto Parser::ParseImportExpr() -> expr::ImportExpr* {
   ExpectNext(Token::kImportExpr);
-  const auto symbol = ParseSymbol();
-  ASSERT(symbol);
-  DVLOG(100) << "importing " << symbol;
-  const auto module = Module::Find(symbol->GetFullyQualifiedName());
-  LOG_IF(FATAL, !module) << "failed to find Module named `" << symbol->GetFullyQualifiedName() << "`";
-  LOG_IF(FATAL, !GetScope()->Add(module->GetScope()))
-      << "failed to import Module `" << symbol->GetFullyQualifiedName() << "` scope.";
+  const auto& next = ExpectNext(Token::kLiteralString);
+  const auto module = Module::FindOrLoad(next.text);
+  LOG_IF(FATAL, !module) << "failed to load Module from `" << next.text << "`";
+  LOG_IF(FATAL, !GetScope()->Add(module->GetScope())) << "failed to import Module from `" << next.text << "` scope.";
   return expr::ImportExpr::New(module);
 }
 

@@ -75,17 +75,6 @@ void Runtime::LoadKernelModule() {
   LOG_IF(ERROR, !GetInitScope()->Add(kernel->GetScope())) << "failed to import the _kernel Module.";
   if (kernel->HasInit())
     LOG_IF(FATAL, !kernel->Init(this)) << "failed to initialize the _kernel Module: " << kernel;
-
-  std::unordered_set<std::string> paths;
-  paths.insert(fmt::format("{}/lib", (*home)));
-  if (kPathVar) {
-    Split(*(kPathVar.value()), ';', paths);
-  }
-  for (const auto& path : paths) {
-    DVLOG(10) << "loading Modules from " << path << "....";
-    DirModuleLoader loader(path);
-    LOG_IF(ERROR, !loader.LoadAllModules()) << "failed to load Modules from " << path;
-  }
 }
 
 auto GetGelPathEnvVar() -> const EnvironmentVariable& {

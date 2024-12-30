@@ -118,6 +118,7 @@ class Module : public Object {
   static auto LoadFrom(const std::filesystem::path& abs_path) -> Module*;
   static auto VisitModules(const std::function<bool(Module*)>& vis) -> bool;
   static auto VisitModulePointers(const std::function<bool(Pointer**)>& vis) -> bool;
+  static auto FindOrLoad(const std::string& name) -> Module*;
 };
 }  // namespace gel
 

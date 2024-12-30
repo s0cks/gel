@@ -70,6 +70,27 @@ auto Module::Find(const std::string& name) -> Module* {
   return (*m)->As<Module>();
 }
 
+auto Module::FindOrLoad(const std::string& name) -> Module* {
+  const auto filter = IsNamed(name);
+  const auto m = std::ranges::find_if(modules_, [&filter](Pointer* ptr) {
+    ASSERT(ptr && ptr->GetObjectPointer());
+    const auto m = ptr->As<Module>();
+    return filter(m);
+  });
+  if (m == std::end(modules_)) {
+    const auto home = GetHomeEnvVar();
+    if (!home)
+      return nullptr;
+    const auto new_module = Module::LoadFrom(fmt::format("{}/lib/{}", (*home.value()), name));
+    LOG_IF(FATAL, !new_module) << "failed to create new module from: " << name;
+    LOG_IF(ERROR, !GetRuntime()->GetInitScope()->Add(new_module->GetScope())) << "failed to import the _kernel Module.";
+    if (new_module->HasInit())
+      LOG_IF(FATAL, !new_module->Init(GetRuntime())) << "failed to initialize the _kernel Module: " << new_module;
+    return new_module;
+  }
+  return (*m)->As<Module>();
+}
+
 auto Module::New(String* name, LocalScope* scope) -> Module* {
   ASSERT(name);
   ASSERT(scope);
