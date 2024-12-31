@@ -8,6 +8,12 @@
       "description": "The filter pattern for GTest"
     },
     {
+      "id": "bm-filter",
+      "type": "promptString",
+      "default": "*",
+      "description": "The filter pattern for Benchmark"
+    },
+    {
       "id": "expression",
       "type": "promptString",
       "default": "(+ 99 1)",
@@ -413,6 +419,28 @@
       "initCommands": [
         "command source ${workspaceFolder}/.lldbinit"
       ]
+    },
+    {
+      "name": "Run Benchmark",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/Benchmarks/gel-benchmarks",
+      "args": [
+        "-logtostdout",
+        "-colorlogtostdout",
+        "--reports-dir", "${workspaceFolder}/reports",
+        "-v=${input:verbose-level}",
+        "--benchmark_filter=${input:bm-filter}"
+      ],
+      "cwd": "${workspaceFolder}",
+      "initCommands": [
+        "command source ${workspaceFolder}/.lldbinit"
+      ],
+      "env": {
+        "TERM": "xterm-256color",
+        "GEL_HOME": "${workspaceFolder}/gel",
+        "GEL_PATH": "${workspaceFolder}/build/Sources/"
+      }
     },
     {
       "name": "Run Script",
