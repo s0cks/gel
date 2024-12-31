@@ -129,10 +129,12 @@
     "Prints the current StackTrace for the gelrt.")
   (defnative gel/get-locals []
     "Returns the current LocalScope from gelrt.")
-  (defnative get-classes []
+  (defnative gel/get-classes []
     "Returns a list of the current register Classes in gelrt.")
-  (defnative get-class [s]
+  (defnative gel/get-class [s]
     "Returns the Class for Symbol [s].")
+  (defnative gel/get-class-id [c]
+    "Returns the ClassId for Class [c].")
   (defnative get-namespace [s]
     "Returns the Namespace for Symbol [s].")
   (defnative ns:get [nsOrSym s]

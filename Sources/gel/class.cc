@@ -11,6 +11,7 @@
 #include "gel/to_string_helper.h"
 
 namespace gel {
+static uword num_classes_ = 0;
 PointerList classes_;
 
 static inline auto Register(Class* cls) -> Class* {
@@ -19,20 +20,32 @@ static inline auto Register(Class* cls) -> Class* {
   return cls;
 }
 
+auto Class::New(const ClassId id, Class* parent, String* name) -> Class* {
+  ASSERT(name);
+  const auto cls = new Class(id, parent, name);
+  ASSERT(cls);
+  return Register(cls);
+}
+
+auto Class::New(const ClassId id, Class* parent, const std::string& name) -> Class* {
+  ASSERT(parent);
+  return New(id, parent, String::New(name));
+}
+
 auto Class::New(Class* parent, String* name) -> Class* {
   ASSERT(parent);
   ASSERT(name);
-  return Register(new Class(parent, name));
+  return New(++num_classes_, parent, name);
 }
 
-auto Class::New(String* name) -> Class* {
+auto Class::New(const ClassId id, String* name) -> Class* {
   ASSERT(name);
-  return Register(new Class(nullptr, name));
+  return Class::New(++num_classes_, nullptr, name);
 }
 
-auto Class::New(const std::string& name) -> Class* {
+auto Class::New(const ClassId id, const std::string& name) -> Class* {
   ASSERT(!name.empty());
-  return New(String::New(name));
+  return New(id, String::New(name));
 }
 
 auto Class::New(Class* parent, const std::string& name) -> Class* {

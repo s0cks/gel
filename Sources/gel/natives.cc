@@ -61,6 +61,7 @@ void NativeProcedure::InitNatives() {
 
   InitNative<get_classes>();
   InitNative<get_class>();
+  InitNative<get_class_id>();
 
   InitNative<get_namespace>();
   InitNative<ns_get>();
@@ -355,6 +356,21 @@ NATIVE_PROCEDURE_F(get_class) {
   if (!symbol)
     return Throw(symbol.GetError());
   return Return(Class::FindClass(symbol));
+}
+
+NATIVE_PROCEDURE_F(get_class_id) {
+  NativeArgument<0> clsOrSym(args);
+  if (!clsOrSym)
+    return Throw(clsOrSym);
+  if (clsOrSym->IsClass()) {
+    return ReturnLong(clsOrSym->AsClass()->GetClassId());
+  } else if (clsOrSym->IsSymbol()) {
+    const auto cls = Class::FindClass(clsOrSym->AsSymbol());
+    if (!cls)
+      return ReturnNull();
+    return ReturnLong(cls->GetClassId());
+  }
+  return ReturnLong(clsOrSym->GetClass()->GetClassId());
 }
 
 NATIVE_PROCEDURE_F(get_namespace) {

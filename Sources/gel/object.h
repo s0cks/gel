@@ -200,36 +200,37 @@ static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream
   return stream << rhs->ToString();
 }
 
-#define DECLARE_TYPE(Name)                          \
-  friend class Class;                               \
-  friend class Object;                              \
-  DEFINE_NON_COPYABLE_TYPE(Name)                    \
- private:                                           \
-  static Class* kClass;                             \
-  static void InitClass();                          \
-  static auto CreateClass() -> Class*;              \
-                                                    \
- public:                                            \
-  static auto New(const ObjectList& args) -> Name*; \
-  static constexpr const auto kClassName = #Name;   \
-  static auto operator new(const size_t sz)->void*; \
-  static inline void operator delete(void* ptr) {   \
-    ASSERT(ptr);                                    \
-  }                                                 \
-  static inline auto GetClass() -> Class* {         \
-    ASSERT(kClass);                                 \
-    return kClass;                                  \
-  }                                                 \
-                                                    \
- public:                                            \
-  auto HashCode() const -> uword override;          \
-  auto Equals(Object* rhs) const -> bool override;  \
-  auto GetType() const -> Class* override {         \
-    return GetClass();                              \
-  }                                                 \
-  auto ToString() const -> std::string override;    \
-  auto As##Name()->Name* override {                 \
-    return this;                                    \
+#define DECLARE_TYPE(Name)                                        \
+  friend class Class;                                             \
+  friend class Object;                                            \
+  DEFINE_NON_COPYABLE_TYPE(Name)                                  \
+ private:                                                         \
+  static Class* kClass;                                           \
+  static void InitClass();                                        \
+  static auto CreateClass() -> Class*;                            \
+                                                                  \
+ public:                                                          \
+  static auto New(const ObjectList& args) -> Name*;               \
+  static constexpr const auto kClassId = Class::k##Name##ClassId; \
+  static constexpr const auto kClassName = #Name;                 \
+  static auto operator new(const size_t sz)->void*;               \
+  static inline void operator delete(void* ptr) {                 \
+    ASSERT(ptr);                                                  \
+  }                                                               \
+  static inline auto GetClass() -> Class* {                       \
+    ASSERT(kClass);                                               \
+    return kClass;                                                \
+  }                                                               \
+                                                                  \
+ public:                                                          \
+  auto HashCode() const -> uword override;                        \
+  auto Equals(Object* rhs) const -> bool override;                \
+  auto GetType() const -> Class* override {                       \
+    return GetClass();                                            \
+  }                                                               \
+  auto ToString() const -> std::string override;                  \
+  auto As##Name()->Name* override {                               \
+    return this;                                                  \
   }
 }  // namespace gel
 

@@ -67,7 +67,7 @@ FOR_EACH_TYPE(DEFINE_INIT_CLASS)
 #undef DEFINE_TYPE_INIT
 
 auto Object::CreateClass() -> Class* {
-  return Class::New(kClassName);
+  return Class::New(Class::kObjectClassId, kClassName);
 }
 
 auto Object::raw_ptr() const -> Pointer* {
@@ -152,7 +152,7 @@ void Object::Init() {
 }
 
 auto Long::CreateClass() -> Class* {
-  return Class::New(Number::GetClass(), kClassName);
+  return Class::New(Class::kLongClassId, Number::GetClass(), kClassName);
 }
 
 auto Long::New(const ObjectList& args) -> Long* {
@@ -172,7 +172,7 @@ auto Long::Unbox(Object* rhs) -> uint64_t {
 }
 
 auto Double::CreateClass() -> Class* {
-  return Class::New(Number::GetClass(), kClassName);
+  return Class::New(kClassId, Number::GetClass(), kClassName);
 }
 
 auto Double::New(const ObjectList& args) -> Double* {
@@ -215,7 +215,7 @@ auto Bool::Or(Object* rhs) const -> Object* {
 }
 
 auto Bool::CreateClass() -> Class* {
-  return Class::New(Object::GetClass(), kClassName);
+  return Class::New(kClassId, Object::GetClass(), kClassName);
 }
 
 void Bool::Init() {
@@ -400,7 +400,10 @@ auto Pair::HashCode() const -> uword {
 auto StringObject::Equals(Object* rhs) const -> bool {
   if (!rhs || !(rhs->IsString() || rhs->IsSymbol()))
     return false;
-  return Get().compare(((StringObject*)rhs)->Get()) == 0;  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  if (rhs->IsSymbol())
+    return Equals(rhs->AsSymbol()->GetFullyQualifiedName());
+  ASSERT(rhs->IsString());
+  return Equals(rhs->AsString()->Get());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
 }
 
 auto StringObject::Equals(const std::string& rhs) const -> bool {

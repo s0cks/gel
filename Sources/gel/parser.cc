@@ -903,9 +903,6 @@ auto Parser::NextToken() -> const Token& {
     const auto ident = GetBufferedText();
     if (IsParsingArgs())
       return NextToken(Token::kIdentifier, ident);
-    const auto cls = Class::FindClass(ident);
-    if (cls)
-      return NextToken(Token::kNewExpr, ident);
     else if (ident == "ns")
       return NextToken(Token::kDefNamespace);
     else if (ident == "def")

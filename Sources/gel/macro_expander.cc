@@ -167,19 +167,19 @@ auto MacroEffectVisitor::VisitCallProcExpr(expr::CallProcExpr* expr) -> bool {
 
 auto MacroEffectVisitor::VisitCaseExpr(expr::CaseExpr* expr) -> bool {
   ASSERT(expr);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return false;
 }
 
 auto MacroEffectVisitor::VisitCastExpr(expr::CastExpr* expr) -> bool {
   ASSERT(expr);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return false;
 }
 
 auto MacroEffectVisitor::VisitClauseExpr(expr::ClauseExpr* expr) -> bool {
   ASSERT(expr);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return false;
 }
 
@@ -197,13 +197,13 @@ auto MacroEffectVisitor::VisitImportExpr(expr::ImportExpr* expr) -> bool {
 
 auto MacroEffectVisitor::VisitInstanceOfExpr(expr::InstanceOfExpr* expr) -> bool {
   ASSERT(expr);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return false;
 }
 
 auto MacroEffectVisitor::VisitLetExpr(expr::LetExpr* expr) -> bool {
   ASSERT(expr);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return false;
 }
 
@@ -215,7 +215,7 @@ auto MacroEffectVisitor::VisitLetRxExpr(expr::LetRxExpr* expr) -> bool {
 
 auto MacroEffectVisitor::VisitListExpr(expr::ListExpr* expr) -> bool {
   ASSERT(expr);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return false;
 }
 
@@ -238,13 +238,13 @@ auto MacroEffectVisitor::VisitLiteralExpr(expr::LiteralExpr* expr) -> bool {
 
 auto MacroEffectVisitor::VisitLoadInstanceMethodExpr(expr::LoadInstanceMethodExpr* expr) -> bool {
   ASSERT(expr);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return false;
 }
 
 auto MacroEffectVisitor::VisitLocalDef(expr::LocalDef* expr) -> bool {
   ASSERT(expr);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return false;
 }
 
@@ -256,7 +256,7 @@ auto MacroEffectVisitor::VisitNewExpr(expr::NewExpr* expr) -> bool {
 
 auto MacroEffectVisitor::VisitNewMapExpr(expr::NewMapExpr* expr) -> bool {
   ASSERT(expr);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return false;
 }
 
@@ -267,7 +267,7 @@ auto MacroEffectVisitor::VisitQuotedExpr(expr::QuotedExpr* expr) -> bool {
 
 auto MacroEffectVisitor::VisitRxOpExpr(expr::RxOpExpr* expr) -> bool {
   ASSERT(expr);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return false;
 }
 
@@ -291,7 +291,7 @@ auto MacroEffectVisitor::VisitSetFieldExpr(expr::SetFieldExpr* expr) -> bool {
 
 auto MacroEffectVisitor::VisitThrowExpr(expr::ThrowExpr* expr) -> bool {
   ASSERT(expr);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return false;
 }
 
@@ -330,7 +330,7 @@ auto MacroEffectVisitor::VisitWhenExpr(expr::WhenExpr* expr) -> bool {
 
 auto MacroEffectVisitor::VisitWhileExpr(expr::WhileExpr* expr) -> bool {
   ASSERT(expr);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return false;
 }
 }  // namespace gel

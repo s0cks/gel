@@ -306,8 +306,8 @@ void Interpreter::Lookup(Symbol* rhs) {
   const auto scope = GetScope();
   ASSERT(scope);
   LocalVariable* local = nullptr;
-  LOG_IF(FATAL, !scope->Lookup(rhs, &local)) << "failed to resolve " << rhs;
-  const auto value = local->HasValue() ? local->GetValue() : Null();
+  LOG_IF(ERROR, !scope->Lookup(rhs, &local)) << "failed to resolve " << rhs;
+  const auto value = local && local->HasValue() ? local->GetValue() : Null();
   PUSH(value);
 }
 

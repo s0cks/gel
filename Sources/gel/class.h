@@ -1,7 +1,3 @@
-#include <set>
-#include <variant>
-
-#include "gel/common.h"
 #ifndef GEL_OBJECT_H
 #error "Please #include <gel/object.h> instead."
 #endif  // GEL_OBJECT_H
@@ -9,13 +5,158 @@
 #ifndef GEL_CLASS_H
 #define GEL_CLASS_H
 
+#include <set>
+#include <variant>
 #include <vector>
 
+#include "gel/common.h"
 #include "gel/object.h"
 
 namespace gel {
+using ClassId = uword;
+class Field;
 class Class;
+class Object;
+class Symbol;
+class String;
 using ClassList = std::vector<Class*>;
+class Class : public Object {
+  friend class Long;
+  friend class Object;
+
+ public:
+  enum ClassIds : ClassId {
+    kInvalidClassId = 0,
+    kObjectClassId,
+    kClassClassId,
+    kFieldClassId,
+    kStringClassId,
+    kSymbolClassId,
+    kNamespaceClassId,
+    kModuleClassId,
+    kSeqClassId,
+    kMapClassId,
+    kProcedureClassId,
+    kLambdaClassId,
+    kNativeProcedureClassId,
+    kBufferClassId,
+    kScriptClassId,
+    kBoolClassId,
+    kNumberClassId,
+    kLongClassId,
+    kDoubleClassId,
+    kPairClassId,
+    kArrayClassId,
+    kMacroClassId,
+    kErrorClassId,
+    kSetClassId,
+    kExpressionClassId,
+    kEventLoopClassId,
+    kTimerClassId,
+    kObservableClassId,
+    kObserverClassId,
+    kSubjectClassId,
+    kReplaySubjectClassId,
+    kPublishSubjectClassId,
+    kTotalNumberOfInternalClassIds,
+  };
+
+ private:
+  ClassId id_;
+  Class* parent_;
+  String* name_;
+  std::vector<Procedure*> funcs_{};
+  std::vector<Field*> fields_{};
+
+ protected:
+  explicit Class(ClassId id, Class* parent, String* name) :
+    Object(),
+    id_(id),
+    parent_(parent),
+    name_(name) {
+    ASSERT(name_);
+  }
+
+  auto VisitPointers(PointerVisitor* vis) -> bool override;
+  auto VisitPointers(PointerPointerVisitor* vis) -> bool override;
+
+ public:
+  ~Class() override = default;
+
+  auto GetClassId() const -> ClassId {
+    return id_;
+  }
+
+  inline auto IsInternalClass() const -> bool {
+    return GetClassId() >= 0 && GetClassId() <= kTotalNumberOfInternalClassIds;
+  }
+
+  void AddFunction(Procedure* func) {
+    ASSERT(func);
+    funcs_.push_back(func);
+  }
+
+  auto GetFields() const -> const std::vector<Field*>& {
+    return fields_;
+  }
+
+  void Add(Field* field) {
+    ASSERT(field);
+    fields_.push_back(field);
+  }
+
+  auto AddField(const std::string& name) -> Field*;
+
+  auto GetParent() const -> Class* {
+    return parent_;
+  }
+
+  inline auto HasParent() const -> bool {
+    return GetParent() != nullptr;
+  }
+
+  auto GetName() const -> String* {
+    return name_;
+  }
+
+  template <class T>
+  inline auto Is() const -> bool {
+    return Equals(T::GetClass());
+  }
+
+  template <class T>
+  inline auto IsInstance() const -> bool {
+    return IsInstanceOf(T::GetClass());
+  }
+
+  auto NewInstance(const ObjectList& args) -> Object*;
+  auto GetAllocationSize() const -> uword;
+  auto IsInstanceOf(Class* rhs) const -> bool;
+  auto HasFunction(Symbol* symbol, const bool recursive = true) const -> bool;
+  auto GetFunction(const std::string& name, const bool recursive = true) const -> Procedure*;
+  auto GetFunction(Symbol* symbol, const bool recursive = true) const -> Procedure*;
+  auto GetField(Symbol* symbol, const bool recursive = true) const -> Field*;
+  DECLARE_TYPE(Class);
+
+ private:
+  static auto New(const ClassId id, String* name) -> Class*;
+  static auto New(const ClassId id, const std::string& name) -> Class*;
+
+ public:
+  static auto GetTotalNumberOfClasses() -> uword;
+
+  static auto New(const ClassId id, Class* parent, String* name) -> Class*;
+  static auto New(const ClassId id, Class* parent, const std::string& name) -> Class*;
+  static auto New(Class* parent, String* name) -> Class*;
+  static auto New(Class* parent, const std::string& name) -> Class*;
+
+  static auto FindClass(const std::string& name) -> Class*;
+  static auto FindClass(String* name) -> Class*;
+  static auto FindClass(Symbol* name) -> Class*;
+
+  static auto VisitClasses(const std::function<bool(Class*)>& vis, const bool reverse = false) -> bool;
+  static auto VisitClassPointers(const std::function<bool(Pointer**)>& vis) -> bool;
+};
 
 class Field : public Object {
   friend class Class;
@@ -98,91 +239,6 @@ class Field : public Object {
   }
 };
 
-class Class : public Object {
-  friend class Object;
-
- private:
-  Class* parent_;
-  String* name_;
-  std::vector<Procedure*> funcs_{};
-  std::vector<Field*> fields_{};
-
- protected:
-  explicit Class(Class* parent, String* name) :
-    Object(),
-    parent_(parent),
-    name_(name) {
-    ASSERT(name_);
-  }
-
-  auto VisitPointers(PointerVisitor* vis) -> bool override;
-  auto VisitPointers(PointerPointerVisitor* vis) -> bool override;
-
- public:
-  ~Class() override = default;
-
-  void AddFunction(Procedure* func) {
-    ASSERT(func);
-    funcs_.push_back(func);
-  }
-
-  auto GetFields() const -> const std::vector<Field*>& {
-    return fields_;
-  }
-
-  void Add(Field* field) {
-    ASSERT(field);
-    fields_.push_back(field);
-  }
-
-  auto AddField(const std::string& name) -> Field*;
-
-  auto GetParent() const -> Class* {
-    return parent_;
-  }
-
-  inline auto HasParent() const -> bool {
-    return GetParent() != nullptr;
-  }
-
-  auto GetName() const -> String* {
-    return name_;
-  }
-
-  template <class T>
-  inline auto Is() const -> bool {
-    return Equals(T::GetClass());
-  }
-
-  template <class T>
-  inline auto IsInstance() const -> bool {
-    return IsInstanceOf(T::GetClass());
-  }
-
-  auto NewInstance(const ObjectList& args) -> Object*;
-  auto GetAllocationSize() const -> uword;
-  auto IsInstanceOf(Class* rhs) const -> bool;
-  auto HasFunction(Symbol* symbol, const bool recursive = true) const -> bool;
-  auto GetFunction(const std::string& name, const bool recursive = true) const -> Procedure*;
-  auto GetFunction(Symbol* symbol, const bool recursive = true) const -> Procedure*;
-  auto GetField(Symbol* symbol, const bool recursive = true) const -> Field*;
-  DECLARE_TYPE(Class);
-
- private:
-  static auto New(String* name) -> Class*;
-  static auto New(const std::string& name) -> Class*;
-
- public:
-  static auto New(Class* parent, String* name) -> Class*;
-  static auto New(Class* parent, const std::string& name) -> Class*;
-
-  static auto FindClass(const std::string& name) -> Class*;
-  static auto FindClass(String* name) -> Class*;
-  static auto FindClass(Symbol* name) -> Class*;
-
-  static auto VisitClasses(const std::function<bool(Class*)>& vis, const bool reverse = false) -> bool;
-  static auto VisitClassPointers(const std::function<bool(Pointer**)>& vis) -> bool;
-};
 }  // namespace gel
 
 #endif  // GEL_CLASS_H

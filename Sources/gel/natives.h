@@ -24,14 +24,15 @@ _DECLARE_NATIVE_PROCEDURE(get_event_loop, "get-event-loop");
 // ----------------------------------------------------------------------------------------------------
 // Class
 // ----------------------------------------------------------------------------------------------------
-_DECLARE_NATIVE_PROCEDURE(get_class, "get-class");
-_DECLARE_NATIVE_PROCEDURE(get_classes, "get-classes");
+_DECLARE_NATIVE_PROCEDURE(get_class, "gel/get-class");
+_DECLARE_NATIVE_PROCEDURE(get_classes, "gel/get-classes");
+_DECLARE_NATIVE_PROCEDURE(get_class_id, "gel/get-class-id");
 // ----------------------------------------------------------------------------------------------------
 
 // ----------------------------------------------------------------------------------------------------
 // Namespaces
 // ----------------------------------------------------------------------------------------------------
-_DECLARE_NATIVE_PROCEDURE(get_namespace, "get-namespace");
+_DECLARE_NATIVE_PROCEDURE(get_namespace, "gel/get-namespace");
 _DECLARE_NATIVE_PROCEDURE(ns_get, "ns:get");
 // ----------------------------------------------------------------------------------------------------
 
