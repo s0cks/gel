@@ -237,6 +237,72 @@ static inline auto operator<<(std::ostream& stream, const Token::KindSet& rhs) -
   }
   return stream;
 }
+
+class KeywordTrie {
+  static constexpr const auto kAlphabetSize = 127;
+  DEFINE_NON_COPYABLE_TYPE(KeywordTrie);
+
+ private:
+  struct Node {
+    bool epsilon;
+    Token::Kind kind;
+    std::array<Node*, kAlphabetSize> children;
+  };
+
+  static inline auto Insert(Node* root, const std::string& key, const Token::Kind kind) -> bool {
+    ASSERT(root);
+    auto current = root;
+    for (const auto& c : key) {
+      if (current->children.at(c) == nullptr) {
+        current->children.at(c) = new Node();
+      }
+      current = current->children.at(c);
+    }
+    current->kind = kind;
+    current->epsilon = true;
+    return true;
+  }
+
+  static inline auto Search(Node* root, const std::string& key, Token::Kind* result) -> bool {
+    ASSERT(root);
+    auto current = root;
+    for (const auto& c : key) {
+      if (current->children.at(c) == nullptr) {
+        (*result) = Token::kInvalid;
+        return false;
+      }
+      current = current->children.at(c);
+    }
+    if (!current || !current->epsilon) {
+      (*result) = Token::kInvalid;
+      return false;
+    }
+    (*result) = current->kind;
+    return true;
+  }
+
+ private:
+  Node* root_;
+
+ public:
+  KeywordTrie() :
+    root_(new Node()) {
+    ASSERT(root_);
+  }
+  ~KeywordTrie() = default;
+
+  auto GetRoot() const -> Node* {
+    return root_;
+  }
+
+  auto Insert(const std::string& value, const Token::Kind kind) -> bool {
+    return Insert(GetRoot(), value, kind);
+  }
+
+  auto Contains(const std::string& value, Token::Kind* result) -> bool {
+    return Search(GetRoot(), value, result);
+  }
+};
 }  // namespace gel
 
 #endif  // GEL_TOKEN_H

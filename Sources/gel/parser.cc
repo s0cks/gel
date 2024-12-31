@@ -17,6 +17,8 @@
 #include "gel/token.h"
 
 namespace gel {
+static KeywordTrie keywords_;
+
 auto Parser::PushScope() -> LocalScope* {
   const auto old_scope = GetScope();
   ASSERT(old_scope);
@@ -903,68 +905,9 @@ auto Parser::NextToken() -> const Token& {
     const auto ident = GetBufferedText();
     if (IsParsingArgs())
       return NextToken(Token::kIdentifier, ident);
-    else if (ident == "ns")
-      return NextToken(Token::kDefNamespace);
-    else if (ident == "def")
-      return NextToken(Token::kDef);
-    else if (ident == "defmacro")
-      return NextToken(Token::kDefMacro);
-    else if (ident == "import")
-      return NextToken(Token::kImportExpr);
-    else if (ident == "cons")
-      return NextToken(Token::kCons);
-    else if (ident == "car")
-      return NextToken(Token::kCar);
-    else if (ident == "cdr")
-      return NextToken(Token::kCdr);
-    else if (ident == "begin")
-      return NextToken(Token::kBeginExpr);
-    else if (ident == "add")
-      return NextToken(Token::kAdd);
-    else if (ident == "subtract")
-      return NextToken(Token::kSubtract);
-    else if (ident == "multiply")
-      return NextToken(Token::kMultiply);
-    else if (ident == "divide")
-      return NextToken(Token::kDivide);
-    else if (ident == "fn")
-      return NextToken(Token::kFn);
-    else if (ident == "quote")
-      return NextToken(Token::kQuote);
-    else if (ident == "not")
-      return NextToken(Token::kNot);
-    else if (ident == "and")
-      return NextToken(Token::kBinaryAnd);
-    else if (ident == "or")
-      return NextToken(Token::kBinaryOr);
-    else if (ident == "throw")
-      return NextToken(Token::kThrowExpr);
-    else if (ident == "eq?")
-      return NextToken(Token::kEquals);
-    else if (ident == "instanceof?")
-      return NextToken(Token::kInstanceOf);
-    else if (ident == "nonnull?")
-      return NextToken(Token::kNonnull);
-    else if (ident == "null?")
-      return NextToken(Token::kNull);
-    else if (ident == "set!")
-      return NextToken(Token::kSet);
-    else if (ident == "cond")
-      return NextToken(Token::kCond);
-    else if (ident == "when")
-      return NextToken(Token::kWhenExpr);
-    else if (ident == "case")
-      return NextToken(Token::kCaseExpr);
-    else if (ident == "while")
-      return NextToken(Token::kWhileExpr);
-    else if (ident == "defn")
-      return NextToken(Token::kDefn);
-    else if (ident == "let")
-      return NextToken(Token::kLetExpr);
-    else if (ident == "let:rx")
-      return NextToken(Token::kLetRxExpr);
-    else if (ident == "defnative")
-      return NextToken(Token::kDefNative);
+    auto kind = Token::kInvalid;
+    if (keywords_.Contains(ident, &kind))
+      return NextToken(kind, ident);
     return NextToken(Token::kIdentifier, ident);
   }
 
@@ -1416,5 +1359,39 @@ auto Parser::ParseDef() -> expr::Expression* {
     return nullptr;
   }
   return expr::SetLocalExpr::New(local, value);
+}
+
+void Parser::Init() {
+  keywords_.Insert("ns", Token::kDefNamespace);
+  keywords_.Insert("def", Token::kDef);
+  keywords_.Insert("defmacro", Token::kDefMacro);
+  keywords_.Insert("import", Token::kImportExpr);
+  keywords_.Insert("cons", Token::kCons);
+  keywords_.Insert("car", Token::kCar);
+  keywords_.Insert("cdr", Token::kCdr);
+  keywords_.Insert("begin", Token::kBeginExpr);
+  keywords_.Insert("add", Token::kAdd);
+  keywords_.Insert("subtract", Token::kSubtract);
+  keywords_.Insert("multiply", Token::kMultiply);
+  keywords_.Insert("divide", Token::kDivide);
+  keywords_.Insert("fn", Token::kFn);
+  keywords_.Insert("quote", Token::kQuote);
+  keywords_.Insert("not", Token::kNot);
+  keywords_.Insert("and", Token::kBinaryAnd);
+  keywords_.Insert("or", Token::kBinaryOr);
+  keywords_.Insert("throw", Token::kThrowExpr);
+  keywords_.Insert("eq?", Token::kEquals);
+  keywords_.Insert("instanceof?", Token::kInstanceOf);
+  keywords_.Insert("nonnull?", Token::kNonnull);
+  keywords_.Insert("null?", Token::kNull);
+  keywords_.Insert("set!", Token::kSet);
+  keywords_.Insert("cond", Token::kCond);
+  keywords_.Insert("when", Token::kWhenExpr);
+  keywords_.Insert("case", Token::kCaseExpr);
+  keywords_.Insert("while", Token::kWhileExpr);
+  keywords_.Insert("defn", Token::kDefn);
+  keywords_.Insert("let", Token::kLetExpr);
+  keywords_.Insert("let:rx", Token::kLetRxExpr);
+  keywords_.Insert("defnative", Token::kDefNative);
 }
 }  // namespace gel

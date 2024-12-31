@@ -408,6 +408,9 @@ class Parser {
     const auto name = filename.substr(slashpos, total_length);
     return parser.ParseModule(name);
   }
+
+ public:
+  static void Init();
 };
 }  // namespace gel
 

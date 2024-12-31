@@ -132,6 +132,7 @@ static inline auto ExecuteScript(const std::string& filename) -> int {
 auto main(int argc, char** argv) -> int {
   ::google::InitGoogleLogging(argv[0]);
   ::google::ParseCommandLineFlags(&argc, &argv, true);
+  Parser::Init();
   Heap::Init();
   Runtime::Init();
   const auto expr = GetExpressionFlag();
