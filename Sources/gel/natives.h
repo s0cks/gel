@@ -202,6 +202,8 @@ _DECLARE_NATIVE_PROCEDURE(gel_get_locals, "gel/get-locals");
 _DECLARE_NATIVE_PROCEDURE(gel_get_target_triple, "gel/get-target-triple");
 _DECLARE_NATIVE_PROCEDURE(gel_get_natives, "gel/get-natives");
 _DECLARE_NATIVE_PROCEDURE(gel_get_compile_time, "gel/compile-time?");
+_DECLARE_NATIVE_PROCEDURE(gel_get_symbol_pool_size, "gel/get-symbol-pool-size");
+_DECLARE_NATIVE_PROCEDURE(gel_get_symbol_pool_max_size, "gel/get-symbol-pool-max-size");
 #endif  // GEL_DEBUG
 
 }  // namespace gel::proc

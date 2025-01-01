@@ -2,15 +2,19 @@
 #define GEL_SYMBOL_H
 
 #include "gel/common.h"
+#include "gel/flags.h"
 #include "gel/object.h"
 #include "gel/trie.h"
 
 namespace gel {
+DECLARE_uword(symbol_pool_size);
+
 class Symbol : public Object {
   friend class Parser;
 
  public:
   static constexpr const auto kAlphabetSize = 127;
+  using PoolNode = trie::Node<Symbol*, kAlphabetSize>;
   struct Comparator {
     auto operator()(Symbol* lhs, Symbol* rhs) const -> bool {
       ASSERT(lhs && rhs);
@@ -107,6 +111,17 @@ class Symbol : public Object {
 
 using SymbolList = std::vector<Symbol*>;
 using SymbolSet = std::unordered_set<Symbol*, Symbol::Comparator>;
+
+static inline auto GetSymbolPoolMaxSize() -> uword {
+  return FLAGS_symbol_pool_size;
+}
+
+static inline auto ShouldPoolSymbols() -> bool {
+  return GetSymbolPoolMaxSize() > 0;
+}
+
+auto GetCurrentThreadSymbolPoolSize() -> uword;
+auto GetCurrentThreadSymbolPoolRoot() -> Symbol::PoolNode*;
 }  // namespace gel
 
 namespace fmt {

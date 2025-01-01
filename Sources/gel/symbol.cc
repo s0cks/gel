@@ -1,14 +1,30 @@
 #include "gel/symbol.h"
 
+#include "gel/common.h"
 #include "gel/namespace.h"
+#include "gel/natives.h"
 #include "gel/thread_local.h"
 #include "gel/to_string_helper.h"
 #include "gel/trie.h"
 
 namespace gel {
-using SymbolNode = trie::Node<Symbol*, Symbol::kAlphabetSize>;
+DEFINE_uword(symbol_pool_size, 65535, "Defines the maximum number of Symbols to be pooled (interned).");
 
-static ThreadLocal<SymbolNode> trie_(new SymbolNode());
+static ThreadLocal<Symbol::PoolNode> trie_(new Symbol::PoolNode());
+static ThreadLocal<uword> pool_size_(new uword(0));  // TODO: this is a really weird use
+
+static inline void IncrementPoolSize() {
+  *(pool_size_.Get()) += 1;
+}
+
+auto GetCurrentThreadSymbolPoolRoot() -> Symbol::PoolNode* {
+  ASSERT(trie_);
+  return trie_;
+}
+
+auto GetCurrentThreadSymbolPoolSize() -> uword {
+  return *(pool_size_.Get());
+}
 
 void Symbol::SetNamespace(Namespace* ns) {
   ASSERT(ns);
@@ -63,9 +79,14 @@ auto Symbol::New(const std::string& ns, const std::string& type, const std::stri
   ss << name;
 
   Symbol* symbol = nullptr;
-  LOG_IF(FATAL, !trie::SearchOrCreate(trie_.Get(), ss.str(), &symbol,
-                                      (const std::function<Symbol*(const std::string&)>)&Symbol::NewInternal))
-      << "failed to internalize Symbol: " << ss.str();
+  if ((GetCurrentThreadSymbolPoolSize() + 1) <= GetSymbolPoolMaxSize()) {
+    const auto created = trie::SearchOrCreate<Symbol*>(trie_.Get(), ss.str(), &symbol, &Symbol::NewInternal);
+    LOG_IF(FATAL, !created) << "failed to internalize Symbol: " << ss.str();
+    IncrementPoolSize();
+  } else {
+    return Symbol::NewInternal(ss.str());
+  }
+
   ASSERT(symbol);
   return symbol;
 }
@@ -73,5 +94,20 @@ auto Symbol::New(const std::string& ns, const std::string& type, const std::stri
 void Symbol::Init() {
   InitClass();
   ASSERT(trie_);
+  InitNative<proc::gel_get_symbol_pool_size>();
+  InitNative<proc::gel_get_symbol_pool_max_size>();
 }
+
+#ifdef GEL_DEBUG
+namespace proc {
+NATIVE_PROCEDURE_F(gel_get_symbol_pool_size) {
+  return ReturnLong(GetCurrentThreadSymbolPoolSize());
+}
+
+NATIVE_PROCEDURE_F(gel_get_symbol_pool_max_size) {
+  return ReturnLong(GetSymbolPoolMaxSize());
+}
+}  // namespace proc
+
+#endif  // GEL_DEBUG
 }  // namespace gel
