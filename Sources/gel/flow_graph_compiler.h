@@ -1,9 +1,12 @@
 #ifndef GEL_FLOW_GRAPH_COMPILER_H
 #define GEL_FLOW_GRAPH_COMPILER_H
 
+#include <type_traits>
+
 #include "gel/assembler.h"
 #include "gel/common.h"
 #include "gel/to_string_helper.h"
+#include "gel/type_traits.h"
 
 namespace gel {
 class Lambda;
@@ -33,8 +36,8 @@ class FlowGraphCompiler {
   Assembler assembler_{};
   std::vector<BlockInfo> info_{};
 
-  auto BuildFlowGraph(Lambda* lambda) -> FlowGraph*;
-  auto BuildFlowGraph(Script* script) -> FlowGraph*;
+  template <class E>  // TODO: use/create gel::is_compilable template predicate
+  auto BuildFlowGraph(E* exec, std::enable_if_t<gel::is_executable<E>::value>* = nullptr) -> FlowGraph*;
   void AssembleFlowGraph(FlowGraph* graph);
 
  public:
@@ -69,12 +72,25 @@ class FlowGraphCompiler {
 
   auto GetBlockInfo(ir::EntryInstr* blk) -> BlockInfo&;
   auto GetBlockLabel(ir::EntryInstr* blk) -> Label*;
-  auto CompileLambda(Lambda* lambda) -> bool;
-  auto CompileScript(Script* script) -> bool;
+
+  template <class E>  // TODO: use/create gel::is_compilable template predicate
+  auto CompileTarget(E* exec, std::enable_if_t<gel::is_executable<E>::value>* = nullptr) -> bool;
 
  public:
-  static auto Compile(Lambda* lambda, LocalScope* scope) -> bool;
-  static auto Compile(Script* script, LocalScope* scope) -> bool;
+  template <class E>
+  static inline auto Compile(E* exec, LocalScope* scope, std::enable_if_t<gel::is_executable<E>::value>* = nullptr) -> bool {
+    if (!exec) {
+      DLOG(ERROR) << "cannot compile null target.";
+      return false;
+    }
+    if (exec->IsCompiled()) {
+      DLOG(WARNING) << "trying to compile already compiled target: " << exec;
+      return true;
+    }
+    ASSERT(scope);
+    FlowGraphCompiler compiler(scope);
+    return compiler.CompileTarget<E>(exec);
+  }
 };
 }  // namespace gel
 

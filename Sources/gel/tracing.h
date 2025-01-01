@@ -6,10 +6,11 @@
 #define TRACY_ENABLE 1
 #include <tracy/Tracy.hpp>
 
-#define TRACE_MARK FrameMark
-#define TRACE_ZONE ZoneScoped
+#define TRACE_MARK             FrameMark
+#define TRACE_ZONE             ZoneScoped
 #define TRACE_ZONE_NAMED(Name) ZoneScopedN((Name))
-#define TRACE_TAG(Value) (ZoneText((Value), strlen((Value))))
+#define TRACE_TAG(Value)       (ZoneText((Value), strlen((Value))))
+#define TRACE_TAG_STR(Value)   (ZoneText((Value).c_str(), (Value).length()))
 
 #else
 

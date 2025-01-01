@@ -163,12 +163,16 @@ class Lambda : public Procedure, public Executable {
     return args_.size();
   }
 
-  auto GetScope() const -> LocalScope* {
+  auto GetScope() const -> LocalScope* {  // TODO: this should never return nullptr
     return scope_;
   }
 
   inline auto HasScope() const -> bool {
     return GetScope() != nullptr;
+  }
+
+  auto GetFullyQualifiedName() const -> std::string {
+    return HasSymbol() ? GetSymbol()->GetFullyQualifiedName() : "Lambda";
   }
 
   DECLARE_TYPE(Lambda);

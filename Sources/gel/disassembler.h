@@ -133,10 +133,8 @@ class Disassembler {
 
   void Disassemble(const Region& region, const char* label = nullptr);
 
-  template <class T>
-  inline void Disassemble(T* exec, const std::string& label = {}, std::enable_if_t<gel::has_code<T>::value>* = nullptr) {
-    ASSERT(exec && exec->IsCompiled());
-    return Disassemble(exec->GetCode(), label.c_str());
+  inline void Disassemble(const Region& region, const std::string& label) {
+    return Disassemble(region, label.c_str());
   }
 
   friend auto operator<<(std::ostream& stream, const Disassembler& rhs) -> std::ostream& {
@@ -144,8 +142,19 @@ class Disassembler {
   }
 
  public:
-  static void DisassembleLambda(std::ostream& stream, Lambda* lambda, LocalScope* parent_scope);
-  static void DisassembleScript(std::ostream& stream, Script* script, LocalScope* parent_scope);
+  template <class E>
+  static inline void Disassemble(std::ostream& stream, const E* exec, LocalScope* parent_scope = nullptr,
+                                 std::enable_if_t<gel::has_code<E>::value>* = nullptr) {
+    ASSERT(exec && exec->IsCompiled());
+    const auto scope = LocalScope::New(parent_scope);
+    ASSERT(scope);
+    if (exec->HasScope())
+      LOG_IF(FATAL, !scope->Add(exec->GetScope())) << "failed to add " << exec << " scope to current scope.";
+    const auto label = exec->GetFullyQualifiedName();
+    Disassembler disassembler(scope);
+    disassembler.Disassemble(exec->GetCode(), label);
+    stream << disassembler;
+  }
 };
 }  // namespace gel
 

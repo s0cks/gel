@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <sstream>
+#include <type_traits>
 
 #include "gel/assembler.h"
 #include "gel/common.h"
@@ -16,7 +17,7 @@
 
 namespace gel {
 void FlowGraphCompiler::AssembleFlowGraph(FlowGraph* flow_graph) {
-  TRACE_ZONE_NAMED("AssembleFlowGraph");
+  TRACE_ZONE_NAMED("FlowGraphCompiler::AssembleFlowGraph");
   ASSERT(flow_graph && flow_graph->HasEntry());
   ir::InstructionIterator iter(flow_graph->GetEntry());
   while (iter.HasNext()) {
@@ -26,12 +27,16 @@ void FlowGraphCompiler::AssembleFlowGraph(FlowGraph* flow_graph) {
   }
 }
 
-auto FlowGraphCompiler::BuildFlowGraph(Lambda* lambda) -> FlowGraph* {
-  TRACE_ZONE_NAMED("BuildFlowGraph");
-  ASSERT(lambda);
-  FlowGraphBuilder builder(GetScope());
-  const auto flow_graph = builder.Build(lambda, GetScope());
-  LOG_IF(FATAL, !(flow_graph && flow_graph->HasEntry())) << "failed to build FlowGraph for: " << lambda;
+template <class E>
+auto FlowGraphCompiler::BuildFlowGraph(E* exec, std::enable_if_t<gel::is_executable<E>::value>*) -> FlowGraph* {
+  TRACE_ZONE_NAMED("FlowGraphCompiler::BuildFlowGraph");
+  ASSERT(exec);
+  const auto scope = LocalScope::New(GetScope());
+  if (exec->HasScope())
+    LOG_IF(ERROR, !scope->Add(exec->GetScope())) << "failed to add " << exec << " scope to current scope.";
+  FlowGraphBuilder builder(scope);
+  const auto flow_graph = builder.Build(exec, scope);
+  LOG_IF(FATAL, !(flow_graph && flow_graph->HasEntry())) << "failed to build FlowGraph for: " << exec;
   return flow_graph;
 }
 
@@ -45,87 +50,33 @@ auto FlowGraphCompiler::GetBlockLabel(ir::EntryInstr* blk) -> Label* {
   return GetBlockLabel(blk->GetBlockId());
 }
 
-auto FlowGraphCompiler::BuildFlowGraph(Script* script) -> FlowGraph* {
-  TRACE_ZONE_NAMED("BuildFlowGraph");
-  ASSERT(script);
-  const auto scope = LocalScope::Union(
-      {
-          script->GetScope(),
-      },
-      GetScope());
-  FlowGraphBuilder builder(scope);
-  const auto flow_graph = builder.Build(script, scope);
-  LOG_IF(FATAL, !(flow_graph && flow_graph->HasEntry())) << "failed to build FlowGraph for: " << script;
-  return flow_graph;
-}
+template auto FlowGraphCompiler::CompileTarget(Lambda* lambda, void*) -> bool;
+template auto FlowGraphCompiler::CompileTarget(Script* script, void*) -> bool;
 
-auto FlowGraphCompiler::CompileLambda(Lambda* lambda) -> bool {
-  ASSERT(lambda);
-  if (lambda->IsEmpty()) {
-    DLOG(ERROR) << "cannot compile empty lambda: " << lambda;
+template <class E>
+auto FlowGraphCompiler::CompileTarget(E* exec, std::enable_if_t<gel::is_executable<E>::value>*) -> bool {
+  TRACE_ZONE_NAMED("FlowGraphCompiler::CompileTarget");
+  ASSERT(exec);
+  if (exec->IsEmpty()) {
+    DLOG(ERROR) << "cannot compile: " << exec;
     return false;
   }
-
-  TRACE_MARK;
-  TRACE_ZONE_NAMED("CompileLambda");
   TIMER_START;
-  MacroExpander::ExpandAll(lambda, GetScope());
-  const auto flow_graph = BuildFlowGraph(lambda);
+  MacroExpander::ExpandAll(exec, GetScope());
+  const auto flow_graph = BuildFlowGraph(exec);
   ASSERT(flow_graph && flow_graph->HasEntry());
   AssembleFlowGraph(flow_graph);
   TIMER_STOP(total_ns);
   const auto code = assembler_.Assemble();
-  lambda->SetCodeRegion(code);
+  exec->SetCodeRegion(code);
 #ifdef GEL_DEBUG
-  DVLOG(10) << lambda << " compiled in " << units::time::nanosecond_t(static_cast<double>(total_ns));
-  lambda->SetCompileTime(total_ns);
+  DVLOG(10) << exec << " compiled in " << units::time::nanosecond_t(static_cast<double>(total_ns));
+  exec->SetCompileTime(total_ns);
   if (VLOG_IS_ON(10))
-    Disassembler::DisassembleLambda(std::cout, lambda, GetScope());
+    Disassembler::Disassemble(std::cout, exec, GetScope());
 #endif  // GEL_DEBUG
-  return lambda->IsCompiled();
-}
-
-auto FlowGraphCompiler::CompileScript(Script* script) -> bool {
-  ASSERT(script);
-  if (script->IsEmpty()) {
-    DLOG(ERROR) << "cannot compile empty script: " << script;
-    return false;
-  }
-
+  TRACE_TAG_STR(exec->GetFullyQualifiedName());
   TRACE_MARK;
-  TRACE_ZONE_NAMED("CompileScript");
-  TIMER_START;
-  MacroExpander::ExpandAll(script, GetScope());
-  const auto flow_graph = BuildFlowGraph(script);
-  ASSERT(flow_graph && flow_graph->HasEntry());
-  AssembleFlowGraph(flow_graph);
-  TIMER_STOP(total_ns);
-  const auto code = assembler_.Assemble();
-  script->SetCodeRegion(code);
-#ifdef GEL_DEBUG
-  DVLOG(10) << script << " compiled in " << units::time::nanosecond_t(static_cast<double>(total_ns));
-  script->SetCompileTime(total_ns);
-  if (VLOG_IS_ON(10))
-    Disassembler::DisassembleScript(std::cout, script, GetScope());
-#endif  // GEL_DEBUG
-  return script->IsCompiled();
-}
-
-auto FlowGraphCompiler::Compile(Lambda* lambda, LocalScope* scope) -> bool {
-  ASSERT(lambda);
-  if (lambda->IsCompiled())
-    return lambda;
-  ASSERT(scope);
-  FlowGraphCompiler compiler(scope);
-  return compiler.CompileLambda(lambda);
-}
-
-auto FlowGraphCompiler::Compile(Script* script, LocalScope* scope) -> bool {
-  ASSERT(script);
-  if (script->IsCompiled())
-    return true;
-  ASSERT(scope);
-  FlowGraphCompiler compiler(scope);
-  return compiler.CompileScript(script);
+  return exec->IsCompiled();
 }
 }  // namespace gel

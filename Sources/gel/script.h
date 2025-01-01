@@ -102,6 +102,10 @@ class Script : public Object, public Executable {
     return scope_;
   }
 
+  auto HasScope() const -> bool {
+    return GetScope() != nullptr;
+  }
+
   auto GetBody() const -> const expr::ExpressionList& {
     return body_;
   }
@@ -117,6 +121,10 @@ class Script : public Object, public Executable {
   auto GetExpressionAt(const uint64_t idx) const -> expr::Expression* {
     ASSERT(idx >= 0 && idx <= GetNumberOfExpressions());
     return body_[idx];
+  }
+
+  auto GetFullyQualifiedName() const -> std::string {
+    return HasName() ? GetName()->Get() : "Script";
   }
 
   inline auto HasExpressionAt(const uint64_t idx) const -> bool {
