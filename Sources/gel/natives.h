@@ -27,6 +27,7 @@ _DECLARE_NATIVE_PROCEDURE(get_event_loop, "get-event-loop");
 _DECLARE_NATIVE_PROCEDURE(get_class, "gel/get-class");
 _DECLARE_NATIVE_PROCEDURE(get_classes, "gel/get-classes");
 _DECLARE_NATIVE_PROCEDURE(get_class_id, "gel/get-class-id");
+_DECLARE_NATIVE_PROCEDURE(is_primitive_class, "gel/is-primitive?");
 // ----------------------------------------------------------------------------------------------------
 
 // ----------------------------------------------------------------------------------------------------

@@ -118,7 +118,7 @@ auto Object::Compare(Object* rhs) const -> int {
 
 void Object::Init() {
   InitClass();
-  Class::InitClass();
+  Class::Init();
   Field::InitClass();
   String::InitClass();
   Symbol::InitClass();

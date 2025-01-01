@@ -16,6 +16,7 @@
 #include "gel/native_procedure.h"
 #include "gel/object.h"
 #include "gel/token.h"
+#include "gel/tracing.h"
 
 namespace gel {
 static KeywordTrie::Node* keywords_ = new KeywordTrie::Node();
@@ -432,7 +433,27 @@ auto Parser::ParseSetExpr() -> expr::Expression* {
   return expr::SetLocalExpr::New(local, value);
 }
 
+auto Parser::ParseDefNamespace(LocalVariable** result) -> bool {
+  LOG_IF(FATAL, GetDepth() != 1) << "unexpected: " << NextToken() << ", expected: <expression>";
+  const auto ns = ParseNamespace();
+  ASSERT(ns);
+  LocalVariable* local = LocalVariable::New(scope_, ns->GetSymbol(), ns);
+  ASSERT(local);
+  if (!scope_->Add(local)) {
+    LOG(ERROR) << "failed to add " << (*local) << " to current scope.";
+    (*result) = nullptr;
+    return false;
+  }
+  if (script_)
+    script_->Append(ns);
+  if (module_)
+    module_->Append(ns);
+  (*result) = local;
+  return true;
+}
+
 auto Parser::ParseExpression(const int depth) -> Expression* {
+  TRACE_ZONE_NAMED("Parser::ParseExpression");
   {
     auto next = PeekToken();
     if (next.IsLiteral() || next.kind == Token::kIdentifier || next.kind == Token::kDispatch || next.kind == Token::kFn)
@@ -453,25 +474,15 @@ auto Parser::ParseExpression(const int depth) -> Expression* {
   } else {
     switch (next.kind) {
       case Token::kDefNamespace: {
-        LOG_IF(FATAL, depth != 0) << "unexpected: " << NextToken() << ", expected: <expression>";
-        const auto ns = ParseNamespace();
-        ASSERT(ns);
-        if (scope_)
-          LOG_IF(FATAL, !scope_->Add(ns)) << "failed to add " << ns << " to scope.";
-        if (script_)
-          script_->Append(ns);
-        if (module_)
-          module_->Append(ns);
+        LocalVariable* local = nullptr;
+        LOG_IF(FATAL, !ParseDefNamespace(&local)) << "failed to parse ns";
+        ASSERT(local && local->GetValue()->IsNamespace());
         break;
       }
       case Token::kDefMacro: {
         LocalVariable* local = nullptr;
         LOG_IF(FATAL, !ParseMacroDef(&local)) << "failed to parse macrodef.";
         ASSERT(local && local->HasValue() && local->GetValue()->IsMacro());
-        if (script_)
-          script_->Append(local->GetValue()->AsMacro());
-        if (module_)
-          module_->Append(local->GetValue()->AsMacro());
         break;
       }
       case Token::kDefNative: {
@@ -1229,6 +1240,7 @@ auto Parser::ParseScript() -> Script* {
   ASSERT(scope);
   const auto script = Script::New(scope);
   ASSERT(script);
+  script_ = script;
   while (!PeekEq(Token::kEndOfStream)) {
     const auto& peek = PeekToken();
     if (peek.IsLiteral() || peek.IsIdentifier() || peek.kind == Token::kFn || peek.kind == Token::kDispatch) {
@@ -1249,10 +1261,9 @@ auto Parser::ParseScript() -> Script* {
     } else {
       switch (next.kind) {
         case Token::kDefNamespace: {
-          const auto ns = ParseNamespace();
-          ASSERT(ns);
-          script->Append(ns);
-          LOG_IF(FATAL, !scope->Add(ns->GetScope())) << "failed to add " << ns << " to scope.";
+          LocalVariable* local = nullptr;
+          LOG_IF(FATAL, !ParseDefNamespace(&local)) << "failed to parse ns";
+          ASSERT(local && local->GetValue()->IsNamespace());
           break;
         }
         // Definitions
@@ -1270,7 +1281,6 @@ auto Parser::ParseScript() -> Script* {
           LocalVariable* local = nullptr;
           LOG_IF(FATAL, !ParseMacroDef(&local)) << "failed to parse macrodef in " << script;
           ASSERT(local && local->HasValue() && local->GetValue()->IsMacro());
-          script->Append(local->GetValue()->AsMacro());
           break;
         }
         // Expressions
@@ -1354,7 +1364,15 @@ auto Parser::ParseMacroDef(LocalVariable** result) -> bool {
   ASSERT(macro);
   const auto local = LocalVariable::New(scope, macro->GetSymbol(), macro);
   ASSERT(local);
-  LOG_IF(FATAL, !scope->Add(local)) << "failed to add " << local << " to scope.";
+  if (!scope->Add(local)) {
+    LOG(ERROR) << "failed to add " << (*local) << " to current scope.";
+    (*result) = nullptr;
+    return false;
+  }
+  if (script_)
+    script_->Append(local->GetValue()->AsMacro());
+  if (module_)
+    module_->Append(local->GetValue()->AsMacro());
   (*result) = local;
   return true;
 }
@@ -1380,7 +1398,6 @@ auto Parser::ParseDef() -> expr::Expression* {
 #define DEF_TOKEN(Keyword, Kind) RegisterKeyword(Keyword, Kind)
 
 void Parser::Init() {
-  DEF_TOKEN("ns", Token::kDefNamespace);
   DEF_TOKEN("ns", Token::kDefNamespace);
   DEF_TOKEN("def", Token::kDef);
   DEF_TOKEN("defmacro", Token::kDefMacro);

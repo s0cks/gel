@@ -135,6 +135,8 @@
     "Returns the Class for Symbol [s].")
   (defnative gel/get-class-id [c]
     "Returns the ClassId for Class [c].")
+  (defnative gel/is-primitive? [clsOrSymbol]
+    "Returns true if the supplied Class|Symbol [clsOrSymbol] is a primitive Class.")
   (defnative get-namespace [s]
     "Returns the Namespace for Symbol [s].")
   (defnative ns:get [nsOrSym s]

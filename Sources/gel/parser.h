@@ -188,6 +188,7 @@ class Parser {
   auto ParseLiteralLambda(const Token::Kind kind) -> expr::LiteralExpr*;
 
   // Expressions
+  auto ParseDefNamespace(LocalVariable** local) -> bool;
   auto ParseMap() -> expr::Expression*;
   auto ParseSetExpr() -> expr::Expression*;
   auto ParseCallExpr() -> expr::Expression*;

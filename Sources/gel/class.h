@@ -87,7 +87,7 @@ class Class : public Object {
     return id_;
   }
 
-  inline auto IsInternalClass() const -> bool {
+  inline auto IsPrimitive() const -> bool {
     return GetClassId() >= 0 && GetClassId() <= kTotalNumberOfInternalClassIds;
   }
 
@@ -139,6 +139,7 @@ class Class : public Object {
   DECLARE_TYPE(Class);
 
  private:
+  static void Init();
   static auto New(const ClassId id, String* name) -> Class*;
   static auto New(const ClassId id, const std::string& name) -> Class*;
 

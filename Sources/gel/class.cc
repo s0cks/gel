@@ -5,6 +5,7 @@
 #include "gel/module.h"
 #include "gel/namespace.h"
 #include "gel/native_procedure.h"
+#include "gel/natives.h"
 #include "gel/object.h"
 #include "gel/pointer.h"
 #include "gel/script.h"
@@ -286,4 +287,63 @@ auto Field::New(const ObjectList& args) -> Field* {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
   return nullptr;
 }
+
+void Class::Init() {
+  InitClass();
+  using namespace proc;
+  InitNative<get_classes>();
+  InitNative<get_class>();
+  InitNative<get_class_id>();
+  InitNative<is_primitive_class>();
+}
+
+namespace proc {
+NATIVE_PROCEDURE_F(get_classes) {
+  ASSERT(args.empty());
+  Object* result = Null();
+  const auto visitor = [&result](Class* cls) {
+    result = Cons(cls, result);
+    return true;
+  };
+  LOG_IF(FATAL, !Class::VisitClasses(visitor, true)) << "failed to visit classes.";
+  return Return(result);
+}
+
+NATIVE_PROCEDURE_F(get_class) {
+  NativeArgument<0, Symbol> symbol(args);
+  if (!symbol)
+    return Throw(symbol.GetError());
+  return Return(Class::FindClass(symbol));
+}
+
+NATIVE_PROCEDURE_F(get_class_id) {
+  NativeArgument<0> clsOrSym(args);
+  if (!clsOrSym)
+    return Throw(clsOrSym);
+  if (clsOrSym->IsClass()) {
+    return ReturnLong(clsOrSym->AsClass()->GetClassId());
+  } else if (clsOrSym->IsSymbol()) {
+    const auto cls = Class::FindClass(clsOrSym->AsSymbol());
+    if (!cls)
+      return ReturnNull();
+    return ReturnLong(cls->GetClassId());
+  }
+  return ReturnLong(clsOrSym->GetClass()->GetClassId());
+}
+
+NATIVE_PROCEDURE_F(is_primitive_class) {
+  NativeArgument<0> clsOrSym(args);
+  if (!clsOrSym)
+    return Throw(clsOrSym);
+  if (clsOrSym->IsClass()) {
+    return ReturnBool(clsOrSym->AsClass()->IsPrimitive());
+  } else if (clsOrSym->IsSymbol()) {
+    const auto cls = Class::FindClass(clsOrSym->AsSymbol());
+    if (!cls)
+      return ReturnFalse();
+    return ReturnBool(cls->IsPrimitive());
+  }
+  return ReturnFalse();
+}
+}  // namespace proc
 }  // namespace gel
