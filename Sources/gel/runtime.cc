@@ -126,7 +126,8 @@ void Runtime::Call(Lambda* lambda, const ObjectList& args) {
       ASSERT(local);
       LOG_IF(FATAL, !locals->Add(local)) << "failed to add parameter local";
     }
-    LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, locals)) << "failed to compile: " << lambda;
+    if (!lambda->IsCompiled())
+      LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, locals)) << "failed to compile: " << lambda;
     StackFrameGuard<Lambda> stack_guard(lambda);
     {
       PushStackFrame(lambda, locals);

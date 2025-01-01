@@ -121,7 +121,7 @@ void Object::Init() {
   Class::Init();
   Field::InitClass();
   String::InitClass();
-  Symbol::InitClass();
+  Symbol::Init();
   Namespace::InitClass();
   Module::InitClass();
   Seq::InitClass();

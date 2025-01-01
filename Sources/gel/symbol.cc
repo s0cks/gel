@@ -1,9 +1,15 @@
 #include "gel/symbol.h"
 
 #include "gel/namespace.h"
+#include "gel/thread_local.h"
 #include "gel/to_string_helper.h"
+#include "gel/trie.h"
 
 namespace gel {
+using SymbolNode = trie::Node<Symbol*, Symbol::kAlphabetSize>;
+
+static ThreadLocal<SymbolNode> trie_(new SymbolNode());
+
 void Symbol::SetNamespace(Namespace* ns) {
   ASSERT(ns);
   return SetNamespace(ns->GetSymbol()->GetSymbolName());
@@ -49,6 +55,23 @@ auto Symbol::ToString() const -> std::string {
 
 auto Symbol::New(const std::string& ns, const std::string& type, const std::string& name) -> Symbol* {
   ASSERT(!name.empty());
-  return new Symbol(ns, type, name);
+  std::stringstream ss;  // TODO: remove this
+  if (!ns.empty())
+    ss << ns << "/";
+  if (!type.empty())
+    ss << type << ":";
+  ss << name;
+
+  Symbol* symbol = nullptr;
+  LOG_IF(FATAL, !trie::SearchOrCreate(trie_.Get(), ss.str(), &symbol,
+                                      (const std::function<Symbol*(const std::string&)>)&Symbol::NewInternal))
+      << "failed to internalize Symbol: " << ss.str();
+  ASSERT(symbol);
+  return symbol;
+}
+
+void Symbol::Init() {
+  InitClass();
+  ASSERT(trie_);
 }
 }  // namespace gel

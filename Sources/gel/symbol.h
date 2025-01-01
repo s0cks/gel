@@ -1,13 +1,16 @@
 #ifndef GEL_SYMBOL_H
 #define GEL_SYMBOL_H
 
+#include "gel/common.h"
 #include "gel/object.h"
+#include "gel/trie.h"
 
 namespace gel {
 class Symbol : public Object {
   friend class Parser;
 
  public:
+  static constexpr const auto kAlphabetSize = 127;
   struct Comparator {
     auto operator()(Symbol* lhs, Symbol* rhs) const -> bool {
       ASSERT(lhs && rhs);
@@ -74,7 +77,18 @@ class Symbol : public Object {
   auto Equals(const std::string& rhs) const -> bool;
   DECLARE_TYPE(Symbol);
 
+ private:
+  static inline auto NewInternal(const std::string& rhs) -> Symbol* {
+    const auto slashpos = rhs.find_last_of('/');
+    const auto ns = slashpos != std::string::npos ? rhs.substr(0, slashpos) : "";
+    const auto colonpos = rhs.find_last_of(':');
+    const auto type = colonpos != std::string::npos ? rhs.substr(ns.empty() ? 0 : ns.length() + 1, colonpos) : "";
+    const auto name = rhs.substr((ns.empty() ? 0 : ns.length() + 1) + (type.empty() ? 0 : type.length() + 1));
+    return new Symbol(ns, type, name);
+  }
+
  public:
+  static void Init();
   static auto New(const std::string& ns, const std::string& type, const std::string& name) -> Symbol*;
 
   static inline auto New(const std::string& ns, const std::string& name) -> Symbol* {
