@@ -14,6 +14,7 @@ auto main(int argc, char** argv) -> int {
   ::benchmark::Initialize(&argc, argv);
   ::google::ParseCommandLineFlags(&argc, &argv, true);
   Heap::Init();
+  Parser::Init();
   Runtime::Init();
   ::benchmark::RunSpecifiedBenchmarks();
   ::benchmark::Shutdown();

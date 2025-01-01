@@ -242,7 +242,7 @@ class KeywordTrie {
   static constexpr const auto kAlphabetSize = 127;
   DEFINE_NON_COPYABLE_TYPE(KeywordTrie);
 
- private:
+ public:
   struct Node {
     bool epsilon;
     Token::Kind kind;
