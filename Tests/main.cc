@@ -4,6 +4,8 @@
 #include "gel/gel.h"
 #include "gel/heap.h"
 #include "gel/object.h"
+#include "gel/parser.h"
+#include "gel/runtime.h"
 
 using namespace gel;
 
@@ -12,7 +14,8 @@ auto main(int argc, char** argv) -> int {
   ::testing::InitGoogleTest(&argc, argv);
   ::google::ParseCommandLineFlags(&argc, &argv, false);
   LOG(INFO) << "Running unit tests for scheme v" << gel::GetVersion() << "....";
+  Parser::Init();
   Heap::Init();
-  Object::Init();
+  Runtime::Init();
   return RUN_ALL_TESTS();
 }

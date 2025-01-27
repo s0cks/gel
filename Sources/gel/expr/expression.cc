@@ -1,4 +1,4 @@
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 
 #include <glog/logging.h>
 
@@ -34,7 +34,7 @@ void Expression::Init() {
 
 #define DEFINE_NEW_OPERATOR(Name)                     \
   auto Name::operator new(const size_t sz) -> void* { \
-    const auto heap = Heap::GetHeap();                \
+    const auto heap = GetCurrentThreadHeap();         \
     ASSERT(heap);                                     \
     const auto address = heap->TryAllocate(sz);       \
     ASSERT(address != UNALLOCATED);                   \
@@ -139,7 +139,14 @@ auto BeginExpr::ToString() const -> std::string {
   return helper;
 }
 
-auto CallProcExpr::IsMacroCall(LocalScope* scope) const -> bool {
+auto InvokeMacroExpr::ToString() const -> std::string {
+  ToStringHelper<InvokeMacroExpr> helper;
+  helper.AddField("target", GetTarget());
+  helper.AddField("num_args", GetNumberOfArgs());
+  return helper;
+}
+
+auto InvokeExpr::IsMacroCall(LocalScope* scope) const -> bool {
   ASSERT(scope);
   if (!expr::IsLiteralSymbol(GetTarget()))
     return false;
@@ -152,22 +159,54 @@ auto CallProcExpr::IsMacroCall(LocalScope* scope) const -> bool {
   return local->HasValue() && local->GetValue()->IsMacro();
 }
 
-auto CallProcExpr::ToString() const -> std::string {
-  ToStringHelper<CallProcExpr> helper;
+auto InvokeExpr::ToString() const -> std::string {
+  ToStringHelper<InvokeExpr> helper;
   helper.AddField("target", GetTarget());
   helper.AddField("num_args", GetNumberOfArgs());
+#ifdef GEL_DEBUG
+  helper.AddField("args", GetArgs());
+#endif  // GEL_DEBUG
   return helper;
 }
 
-auto SetLocalExpr::ToString() const -> std::string {
-  ToStringHelper<SetLocalExpr> helper;
+auto InvokeNativeExpr::ToString() const -> std::string {
+  ToStringHelper<InvokeExpr> helper;
+  helper.AddField("target", GetTarget());
+  helper.AddField("num_args", GetNumberOfArgs());
+  helper.AddField("args", GetArgs());
+  return helper;
+}
+
+auto InvokeInstanceExpr::ToString() const -> std::string {
+  ToStringHelper<InvokeExpr> helper;
+  helper.AddField("target", GetTarget());
+  helper.AddField("instance", GetInstance());
+  helper.AddField("num_args", GetNumberOfArgs());
+  helper.AddField("args", GetArgs());
+  return helper;
+}
+
+auto InvokeInstanceExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
+  ASSERT(vis);
+  if (!GetInstance()->Accept(vis))
+    return false;
+  return VisitArgs(vis);
+}
+
+auto InvokeNativeExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
+  ASSERT(vis);
+  return VisitArgs(vis);
+}
+
+auto StoreLocalExpr::ToString() const -> std::string {
+  ToStringHelper<StoreLocalExpr> helper;
   helper.AddField("local", (*GetLocal()));
   helper.AddField("value", GetValue());
   return helper;
 }
 
-auto SetFieldExpr::ToString() const -> std::string {
-  ToStringHelper<SetFieldExpr> helper;
+auto StoreFieldExpr::ToString() const -> std::string {
+  ToStringHelper<StoreFieldExpr> helper;
   helper.AddField("field", GetField());
   helper.AddField("value", GetValue());
   return helper;
@@ -207,23 +246,37 @@ auto ThrowExpr::ToString() const -> std::string {
   return helper;
 }
 
-// Definitions
-
-auto LocalDef::ToString() const -> std::string {
-  ToStringHelper<LocalDef> helper;
-  helper.AddField("local", (*GetLocal()));
-  helper.AddField("value", GetValue());
-  return helper;
-}
-
 auto ImportExpr::ToString() const -> std::string {
   ToStringHelper<ImportExpr> helper;
   helper.AddField("module", GetModule());
   return helper;
 }
 
-auto UnaryExpr::ToString() const -> std::string {
-  ToStringHelper<UnaryExpr> helper;
+auto UnaryOpExpr::IsConstantExpr() const -> bool {
+  return HasValue() && GetValue()->IsConstantExpr();
+}
+
+auto UnaryOpExpr::EvalToConstant(LocalScope* scope) const -> Object* {
+  ASSERT(IsConstantExpr());
+  const auto value = GetValue()->EvalToConstant(scope);
+  switch (GetOp()) {
+    case UnaryOp::kCar:
+      return gel::Car(value);
+    case UnaryOp::kCdr:
+      return gel::Cdr(value);
+    case UnaryOp::kNot:
+      return Bool::Box(gel::Truth(value))->Negate();
+    case UnaryOp::kNull:
+      return Bool::Box(gel::IsNull(value));
+    case UnaryOp::kNonnull:
+      return Bool::Box(!gel::IsNull(value));
+    default:
+      LOG(FATAL) << "invalid UnaryOp: " << GetOp();
+  }
+}
+
+auto UnaryOpExpr::ToString() const -> std::string {
+  ToStringHelper<UnaryOpExpr> helper;
   helper.AddField("op", GetOp());
   helper.AddField("value", GetValue());
   return helper;

@@ -6,10 +6,13 @@
 #include <fstream>
 #include <istream>
 #include <ostream>
+#include <termcolor/termcolor.hpp>
+#include <type_traits>
 #include <utility>
+#include <variant>
 
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/instruction.h"
 #include "gel/lambda.h"
 #include "gel/local.h"
@@ -18,9 +21,88 @@
 #include "gel/runtime.h"
 #include "gel/script.h"
 #include "gel/token.h"
+#include "gel/type_traits.h"
 
 namespace gel {
+class ParseError {
+  DEFINE_DEFAULT_COPYABLE_TYPE(ParseError);
+
+ private:
+  std::string message_;
+  Position start_;
+  Position end_;
+
+ public:
+  ParseError(const std::string& message, const Position& start, const Position& end) :
+    message_(message),
+    start_(start),
+    end_(end) {}
+  ParseError(const std::string& message, const Position& start) :
+    ParseError(message, start, start) {}
+  ~ParseError() = default;
+
+  auto GetMessage() const -> const std::string& {
+    return message_;
+  }
+
+  auto GetStartPos() const -> const Position& {
+    return start_;
+  }
+
+  auto GetEndPos() const -> const Position& {
+    return end_;
+  }
+
+  friend auto operator<<(std::ostream& stream, const ParseError& rhs) -> std::ostream& {
+    const auto distance = (rhs.GetEndPos() - rhs.GetStartPos());
+    if (distance == 0)
+      return stream << "ParseError at " << rhs.GetStartPos() << ": " << rhs.GetMessage();
+    return stream << "ParseError " << rhs.GetStartPos() << "-" << rhs.GetEndPos() << ": " << rhs.GetMessage();
+  }
+};
+
+class ParseResult {
+  DEFINE_DEFAULT_COPYABLE_TYPE(ParseResult);
+
+ private:
+  std::variant<bool, ParseError> data_;
+
+ public:
+  ParseResult(const bool success) :
+    data_(success) {}
+  explicit ParseResult(const ParseError& error) :
+    data_(error) {}
+  ~ParseResult() = default;
+
+  auto data() const -> const std::variant<bool, ParseError>& {
+    return data_;
+  }
+
+  auto IsError() const -> bool {
+    return std::holds_alternative<ParseError>(data());
+  }
+
+  auto GetError() const -> const ParseError& {
+    return std::get<ParseError>(data());
+  }
+
+  auto IsSuccess() const -> bool {
+    return std::holds_alternative<bool>(data()) && std::get<bool>(data());
+  }
+
+  operator bool() const {
+    return IsSuccess();
+  }
+
+  friend auto operator<<(std::ostream& stream, const ParseResult& rhs) -> std::ostream& {
+    if (rhs.IsSuccess())
+      return stream << "Success";
+    return stream << rhs.GetError();
+  }
+};
+
 class Parser {
+  friend class ParseScope;
   using Severity = google::LogSeverity;
   DEFINE_NON_COPYABLE_TYPE(Parser);
 
@@ -30,11 +112,87 @@ class Parser {
   using Chunk = std::array<char, kDefaultChunkSize>;
 
  private:
+  static inline auto NewParseError(const std::string& message, const Position& start, const Position& stop) -> ParseResult {
+    ASSERT(!message.empty());
+    return ParseResult(ParseError(message, start, stop));
+  }
+
+  static inline auto NewParseError(const std::string& message, const Position& start) -> ParseResult {
+    ASSERT(!message.empty());
+    return NewParseError(message, start, start);
+  }
+
+  inline auto ReturnError(const std::string& message, const Position& start) -> ParseResult {
+    ASSERT(!message.empty());
+    return NewParseError(message, start, pos_);
+  }
+
+  inline auto ReturnError(const std::stringstream& ss, const Position& start) -> ParseResult {
+    return ReturnError(ss.str(), start);
+  }
+
+  inline auto UnexpectedError(const Token& rhs) -> ParseResult {
+    std::stringstream ss;
+    ss << "Unexpected " << rhs;
+    return NewParseError(ss.str(), rhs.pos);
+  }
+
+  inline auto GetWindowStartPos() const -> uword {
+    auto curr_pos = rpos_;
+    while (curr_pos >= 0) {
+      const auto current = chunk_[curr_pos];
+      if (current == '\n' || current == '\0' || curr_pos == 0)
+        break;
+      curr_pos -= 1;
+    }
+    return curr_pos;
+  }
+
+  inline auto GetWindowEndPos() const -> uword {
+    auto curr_pos = rpos_;
+    while (curr_pos <= wpos_) {
+      const auto current = chunk_[curr_pos];
+      if (current == '\n' || current == '\0' || curr_pos == wpos_)
+        break;
+      curr_pos += 1;
+    }
+    return std::min(curr_pos, wpos_);
+  }
+
+  inline auto GetWindowBeforePos(const uword pos) const -> std::string {
+    const auto start = GetWindowStartPos();
+    return {&chunk_[start], (pos - start)};
+  }
+
+  inline auto GetWindowBefore() const -> std::string {
+    return GetWindowBeforePos(rpos_ - 1);
+  }
+
+  inline auto GetWindowAfterPos(const uword pos) const -> std::string {
+    const auto end = GetWindowEndPos();
+    return {&chunk_[pos], (end - pos)};
+  }
+
+  inline auto GetWindowAfter() const -> std::string {
+    return GetWindowAfterPos(rpos_);
+  }
+
+  inline auto UnexpectedError(const Token& actual, const Token::Kind expected) -> ParseResult {
+    std::stringstream ss;
+    ss << termcolor::colorize;
+    ss << "unexpected: " << actual.kind << ", expected: " << expected << " at: ";
+    ss << GetWindowBefore();
+    ss << termcolor::underline << actual.text << termcolor::reset;
+    ss << GetWindowAfter();
+    return NewParseError(ss.str(), actual.pos);
+  }
+
+ private:
   std::istream& stream_;
   LocalScope* scope_;
   std::vector<char> chunk_;
   std::string buffer_{};
-  Position pos_{};
+  Position pos_{.row = 1, .column = 1};
   uint64_t wpos_ = 0;
   uint64_t rpos_ = 0;
   uint64_t token_len_ = 0;
@@ -42,41 +200,32 @@ class Parser {
   Token next_{};
   Token peek_{};
   std::stack<Object*> owner_stack_{};
-  Script* script_ = nullptr;
-  Module* module_ = nullptr;
-  Namespace* namespace_ = nullptr;
+
+  inline void PushOwner(Object* rhs) {
+    ASSERT(rhs);
+    return owner_stack_.push(rhs);
+  }
+
+  inline void PopOwner() {
+    ASSERT(HasOwner());
+    return owner_stack_.pop();
+  }
+
+  inline auto HasOwner() const -> bool {
+    return !owner_stack_.empty();
+  }
+
+  inline auto GetOwner() const -> Object* {
+    ASSERT(HasOwner());
+    return owner_stack_.top();
+  }
+
   word dispatched_ = -1;
   bool args_ = false;
 
-  inline void SetModule(Module* m) {
-    ASSERT(m);
-    module_ = m;
-  }
-
-  inline void ClearModule() {
-    module_ = nullptr;
-  }
-
-  inline auto GetModule() const -> Module* {
-    return module_;
-  }
-
-  inline auto HasModule() const -> bool {
-    return GetModule() != nullptr;
-  }
-
-  inline void SetScript(Script* script) {
-    ASSERT(script);
-    script_ = script;
-  }
-
-  inline void SetNamespace(Namespace* ns) {
-    ASSERT(ns);
-    namespace_ = ns;
-  }
-
-  inline void ClearNamespace() {
-    namespace_ = nullptr;
+ protected:
+  auto GetPos() const -> const Position& {
+    return pos_;
   }
 
   inline void SetParsingArgs(const bool rhs = true) {
@@ -87,7 +236,6 @@ class Parser {
     return SetParsingArgs(false);
   }
 
- protected:
   inline auto IsParsingArgs() const -> bool {
     return args_;
   }
@@ -99,14 +247,6 @@ class Parser {
 
   inline auto GetScope() const -> LocalScope* {
     return scope_;
-  }
-
-  inline auto GetNamespace() const -> Namespace* {
-    return namespace_;
-  }
-
-  inline auto InNamespace() const -> bool {
-    return GetNamespace() != nullptr;
   }
 
   inline auto IsDispatching() const -> bool {
@@ -123,17 +263,6 @@ class Parser {
 
   inline void ClearDispatched() {
     return SetDispatched(-1);
-  }
-
-  // Definitions
-  template <const bool IsTopLevel = false>
-  static inline auto IsValidDefinition(const Token& rhs) -> bool {
-    switch (rhs.kind) {
-      case Token::kLocalDef:
-        return true;
-      default:
-        return false;
-    }
   }
 
   template <const google::LogSeverity Severity = google::ERROR>
@@ -158,64 +287,12 @@ class Parser {
     return PeekKind() == rhs;
   }
 
-  inline auto ExpectNext(const Token::Kind rhs) -> const Token& {
+  inline auto ExpectNext(const Token::Kind rhs) -> const Token& {  // TODO: fix this function
     const auto& next = NextToken();
     if (next.kind != rhs)
       Unexpected(rhs, next);
     return next;
   }
-
-  auto IsValidIdentifierChar(const char c, const bool initial = false) const -> bool;
-  auto ParseLambda(const Token::Kind kind) -> Lambda*;
-  auto ParseMacro() -> Macro*;
-  auto ParseNamespace() -> Namespace*;
-
-  auto ParseLoadSymbol() -> LoadLocalInstr*;
-  auto ParseArguments(ArgumentSet& args, const bool bind = false) -> bool;
-  auto ParseExpressionList(expr::ExpressionList& expressions, const bool push_scope = true) -> bool;
-  auto ParseRxOpList(expr::RxOpList& operators) -> bool;
-  auto ParseSymbolList(SymbolList& symbols) -> bool;
-  auto ParseIdentifier(std::string& result) -> bool;
-  auto ParseClauseList(expr::ClauseList& clauses) -> bool;
-
-  auto ParseSymbol() -> Symbol*;
-
-  auto ParseLiteralBool() -> Bool*;
-  auto ParseLiteralNumber() -> Number*;
-
-  auto ParseLiteralValue() -> Object*;
-  auto ParseLiteralString() -> String*;
-  auto ParseLiteralLambda(const Token::Kind kind) -> expr::LiteralExpr*;
-
-  // Expressions
-  auto ParseDefNamespace(LocalVariable** local) -> bool;
-  auto ParseMap() -> expr::Expression*;
-  auto ParseSetExpr() -> expr::Expression*;
-  auto ParseCallExpr() -> expr::Expression*;
-  auto ParseLiteralExpr() -> expr::Expression*;
-  auto ParseBeginExpr() -> expr::BeginExpr*;
-  auto ParseUnaryExpr() -> expr::UnaryExpr*;
-  auto ParseBinaryExpr() -> expr::BinaryOpExpr*;
-  auto ParseLambdaExpr() -> expr::LambdaExpr*;
-  auto ParseThrowExpr() -> expr::ThrowExpr*;
-  auto ParseQuotedExpr() -> expr::Expression*;
-  auto ParseWhenExpr() -> expr::WhenExpr*;
-  auto ParseCaseExpr() -> expr::CaseExpr*;
-  auto ParseWhileExpr() -> expr::WhileExpr*;
-  auto ParseCondExpr() -> expr::CondExpr*;
-  auto ParseLetExpr() -> expr::LetExpr*;
-  auto ParseRxOpExpr() -> expr::RxOpExpr*;
-  auto ParseLetRxExpr() -> expr::LetRxExpr*;
-  auto ParseListExpr() -> expr::Expression*;
-  auto ParseInstanceOfExpr() -> expr::InstanceOfExpr*;
-  auto ParseCastExpr() -> expr::CastExpr*;
-  auto ParseNewExpr() -> expr::NewExpr*;
-  auto ParseImportExpr() -> expr::ImportExpr*;
-  auto ParseDef() -> expr::Expression*;
-  auto ParseDefNative(LocalVariable** local) -> bool;
-  auto ParseDefn(LocalVariable** local) -> bool;
-  auto ParseMacroDef(LocalVariable** local) -> bool;
-  auto ParseDefmacro() -> expr::Expression*;
 
   inline auto PeekChar(const uint64_t offset = 0) const -> char {
     const auto idx = (rpos_ + offset);
@@ -277,9 +354,6 @@ class Parser {
     depth_ -= 1;
   }
 
-  auto PeekToken() -> const Token&;
-  auto NextToken() -> const Token&;
-
   inline auto GetBufferedText() const -> std::string {
     return {(const char*)&buffer_[0], token_len_};
   }
@@ -288,13 +362,6 @@ class Parser {
     const auto remaining_len = std::max((uint64_t)0, wpos_ - rpos_);
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast, cppcoreguidelines-pro-bounds-constant-array-index)
     return {(const char*)&chunk_[rpos_], remaining_len};
-  }
-
-  inline auto NextToken(const Token::Kind kind) -> const Token& {
-    return next_ = Token{
-               .kind = kind,
-               .pos = pos_,
-           };
   }
 
   inline auto NextToken(const Token::Kind kind, const std::string& text) -> const Token& {
@@ -307,6 +374,10 @@ class Parser {
 
   inline auto NextToken(const Token::Kind kind, const char c) -> const Token& {
     return NextToken(kind, std::string(1, c));
+  }
+
+  inline auto NextToken(const Token::Kind kind) -> const Token& {
+    return NextToken(kind, Token::GetChar(kind));
   }
 
   inline void Advance(uint64_t n = 1) {
@@ -332,14 +403,13 @@ class Parser {
 
   inline auto ReadNextChunk(const uint64_t num_bytes = kDefaultChunkSize) -> bool {
     ASSERT(stream_.good());
+    chunk_.resize(num_bytes);
     stream_.read(chunk_.data(), static_cast<long>(num_bytes));
     const auto num_read = stream_.gcount();
     rpos_ = 0;
+    chunk_.resize(num_read);
     return (wpos_ = num_read) >= 1;
   }
-
-  void PopScope();
-  auto PushScope() -> LocalScope*;
 
   template <const Severity S = google::FATAL>
   void Unexpected(const Token& actual, const Token::Kind expected) {
@@ -350,6 +420,67 @@ class Parser {
   void Unexpected(const Token& actual, const Token::KindSet& expected) {
     LOG_AT_LEVEL(S) << "unexpected " << actual << ", expected: " << expected;
   }
+
+  auto PeekToken() -> const Token&;
+  auto NextToken() -> const Token&;
+  void PopScope();
+  auto PushScope() -> LocalScope*;
+  auto IsValidIdentifierChar(const char c, const bool initial = false) const -> bool;
+
+  template <class T>
+  auto TryParseDocstring(T* owner, std::enable_if_t<gel::has_docs<T>::value>* = nullptr) -> ParseResult;
+
+  template <class T>
+  auto TryParseSymbol(T* owner, std::enable_if_t<gel::has_symbol<T>::value>* = nullptr) -> ParseResult;
+
+ protected:
+  auto ParseLambda(const Token::Kind kind, Lambda** result) -> ParseResult;
+  auto ParseMacro(Macro** result) -> ParseResult;
+  auto ParseNamespace(Namespace** result) -> ParseResult;
+
+  auto ParseLoadSymbol() -> LoadLocalInstr*;
+  auto ParseArguments(Array<Argument*>** args, const bool bind = false) -> ParseResult;
+  auto ParseExpressionList(expr::ExpressionList& expressions, const bool push_scope = true) -> ParseResult;
+  auto ParseRxOpList(expr::RxOpList& operators) -> ParseResult;
+  auto ParseClauseList(expr::ClauseList& clauses) -> ParseResult;
+
+  auto ParseLiteralBool(Bool** result) -> ParseResult;
+  auto ParseLiteralNumber(Number** result) -> ParseResult;
+  auto ParseLiteralString(String** result) -> ParseResult;
+  auto ParseLiteralSymbol(Symbol** result) -> ParseResult;
+  auto ParseLiteralValue(Object** result) -> ParseResult;
+
+  auto ParseLiteralLambda(const Token::Kind kind, expr::LiteralExpr** result) -> ParseResult;
+  auto ParseLambdaExpr() -> expr::LambdaExpr*;
+
+  auto ParseDefNamespace(LocalVariable** local) -> ParseResult;
+  auto ParseMap(expr::Expression**) -> ParseResult;
+  auto ParseSetExpr(expr::Expression**) -> ParseResult;
+  auto ParseCallExpr(expr::Expression**) -> ParseResult;
+  auto ParseLiteralExpr(expr::Expression**) -> ParseResult;
+  auto ParseBeginExpr(expr::Expression**) -> ParseResult;
+  auto ParseUnaryOpExpr(expr::Expression**) -> ParseResult;
+  auto ParseBinaryExpr(expr::Expression**) -> ParseResult;
+  auto ParseThrowExpr(expr::Expression**) -> ParseResult;
+  auto ParseQuotedExpr(expr::Expression**) -> ParseResult;
+  auto ParseWhenExpr(expr::Expression**) -> ParseResult;
+  auto ParseCaseExpr(expr::Expression**) -> ParseResult;
+  auto ParseWhileExpr(expr::Expression**) -> ParseResult;
+  auto ParseCondExpr(expr::Expression**) -> ParseResult;
+  auto ParseLetExpr(expr::Expression**) -> ParseResult;
+  auto ParseRxOpExpr(expr::Expression**) -> ParseResult;
+  auto ParseLetRxExpr(expr::Expression**) -> ParseResult;
+  auto ParseListExpr(expr::Expression**) -> ParseResult;
+  auto ParseInstanceOfExpr(expr::Expression**) -> ParseResult;
+  auto ParseCastExpr(expr::Expression**) -> ParseResult;
+  auto ParseNewExpr(expr::Expression**) -> ParseResult;
+  auto ParseImportExpr(expr::Expression**) -> ParseResult;
+  auto ParseDef(expr::Expression**) -> ParseResult;
+  auto ParseDefNative(LocalVariable** local) -> ParseResult;
+  auto ParseDefn(LocalVariable** local) -> ParseResult;
+  auto ParseDefMacro(LocalVariable** local) -> ParseResult;
+
+  auto ParseExpression(Expression** result, const int depth = 0) -> ParseResult;
 
  public:
   explicit Parser(std::istream& stream, LocalScope* scope) :
@@ -364,16 +495,18 @@ class Parser {
   }
   ~Parser() = default;
 
-  auto ParseExpression(const int depth = 0) -> Expression*;
-  auto ParseScript() -> Script*;
-  auto ParseModule(const std::string& name) -> Module*;
+  auto ParseScript(Script** result) -> ParseResult;
+  auto ParseModule(const std::string& name, Module** result) -> ParseResult;
 
  public:
   static inline auto ParseExpr(std::istream& stream, LocalScope* scope = LocalScope::New()) -> expr::Expression* {
     ASSERT(stream.good());
     ASSERT(scope);
     Parser parser(stream, scope);
-    return parser.ParseExpression();
+    expr::Expression* result = nullptr;
+    if (!parser.ParseExpression(&result))
+      return nullptr;
+    return result;
   }
 
   static inline auto ParseExpr(const std::string& expr, LocalScope* scope = LocalScope::New()) -> expr::Expression* {
@@ -388,7 +521,14 @@ class Parser {
     ASSERT(stream.good());
     ASSERT(scope);
     Parser parser(stream, scope);
-    return parser.ParseScript();
+    Script* script = nullptr;
+    const auto result = parser.ParseScript(&script);
+    if (!result) {
+      LOG(ERROR) << "failed to parse script: " << result;
+      return nullptr;
+    }
+    ASSERT(script);
+    return script;
   }
 
   static inline auto ParseModuleFrom(const std::string& filename,
@@ -407,7 +547,15 @@ class Parser {
     const auto dotpos = filename.find_first_of('.', slashpos);
     const auto total_length = (dotpos - slashpos);
     const auto name = filename.substr(slashpos, total_length);
-    return parser.ParseModule(name);
+
+    Module* new_module = nullptr;
+    const auto result = parser.ParseModule(name, &new_module);
+    if (!result) {
+      LOG(ERROR) << "failed to parse Module from " << filename << ": " << result;
+      return nullptr;
+    }
+    ASSERT(new_module);
+    return new_module;
   }
 
  public:

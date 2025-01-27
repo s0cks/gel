@@ -4,8 +4,9 @@
 #include <string>
 
 #include "gel/common.h"
-#include "gel/native_procedure.h"
 #include "gel/object.h"
+#include "gel/platform.h"
+#include "gel/pointer.h"
 
 namespace gel {
 class Pointer;
@@ -15,6 +16,8 @@ class ArrayBase : public Object {
 
   friend class Object;
   friend class ArrayPointerIterator;
+
+  static constexpr const auto kDefaultInitCapacity = 10;
   DEFINE_NON_COPYABLE_TYPE(ArrayBase);
 
  private:
@@ -41,12 +44,16 @@ class ArrayBase : public Object {
       return array_;
     }
 
+    auto current_index() const -> uword {
+      return index_;
+    }
+
     auto HasNext() const -> bool {
-      return index_ < array()->GetCapacity();
+      return index_ < array()->GetLength();
     }
 
     auto Next() -> Pointer** {
-      const auto next = (Pointer**)&array()->data()[index_];  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+      const auto next = array()->GetPtrAddrAt(current_index());
       ASSERT(next);
       index_ += 1;
       return next;
@@ -54,68 +61,60 @@ class ArrayBase : public Object {
   };
 
  private:
-  uword capacity_;
+  uword capacity_ = 0;
+  uword length_ = 0;
+  uword data_ = UNALLOCATED;
 
-  inline auto GetStartingAddress() const -> uword {
-    return (uword)this;  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  auto data_address() const -> uword {
+    ASSERT(data_ != UNALLOCATED);
+    return data_;
+  }
+
+  inline auto data() const -> void* {
+    return (void*)data_address();  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  }
+
+  inline auto GetPtrAddrAt(const uword idx) const -> Pointer** {
+    return (Pointer**)(data_address() + (idx * sizeof(uword)));  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   }
 
  protected:
-  explicit ArrayBase(const uword init_cap) :
-    capacity_(init_cap) {
-    memset(data(), 0, sizeof(uword) * init_cap);
-  }
-
-  auto data() const -> uword* {
-    return (uword*)(GetStartingAddress() + sizeof(ArrayBase));  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-  }
+  explicit ArrayBase(const word init_cap);
 
   void SetCapacity(const uword cap) {
     capacity_ = cap;
   }
 
-  auto VisitPointers(const std::function<bool(Pointer**)>& vis) -> bool;
-
-  auto GetPointerAt(const uword idx) const -> Pointer** {
-    ASSERT(idx >= 0 && idx <= GetCapacity());
-    return (Pointer**)&data()[idx];  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-  }
+  void Resize(const word new_length);
+  auto UpdateForwardingPointers() -> bool;
 
  public:
-  ~ArrayBase() override = default;
-
-  auto GetCapacity() const -> uword {
-    return capacity_;
-  }
+  ~ArrayBase() override;
 
   auto IsArray() const -> bool override {
     return true;
   }
 
   auto GetType() const -> Class* override {
-    return GetClass();
+    ASSERT(kClass);
+    return kClass;
   }
 
-  auto Get(const uword idx) const -> Object* {
-    ASSERT(idx >= 0 && idx <= GetCapacity());
-    const auto ptr = GetPointerAt(idx);
-    return (*ptr) ? (*ptr)->GetObjectPointer() : nullptr;
+  auto GetCapacity() const -> uword {
+    return capacity_;
   }
 
-  void Set(const uword idx, Object* value) {
-    ASSERT(value);
-    ASSERT(idx >= 0 && idx <= GetCapacity());
-    (*GetPointerAt(idx)) = value->raw_ptr();
-  }
-
-  auto operator[](const uword idx) const -> uword& {
-    ASSERT(idx >= 0 && idx <= GetCapacity());
-    return data()[idx];
+  auto GetLength() const -> uword {
+    return length_;
   }
 
   auto HashCode() const -> uword override;
   auto Equals(Object* rhs) const -> bool override;
   auto ToString() const -> std::string override;
+
+  auto VisitPointers(PointerVisitor* vis) -> bool override;
+  auto VisitPointerPointers(PointerPointerVisitor* vis) -> bool override;
+  auto VisitValues(const std::function<bool(Object*)>& vis) -> bool;
 
  public:
   static void Init();
@@ -124,7 +123,7 @@ class ArrayBase : public Object {
     return kClass;
   }
 
-  static auto operator new(const size_t sz, const uword capacity) -> void*;
+  static auto operator new(const size_t sz) -> void*;
   static void operator delete(void* ptr) {
     // do nothing
   }
@@ -134,17 +133,54 @@ template <typename T>
 class Array : public ArrayBase {
   DEFINE_NON_COPYABLE_TYPE(Array<T>);
 
- protected:
-  Array() = default;
-
  public:
-  ~Array() override;
+  Array(const word init_cap = kDefaultInitCapacity) :
+    ArrayBase(init_cap) {}
+  ~Array() override = default;
 
-  auto operator[](const uword idx) const -> T& {
-    return (T&)data()[idx];
+  void Clear() {
+    length_ = 0;
   }
 
-  auto ToString() const -> std::string override;
+  auto IsEmpty() const -> bool {
+    return GetLength() == 0;
+  }
+
+  void Push(T value) {
+    ASSERT(value);
+    Resize(static_cast<word>(GetLength() + 1));
+    Set(GetLength() - 1, value);
+  }
+
+  auto Get(const uword idx) const -> T {
+    ASSERT(idx >= 0 && idx <= GetCapacity());
+    const auto ptr = GetPtrAddrAt(idx);
+    return (T)((*ptr) ? (*ptr)->GetObjectPointer() : nullptr);
+  }
+
+  void Set(const uword idx, T value) {
+    ASSERT(value);
+    ASSERT(idx >= 0 && idx <= GetCapacity());
+    *(GetPtrAddrAt(idx)) = value->raw_ptr();
+  }
+
+  void AddAll(Array<T>* rhs) {
+    for (auto idx = 0; idx < rhs->GetLength(); idx++) {
+      const auto value = rhs->Get(idx);
+      ASSERT(value);
+      Push(value);
+    }
+  }
+
+  auto FindIf(const std::function<bool(T)>& filter) const -> T {
+    for (auto idx = 0; idx < GetLength(); idx++) {
+      const auto val = Get(idx);
+      ASSERT(val);
+      if (filter(val))
+        return val;
+    }
+    return (T)UNALLOCATED;
+  }
 
   friend auto operator<<(std::ostream& stream, const Array<T>& rhs) -> std::ostream& {
     stream << "Array(";
@@ -163,17 +199,11 @@ class Array : public ArrayBase {
   }
 
  public:
-  static auto New(const uword init_cap) -> Array<T>* {
-    return ((Array<T>*)new (init_cap) ArrayBase(init_cap));
+  static inline auto New(const word init_cap = kDefaultInitCapacity) -> Array<T>* {
+    ASSERT(init_cap >= 0);
+    return new Array<T>(init_cap);
   }
 };
-
-namespace proc {
-_DECLARE_NATIVE_PROCEDURE(array_new, "Array/new");
-_DECLARE_NATIVE_PROCEDURE(array_get, "Array/get");
-_DECLARE_NATIVE_PROCEDURE(array_set, "Array/set!");
-_DECLARE_NATIVE_PROCEDURE(array_length, "Array/count");  // TODO: rename
-}  // namespace proc
 }  // namespace gel
 
 #endif  // GEL_ARRAY_H

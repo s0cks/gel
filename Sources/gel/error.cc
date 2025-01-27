@@ -31,7 +31,7 @@ auto Error::VisitPointers(PointerVisitor* vis) -> bool {
   return vis->Visit((*raw_ptr()));
 }
 
-auto Error::VisitPointers(PointerPointerVisitor* vis) -> bool {
+auto Error::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
   ASSERT(vis);
   return vis->Visit(raw_ptr());
 }

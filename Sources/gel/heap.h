@@ -4,7 +4,7 @@
 #include <units.h>
 
 #include "gel/common.h"
-#include "gel/section.h"
+#include "gel/region.h"
 #include "gel/zone.h"
 
 namespace gel {
@@ -65,9 +65,10 @@ class Heap {
   }
 
  public:
-  static auto GetHeap() -> Heap*;
   static void Init();
 };
+
+auto GetCurrentThreadHeap() -> Heap*;
 
 #ifdef GEL_DEBUG
 

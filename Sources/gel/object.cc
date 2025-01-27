@@ -14,13 +14,15 @@
 #include "gel/array.h"
 #include "gel/buffer.h"
 #include "gel/common.h"
+#include "gel/event_emitter.h"
 #include "gel/event_loop.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/heap.h"
 #include "gel/macro.h"
 #include "gel/module.h"
 #include "gel/namespace.h"
 #include "gel/native_procedure.h"
+#include "gel/natives.h"
 #include "gel/platform.h"
 #include "gel/pointer.h"
 #include "gel/procedure.h"
@@ -43,7 +45,7 @@ namespace gel {
 #define DEFINE_NEW_OPERATOR(Name)                                             \
   auto Name::operator new(const size_t sz) -> void* {                         \
     const auto alloc_size = Name::kClass ? kClass->GetAllocationSize() : sz;  \
-    const auto heap = Heap::GetHeap();                                        \
+    const auto heap = GetCurrentThreadHeap();                                 \
     ASSERT(heap);                                                             \
     const auto address = heap->TryAllocate(alloc_size > 0 ? alloc_size : sz); \
     ASSERT(address != UNALLOCATED);                                           \
@@ -63,17 +65,16 @@ FOR_EACH_TYPE(DEFINE_NEW_OPERATOR)  // NOLINT(cppcoreguidelines-pro-type-reinter
     ASSERT(kClass);              \
   }
 DEFINE_INIT_CLASS(Object);
-FOR_EACH_TYPE(DEFINE_INIT_CLASS)
+FOR_EACH_TYPE(DEFINE_INIT_CLASS);
 #undef DEFINE_TYPE_INIT
 
 auto Object::CreateClass() -> Class* {
-  return Class::New(Class::kObjectClassId, kClassName);
-}
-
-auto Object::raw_ptr() const -> Pointer* {
-  const auto address = GetStartingAddress() - sizeof(Pointer);
-  ASSERT(address >= UNALLOCATED);
-  return Pointer::At(address);
+  ASSERT(kClass == nullptr);
+  const auto cls = Class::New(Class::kObjectClassId, kClassName);
+  ASSERT(cls);
+  using namespace proc;
+  cls->AddFunction(object_hashcode::Get()->GetNative());
+  return cls;
 }
 
 auto Object::Add(Object* rhs) const -> Object* {
@@ -116,14 +117,35 @@ auto Object::Compare(Object* rhs) const -> int {
   return 0;
 }
 
+auto Object::VisitClassPointerPointer(PointerPointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  if (!VisitPointerPointer(vis, &kClass))
+    return false;
+  return true;
+}
+
+#define DEFINE_VISIT_CLASS_POINTER_POINTER(Name)                            \
+  auto Name::VisitClassPointerPointer(PointerPointerVisitor* vis) -> bool { \
+    ASSERT(vis);                                                            \
+    if (!VisitPointerPointer(vis, &kClass))                                 \
+      return false;                                                         \
+    return true;                                                            \
+  }
+FOR_EACH_TYPE(DEFINE_VISIT_CLASS_POINTER_POINTER)
+#undef DEFINE_VISIT_CLASS_POINTER_POINTER
+
 void Object::Init() {
-  InitClass();
+  using namespace proc;
+  InitNative<object_hashcode>();
   Class::Init();
+  InitClass();
+  Class::InitClass();
   Field::InitClass();
   String::InitClass();
   Symbol::Init();
+  Argument::InitClass();
   Namespace::InitClass();
-  Module::InitClass();
+  Module::Init();
   Seq::InitClass();
   Map::InitClass();
   Procedure::InitClass();
@@ -142,6 +164,7 @@ void Object::Init() {
   Set::InitClass();
   Expression::Init();
   EventLoop::Init();
+  EventEmitter::Init();
 #ifdef GEL_ENABLE_RX
   Observable::InitClass();
   Observer::InitClass();
@@ -363,8 +386,15 @@ auto Pair::CreateClass() -> Class* {
 
 auto Pair::VisitPointers(PointerVisitor* vis) -> bool {
   ASSERT(vis);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return false;
+  if (HasCar()) {
+    if (!vis->Visit(GetCar()))
+      return false;
+  }
+  if (HasCdr()) {
+    if (!vis->Visit(GetCdr()))
+      return false;
+  }
+  return true;
 }
 
 auto Pair::Equals(Object* rhs) const -> bool {
@@ -386,6 +416,28 @@ auto Pair::Empty() -> Pair* {
   if (kEmptyPair)
     return kEmptyPair;
   return kEmptyPair = Pair::NewEmpty();
+}
+
+auto Pair::VisitEmptyPointerPointer(const std::function<bool(Pointer**)>& vis) -> bool {
+  ASSERT(vis);
+  ASSERT(kEmptyPair);
+  auto empty = kEmptyPair->raw_ptr();
+  if (!vis(&empty))
+    return false;
+  if (!kEmptyPair->raw_ptr()->Equals(empty))
+    kEmptyPair = empty->As<Pair>();
+  return true;
+}
+
+auto Pair::VisitEmptyPointerPointer(PointerPointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  ASSERT(kEmptyPair);
+  auto empty = kEmptyPair->raw_ptr();
+  if (!vis->Visit(&empty))
+    return false;
+  if (!kEmptyPair->raw_ptr()->Equals(empty))
+    kEmptyPair = empty->As<Pair>();
+  return true;
 }
 
 auto Pair::HashCode() const -> uword {

@@ -2,6 +2,7 @@
 #define GEL_COMMON_H
 
 #include <glog/logging.h>
+#include <units.h>
 
 #include <chrono>
 #include <cstdio>
@@ -46,6 +47,13 @@
   Name(const Name& rhs) = default;                  \
   auto operator=(const Name& rhs)->Name& = default; \
   auto operator=(Name&& rhs)->Name& = default;
+
+#define DEFINE_NON_INSTANTIABLE_TYPE(Name) \
+  DEFINE_NON_COPYABLE_TYPE(Name);          \
+                                           \
+ public:                                   \
+  Name() = delete;                         \
+  ~Name() = delete;
 
 #ifdef _MSC_VER
 #define NOT_IMPLEMENTED(Level) LOG(Level) << __FUNCSIG__ << " is not implemented!"
@@ -115,6 +123,36 @@ template <typename T>
 static inline auto IsPow2(T x) -> bool {
   return ((x & (x - 1)) == 0) && (x != 0);
 }
+
+#define DECLARE_VISITOR_WRAPPER(Name, Type)           \
+  class Name##VisitorWrapper : public Name##Visitor { \
+    using Callback = std::function<bool(Type)>;       \
+    DEFINE_NON_COPYABLE_TYPE(Name##VisitorWrapper);   \
+                                                      \
+   private:                                           \
+    Callback delegate_;                               \
+                                                      \
+   public:                                            \
+    Name##VisitorWrapper(const Callback& delegate) :  \
+      Name##Visitor(),                                \
+      delegate_(delegate) {}                          \
+    ~Name##VisitorWrapper() override = default;       \
+    auto Visit(Type ptr) -> bool override {           \
+      return delegate_(ptr);                          \
+    }                                                 \
+  };
+#define DECLARE_VISITOR(Type)                    \
+  class Type##Visitor {                          \
+    DEFINE_NON_COPYABLE_TYPE(Type##Visitor);     \
+                                                 \
+   protected:                                    \
+    Type##Visitor() = default;                   \
+                                                 \
+   public:                                       \
+    virtual ~Type##Visitor() = default;          \
+    virtual auto Visit(Type* value) -> bool = 0; \
+  };                                             \
+  DECLARE_VISITOR_WRAPPER(Type, Type*);
 
 static inline void Split(const std::string& str, const char delimiter, std::vector<std::string>& results) {
   std::string current;
@@ -265,6 +303,46 @@ static inline auto Contains(const std::string& value, const char c) -> bool {
 #define TIMER_STOP(Result)
 
 #endif  // GEL_DEBUG
+
+static inline auto bytes(const uword nbytes) -> units::data::byte_t {
+  return units::data::byte_t(static_cast<double>(nbytes));
+}
+
+static inline auto PrettyPrintBytes(const uword num_bytes) -> std::string {
+  using namespace units::data;
+
+  static constexpr const auto kScale = 1024;
+
+  std::stringstream ss;
+  int scale = 0;
+  uword remaining = num_bytes;
+  while (remaining >= kScale) {
+    remaining /= kScale;
+    scale += 1;
+  }
+  switch (scale) {
+    case 1:
+      ss << kilobyte_t(static_cast<double>(remaining));
+      break;
+    case 2:
+      ss << megabyte_t(static_cast<double>(remaining));
+      break;
+    case 3:
+      ss << gigabyte_t(static_cast<double>(remaining));
+      break;
+    case 4:
+      ss << terabyte_t(static_cast<double>(remaining));
+      break;
+    case 5:  // NOLINT(cppcoreguidelines-avoid-magic-numbers)
+      ss << petabyte_t(static_cast<double>(remaining));
+      break;
+    case 0:
+    default:
+      ss << byte_t(static_cast<double>(remaining));
+      break;
+  }
+  return ss.str();
+}
 }  // namespace gel
 
 #endif  // GEL_COMMON_H

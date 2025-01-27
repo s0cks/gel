@@ -8,35 +8,35 @@
 #include "gel/platform.h"
 
 namespace gel::trie {
-template <typename Value, const uword AlphabetSize>
+template <typename K, typename V, const uword AlphabetSize>
 struct Node {
   std::array<Node*, AlphabetSize> children{};
   bool epsilon = false;
-  Value value{};
+  V value{};
 };
 
-template <typename Value, const uword AlphabetSize>
-static inline auto Insert(Node<Value, AlphabetSize>* root, const std::string& key, const Value& value) -> bool {
+template <typename K, typename V, const uword AlphabetSize>
+static inline auto Insert(Node<K, V, AlphabetSize>* root, const K& key, const V& value) -> Node<K, V, AlphabetSize>* {
   ASSERT(root);
   auto current = root;
   for (const auto& c : key) {
     if (current->children.at(c) == nullptr)
-      current->children.at(c) = new Node<Value, AlphabetSize>();
+      current->children.at(c) = new Node<K, V, AlphabetSize>();
     current = current->children.at(c);
   }
   current->value = value;
   current->epsilon = true;
-  return true;
+  return current;
 }
 
-template <typename Value, const uword AlphabetSize>
-static inline auto SearchOrCreate(Node<Value, AlphabetSize>* root, const std::string& key, Value* result,
-                                  const std::function<Value(const std::string& key)>& supplier) -> bool {
+template <typename K, typename V, const uword AlphabetSize>
+static inline auto SearchOrCreate(Node<K, V, AlphabetSize>* root, const K& key, V* result,
+                                  const std::function<V(const std::string& key)>& supplier) -> bool {
   ASSERT(root);
   auto current = root;
   for (const auto& c : key) {
     if (current->children.at(c) == nullptr)
-      current->children.at(c) = new Node<Value, AlphabetSize>();
+      current->children.at(c) = new Node<K, V, AlphabetSize>();
     current = current->children.at(c);
   }
   ASSERT(current);
@@ -51,19 +51,19 @@ static inline auto SearchOrCreate(Node<Value, AlphabetSize>* root, const std::st
   return true;
 }
 
-template <typename Value, const uword AlphabetSize>
-static inline auto Search(Node<Value, AlphabetSize>* root, const std::string& key, Value* result) -> bool {
+template <typename K, typename V, const uword AlphabetSize>
+static inline auto Search(Node<K, V, AlphabetSize>* root, const K& key, V* result) -> bool {
   ASSERT(root);
   auto current = root;
   for (const auto& c : key) {
     if (current->children.at(c) == nullptr) {
-      (*result) = (Value) nullptr;
+      (*result) = (V) nullptr;
       return false;
     }
     current = current->children.at(c);
   }
   if (!current || !current->epsilon) {
-    (*result) = (Value) nullptr;
+    (*result) = (V) nullptr;
     return false;
   }
   ASSERT(current && current->epsilon);

@@ -8,7 +8,7 @@
 #define GEL_DISASSEMBLER_VM_H
 
 #include "gel/bytecode.h"
-#include "gel/section.h"
+#include "gel/region.h"
 
 namespace gel {
 using namespace vm;

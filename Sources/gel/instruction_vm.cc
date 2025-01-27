@@ -1,5 +1,5 @@
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/flow_graph_compiler.h"
 #include "gel/instruction.h"
 #include "gel/native_procedure.h"

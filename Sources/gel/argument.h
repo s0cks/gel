@@ -3,32 +3,44 @@
 
 #include <set>
 
+#include "gel/common.h"
 #include "gel/object.h"
+#include "gel/pointer.h"
 
 namespace gel {
-
-class Argument {
-  DEFINE_DEFAULT_COPYABLE_TYPE(Argument);
+class Argument : public Object {
+  friend class Object;
+  DEFINE_NON_COPYABLE_TYPE(Argument);
 
  private:
   uint64_t index_;
-  std::string name_;
+  String* name_;
   bool optional_;
   bool vararg_;
 
- public:
-  Argument(const uint64_t index, const std::string& name, const bool optional, const bool vararg) :
+  Argument(const uint64_t index, String* name, const bool optional, const bool vararg) :
     index_(index),
     name_(name),
     optional_(optional),
-    vararg_(vararg) {}
-  ~Argument() = default;
+    vararg_(vararg) {
+    ASSERT(name_);
+    // TODO: assert that optional and vararg are either: false & false, false & true, true & false
+  }
+
+  auto VisitPointerPointers(PointerPointerVisitor* vis) -> bool override;
+
+ public:
+  ~Argument() override = default;
+
+  auto GetType() const -> Class* override {
+    return GetClass();
+  }
 
   auto GetIndex() const -> uint64_t {
     return index_;
   }
 
-  auto GetName() const -> const std::string& {
+  auto GetName() const -> String* {
     return name_;
   }
 
@@ -40,49 +52,44 @@ class Argument {
     return vararg_;
   }
 
-  auto operator==(const Argument& rhs) const -> bool {
-    return GetIndex() == rhs.GetIndex() && GetName() == rhs.GetName();
-  }
+  auto HashCode() const -> uword override;
+  auto Equals(Object* rhs) const -> bool override;
+  auto ToString() const -> std::string override;
 
-  auto operator!=(const Argument& rhs) const -> bool {
-    return GetIndex() != rhs.GetIndex() || GetName() != rhs.GetName();
-  }
-
-  auto operator<(const Argument& rhs) const -> bool {
-    return GetIndex() < rhs.GetIndex();
-  }
-
-  friend auto operator<<(std::ostream& stream, const Argument& rhs) -> std::ostream& {
-    stream << "Argument(";
-    stream << "index=" << rhs.GetIndex() << ", ";
-    stream << "name=" << rhs.GetName() << ", ";
-    stream << "optional=" << rhs.IsOptional() << ", ";
-    stream << "vararg=" << rhs.IsVararg();
-    stream << ")";
-    return stream;
-  }
+ private:
+  static Class* kClass;
+  static auto CreateClass() -> Class*;
+  static void InitClass();
 
  public:
-  struct Comparator {
-    auto operator()(const Argument& lhs, const Argument& rhs) const -> bool {
-      return lhs.GetIndex() < rhs.GetIndex();
-    }
-  };
-};
-
-using ArgumentSet = std::set<Argument, Argument::Comparator>;
-
-static inline auto operator<<(std::ostream& stream, const ArgumentSet& rhs) -> std::ostream& {
-  stream << "[";
-  auto remaining = rhs.size();
-  for (const auto& arg : rhs) {
-    stream << arg.GetName();
-    if (--remaining > 0)
-      stream << ", ";
+  static inline auto GetClass() -> Class* {
+    ASSERT(kClass);
+    return kClass;
   }
-  stream << "]";
-  return stream;
-}
+
+  static auto operator new(const size_t sz) -> void*;
+  static inline void operator delete(void* ptr) {
+    ASSERT(ptr);
+  }
+
+  static inline auto IsNamed(const std::string& name) -> std::function<bool(Argument*)> {
+    return [&name](Argument* arg) {
+      return arg && arg->GetName()->Equals(name);
+    };
+  }
+
+  static inline auto New(const uint64_t idx, String* name, const bool optional, const bool vararg) -> Argument* {
+    ASSERT(idx >= 0);
+    ASSERT(name);
+    return new Argument(idx, name, optional, vararg);
+  }
+
+  static inline auto New(const uint64_t idx, const std::string& name, const bool optional, const bool vararg) -> Argument* {
+    ASSERT(idx >= 0);
+    ASSERT(!name.empty());
+    return new Argument(idx, String::New(name), optional, vararg);
+  }
+};
 }  // namespace gel
 
 #endif  // GEL_ARGUMENT_H

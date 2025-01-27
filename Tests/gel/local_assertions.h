@@ -5,6 +5,7 @@
 
 #include "gel/local.h"
 #include "gel/object.h"
+#include "gel/symbol.h"
 
 namespace gel {
 using namespace ::testing;
@@ -40,10 +41,10 @@ static inline auto IsLocal(LocalVariable* local, const char* expected_name, cons
   ASSERT(local);
   ASSERT(expected_name);
   ASSERT(expected_index >= 0);
-  if (local->GetName() != expected_name)
-    return AssertionFailure() << "expected " << (*local) << " to have name: " << expected_name;
   if (local->GetIndex() != expected_index)
     return AssertionFailure() << "expected " << (*local) << " to have index: " << expected_index;
+  if (!local->GetSymbol()->Equals(expected_name))
+    return AssertionFailure() << "expected " << (*local) << " to have name: " << expected_name;
   return AssertionSuccess();
 }
 }  // namespace gel

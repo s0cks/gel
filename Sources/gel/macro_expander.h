@@ -2,13 +2,14 @@
 #define GEL_MACRO_EXPANDER_H
 
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/local.h"
 #include "gel/local_scope.h"
 
 namespace gel {
 class Macro;
 class MacroExpander {
+  friend class ExpanderScope;
   friend class MacroEffectVisitor;
   DEFINE_NON_COPYABLE_TYPE(MacroExpander);
 
@@ -74,6 +75,16 @@ class MacroEffectVisitor : public ExpressionVisitor {
     return SetResult(expr::ExpressionList{expr});
   }
 
+  inline void SetResult(MacroEffectVisitor& vis) {
+    return SetResult(vis.GetResults());
+  }
+
+  virtual auto Expand(expr::LiteralExpr* expr, expr::ExpressionList& result) -> bool {
+    return false;
+  }
+
+  virtual auto VisitExpressionList(const expr::ExpressionList& source, expr::ExpressionList& dest, bool* changed) -> bool;
+
  public:
   explicit MacroEffectVisitor(MacroExpander* owner) :
     ExpressionVisitor(),
@@ -88,6 +99,10 @@ class MacroEffectVisitor : public ExpressionVisitor {
 
   auto GetResults() const -> const expr::ExpressionList& {
     return result_;
+  }
+
+  inline auto GetNumberOfResults() const -> uword {
+    return result_.size();
   }
 
   auto GetResult() const -> expr::Expression* {
@@ -111,9 +126,39 @@ class MacroEffectVisitor : public ExpressionVisitor {
     return HasResult();
   }
 
+  auto operator()(expr::Expression* expr) -> bool {
+    ASSERT(expr);
+    return expr->Accept(this);
+  }
+
 #define DECLARE_VISIT(Name) auto Visit##Name(expr::Name* expr)->bool override;
   FOR_EACH_EXPRESSION_NODE(DECLARE_VISIT)
 #undef DECLARE_VISIT
+};
+
+class MacroExpansionSiteEffectVisitor : public MacroEffectVisitor {
+  DEFINE_NON_COPYABLE_TYPE(MacroExpansionSiteEffectVisitor);
+
+ private:
+  expr::MacroExpansionSite site_;
+
+ protected:
+  auto Expand(expr::LiteralExpr* expr, expr::ExpressionList& results) -> bool override;
+  auto VisitExpressionList(const expr::ExpressionList& source, expr::ExpressionList& dest, bool* changed) -> bool override;
+
+ public:
+  MacroExpansionSiteEffectVisitor(MacroExpander* owner, const expr::MacroExpansionSite& site) :
+    MacroEffectVisitor(owner),
+    site_(site) {}
+  ~MacroExpansionSiteEffectVisitor() override = default;
+
+  auto GetSite() const -> const expr::MacroExpansionSite& {
+    return site_;
+  }
+
+  auto VisitInvokeExpr(expr::InvokeExpr* expr) -> bool override;
+  auto VisitWhenExpr(expr::WhenExpr* expr) -> bool override;
+  auto VisitLiteralExpr(expr::LiteralExpr* expr) -> bool override;
 };
 }  // namespace gel
 

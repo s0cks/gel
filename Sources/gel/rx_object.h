@@ -145,6 +145,7 @@ class Subject : public Object {
   static void InitClass();
 
  public:
+  static auto VisitClassPointerPointer(PointerPointerVisitor* vis) -> bool;
   static auto New(const ObjectList& args) -> Subject*;
   static auto operator new(const size_t sz) -> void*;
   static inline void operator delete(void* ptr) {

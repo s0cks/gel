@@ -69,6 +69,11 @@ auto Symbol::ToString() const -> std::string {
   return helper;
 }
 
+auto Symbol::New(String* rhs) -> Symbol* {
+  ASSERT(rhs);
+  return Symbol::New(rhs->Get());
+}
+
 auto Symbol::New(const std::string& ns, const std::string& type, const std::string& name) -> Symbol* {
   ASSERT(!name.empty());
   std::stringstream ss;  // TODO: remove this
@@ -78,17 +83,17 @@ auto Symbol::New(const std::string& ns, const std::string& type, const std::stri
     ss << type << ":";
   ss << name;
 
+#ifdef GEL_ENABLE_SYMBOL_POOL
   Symbol* symbol = nullptr;
   if ((GetCurrentThreadSymbolPoolSize() + 1) <= GetSymbolPoolMaxSize()) {
-    const auto created = trie::SearchOrCreate<Symbol*>(trie_.Get(), ss.str(), &symbol, &Symbol::NewInternal);
+    const auto created = trie::SearchOrCreate<std::string, Symbol*>(trie_.Get(), ss.str(), &symbol, &Symbol::NewInternal);
     LOG_IF(FATAL, !created) << "failed to internalize Symbol: " << ss.str();
     IncrementPoolSize();
-  } else {
-    return Symbol::NewInternal(ss.str());
+    ASSERT(symbol);
+    return symbol;
   }
-
-  ASSERT(symbol);
-  return symbol;
+#endif  // GEL_ENABLE_SYMBOL_POOL
+  return Symbol::NewInternal(ss.str());
 }
 
 void Symbol::Init() {

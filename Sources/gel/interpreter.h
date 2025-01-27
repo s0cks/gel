@@ -8,7 +8,7 @@
 #include "gel/instruction.h"
 #include "gel/local_scope.h"
 #include "gel/platform.h"
-#include "gel/section.h"
+#include "gel/region.h"
 #include "gel/stack_frame.h"
 #include "gel/type.h"
 #include "gel/type_traits.h"
@@ -87,6 +87,12 @@ class Interpreter {
   void Cast(Class* cls);
   void CheckInstance(Class* cls);
   void Jump(const Bytecode code, const uword address);
+
+  void Throw(Error* error);
+
+  inline void Throw(const std::stringstream& ss) {
+    return Throw(Error::New(ss.str()));
+  }
 
  protected:
   explicit Interpreter(Runtime* runtime) :

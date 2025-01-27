@@ -18,37 +18,38 @@
 #include "gel/util.h"
 
 namespace gel {
-class StackFrame {
+class StackFrame {  // TODO: extend Object
   friend class Runtime;
+  friend class Collector;
   friend class Interpreter;
+  friend class NativeProcedureEntry;
   DEFINE_DEFAULT_COPYABLE_TYPE(StackFrame);
-
- public:
-  using TargetVariant = std::variant<Script*, Lambda*, NativeProcedure*>;
 
  private:
   uint64_t id_;
-  TargetVariant target_;
+  Object* target_;
   LocalScope* locals_;
   uword return_address_;
   OperationStack stack_{};
 
-  StackFrame(const uword id, const TargetVariant target, LocalScope* locals, const uword return_address = UNALLOCATED) :
+  StackFrame(const uword id, Object* target, LocalScope* locals, const uword return_address = UNALLOCATED) :
     id_(id),
     target_(target),
     locals_(locals),
     return_address_(return_address) {
+    ASSERT(target_);
     ASSERT(locals);
   }
 
   void SetReturnAddress(const uword addr) {
     ASSERT(addr > UNALLOCATED);
+    return_address_ = addr;
   }
 
  public:
   StackFrame() :
     id_(0),
-    target_(),
+    target_(nullptr),
     locals_(nullptr),
     return_address_(UNALLOCATED) {}
   ~StackFrame() = default;
@@ -61,36 +62,28 @@ class StackFrame {
     return &stack_;
   }
 
+  auto GetStackTop() -> Object* {
+    return !stack_.IsEmpty() ? stack_.top() : Null();
+  }
+
   auto GetId() const -> uword {
     return id_;
   }
 
-  auto target() const -> const TargetVariant& {
+  auto GetTarget() const -> Object* {
     return target_;
   }
 
   auto IsScriptFrame() const -> bool {
-    return std::holds_alternative<Script*>(target());
-  }
-
-  auto GetScript() const -> Script* {
-    return std::get<Script*>(target());
+    return GetTarget()->IsScript();
   }
 
   auto IsLambdaFrame() const -> bool {
-    return std::holds_alternative<Lambda*>(target());
-  }
-
-  auto GetLambda() const -> Lambda* {
-    return std::get<Lambda*>(target());
+    return GetTarget()->IsLambda();
   }
 
   auto IsNativeFrame() const -> bool {
-    return std::holds_alternative<NativeProcedure*>(target());
-  }
-
-  auto GetNativeProcedure() const -> NativeProcedure* {
-    return std::get<NativeProcedure*>(target());
+    return GetTarget()->IsNativeProcedure();
   }
 
   auto GetLocals() const -> LocalScope* {
@@ -109,12 +102,16 @@ class StackFrame {
     return GetReturnAddress() != UNALLOCATED;
   }
 
-  inline auto GetReturnInstr() const -> ir::Instruction* {
-    return ((ir::Instruction*)GetReturnAddressPointer());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  inline auto GetReturnObjectPointer() const -> Object* {
+    return (Object*)GetReturnAddress();  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   }
 
-  auto GetTargetName() const -> std::string;
   auto ToString() const -> std::string;
+  auto GetTargetName() const -> std::string;
+
+  auto VisitAllPointerPointers(PointerPointerVisitor* vis) -> bool;
+  auto VisitAllPointerPointers(const std::function<bool(Pointer**)>& vis) -> bool;
+
   friend auto operator<<(std::ostream& stream, const StackFrame& rhs) -> std::ostream& {
     return stream << rhs.ToString();
   }
@@ -128,18 +125,19 @@ class StackFrameIterator {
   DEFINE_NON_COPYABLE_TYPE(StackFrameIterator);
 
  private:
-  std::stack<StackFrame> stack_;
+  std::stack<StackFrame*> stack_;
 
  public:
-  explicit StackFrameIterator(const std::stack<StackFrame>& stack) :
+  explicit StackFrameIterator(const std::stack<StackFrame*>& stack) :
     stack_(stack) {}
+  explicit StackFrameIterator(Runtime* runtime);
   ~StackFrameIterator() = default;
 
   auto HasNext() const -> bool {
     return !stack_.empty();
   }
 
-  auto Next() -> StackFrame {
+  auto Next() -> StackFrame* {
     const auto next = stack_.top();
     stack_.pop();
     return next;
@@ -180,8 +178,8 @@ class StackFrameGuardBase {
   using TargetInfoCallback = std::function<void()>;
 
  private:
-  std::optional<StackFrame> enter_{};
-  std::optional<StackFrame> exit_{};
+  StackFrame* enter_{};
+  StackFrame* exit_{};
   TargetInfoCallback target_info_;
 
  public:

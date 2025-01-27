@@ -6,6 +6,7 @@
 
 #include "gel/common.h"
 #include "gel/object.h"
+#include "gel/pointer.h"
 #include "gel/type_traits.h"
 
 namespace gel {
@@ -18,6 +19,14 @@ class Namespace : public Object {
 
  public:
   static constexpr const auto kPrefixChar = '/';
+
+  static inline auto IsNamed(const std::string& name) -> std::function<bool(Namespace*)> {
+    ASSERT(!name.empty());
+    return [&name](Namespace* ns) {
+      ASSERT(ns);
+      return ns->GetName() == name;
+    };
+  }
 
  private:
   Object* owner_ = nullptr;
@@ -45,6 +54,7 @@ class Namespace : public Object {
   }
 
   auto IsKernelNamespace() const -> bool;
+  auto VisitPointerPointers(PointerPointerVisitor* vis) -> bool override;
 
  public:
   ~Namespace() override = default;
@@ -63,6 +73,10 @@ class Namespace : public Object {
 
   auto GetOwner() const -> Object* {
     return owner_;
+  }
+
+  inline auto HasOwner() const -> bool {
+    return GetOwner() != nullptr;
   }
 
   auto Get(Symbol* rhs) const -> Object*;

@@ -9,10 +9,12 @@
 #include <iostream>
 #include <rpp/sources/fwd.hpp>
 
+#include "gel/array.h"
+#include "gel/collector.h"
 #include "gel/common.h"
 #include "gel/error.h"
-#include "gel/expression.h"
-#include "gel/expression_dot.h"
+#include "gel/expr/expression.h"
+#include "gel/expr/expression_dot.h"
 #include "gel/flags.h"
 #include "gel/flow_graph_builder.h"
 #include "gel/flow_graph_compiler.h"
@@ -20,6 +22,7 @@
 #include "gel/heap.h"
 #include "gel/instruction.h"
 #include "gel/local_scope.h"
+#include "gel/marker.h"
 #include "gel/module_loader.h"
 #include "gel/object.h"
 #include "gel/parser.h"
@@ -78,7 +81,8 @@ struct TimedResult {
 static inline auto Execute(const std::string& expr) -> int {
   if (FLAGS_dump_ast) {
     try {
-      ArgumentSet args{};
+      const auto args = Array<Argument*>::New(0);
+      ASSERT(args);
       expr::ExpressionList body = {
           Parser::ParseExpr(expr),
       };

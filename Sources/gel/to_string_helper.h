@@ -8,8 +8,9 @@
 #include <type_traits>
 
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/instruction.h"
+#include "gel/macro.h"
 #include "gel/object.h"
 
 #if defined(__clang__)
@@ -175,6 +176,7 @@ class ToStringHelperBase {
     fields_.emplace_back(std::move(name), std::move(value));
   }
 
+  void AddBytesField(const std::string& name, const uword num_bytes);
   void AddField(const std::string& name, const gel::Object* value);
   auto ToString() const -> std::string;
 };

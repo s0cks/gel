@@ -5,8 +5,10 @@
 #include <variant>
 
 #include "gel/argument.h"
+#include "gel/array.h"
 #include "gel/common.h"
 #include "gel/error.h"
+#include "gel/pointer.h"
 #include "gel/procedure.h"
 
 namespace gel {
@@ -88,7 +90,7 @@ class NativeArgument {
   }
 };
 
-template <const uword Index, class T>
+template <const uword Index, class T = Object>
 using OptionalNativeArgument = NativeArgument<Index, T, false>;
 
 template <const uword Index, class T>
@@ -194,7 +196,7 @@ class NativeProcedure : public Procedure {
   friend class NativeProcedureEntry;
 
  private:
-  ArgumentSet args_{};
+  Array<Argument*>* args_ = nullptr;
   String* docs_ = nullptr;
   NativeProcedureEntry* entry_ = nullptr;
 
@@ -213,7 +215,8 @@ class NativeProcedure : public Procedure {
   explicit NativeProcedure(Symbol* symbol) :
     Procedure(symbol) {}
 
-  void SetArgs(const ArgumentSet& args) {
+  void SetArgs(Array<Argument*>* args) {
+    ASSERT(args);
     args_ = args;
   }
 
@@ -222,6 +225,9 @@ class NativeProcedure : public Procedure {
     docs_ = rhs;
   }
 
+  auto VisitPointers(PointerVisitor* vis) -> bool override;
+  auto VisitPointerPointers(PointerPointerVisitor* vis) -> bool override;
+
  public:
   ~NativeProcedure() override = default;
 
@@ -229,7 +235,7 @@ class NativeProcedure : public Procedure {
     return true;
   }
 
-  auto GetArgs() const -> const ArgumentSet& {
+  auto GetArgs() const -> Array<Argument*>* {
     return args_;
   }
 
@@ -241,8 +247,13 @@ class NativeProcedure : public Procedure {
     return GetEntry() != nullptr;
   }
 
+  auto HasArgs() const -> bool {
+    return GetArgs() && GetNumberOfArgs() > 0;
+  }
+
   inline auto GetNumberOfArgs() const -> uword {
-    return args_.size();
+    ASSERT(args_);
+    return args_->GetLength();
   }
 
   auto GetDocs() const -> String* {
@@ -251,6 +262,11 @@ class NativeProcedure : public Procedure {
 
   inline auto HasDocs() const -> bool {
     return GetDocs() != nullptr;
+  }
+
+  auto GetArgAt(const uint64_t idx) const -> Argument* {
+    ASSERT(idx >= 0 && idx <= GetNumberOfArgs());
+    return args_->Get(idx);
   }
 
   DECLARE_TYPE(NativeProcedure);

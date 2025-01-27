@@ -1,4 +1,4 @@
-#include "gel/expression_dot.h"
+#include "gel/expr/expression_dot.h"
 #ifdef GEL_ENABLE_GV
 
 #include <glog/logging.h>
@@ -6,7 +6,7 @@
 #include <algorithm>
 
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 
 namespace gel {
 ExpressionToDot::ExpressionToDot(const char* graph_name) :
@@ -208,7 +208,7 @@ auto ExpressionToDot::VisitEvalExpr(EvalExpr* expr) -> bool {
   return true;
 }
 
-auto ExpressionToDot::VisitCallProcExpr(CallProcExpr* expr) -> bool {
+auto ExpressionToDot::VisitInvokeExpr(InvokeExpr* expr) -> bool {
   ASSERT(expr);
   // create new node
   const auto node = NewNode();
@@ -250,7 +250,7 @@ auto ExpressionToDot::VisitLiteralExpr(LiteralExpr* expr) -> bool {
   return true;
 }
 
-auto ExpressionToDot::VisitUnaryExpr(UnaryExpr* expr) -> bool {
+auto ExpressionToDot::VisitUnaryOpExpr(UnaryOpExpr* expr) -> bool {
   ASSERT(expr);
   const auto node = NewNode();
   ASSERT(node);

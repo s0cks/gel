@@ -10,6 +10,11 @@ if(ENABLE_RX)
   add_compile_definitions(GEL_ENABLE_RX)
 endif()
 
+option(ENABLE_SYMBOL_POOL "Enable the symbol pool" OFF)
+if(ENABLE_SYMBOL_POOL)
+  add_compile_definitions(GEL_ENABLE_SYMBOL_POOL)
+endif()
+
 option(ENABLE_GRAPHVIZ "Compile w/ Graphviz" OFF)
 if(ENABLE_GRAPHVIZ)
   find_package(Graphviz REQUIRED)

@@ -3,7 +3,7 @@
 
 #include "gel/argument.h"
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/object.h"
 
 namespace gel {
@@ -18,12 +18,12 @@ class Macro : public Object {
   Symbol* symbol_ = nullptr;
   String* docstring_ = nullptr;
   LocalScope* scope_ = nullptr;
-  ArgumentSet args_{};
-  expr::ExpressionList body_{};
+  Array<Argument*>* args_ = nullptr;
+  expr::ExpressionList body_{};  // TODO: convert to array type
 
  protected:
   Macro() = default;
-  Macro(Symbol* symbol, const ArgumentSet& args, const expr::ExpressionList& body) :  // NOLINT(modernize-pass-by-value)
+  Macro(Symbol* symbol, Array<Argument*>* args, const expr::ExpressionList& body) :  // NOLINT(modernize-pass-by-value)
     symbol_(symbol),
     args_(args),
     body_(body) {
@@ -45,7 +45,8 @@ class Macro : public Object {
     scope_ = rhs;
   }
 
-  void SetArgs(const ArgumentSet& rhs) {
+  void SetArgs(Array<Argument*>* rhs) {
+    ASSERT(rhs);
     args_ = rhs;
   }
 
@@ -53,10 +54,12 @@ class Macro : public Object {
     body_ = rhs;
   }
 
-  void SetDocstring(String* rhs) {
+  void SetDocs(String* rhs) {
     ASSERT(rhs);
     docstring_ = rhs;
   }
+
+  auto VisitPointers(PointerVisitor* vis) -> bool override;
 
  public:
   ~Macro() override = default;
@@ -81,16 +84,22 @@ class Macro : public Object {
     return GetDocstring() != nullptr;
   }
 
-  auto GetArgs() const -> const ArgumentSet& {
+  auto GetArgs() const -> Array<Argument*>* {
     return args_;
   }
 
   auto GetNumberOfArgs() const -> uint64_t {
-    return args_.size();
+    ASSERT(args_);
+    return args_->GetLength();
   }
 
   inline auto HasArgs() const -> bool {
-    return !args_.empty();
+    return GetArgs() && GetNumberOfArgs() > 0;
+  }
+
+  auto GetArgAt(const uint64_t idx) const -> Argument* {
+    ASSERT(idx >= 0 && idx <= GetNumberOfArgs());
+    return args_->Get(idx);
   }
 
   auto GetBody() const -> const expr::ExpressionList& {
@@ -101,6 +110,20 @@ class Macro : public Object {
     return body_.empty();
   }
 
+  inline auto GetArg(const std::string& name) const -> Argument* {
+    return args_ ? args_->FindIf(Argument::IsNamed(name)) : nullptr;
+  }
+
+  inline auto GetArg(String* name) const -> Argument* {
+    ASSERT(name);
+    return GetArg(name->Get());
+  }
+
+  inline auto GetArg(Symbol* name) const -> Argument* {
+    ASSERT(name);
+    return GetArg(name->GetFullyQualifiedName());
+  }
+
   DECLARE_TYPE(Macro);
 
  private:
@@ -109,7 +132,7 @@ class Macro : public Object {
   }
 
  public:
-  static inline auto New(Symbol* symbol, const ArgumentSet& args = {}, const expr::ExpressionList& body = {}) -> Macro* {
+  static inline auto New(Symbol* symbol, Array<Argument*>* args = nullptr, const expr::ExpressionList& body = {}) -> Macro* {
     return new Macro(symbol, args, body);
   }
 };

@@ -75,8 +75,8 @@ class Disassembler {
 
   inline auto Comment(const LocalVariable& rhs) -> std::ostream& {
     if (rhs.HasValue())
-      return PrintValue(Comment(rhs.GetName()) << " idx=" << rhs.GetIndex(), rhs.GetValue());
-    return Comment(rhs.GetName()) << " idx=" << rhs.GetIndex();
+      return PrintValue(Comment(rhs.GetSymbol()) << " idx=" << rhs.GetIndex(), rhs.GetValue());
+    return Comment(rhs.GetSymbol()) << " idx=" << rhs.GetIndex();
   }
 
   inline auto Comment(const uint32_t rhs) -> std::ostream& {
@@ -149,7 +149,7 @@ class Disassembler {
     const auto scope = LocalScope::New(parent_scope);
     ASSERT(scope);
     if (exec->HasScope())
-      LOG_IF(FATAL, !scope->Add(exec->GetScope())) << "failed to add " << exec << " scope to current scope.";
+      scope->AddAll(exec->GetScope());
     const auto label = exec->GetFullyQualifiedName();
     Disassembler disassembler(scope);
     disassembler.Disassemble(exec->GetCode(), label);

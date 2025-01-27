@@ -5,7 +5,7 @@
 #include <fstream>
 
 #include "gel/common.h"
-#include "gel/expression_dot.h"
+#include "gel/expr/expression_dot.h"
 #include "gel/flags.h"
 #include "gel/flow_graph_builder.h"
 #include "gel/flow_graph_compiler.h"
@@ -68,8 +68,27 @@ auto Script::ToString() const -> std::string {
 
 auto Script::VisitPointers(PointerVisitor* vis) -> bool {
   ASSERT(vis);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return false;
+  if (HasName()) {
+    if (!vis->Visit(GetName()))
+      return false;
+  }
+  for (const auto& macro : macros_) {
+    ASSERT(macro);
+    if (!vis->Visit(macro))
+      return false;
+  }
+  for (const auto& lambda : lambdas_) {
+    ASSERT(lambda);
+    if (!vis->Visit(lambda))
+      return false;
+  }
+  for (const auto& ns : namespaces_) {
+    ASSERT(ns);
+    if (!vis->Visit(ns))
+      return false;
+  }
+  // TODO: visit body
+  return true;
 }
 
 auto Script::FromFile(const std::string& filename, const bool compile) -> Script* {

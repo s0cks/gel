@@ -1,5 +1,5 @@
-#ifndef GEL_SECTION_H
-#define GEL_SECTION_H
+#ifndef GEL_REGION_H
+#define GEL_REGION_H
 
 #include "gel/common.h"
 #include "gel/platform.h"
@@ -67,6 +67,10 @@ class Region {
     return address >= GetStartingAddress() && address <= GetEndingAddress();
   }
 
+  auto Contains(const Region& rhs) const -> bool {
+    return Contains(rhs.GetStartingAddress()) && Contains(rhs.GetEndingAddress());
+  }
+
   void CopyFrom(const uword start, const uword size) {
     ASSERT(start != UNALLOCATED);
     ASSERT(GetSize() >= size);
@@ -95,6 +99,7 @@ class Region {
 };
 
 class AllocationRegion : public Region {
+  friend class Collector;
   DEFINE_DEFAULT_COPYABLE_TYPE(AllocationRegion);
 
  protected:
@@ -165,4 +170,4 @@ class AllocationRegion : public Region {
 };
 }  // namespace gel
 
-#endif  // GEL_SECTION_H
+#endif  // GEL_REGION_H

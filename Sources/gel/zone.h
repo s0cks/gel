@@ -6,7 +6,7 @@
 #include "gel/free_list.h"
 #include "gel/memory_region.h"
 #include "gel/pointer.h"
-#include "gel/section.h"
+#include "gel/region.h"
 #include "gel/semispace.h"
 
 namespace gel {
@@ -111,6 +111,10 @@ class NewZone : public Zone {
     return tospace_;
   }
 
+  auto GetTospace() const -> Semispace {
+    return {tospace_, semi_size_};
+  }
+
   auto GetTospacePointer() const -> void* {
     return (void*)tospace();  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   }
@@ -120,6 +124,12 @@ class NewZone : public Zone {
   }
 
   auto VisitAllPointers(PointerVisitor* vis) const -> bool;
+  auto VisitAllPointers(const std::function<bool(Pointer*)>& vis, const Tag filter = Tag::Invalid()) const -> bool;
+
+  inline auto VisitAllMarkedPointers(const std::function<bool(Pointer*)>& vis) const -> bool {
+    return VisitAllPointers(vis, Tag::Marked());
+  }
+
   auto VisitAllMarkedPointers(PointerVisitor* vis) const -> bool;
   auto TryAllocate(const uword size) -> uword override;
 
@@ -165,10 +175,11 @@ class OldZone : public Zone {
   explicit OldZone(const uword size = GetOldZoneSize());
   ~OldZone() override = default;
 
-  auto free_list() const -> const FreeList& {
+  auto GetFreeList() const -> const FreeList& {
     return free_list_;
   }
 
+  auto TryAllocatePointer(const uword size) -> Pointer*;
   auto TryAllocate(const uword size) -> uword override;
 
   friend auto operator<<(std::ostream& stream, const OldZone& rhs) -> std::ostream& {

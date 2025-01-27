@@ -5,7 +5,10 @@
 #include <string>
 #include <utility>
 
+#include "gel/allocator.h"
+#include "gel/common.h"
 #include "gel/object.h"
+#include "gel/pointer.h"
 
 namespace gel {
 class LocalVariable;
@@ -21,23 +24,29 @@ class LocalVariableVisitor {
   virtual auto VisitLocal(LocalVariable* local) -> bool = 0;
 };
 
+class String;
 class LocalScope;
-class LocalVariable {
+class LocalVariable : public HeapObject {
   friend class LocalScope;
-  DEFINE_NON_COPYABLE_TYPE(LocalVariable);
+  using Predicate = std::function<bool(LocalVariable*)>;
+
+ public:
+  static auto HasSymbol(Symbol* rhs) -> Predicate;
+  static auto HasSymbol(const std::string& symbol) -> Predicate;
 
  private:
   LocalScope* owner_;
   uint64_t index_;
-  std::string name_;
-  Pointer* value_ = nullptr;
+  Symbol* symbol_;
+  Object* value_;
 
-  LocalVariable(LocalScope* owner, uint64_t index, std::string name, Object* value = nullptr) :
+  LocalVariable(LocalScope* owner, uint64_t index, Symbol* symbol, Object* value) :
     owner_(owner),
     index_(index),
-    name_(std::move(name)) {
-    if (value)
-      SetValue(value);
+    symbol_(symbol),
+    value_(value) {
+    ASSERT(index_ >= 0);
+    ASSERT(symbol_);
   }
 
   void SetOwner(LocalScope* scope) {
@@ -49,24 +58,16 @@ class LocalVariable {
     index_ = index;
   }
 
-  void SetName(const std::string& name) {
-    ASSERT(!name.empty());
-    name_ = name;
+  void SetSymbol(Symbol* rhs) {
+    ASSERT(rhs);
+    symbol_ = rhs;
   }
 
-  auto Accept(PointerVisitor* vis) -> bool;
-  auto Accept(PointerPointerVisitor* vis) -> bool;
-
-  auto Accept(const std::function<bool(Pointer**)>& vis) -> bool {
-    return vis(&value_);
-  }
+  auto VisitPointers(PointerVisitor* vis) -> bool override;
+  auto VisitPointerPointers(PointerPointerVisitor* vis) -> bool override;
 
  public:
-  ~LocalVariable() = default;
-
-  auto ptr() const -> Pointer* {
-    return value_;
-  }
+  ~LocalVariable() override = default;
 
   auto GetOwner() const -> LocalScope* {
     return owner_;
@@ -80,8 +81,8 @@ class LocalVariable {
     return index_;
   }
 
-  auto GetName() const -> const std::string& {
-    return name_;
+  auto GetSymbol() const -> Symbol* {
+    return symbol_;
   }
 
   auto GetValue() const -> Object*;
@@ -91,38 +92,27 @@ class LocalVariable {
     return GetValue() != nullptr;
   }
 
-#define DEFINE_TYPE_CHECK(Name)                  \
-  inline auto Is##Name() const->bool {           \
-    return HasValue() && GetValue()->Is##Name(); \
-  }
-  FOR_EACH_TYPE(DEFINE_TYPE_CHECK)
-#undef DEFINE_TYPE_CHECK
-
   auto IsGlobal() const -> bool;
+  auto ToString() const -> std::string override;
 
   friend auto operator<<(std::ostream& stream, const LocalVariable& rhs) -> std::ostream& {
-    stream << "LocalVariable(";
-    if (rhs.HasOwner())
-      stream << "owner=" << rhs.GetOwner() << ", ";
-    stream << "index=" << rhs.GetIndex() << ", ";
-    stream << "name=" << rhs.GetName();
-    if (rhs.HasValue())
-      stream << ", value=" << rhs.GetValue()->ToString();
-    stream << ")";
-    return stream;
+    return stream << rhs.ToString();
   }
+
+  DECLARE_HEAP_ALLOC_TYPE(LocalVariable);
 
  public:
-  static inline auto New(LocalScope* owner, const uint64_t index, const std::string& name, Object* value = nullptr)
-      -> LocalVariable* {
+  static inline auto New(LocalScope* owner, const uint64_t index, Symbol* symbol, Object* value = nullptr) -> LocalVariable* {
     ASSERT(owner);
     ASSERT(index >= 0);
-    ASSERT(!name.empty());
-    return new LocalVariable(owner, index, name, value);
+    ASSERT(symbol);
+    return new LocalVariable(owner, index, symbol, value);
   }
 
+  static auto New(LocalScope* owner, String* name, Object* value = nullptr) -> LocalVariable*;
+  static auto New(LocalScope* owner, Symbol* symbol, Object* value = nullptr) -> LocalVariable*;
+
   static auto New(LocalScope* owner, const std::string& name, Object* value = nullptr) -> LocalVariable*;
-  static auto New(LocalScope* owner, const Symbol* symbol, Object* value = nullptr) -> LocalVariable*;
 };
 }  // namespace gel
 

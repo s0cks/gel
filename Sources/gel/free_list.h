@@ -2,92 +2,48 @@
 #define GEL_FREE_LIST_H
 
 #include "gel/common.h"
+#include "gel/free_pointer.h"
+#include "gel/memory_region.h"
 #include "gel/platform.h"
-#include "gel/pointer.h"
-#include "gel/section.h"
 
 namespace gel {
-class FreePointer {
-  friend class FreeList;
-  DEFINE_NON_COPYABLE_TYPE(FreePointer);
-
- private:
-  Tag tag_;
-  uword next_ = UNALLOCATED;
-
- protected:
-  FreePointer(const Tag& tag) :
-    tag_(tag) {}
-
-  void SetNext(FreePointer* ptr) {
-    next_ = ptr ? ptr->GetStartingAddress() : UNALLOCATED;
-  }
-
- public:
-  ~FreePointer() = default;
-
-  auto tag() -> Tag& {
-    return tag_;
-  }
-
-  auto tag() const -> const Tag& {
-    return tag_;
-  }
-
-  auto GetStartingAddress() const -> uword {
-    return (uword)this;  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-  }
-
-  auto GetStartingAddressPointer() const -> void* {
-    return (void*)GetStartingAddress();  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-  }
-
-  auto GetEndingAddress() const -> uword {
-    return GetStartingAddress() + GetTotalSize();
-  }
-
-  auto GetEndingAddressPointer() const -> void* {
-    return (void*)GetEndingAddress();  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-  }
-
-  inline auto GetPointerSize() const -> uword {
-    return tag().GetSize();
-  }
-
-  inline auto GetTotalSize() const -> uword {
-    return sizeof(Pointer) + GetPointerSize();
-  }
-
-  auto GetNext() const -> FreePointer* {
-    return (FreePointer*)next_;  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-  }
-
-  inline auto HasNext() const -> bool {
-    return GetNext() != nullptr;
-  }
-
-  auto Equals(FreePointer* rhs) const -> bool;
-  auto ToString() const -> std::string;
-  friend auto operator<<(std::ostream& stream, const FreePointer& rhs) -> std::ostream&;
-
- private:
-  static inline auto New(const uword address, const Tag& tag) -> FreePointer* {
-    ASSERT(address > UNALLOCATED);
-    return new ((void*)address) FreePointer(tag);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-  }
-
- public:
-  static auto At(const uword address) -> FreePointer* {
-    return (FreePointer*)address;  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-  }
-};
-
 class FreeList : public Region {
   friend class OldZone;
+  friend class FreeListTest;
   DEFINE_DEFAULT_COPYABLE_TYPE(FreeList);
+
+ public:
+  class Iterator {
+    DEFINE_NON_COPYABLE_TYPE(Iterator);
+
+   private:
+    FreePointer* current_;
+
+   public:
+    explicit Iterator(FreePointer* head) :
+      current_(head) {}
+    explicit Iterator(const FreeList* free_list) :
+      Iterator(free_list->head()) {}
+    ~Iterator() = default;
+
+    auto HasNext() const -> bool {
+      return current_ != nullptr;
+    }
+
+    auto Next() -> FreePointer* {
+      const auto next = current_;
+      current_ = next->GetNext();
+      return next;
+    }
+  };
 
  private:
   FreePointer* head_;
+
+  inline void SetHead(FreePointer* rhs) {
+    ASSERT(rhs);
+    head_ = rhs;
+  }
 
  protected:
   FreeList() :
@@ -98,35 +54,55 @@ class FreeList : public Region {
     head_(FreePointer::New(start_address, Tag::Old(size))) {
     ASSERT(head_);
   }
+  FreeList(const MemoryRegion& region) :
+    Region(region),
+    head_(FreePointer::New(region.GetStartingAddress(), Tag::Old(region.GetSize()))) {
+    ASSERT(head_);
+  }
+
+  inline auto GetHead() const -> FreePointer* {
+    ASSERT(head_);
+    return head_;
+  }
+
+  void Remove(FreePointer* free_ptr);
+  auto FindBestFit(const uword size) -> FreePointer*;
+  auto Split(FreePointer* free_ptr, const uword size) -> FreePointer*;
 
  public:
   ~FreeList() override = default;
 
+  void Clear() override {
+    Region::Clear();
+    head_ = FreePointer::New(GetStartingAddress(), Tag::Old(GetSize()));
+    ASSERT(head_);
+  }
+
+  auto head() const -> FreePointer* {
+    return head_;
+  }
+
+  inline auto HasHead() const -> bool {
+    return head() != nullptr;
+  }
+
+  auto IsEmpty() const -> bool {
+    return head()->GetStartingAddress() == GetStartingAddress() && head()->GetPointerSize() == GetSize() && !head()->HasNext();
+  }
+
+  void Remove(const Region& region);
+  auto Insert(FreePointer* free_ptr) -> bool;
   auto TryAllocate(const uword size) -> uword;
-  auto VisitFreePointers(const std::function<bool(FreePointer*)>& vis) const -> bool;
+  auto VisitFreePointers(FreePointerVisitor* vis) const -> bool;
+  auto ToString() const -> std::string;
 
   friend auto operator<<(std::ostream& stream, const FreeList& rhs) -> std::ostream& {
-    stream << "FreeList(";
-    stream << "starting_address=" << rhs.GetStartingAddressPointer() << ", ";
-    stream << "total_size=" << units::data::byte_t(static_cast<double>(rhs.GetSize())) << ", ";
-    if (rhs.head_)
-      stream << "head=" << rhs.head_->ToString();
-    stream << ")";
-    return stream;
+    return stream << rhs.ToString();
   }
 };
 
 #ifdef GEL_DEBUG
-
-static inline auto PrintFreePointers(const FreeList& free_list) -> bool {
-  static const auto kPrintFreePointer = [](FreePointer* ptr) {
-    ASSERT(ptr);
-    LOG(INFO) << " - " << ptr->ToString();
-    return true;
-  };
-  return free_list.VisitFreePointers(kPrintFreePointer);
-}
-
+void PrintFreeList(const FreeList& free_list);
 #endif  // GEL_DEBUG
 }  // namespace gel
 

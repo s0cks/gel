@@ -2,7 +2,7 @@
 #define GEL_BYTECODE_H
 
 #include "gel/common.h"
-#include "gel/expression.h"  //TODO: remove include
+#include "gel/expr/expression.h"  //TODO: remove include
 #include "gel/platform.h"
 
 #define FOR_EACH_BYTECODE(V) \

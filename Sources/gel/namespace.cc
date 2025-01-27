@@ -4,6 +4,7 @@
 
 #include "gel/common.h"
 #include "gel/local.h"
+#include "gel/pointer.h"
 #include "gel/to_string_helper.h"
 
 namespace gel {
@@ -11,6 +12,19 @@ NamespaceList Namespace::namespaces_{};
 
 auto Namespace::IsKernelNamespace() const -> bool {
   return GetName() == "_kernel";
+}
+
+auto Namespace::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  if (!VisitPointerPointer(vis, &owner_))
+    return false;
+  if (!VisitPointerPointer(vis, &symbol_))
+    return false;
+  if (!VisitPointerPointer(vis, &scope_))
+    return false;
+  if (!VisitPointerPointer(vis, &docs_))
+    return false;
+  return true;
 }
 
 auto Namespace::HashCode() const -> uword {

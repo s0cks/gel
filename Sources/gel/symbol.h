@@ -14,7 +14,7 @@ class Symbol : public Object {
 
  public:
   static constexpr const auto kAlphabetSize = 127;
-  using PoolNode = trie::Node<Symbol*, kAlphabetSize>;
+  using PoolNode = trie::Node<std::string, Symbol*, kAlphabetSize>;
   struct Comparator {
     auto operator()(Symbol* lhs, Symbol* rhs) const -> bool {
       ASSERT(lhs && rhs);
@@ -93,6 +93,7 @@ class Symbol : public Object {
 
  public:
   static void Init();
+  static auto New(String* rhs) -> Symbol*;
   static auto New(const std::string& ns, const std::string& type, const std::string& name) -> Symbol*;
 
   static inline auto New(const std::string& ns, const std::string& name) -> Symbol* {

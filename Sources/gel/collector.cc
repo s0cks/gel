@@ -1,105 +1,124 @@
 #include "gel/collector.h"
 
+#include "gel/buffer.h"
 #include "gel/common.h"
+#include "gel/event_emitter.h"
+#include "gel/event_loop.h"
 #include "gel/heap.h"
+#include "gel/macro.h"
 #include "gel/module.h"
 #include "gel/object.h"
 #include "gel/platform.h"
 #include "gel/pointer.h"
+#include "gel/region.h"
 #include "gel/runtime.h"
+#include "gel/script.h"
+#include "gel/stack_frame.h"
 #include "gel/zone.h"
 
 namespace gel {
-auto VisitRoots(PointerPointerVisitor* vis) -> bool {
-  return VisitRoots([vis](Pointer** ptr) {
-    return vis->Visit(ptr);
-  });
+auto Collector::VisitRoots(const std::function<bool(Pointer**)>& vis) -> bool {
+  PointerPointerVisitorWrapper wrapper = vis;
+  return VisitRoots(&wrapper);
 }
 
-auto VisitRoots(const std::function<bool(Pointer**)>& vis) -> bool {
-  if (!HasRuntime())
+/**
+ * Roots:
+ *   - '()
+ *   - All classes
+ *   - _kernel Module
+ *   - All StackFrames
+ *   - Current thread EventLoop
+ */
+auto Collector::VisitRoots(PointerPointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  if (!Pair::VisitEmptyPointerPointer(vis))
     return false;
-  if (!Class::VisitClassPointers(vis)) {
-    LOG(ERROR) << "failed to visit Class pointers.";
+
+  if (!Class::VisitAllClassPointerPointers(vis))
     return false;
+
+  if (!Module::VisitAllModulePointerPointers(vis))
+    return false;
+
+  const auto runtime = GetRuntime();
+  ASSERT(runtime);
+  if (!runtime->VisitPointerPointers(vis))
+    return false;
+
+  StackFrameIterator iter(runtime);
+  while (iter.HasNext()) {
+    auto next = iter.Next();
+    ASSERT(next);
+    if (!next->VisitAllPointerPointers(vis))
+      return false;
   }
-  if (!Module::VisitModulePointers(vis)) {
-    LOG(ERROR) << "failed to visit Module pointers.";
+
+  if (!VisitThreadEventLoopPointerPointer(vis))
     return false;
-  }
-  // TODO: should we visit the current local scope?
   return true;
 }
 
 Collector::Collector(Heap& heap) :
   heap_(heap) {}
 
-auto Collector::CopyPointer(Pointer* ptr) -> Pointer* {
-  ASSERT(ptr);
+auto Collector::Scavenge(Pointer* ptr) -> uword {
+  ASSERT(ptr && !ptr->IsRemembered());
   const auto total_size = ptr->GetTotalSize();
   if ((next_address() + total_size) >= (heap().new_zone().fromspace() + heap().new_zone().semisize()))
     return UNALLOCATED;
-  const auto next = Pointer::Copy(next_address(), ptr);
+  const auto new_address = next_address();
   next_address_ += total_size;
-  return next;
+  const auto new_ptr = Pointer::Copy(new_address, ptr);
+  ASSERT(new_ptr);
+  new_ptr->SetRemembered();
+  return new_ptr->GetStartingAddress();
+}
+
+auto Collector::Promote(Pointer* ptr) -> uword {
+  ASSERT(ptr && ptr->IsRemembered());
+  const auto new_ptr = heap().old_zone().TryAllocatePointer(ptr->GetObjectSize());
+  ASSERT(new_ptr && new_ptr->GetObjectSize() == ptr->GetObjectSize());
+  memcpy(new_ptr->GetObjectAddressPointer(), ptr->GetObjectAddressPointer(), ptr->GetObjectSize());
+  return new_ptr->GetStartingAddress();
+}
+
+auto Collector::ProcessPointer(Pointer* ptr) -> uword {
+  ASSERT(ptr);
+  if (ptr->IsForwarding())
+    return ptr->GetForwardingAddress();
+  const auto new_address = ptr->IsRemembered() ? Promote(ptr) : Scavenge(ptr);
+  ASSERT(new_address != UNALLOCATED);
+  ptr->SetForwardingAddress(new_address);
+  return new_address;
 }
 
 auto Collector::Process(Pointer** ptr) -> bool {
-  ASSERT(ptr && (*ptr));
   const auto old_ptr = (*ptr);
-  const auto value = old_ptr->GetObjectPointer();
-  ASSERT(value);
-  DLOG(INFO) << "processing: " << (*old_ptr) << " := " << value->ToString();
-  const auto new_ptr = CopyPointer(old_ptr);
-  ASSERT(new_ptr);
-  new_ptr->tag().SetRememberedBit();
-  old_ptr->SetForwardingAddress(new_ptr->GetStartingAddress());
+  ASSERT(old_ptr);
+  auto new_address = ProcessPointer(old_ptr);
+  LOG_IF(FATAL, new_address == UNALLOCATED) << "failed to forward: " << *(old_ptr);
+  (*ptr) = Pointer::At(new_address);
+  DLOG(INFO) << "forwarded: " << *(old_ptr) << " => " << *(*ptr) << "  ;;  " << (*ptr)->GetObjectPointer()->ToString();
   return true;
 }
 
-void Collector::ProcessRoots() {
-  const auto vis = [this](Pointer** ptr) {
-    return Process(ptr);
-  };
-  DLOG(INFO) << "processing roots....";
-  LOG_IF(FATAL, !VisitRoots(vis)) << "failed to visit roots.";
-}
-
-class PointerNotifier : public PointerPointerVisitor {
-  DEFINE_NON_COPYABLE_TYPE(PointerNotifier);
-
- public:
-  PointerNotifier() = default;
-  ~PointerNotifier() override = default;
-
-  auto Visit(Pointer** ptr) -> bool override {
-    ASSERT(ptr && (*ptr)->IsForwarding());
-    const auto old_ptr = (*ptr);
-    const auto new_ptr = (*ptr) = Pointer::At((*ptr)->GetForwardingAddress());
-    VLOG(1) << "forwarded " << (*old_ptr) << " => " << (*new_ptr);
-    return true;
-  }
-};
-
-void Collector::NotifyRoots() {
-  PointerNotifier notifier;
-  LOG_IF(FATAL, !VisitRoots(&notifier)) << "failed to notify roots.";
+auto Collector::ProcessRoots() -> bool {
+  return VisitRoots(this);
 }
 
 auto Collector::Visit(Pointer** ptr) -> bool {
   ASSERT(ptr && (*ptr));
-  if ((*ptr)->IsForwarding())
-    return true;
   return Process(ptr);
 }
 
 auto Collector::ProcessFromspace() -> bool {
-  DLOG(INFO) << "processing fromspace....";
+  DVLOG(100) << "processing fromspace....";
   while (current_address() < next_address_) {
     auto ptr = Pointer::At(current_address());
     ASSERT(ptr);
     DLOG(INFO) << "processing: " << (*ptr) << " ;; " << ptr->GetObjectPointer()->ToString();
-    if (!ptr->VisitPointers(this))
+    if (!ptr->VisitPointerPointers(this))
       return false;
     curr_address_ += ptr->GetTotalSize();
   }
@@ -127,33 +146,43 @@ auto Collector::ProcessFromspace() -> bool {
 void Collector::Collect() {
   heap().new_zone().SwapSpaces();
   next_address_ = curr_address_ = heap().new_zone().fromspace();
-  ProcessRoots();
+  LOG_IF(FATAL, !ProcessRoots()) << "failed to process roots.";
   LOG_IF(FATAL, !ProcessFromspace()) << "failed to process fromspace.";
-  NotifyRoots();
   heap().new_zone().SetCurrent(next_address_);
+  memset(heap().new_zone().GetTospacePointer(), 0, heap().new_zone().semisize());
 }
 
+#ifdef GEL_DEBUG
+static auto PrintRoot(Pointer** ptr) -> bool {
+  ASSERT(ptr && (*ptr)->GetObjectPointer());
+  LOG(INFO) << "- " << (*ptr)->GetObjectPointer()->ToString() << " ;; " << *(*ptr);
+  return true;
+}
+
+void PrintRoots() {
+  LOG(INFO) << "roots:";
+  LOG_IF(FATAL, !Collector::VisitRoots(&PrintRoot)) << "failed to print roots.";
+}
+#endif  // GEL_DEBUG
+
 void MinorCollection() {
-  const auto heap = Heap::GetHeap();
+  const auto heap = GetCurrentThreadHeap();
   ASSERT(heap);
 
-  static const auto kPrintRoot = [](Pointer** ptr) {
-    ASSERT(ptr && (*ptr)->GetObjectPointer());
-    LOG(INFO) << "- " << (void*)(*ptr) << " ;; " << *(*ptr) << " " << (*ptr)->GetObjectPointer()->ToString();
-    return true;
-  };
-
+#ifdef GEL_DEBUG
   LOG(INFO) << "NewZone before:";
   PrintNewZone(heap->GetNewZone());
-  LOG(INFO) << "roots:";
-  LOG_IF(FATAL, !VisitRoots(kPrintRoot)) << "failed to visit roots.";
+  PrintRoots();
+#endif  // GEL_DEBUG
+
   Collector collector((*heap));
   collector.Collect();
 
+#ifdef GEL_DEBUG
   LOG(INFO) << "NewZone after:";
   PrintNewZone(heap->GetNewZone());
-  LOG(INFO) << "roots:";
-  LOG_IF(FATAL, !VisitRoots(kPrintRoot)) << "failed to visit roots.";
+  PrintRoots();
+#endif  // GEL_DEBUG
 }
 
 void MajorCollection() {

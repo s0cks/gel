@@ -1,28 +1,35 @@
 #include "gel/module.h"
 
+#include "gel/array.h"
 #include "gel/common.h"
 #include "gel/macro.h"
 #include "gel/parser.h"
+#include "gel/platform.h"
+#include "gel/pointer.h"
 #include "gel/to_string_helper.h"
 
 namespace gel {
-std::vector<Pointer*> modules_{};
+static Array<Module*>* modules_ = nullptr;
 
 static inline auto Register(Module* m) -> Module* {
   ASSERT(m);
-  modules_.push_back(m->raw_ptr());
+  ASSERT(modules_);
+  modules_->Push(m);
   return m;
 }
 
-void Module::GetAllLoadedModules(std::vector<Module*>& modules) {
-  for (const auto& m : modules_) {
-    modules.push_back(m->As<Module>());
+void Module::GetAllLoadedModules(std::vector<Module*>& results) {
+  for (auto idx = 0; idx < modules_->GetLength(); idx++) {
+    const auto m = modules_->Get(idx);
+    ASSERT(m);
+    results.push_back(m);
   }
 }
 
 auto Module::CreateInitFunc(const expr::ExpressionList& body) -> Lambda* {
   ASSERT(!body.empty());
-  const ArgumentSet args = {Argument(0, "this", false, false)};
+  const auto args = Array<Argument*>::New(1);
+  ASSERT(args);
   const auto init = Lambda::New(args, body);
   const auto scope = LocalScope::New();
   ASSERT(scope);
@@ -35,65 +42,41 @@ auto Module::CreateInitFunc(const expr::ExpressionList& body) -> Lambda* {
 
 auto Module::Init(Runtime* runtime) -> bool {
   ASSERT(runtime);
-  ASSERT(!IsInitialized());
+  ASSERT(!IsInitialized() && HasInit());
   runtime->Call(GetInit(), {this});
+  SetInitialized(true);
   return IsInitialized();
 }
 
-void Module::Append(Macro* macro) {
-  ASSERT(macro);
-  macros_.push_back(macro);
-  macro->SetOwner(this);
-}
-
-void Module::Append(Namespace* ns) {
-  ASSERT(ns);
-  namespaces_.push_back(ns);
-  if (scope_ && ns->GetScope())
-    scope_->Add(ns->GetScope());
-}
-
-auto Module::IsLoaded(const std::string& name) -> bool {
-  const auto filter = IsNamed(name);
-  const auto m = std::ranges::find_if(modules_, [&filter](Pointer* ptr) {
-    ASSERT(ptr && ptr->GetObjectPointer());
-    const auto m = ptr->As<Module>();
-    return filter(m);
-  });
-  return m != std::end(modules_);
-}
-
 auto Module::Find(const std::string& name) -> Module* {
-  const auto filter = IsNamed(name);
-  const auto m = std::ranges::find_if(modules_, [&filter](Pointer* ptr) {
-    ASSERT(ptr && ptr->GetObjectPointer());
-    const auto m = ptr->As<Module>();
-    return filter(m);
-  });
-  if (m == std::end(modules_) || !(*m)->GetObjectPointer())
-    return nullptr;
-  return (*m)->As<Module>();
+  return modules_->FindIf(IsNamed(name));
+}
+
+void Module::AddChild(Object* rhs) {
+  ASSERT(rhs);
+  if (rhs->IsMacro()) {
+    macros_->Push(rhs->AsMacro());
+  } else if (rhs->IsLambda()) {
+    lambdas_->Push(rhs->AsLambda());
+  } else if (rhs->IsNamespace()) {
+    namespaces_->Push(rhs->AsNamespace());
+  }
 }
 
 auto Module::FindOrLoad(const std::string& name) -> Module* {
-  const auto filter = IsNamed(name);
-  const auto m = std::ranges::find_if(modules_, [&filter](Pointer* ptr) {
-    ASSERT(ptr && ptr->GetObjectPointer());
-    const auto m = ptr->As<Module>();
-    return filter(m);
-  });
-  if (m == std::end(modules_)) {
+  const auto m = modules_->FindIf(IsNamed(name));
+  if (m == nullptr) {
     const auto home = GetHomeEnvVar();
     if (!home)
       return nullptr;
     const auto new_module = Module::LoadFrom(fmt::format("{}/lib/{}", (*home.value()), name));
     LOG_IF(FATAL, !new_module) << "failed to create new module from: " << name;
-    LOG_IF(ERROR, !GetRuntime()->GetInitScope()->Add(new_module->GetScope())) << "failed to import the _kernel Module.";
+    GetRuntime()->GetInitScope()->AddAll(new_module->GetScope());
     if (new_module->HasInit())
       LOG_IF(FATAL, !new_module->Init(GetRuntime())) << "failed to initialize the _kernel Module: " << new_module;
     return new_module;
   }
-  return (*m)->As<Module>();
+  return m;
 }
 
 auto Module::New(String* name, LocalScope* scope) -> Module* {
@@ -130,32 +113,52 @@ auto Module::Equals(Object* rhs) const -> bool {
   return GetName()->Equals(other->GetName());
 }
 
-auto Module::VisitPointers(PointerPointerVisitor* vis) -> bool {
+auto Module::VisitPointers(PointerVisitor* vis) -> bool {
   ASSERT(vis);
-  {
-    auto name_ptr = name_->raw_ptr();
-    if (!vis->Visit(&name_ptr))
-      return false;
-    name_ = name_ptr->As<String>();
-  }
-  DLOG(INFO) << "visiting: " << scope_->ToString();
-  LOG_IF(FATAL, !scope_->VisitLocalPointers([vis](Pointer** ptr) {
-    return vis->Visit(ptr);
-  })) << "failed to visit pointers in scope.";
-  for (auto& ns : namespaces_) {
-    auto ns_ptr = ns->raw_ptr();
-    if (!vis->Visit(&ns_ptr))
-      return false;
-    ns = ns_ptr->As<Namespace>();
-  }
+  if (!vis->Visit(GetName()))
+    return false;
+  if (!vis->Visit(GetInitialized()))
+    return false;
+  if (!vis->Visit(GetInit()))
+    return false;
+  return true;
+}
+
+auto Module::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  if (!VisitPointerPointer(vis, &namespaces_))
+    return false;
+  if (!VisitPointerPointer(vis, &macros_))
+    return false;
+  if (!VisitPointerPointer(vis, &lambdas_))
+    return false;
+  if (!VisitPointerPointer(vis, &init_))
+    return false;
+  if (!VisitPointerPointer(vis, &scope_))
+    return false;
+
+  auto name = GetName()->raw_ptr();
+  if (!vis->Visit(&name))
+    return false;
+  if (!GetName()->raw_ptr()->Equals(name))
+    SetName(name->As<String>());
+
+  auto initialized = GetInitialized()->raw_ptr();
+  if (!vis->Visit(&initialized))
+    return false;
+  if (!GetInitialized()->raw_ptr()->Equals(initialized))
+    SetInitialized(initialized->As<Bool>());
   return true;
 }
 
 Field* Module::kFieldInitialized = nullptr;
+Field* Module::kNameField = nullptr;
 auto Module::CreateClass() -> Class* {
   ASSERT(kClass == nullptr);
   const auto cls = Class::New(Object::GetClass(), "Module");
   ASSERT(cls);
+  kNameField = cls->AddField("name");
+  ASSERT(kNameField);
   kFieldInitialized = cls->AddField("initialized");
   ASSERT(kFieldInitialized);
   return cls;
@@ -165,21 +168,39 @@ auto Module::New(const ObjectList& args) -> Module* {
   NOT_IMPLEMENTED(FATAL);
 }
 
-auto Module::VisitModules(const std::function<bool(Module*)>& vis) -> bool {
-  for (const auto& ptr : modules_) {
-    ASSERT(ptr && ptr->GetObjectPointer());
-    if (!vis(ptr->As<Module>()))
+auto Module::VisitAllModules(ModuleVisitor* vis) -> bool {
+  ASSERT(vis);
+  for (auto idx = 0; idx < modules_->GetLength(); idx++) {
+    const auto m = modules_->Get(idx);
+    ASSERT(m);
+    if (!vis->Visit(m))
       return false;
   }
   return true;
 }
 
-auto Module::VisitModulePointers(const std::function<bool(Pointer**)>& vis) -> bool {
-  for (auto& ptr : modules_) {
-    ASSERT(ptr && ptr->GetObjectPointer());
-    if (!vis(&ptr))
-      return false;
-  }
+auto Module::VisitAllModulePointers(PointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  return modules_->VisitPointers(vis);
+}
+
+auto Module::VisitAllModulePointerPointers(PointerPointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  if (!modules_->VisitPointerPointers(vis))
+    return false;
+  if (!VisitPointerPointer(vis, &modules_))
+    return false;
+  if (!VisitPointerPointer(vis, &kNameField))
+    return false;
+  if (!VisitPointerPointer(vis, &kFieldInitialized))
+    return false;
   return true;
+}
+
+void Module::Init() {
+  InitClass();
+  ASSERT(modules_ == nullptr);
+  modules_ = Array<Module*>::New();
+  ASSERT(modules_);
 }
 }  // namespace gel

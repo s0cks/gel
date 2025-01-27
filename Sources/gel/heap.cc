@@ -4,7 +4,7 @@
 #include "gel/common.h"
 #include "gel/os_thread.h"
 #include "gel/platform.h"
-#include "gel/section.h"
+#include "gel/region.h"
 #include "gel/thread_local.h"
 #include "gel/zone.h"
 
@@ -54,8 +54,7 @@ void Heap::Clear() {
 
 static const ThreadLocal<Heap> heap_{};
 
-auto Heap::GetHeap() -> Heap* {
-  ASSERT(heap_);
+auto GetCurrentThreadHeap() -> Heap* {
   return heap_.Get();
 }
 
@@ -66,8 +65,8 @@ void Heap::Init() {
 #ifdef GEL_DEBUG
   DVLOG(100) << "heap initialized.";
   if (VLOG_IS_ON(100)) {
-    PrintNewZone(GetHeap()->GetNewZone());
-    PrintOldZone(GetHeap()->GetOldZone());
+    PrintNewZone(GetCurrentThreadHeap()->GetNewZone());
+    PrintOldZone(GetCurrentThreadHeap()->GetOldZone());
   }
 #endif  // GEL_DEBUG
 }

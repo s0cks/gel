@@ -371,7 +371,7 @@ NATIVE_RX_PROCEDURE_F(get_operators) {
   ASSERT(args.empty());
   LocalScope::RecursiveIterator iter(rx::GetRxScope());
   return Return(gel::ToList<LocalScope::RecursiveIterator, LocalVariable*>(iter, [](LocalVariable* local) -> Object* {
-    return String::New(local->GetName());
+    return String::New(local->GetSymbol());
   }));
 }
 #endif  // GEL_DEBUG

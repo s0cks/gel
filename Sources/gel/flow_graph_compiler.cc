@@ -33,9 +33,8 @@ auto FlowGraphCompiler::BuildFlowGraph(E* exec, std::enable_if_t<gel::is_executa
   ASSERT(exec);
   const auto scope = LocalScope::New(GetScope());
   if (exec->HasScope())
-    LOG_IF(ERROR, !scope->Add(exec->GetScope())) << "failed to add " << exec << " scope to current scope.";
-  FlowGraphBuilder builder(scope);
-  const auto flow_graph = builder.Build(exec, scope);
+    scope->AddAll(exec->GetScope());
+  const auto flow_graph = FlowGraphBuilder::Build(exec, scope);
   LOG_IF(FATAL, !(flow_graph && flow_graph->HasEntry())) << "failed to build FlowGraph for: " << exec;
   return flow_graph;
 }

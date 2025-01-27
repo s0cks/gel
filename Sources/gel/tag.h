@@ -20,13 +20,11 @@ class Tag {
     // references
     kReferencesOffset = 0,
     kBitsForReferences = 16,
-    // new bit
-    kNewBitOffset = kReferencesOffset + kBitsForReferences,
-    // old bit
+    // bits
+    kFreeBitOffset = kReferencesOffset + kBitsForReferences,
+    kNewBitOffset = kFreeBitOffset + 1,
     kOldBitOffset = kNewBitOffset + 1,
-    // marked bit
     kMarkedBitOffset = kOldBitOffset + 1,
-    // remembered bit
     kRememberedBitOffset = kMarkedBitOffset + 1,
     // size
     kSizeOffset = kRememberedBitOffset + 1,
@@ -34,6 +32,7 @@ class Tag {
 
     kTotalNumberOfBits = kBitsForReferences + kBitsForSize + 4,
   };
+  static_assert(kTotalNumberOfBits <= kBitsPerWord);
 
   template <typename T, const int Pos, const int Size>
   class TagField : public BitField<RawTag, T, Pos, Size> {};
@@ -42,6 +41,7 @@ class Tag {
 
  public:
   class ReferencesField : public TagField<uword, kReferencesOffset, kBitsForReferences> {};
+  class FreeBit : public TagBit<kFreeBitOffset> {};
   class NewBit : public TagBit<kNewBitOffset> {};
   class OldBit : public TagBit<kOldBitOffset> {};
   class MarkedBit : public TagBit<kMarkedBitOffset> {};
@@ -105,6 +105,18 @@ class Tag {
     return SetMarkedBit(false);
   }
 
+  constexpr auto IsFree() const -> bool {
+    return FreeBit::Decode(raw());
+  }
+
+  void SetFreeBit(const bool value = true) {
+    raw_ = FreeBit::Update(value, raw());
+  }
+
+  inline void ClearFreeBit() {
+    return SetFreeBit(false);
+  }
+
   constexpr auto IsRemembered() const -> bool {
     return RememberedBit::Decode(raw());
   }
@@ -136,18 +148,31 @@ class Tag {
   friend auto operator<<(std::ostream& stream, const Tag& rhs) -> std::ostream& {
     stream << "Tag(";
     stream << "num_references=" << rhs.GetNumberOfReferences() << ", ";
-    stream << "size=" << units::data::byte_t(static_cast<double>(rhs.GetSize())) << ", ";
+    stream << "size=" << PrettyPrintBytes(rhs.GetSize()) << ", ";
     stream << "new=" << rhs.IsNew() << ", ";
     stream << "old=" << rhs.IsOld() << ", ";
+    stream << "free=" << rhs.IsFree() << ", ";
     stream << "marked=" << rhs.IsMarked() << ", ";
     stream << "remembered=" << rhs.IsRemembered();
     stream << ")";
     return stream;
   }
 
+  auto operator&(const Tag& rhs) const -> Tag {
+    return raw() & rhs.raw();
+  }
+
  public:
   static inline constexpr auto Invalid() -> Tag {
     return {};
+  }
+
+  static inline constexpr auto Marked() -> Tag {
+    return Invalid() | MarkedBit::Encode(true);
+  }
+
+  static inline constexpr auto Free() -> Tag {
+    return Invalid() | FreeBit::Encode(true);
   }
 
   static inline constexpr auto New(const uword size) -> Tag {

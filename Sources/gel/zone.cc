@@ -3,6 +3,7 @@
 #include <units.h>
 
 #include "gel/common.h"
+#include "gel/free_list.h"
 #include "gel/platform.h"
 #include "gel/pointer.h"
 
@@ -35,9 +36,27 @@ auto NewZone::TryAllocate(const uword size) -> uword {
   }
   const auto new_address = GetCurrentAddress();
   current_ += total_size;
-  memset((void*)new_address, 0, total_size);
-  const auto ptr = Pointer::New(new_address, size);
-  return ptr->GetObjectAddress();
+  memset((void*)new_address, 0, total_size);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  const auto new_ptr = Pointer::New(new_address, size);
+  ASSERT(new_ptr);
+#ifdef GEL_DEBUG
+  memset(new_ptr->GetObjectAddressPointer(), 0, new_ptr->GetObjectSize());
+#endif  // GEL_DEBUG
+  return new_ptr->GetObjectAddress();
+}
+
+auto NewZone::VisitAllPointers(const std::function<bool(Pointer*)>& vis, const Tag filter) const -> bool {
+  ASSERT(vis);
+  Iterator iter(*this);
+  while (iter.HasNext()) {
+    const auto next = iter.Next();
+    ASSERT(next);
+    if ((next->GetTag() & filter) != filter)
+      continue;
+    if (!vis(next))
+      return false;
+  }
+  return true;
 }
 
 auto NewZone::VisitAllPointers(PointerVisitor* vis) const -> bool {
@@ -69,52 +88,27 @@ auto NewZone::VisitAllMarkedPointers(PointerVisitor* vis) const -> bool {
 
 OldZone::OldZone(const uword size) :
   Zone(size, MemoryRegion::kReadWrite),
-  free_list_() {
-  free_list_ = FreeList(GetStartingAddress(), size);
+  free_list_(GetStartingAddress(), size) {}
+
+auto OldZone::TryAllocatePointer(const uword size) -> Pointer* {
+  ASSERT(size > 0);
+  const auto new_address = free_list_.TryAllocate(size);
+  if (new_address == UNALLOCATED)
+    return nullptr;
+  const auto new_ptr = Pointer::Old(new_address, size);
+  ASSERT(new_ptr);
+#ifdef GEL_DEBUG
+  memset(new_ptr->GetObjectAddressPointer(), 0, new_ptr->GetObjectSize());
+#endif  // GEL_DEBUG
+  return new_ptr;
 }
 
 auto OldZone::TryAllocate(const uword size) -> uword {
-  ASSERT(size > 0);
-  return free_list_.TryAllocate(size);
+  const auto new_ptr = TryAllocatePointer(size);
+  return new_ptr ? new_ptr->GetObjectAddress() : UNALLOCATED;
 }
 
 #ifdef GEL_DEBUG
-
-using namespace units::data;
-
-static inline auto PrettyPrintBytes(const uword num_bytes) -> std::string {
-  static constexpr const auto kScale = 1024;
-
-  std::stringstream ss;
-  int scale = 0;
-  uword remaining = num_bytes;
-  while (remaining >= kScale) {
-    remaining /= kScale;
-    scale += 1;
-  }
-  switch (scale) {
-    case 1:
-      ss << kilobyte_t(static_cast<double>(remaining));
-      break;
-    case 2:
-      ss << megabyte_t(static_cast<double>(remaining));
-      break;
-    case 3:
-      ss << gigabyte_t(static_cast<double>(remaining));
-      break;
-    case 4:
-      ss << terabyte_t(static_cast<double>(remaining));
-      break;
-    case 5:  // NOLINT(cppcoreguidelines-avoid-magic-numbers)
-      ss << petabyte_t(static_cast<double>(remaining));
-      break;
-    case 0:
-    default:
-      ss << byte_t(static_cast<double>(remaining));
-      break;
-  }
-  return ss.str();
-}
 
 void PrintNewZone(const NewZone& zone) {
   DLOG(INFO) << "New Zone:";
@@ -133,12 +127,7 @@ void PrintOldZone(const OldZone& zone) {
   DLOG(INFO) << "  Total Size: " << PrettyPrintBytes(zone.GetSize());
   DLOG(INFO) << "  Total Allocated: " << PrettyPrintBytes(zone.GetNumberOfBytesAllocated()) << " / "
              << zone.GetAllocationPercent();
-  DLOG(INFO) << "  Free Pointers:";
-  LOG_IF(FATAL, !zone.free_list().VisitFreePointers([](FreePointer* ptr) {
-    DLOG(INFO) << "  - " << (*ptr);
-    return true;
-  })) << "failed to visit FreePointers in: "
-      << zone;
+  PrintFreeList(zone.GetFreeList());
 }
 
 #endif  // GEL_DEBUG

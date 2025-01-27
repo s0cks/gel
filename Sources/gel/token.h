@@ -5,7 +5,7 @@
 #include <ostream>
 
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 
 namespace gel {
 struct Position {
@@ -22,6 +22,10 @@ struct Position {
 
   auto operator!=(const Position& rhs) const -> bool {
     return row != rhs.row || column != rhs.column;
+  }
+
+  auto operator-(const Position& rhs) const -> word {
+    return floor(sqrt(pow(rhs.row - row, 2.0) + pow(rhs.column - column, 2.0)));  // NOLINT(cppcoreguidelines-avoid-magic-numbers)
   }
 };
 
@@ -90,6 +94,55 @@ struct Token {
     }
   }
 
+  static inline auto GetChar(const Kind rhs) -> char {
+    switch (rhs) {
+      case kLParen:
+        return '(';
+      case kRParen:
+        return ')';
+      case kDot:
+        return '.';
+      case kAdd:
+        return '+';
+      case kSubtract:
+        return '-';
+      case kMultiply:
+        return '*';
+      case kDivide:
+        return '/';
+      case kBinaryAnd:
+        return '&';
+      case kBinaryOr:
+        return '|';
+      case kEquals:
+        return '=';
+      case kModulus:
+        return '%';
+      case kNot:
+        return '!';
+      case kLBracket:
+        return '[';
+      case kRBracket:
+        return ']';
+      case kComma:
+        return ',';
+      case kLBrace:
+        return '{';
+      case kRBrace:
+        return '}';
+      case kQuestion:
+        return '?';
+      case kDollar:
+        return '$';
+      case kLessThan:
+        return '<';
+      case kGreaterThan:
+        return '>';
+      default:
+        return '\0';
+    }
+  }
+
   using KindSet = std::bitset<kTotalNumberOfTokens>;
 
   static inline constexpr auto SetOf(const Token::Kind a, const Token::Kind b) -> KindSet {
@@ -124,23 +177,26 @@ struct Token {
     return kind == kInvalid;
   }
 
+  auto IsEmpty() const -> bool {
+    return text.empty();
+  }
+
   auto IsEndOfStream() const -> bool {
     return kind == kEndOfStream;
   }
 
+  auto IsFunctionLiteral() const -> bool {
+    return kind == Token::kDispatch || kind == Token::kFn;
+  }
+
+  auto IsSymbol() const -> bool {
+    return kind == Token::kIdentifier;
+  }
+
   auto IsLiteral() const -> bool {
-    switch (kind) {
-      case kLBrace:
-      case kLiteralTrue:
-      case kLiteralFalse:
-      case kLiteralString:
-      case kLiteralNumber:
-      case kLiteralLong:
-      case kLiteralDouble:
-        return true;
-      default:
-        return false;
-    }
+    return kind == Token::kLBrace || IsFunctionLiteral() || IsSymbol() || kind == Token::kLiteralTrue ||
+           kind == Token::kLiteralFalse || kind == Token::kLiteralLong || kind == Token::kLiteralDouble ||
+           kind == Token::kLiteralString;
   }
 
   auto IsIdentifier() const -> bool {

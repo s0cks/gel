@@ -2,22 +2,50 @@
 
 #include "gel/common.h"
 #include "gel/heap.h"
+#include "gel/platform.h"
+#include "gel/pointer.h"
 #include "gel/runtime.h"
 
 namespace gel {
+ArrayBase::ArrayBase(const word init_cap) {
+  if (init_cap > 0) {
+    const auto new_cap = RoundUpPow2(init_cap);
+    const auto address = sys::malloc(sizeof(uword) * new_cap);  // TODO: convert to gel heap allocation
+    LOG_IF(FATAL, address == UNALLOCATED) << "failed to allocate GrowableArray of: " << bytes(new_cap);
+    data_ = address;
+    capacity_ = new_cap;
+    memset((void*)data_, 0, sizeof(uword) * new_cap);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  }
+}
+
+ArrayBase::~ArrayBase() {
+  if (data_ != UNALLOCATED)
+    sys::free((uword)data_);
+}
+
+void ArrayBase::Resize(const word new_length) {
+  if (new_length > capacity_) {
+    const auto new_cap = RoundUpPow2(new_length);
+    const auto new_data = sys::realloc((uword)data_, sizeof(uword) * new_cap);  // TODO: convert to gel heap allocation
+    LOG_IF(FATAL, new_data == UNALLOCATED) << "failed to resize GrowableArray to: " << bytes(new_cap);
+    data_ = new_data;
+    capacity_ = new_cap;
+  }
+  length_ = new_length;
+}
+
 #ifdef GEL_DISABLE_HEAP
 
 auto ArrayBase::operator new(const size_t sz, const uword cap) -> void* {
-  return malloc(sz + sizeof(uword) * cap);
+  return sys::malloc(sz + sizeof(uword) * cap);
 }
 
 #else
 
-auto ArrayBase::operator new(const size_t sz, const uword cap) -> void* {
-  const auto heap = Heap::GetHeap();
+auto ArrayBase::operator new(const size_t sz) -> void* {
+  const auto heap = GetCurrentThreadHeap();
   ASSERT(heap);
-  const auto total_size = sz + sizeof(uword) * cap;
-  const auto address = heap->TryAllocate(total_size);
+  const auto address = heap->TryAllocate(sz);
   ASSERT(address != UNALLOCATED);
   return (void*)address;  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
 }
@@ -36,25 +64,18 @@ auto ArrayBase::HashCode() const -> uword {
   return 0;
 }
 
-auto ArrayBase::Equals(Object* rhs) const -> bool {
-  if (!rhs || !rhs->IsArray())
-    return false;
-  const auto other = (ArrayBase*)rhs;  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-  return GetCapacity() == other->GetCapacity();
-}
-
 auto ArrayBase::ToString() const -> std::string {
   std::stringstream ss;
   ss << "Array(";
   ss << "capacity=" << GetCapacity() << ", ";
+  ss << "length=" << GetLength() << ", ";
   ss << "data=";
   ss << "[";
-  for (auto idx = 0; idx < GetCapacity(); idx++) {
-    const auto value = Get(idx);
-    if (!value)
-      continue;
-    PrintValue(ss, value);
-    if (idx < (GetCapacity() - 1))
+  for (auto idx = 0; idx < GetLength(); idx++) {
+    const auto value = *(GetPtrAddrAt(idx));
+    ASSERT(value);
+    PrintValue(ss, value->GetObjectPointer());
+    if (idx < (GetLength() - 1))
       ss << ", ";
   }
   ss << "]";
@@ -62,79 +83,53 @@ auto ArrayBase::ToString() const -> std::string {
   return ss.str();
 }
 
+auto ArrayBase::Equals(Object* rhs) const -> bool {
+  if (!rhs || !rhs->IsArray())
+    return false;
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return false;
+}
+
 auto ArrayBase::CreateClass() -> Class* {
   ASSERT(kClass == nullptr);
   return Class::New(Seq::GetClass(), "Array");
 }
 
-auto ArrayBase::VisitPointers(const std::function<bool(Pointer**)>& vis) -> bool {
+auto ArrayBase::VisitPointers(PointerVisitor* vis) -> bool {
+  ASSERT(vis);
   ArrayPointerIterator iter(this);
   while (iter.HasNext()) {
     const auto next = iter.Next();
     if (!IsUnallocated(next)) {
-      if (!vis(next))
+      if (!vis->Visit((*next)))
         return false;
     }
   }
   return true;
 }
 
-void ArrayBase::Init() {
-  InitClass();
-  InitNative<proc::array_new>();
-  InitNative<proc::array_get>();
-  InitNative<proc::array_set>();
-  InitNative<proc::array_length>();
-}
-
-namespace proc {
-NATIVE_PROCEDURE_F(array_new) {
-  ASSERT(HasRuntime());
-  if (args.empty())
-    return ThrowError(fmt::format("expected args to not be empty"));
-  const auto length = args.size();
-  const auto result = Array<Object*>::New(length);
-  ASSERT(result);
-  for (auto idx = 0; idx < length; idx++) {
-    ASSERT(args[idx]);
-    result->Set(idx, args[idx]);
+auto ArrayBase::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  ArrayPointerIterator iter(this);
+  while (iter.HasNext()) {
+    const auto next = iter.Next();
+    if (!IsUnallocated(next)) {
+      if (!vis->Visit(next))
+        return false;
+    }
   }
-  return Return(result);
+  return true;
 }
 
-NATIVE_PROCEDURE_F(array_get) {
-  ASSERT(HasRuntime());
-  if (args.size() != 2)
-    return ThrowError(fmt::format("expected args to be: `<array> <index>`"));
-  NativeArgument<0, ArrayBase> array(args);
-  NativeArgument<1, Long> index(args);
-  if (index->Get() > array->GetCapacity())
-    return ThrowError(fmt::format("index `{}` is out of bounds for `{}`", index->Get(), (const gel::Object&)*array));
-  const auto result = array->Get(index->Get());
-  return Return(result ? result : Null());
+auto ArrayBase::VisitValues(const std::function<bool(Object*)>& vis) -> bool {
+  ArrayPointerIterator iter(this);
+  while (iter.HasNext()) {
+    const auto next = iter.Next();
+    if (!IsUnallocated(next)) {
+      if (!vis((*next)->GetObjectPointer()))
+        return false;
+    }
+  }
+  return true;
 }
-
-NATIVE_PROCEDURE_F(array_set) {
-  ASSERT(HasRuntime());
-  if (args.size() != 3)
-    return ThrowError(fmt::format("expected args to be: `<array> <index>`"));
-  if (!gel::IsArray(args[0]))
-    return ThrowError(fmt::format("expected `{}` to be an Array", (*args[0])));
-  const auto array = (ArrayBase*)args[0];  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-  ASSERT(array);
-  if (!gel::IsLong(args[1]))
-    return ThrowError(fmt::format("expected `{}` to be a Long.", (*args[1])));
-  const auto index = Long::Unbox(args[1]);
-  if (index > array->GetCapacity())
-    return ThrowError(fmt::format("index `{}` is out of bounds for `{}`", index, (const gel::Object&)*array));
-  array->Set(index, args[2]);
-  return DoNothing();
-}
-
-NATIVE_PROCEDURE_F(array_length) {
-  ASSERT(HasRuntime());
-  NativeArgument<0, ArrayBase> array(args);
-  return ReturnNew<Long>(array->GetCapacity());
-}
-}  // namespace proc
 }  // namespace gel

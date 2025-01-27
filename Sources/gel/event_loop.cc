@@ -4,6 +4,7 @@
 
 #include "gel/common.h"
 #include "gel/error.h"
+#include "gel/pointer.h"
 #include "gel/procedure.h"
 #include "gel/runtime.h"
 #include "gel/thread_local.h"
@@ -159,6 +160,39 @@ static ThreadLocal<EventLoop> kEventLoop;
 void EventLoop::Init() {
   InitClass();
   Timer::InitClass();
+}
+
+auto VisitThreadEventLoopPointer(PointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  const auto event_loop = GetThreadEventLoop();
+  ASSERT(event_loop);
+  return vis->Visit(event_loop->raw_ptr());
+}
+
+auto VisitThreadEventLoopPointerPointer(PointerPointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  const auto event_loop = GetThreadEventLoop();
+  ASSERT(event_loop);
+  auto raw_ptr = event_loop->raw_ptr();
+  ASSERT(raw_ptr);
+  if (!vis->Visit(&raw_ptr))
+    return false;
+  if (!event_loop->raw_ptr()->Equals(raw_ptr))
+    kEventLoop.Set(raw_ptr->As<EventLoop>());
+  return true;
+}
+
+auto VisitThreadEventLoopPointerPointer(const std::function<bool(Pointer**)>& vis) -> bool {
+  ASSERT(vis);
+  const auto event_loop = GetThreadEventLoop();
+  ASSERT(event_loop);
+  auto raw_ptr = event_loop->raw_ptr();
+  ASSERT(raw_ptr);
+  if (!vis(&raw_ptr))
+    return false;
+  if (!event_loop->raw_ptr()->Equals(raw_ptr))
+    kEventLoop.Set(raw_ptr->As<EventLoop>());
+  return true;
 }
 
 auto GetThreadEventLoop() -> EventLoop* {

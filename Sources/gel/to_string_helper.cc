@@ -9,6 +9,13 @@ void ToStringHelperBase::AddField(const std::string& name, const gel::Object* va
   return AddField(name, value->ToString());
 }
 
+void ToStringHelperBase::AddBytesField(const std::string& name, const uword num_bytes) {
+  ASSERT(!name.empty());
+  std::stringstream ss;
+  ss << PrettyPrintBytes(num_bytes);
+  return AddField(name, ss.str());
+}
+
 auto ToStringHelperBase::ToString() const -> std::string {
   std::stringstream ss;
   ss << GetTypename() << GetChar(GetEncosingStyle(), true);

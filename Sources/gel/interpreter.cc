@@ -11,7 +11,7 @@
 #include "gel/disassembler.h"
 #include "gel/error.h"
 #include "gel/event_loop.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/instruction.h"
 #include "gel/lambda.h"
 #include "gel/local.h"
@@ -143,16 +143,21 @@ void Interpreter::Invoke(const Bytecode::Op op) {
     ASSERT(op == Bytecode::kInvoke || op == Bytecode::kInvokeDynamic);
     return GetRuntime()->CallWithNArgs(func->AsLambda(), num_args);
   }
-  const auto error = Error::New(fmt::format("cannot invoke {}", (*func)));
-  ASSERT(error);
-  PUSH(error);
-  return Throw();
+  std::stringstream ss;
+  ss << "cannot invoke: " << func->ToString();
+  return Throw(ss);
 }
 
 void Interpreter::Throw() {
   const auto err = (*POP);
   ASSERT(err && err->IsError());
-  throw std::runtime_error(err->AsError()->GetMessage()->Get());
+  throw Exception(err->AsError()->GetMessage()->Get());
+}
+
+void Interpreter::Throw(Error* error) {
+  ASSERT(error);
+  PUSH(error);
+  return Throw();
 }
 
 void Interpreter::ExecBinaryOp(const Bytecode code) {
@@ -306,8 +311,13 @@ void Interpreter::Lookup(Symbol* rhs) {
   const auto scope = GetScope();
   ASSERT(scope);
   LocalVariable* local = nullptr;
-  LOG_IF(ERROR, !scope->Lookup(rhs, &local)) << "failed to resolve " << rhs;
-  const auto value = local && local->HasValue() ? local->GetValue() : Null();
+  if (!scope->Lookup(rhs, &local)) {
+    std::stringstream ss;
+    ss << "failed to resolve symbol `" << rhs->GetFullyQualifiedName() << "`";
+    return Throw(ss);
+  }
+  ASSERT(local);
+  const auto value = local->HasValue() ? local->GetValue() : Null();
   PUSH(value);
 }
 
@@ -350,13 +360,14 @@ void Interpreter::New(Class* cls, const uword num_args) {
   PUSH(value);
 }
 
-void Interpreter::Run(const uword address) {
-  SetCurrentAddress(address);
-  ASSERT(GetCurrentAddress() == address);
+void Interpreter::Run(const uword start_address) {
+  SetCurrentAddress(start_address);
+  ASSERT(GetCurrentAddress() == start_address);
   while (true) {
-    const auto start_address = GetCurrentAddress();
-    const auto pos = (start_address - address);
+    const auto current = GetCurrentAddress();
+    const auto pos = (current - start_address);
     const auto op = NextBytecode();
+    VLOG(1000) << "executing: " << op;
     switch (op.op()) {
       case Bytecode::kPushN:
       case Bytecode::kPushT:
@@ -430,6 +441,9 @@ void Interpreter::Run(const uword address) {
         continue;
 #undef DECLARE_CASE
       case Bytecode::kRet: {
+        const auto frame = GetRuntime()->GetCurrentStackFrame();
+        ASSERT(frame);
+        frame->SetReturnAddress(TOP.value_or(Null())->GetStartingAddress());
         const auto event_loop = GetThreadEventLoop();
         ASSERT(event_loop);
         while (event_loop->Run(UV_RUN_NOWAIT) != 0);  // do nothing
@@ -441,7 +455,7 @@ void Interpreter::Run(const uword address) {
       case Bytecode::kJeq:
       case Bytecode::kJne: {
         const auto offset = NextWord();
-        Jump(op, address + (pos + offset));
+        Jump(op, start_address + (pos + offset));
         continue;
       }
       case Bytecode::kStoreField:

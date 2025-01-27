@@ -8,6 +8,7 @@
 #include "gel/common.h"
 #include "gel/natives.h"
 #include "gel/object.h"
+#include "gel/pointer.h"
 
 namespace gel {
 // TODO: move to async namespace
@@ -95,6 +96,9 @@ class EventLoop : public Object {
   }
 };
 
+auto VisitThreadEventLoopPointer(PointerVisitor* vis) -> bool;
+auto VisitThreadEventLoopPointerPointer(PointerPointerVisitor* vis) -> bool;
+auto VisitThreadEventLoopPointerPointer(const std::function<bool(Pointer**)>& vis) -> bool;
 auto GetThreadEventLoop() -> EventLoop*;
 
 namespace fs {

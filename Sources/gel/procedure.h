@@ -4,6 +4,7 @@
 #include "gel/common.h"
 #include "gel/local_scope.h"
 #include "gel/object.h"
+#include "gel/pointer.h"
 #include "gel/symbol.h"
 
 namespace gel {
@@ -27,6 +28,27 @@ class Procedure : public Object {
 
   void RemoveSymbol() {
     symbol_ = nullptr;
+  }
+
+  auto VisitPointers(PointerVisitor* vis) -> bool override {
+    ASSERT(vis);
+    if (HasSymbol()) {
+      if (!vis->Visit(GetSymbol()))
+        return false;
+    }
+    return true;
+  }
+
+  auto VisitPointerPointers(PointerPointerVisitor* vis) -> bool override {
+    ASSERT(vis);
+    if (HasSymbol()) {
+      auto symbol = GetSymbol()->raw_ptr();
+      if (!vis->Visit(&symbol))
+        return false;
+      if (!GetSymbol()->raw_ptr()->Equals(symbol))
+        SetSymbol(symbol->As<Symbol>());
+    }
+    return true;
   }
 
  public:
@@ -69,6 +91,7 @@ class Procedure : public Object {
   static void InitClass();
 
  public:
+  static auto VisitClassPointerPointer(PointerPointerVisitor* vis) -> bool;
   static inline auto New(const ObjectList& args) -> Procedure* {
     NOT_IMPLEMENTED(FATAL);
   }

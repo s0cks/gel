@@ -17,7 +17,7 @@ auto Buffer::operator new(const size_t sz, const uword capacity) -> void* {
 #else
 
 auto Buffer::operator new(const size_t sz, const uword capacity) -> void* {
-  const auto heap = Heap::GetHeap();
+  const auto heap = GetCurrentThreadHeap();
   ASSERT(heap);
   const auto total_size = sz + (sizeof(uint8_t) * capacity);
   const auto address = heap->TryAllocate(total_size);
@@ -27,7 +27,7 @@ auto Buffer::operator new(const size_t sz, const uword capacity) -> void* {
 
 #define DEFINE_NEW_OPERATOR(Name)                     \
   auto Name::operator new(const size_t sz) -> void* { \
-    const auto heap = Heap::GetHeap();                \
+    const auto heap = GetCurrentThreadHeap();         \
     ASSERT(heap);                                     \
     const auto address = heap->TryAllocate(sz);       \
     ASSERT(address != UNALLOCATED);                   \

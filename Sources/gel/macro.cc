@@ -3,7 +3,7 @@
 #include <sstream>
 
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/local.h"
 #include "gel/local_scope.h"
 #include "gel/to_string_helper.h"
@@ -21,6 +21,22 @@ auto Macro::CreateClass() -> Class* {
 auto Macro::HashCode() const -> uword {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
   return 0;
+}
+
+auto Macro::VisitPointers(PointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  if (HasOwner()) {
+    if (!vis->Visit(GetOwner()))
+      return false;
+  }
+  if (!vis->Visit(GetSymbol()))
+    return false;
+  if (HasDocstring()) {
+    if (!vis->Visit(GetDocstring()))
+      return false;
+  }
+  // TODO: visit body
+  return true;
 }
 
 auto Macro::Equals(Object* rhs) const -> bool {

@@ -1,7 +1,0 @@
-(import array)
-(let ((arr (new:Array 5))
-      (idx 0))
-  (print (format "Array: {}" arr))
-  (print (format "#{}: {}" idx (array:get arr idx)))
-  (array:set! arr idx "Hello World")
-  (print (format "#{}: {}" idx (array:get arr idx))))

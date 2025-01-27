@@ -6,7 +6,7 @@
 #include <sstream>
 
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/flow_graph_builder.h"
 #include "gel/local_scope.h"
 #include "gel/pointer.h"
@@ -32,8 +32,31 @@ auto Lambda::HashCode() const -> uword {
 
 auto Lambda::VisitPointers(PointerVisitor* vis) -> bool {
   ASSERT(vis);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return false;
+  if (!Procedure::VisitPointers(vis))
+    return false;
+  if (HasOwner()) {
+    if (!vis->Visit(GetOwner()))
+      return false;
+  }
+  if (HasDocstring()) {
+    if (!vis->Visit(GetDocstring()))
+      return false;
+  }
+  return true;
+}
+
+auto Lambda::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  if (!Procedure::VisitPointerPointers(vis))
+    return false;
+  if (!VisitPointerPointer(vis, &owner_))
+    return false;
+  if (!VisitPointerPointer(vis, &docstring_))
+    return false;
+  if (!VisitPointerPointer(vis, &args_))
+    return false;
+  // TODO: visit body_
+  return true;
 }
 
 auto Lambda::New(const ObjectList& args) -> Lambda* {

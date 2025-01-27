@@ -5,7 +5,7 @@
 #include <type_traits>
 
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/lambda.h"
 #include "gel/local.h"
 #include "gel/procedure.h"

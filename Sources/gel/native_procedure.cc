@@ -1,8 +1,10 @@
 #include "gel/native_procedure.h"
 
+#include "gel/argument.h"
 #include "gel/common.h"
 #include "gel/local.h"
 #include "gel/natives.h"
+#include "gel/pointer.h"
 #include "gel/runtime.h"
 #include "gel/to_string_helper.h"
 #include "gel/type.h"
@@ -10,9 +12,9 @@
 namespace gel {
 auto NativeProcedureEntry::Return(Object* rhs) const -> bool {
   ASSERT(rhs);
-  const auto stack = GetRuntime()->GetOperationStack();
-  ASSERT(stack);
-  stack->Push(rhs);
+  const auto frame = GetRuntime()->GetCurrentStackFrame();
+  ASSERT(frame);
+  frame->SetReturnAddress(rhs->GetStartingAddress());
   return DoNothing();
 }
 
@@ -49,6 +51,42 @@ auto NativeProcedure::Find(const std::string& name) -> NativeProcedure* {
       return native;
   }
   return nullptr;
+}
+
+auto NativeProcedure::VisitPointers(PointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  if (!Procedure::VisitPointers(vis))
+    return false;
+  if (HasDocs()) {
+    if (!vis->Visit(GetDocs()->raw_ptr()))
+      return false;
+  }
+  if (HasArgs()) {
+    if (!vis->Visit(GetArgs()->raw_ptr()))
+      return false;
+  }
+  return true;
+}
+
+auto NativeProcedure::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  if (!Procedure::VisitPointerPointers(vis))
+    return false;
+  if (HasDocs()) {
+    auto docs = GetDocs()->raw_ptr();
+    if (!vis->Visit(&docs))
+      return false;
+    if (!GetDocs()->raw_ptr()->Equals(docs))
+      SetDocs(docs->As<String>());
+  }
+  if (HasArgs()) {
+    auto args = GetArgs()->raw_ptr();
+    if (!vis->Visit(&args))
+      return false;
+    if (!GetDocs()->raw_ptr()->Equals(args))
+      SetArgs(args->As<Array<Argument*>>());
+  }
+  return true;
 }
 
 auto NativeProcedure::HashCode() const -> uword {

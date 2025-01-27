@@ -5,7 +5,7 @@
 #include <glog/logging.h>
 
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/gv.h"
 
 namespace gel {

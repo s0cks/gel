@@ -19,7 +19,7 @@ class Error : public Object {
 
  protected:
   auto VisitPointers(PointerVisitor* vis) -> bool override;
-  auto VisitPointers(PointerPointerVisitor* vis) -> bool override;
+  auto VisitPointerPointers(PointerPointerVisitor* vis) -> bool override;
 
  public:
   explicit Error(String* message) :
@@ -50,6 +50,10 @@ class Error : public Object {
   static inline auto New(const std::string& message) -> Error* {
     ASSERT(!message.empty());
     return New(String::New(message));
+  }
+
+  static inline auto New(const std::stringstream& ss) -> Error* {
+    return New(ss.str());
   }
 
   static inline auto New(Object* rhs) -> Error* {

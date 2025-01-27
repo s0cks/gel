@@ -1,4 +1,4 @@
-(import fs)
+(import "fs.cl")
 (def filename "./test")
 (fs/mkdir filename 0755
   $((print (format "{} created!" filename)))

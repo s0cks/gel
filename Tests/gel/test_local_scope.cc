@@ -108,9 +108,9 @@ TEST_F(LocalScopeTest, Test_ChildHasFromParentScope) {  // NOLINT
   const auto child_scope = LocalScope::New(GetScope());
   ASSERT_TRUE(child_scope);
 
-  ASSERT_FALSE(child_scope->Has(kSymbol1));
-  ASSERT_FALSE(child_scope->Has(kSymbol2));
-  ASSERT_FALSE(child_scope->Has(kSymbol3));
-  ASSERT_TRUE(child_scope->Has(kSymbol2, true));
+  ASSERT_FALSE(child_scope->HasLocal(kSymbol1));
+  ASSERT_FALSE(child_scope->HasLocal(kSymbol2));
+  ASSERT_FALSE(child_scope->HasLocal(kSymbol3));
+  ASSERT_TRUE(child_scope->Has(kSymbol2));
 }
 }  // namespace gel

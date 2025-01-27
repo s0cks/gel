@@ -14,7 +14,9 @@ NATIVE_PROCEDURE_F(gel_get_fields) {
   if (!cls)
     return Throw(cls);
   Object* result = Null();
-  for (const auto& field : cls->GetFields()) {
+  for (auto idx = 0; idx < cls->GetNumberOfFields(); idx++) {
+    const auto field = cls->GetFieldAt(idx);
+    ASSERT(field);
     result = Cons(Cons(field->GetName(), Long::New(field->GetOffset())), result);
   }
   return Return(result);
@@ -26,15 +28,23 @@ NATIVE_PROCEDURE_F(gel_print_args) {
     return Throw(func);
   if (func->IsLambda()) {
     const auto& arguments = func->AsLambda()->GetArgs();
-    DLOG(INFO) << func->GetSymbol() << " arguments:";
-    for (const auto& arg : arguments) {
-      DLOG(INFO) << " - " << arg;
+    if (arguments) {
+      DLOG(INFO) << func->GetSymbol() << " arguments:";
+      for (auto idx = 0; idx < arguments->GetLength(); idx++) {
+        const auto arg = arguments->Get(idx);
+        ASSERT(arg);
+        DLOG(INFO) << " - " << arg->ToString();
+      }
     }
   } else if (func->IsNativeProcedure()) {
     const auto& arguments = func->AsNativeProcedure()->GetArgs();
-    DLOG(INFO) << func->GetSymbol() << " arguments:";
-    for (const auto& arg : arguments) {
-      DLOG(INFO) << " - " << arg;
+    if (arguments) {
+      DLOG(INFO) << func->GetSymbol() << " arguments:";
+      for (auto idx = 0; idx < arguments->GetLength(); idx++) {
+        const auto arg = arguments->Get(idx);
+        ASSERT(arg);
+        DLOG(INFO) << " - " << arg->ToString();
+      }
     }
   }
   return Return();
@@ -52,7 +62,7 @@ NATIVE_PROCEDURE_F(gel_get_modules) {
 }
 
 NATIVE_PROCEDURE_F(gel_print_new_zone) {
-  const auto heap = Heap::GetHeap();
+  const auto heap = GetCurrentThreadHeap();
   if (!heap)
     return Return();
   PrintNewZone(heap->GetNewZone());
@@ -60,22 +70,16 @@ NATIVE_PROCEDURE_F(gel_print_new_zone) {
 }
 
 NATIVE_PROCEDURE_F(gel_print_old_zone) {
-  const auto heap = Heap::GetHeap();
+  const auto heap = GetCurrentThreadHeap();
   if (!heap)
     return Return();
   PrintOldZone(heap->GetOldZone());
   return Return();
 }
 
-NATIVE_PROCEDURE_F(gel_get_roots) {
-  Object* result = Null();
-  LOG_IF(FATAL, !VisitRoots([&result](Pointer** ptr) {
-           ASSERT((*ptr));
-           result = Pair::New((*ptr)->GetObjectPointer(), result);
-           return true;
-         }))
-      << "failed to visit roots.";
-  return Return(result);
+NATIVE_PROCEDURE_F(gel_print_roots) {
+  PrintRoots();
+  return ReturnNull();
 }
 
 NATIVE_PROCEDURE_F(gel_minor_gc) {
@@ -114,7 +118,7 @@ NATIVE_PROCEDURE_F(gel_print_st) {
   StackFrameIterator iter(runtime->stack_);
   while (iter.HasNext()) {
     const auto& next = iter.Next();
-    LOG(INFO) << "  " << next.GetId() << ": " << next.GetTargetName();
+    LOG(INFO) << "  " << next->GetId() << ": " << next->GetTargetName();
   }
   return DoNothing();
 }
@@ -127,7 +131,7 @@ NATIVE_PROCEDURE_F(gel_get_locals) {
     return gel::ToList(ObjectList{
 
         local->HasValue() ? local->GetValue() : Null(),
-        String::New(local->GetName()),
+        String::New(local->GetSymbol()),
     });
   }));
 }

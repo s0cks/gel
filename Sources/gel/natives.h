@@ -16,10 +16,21 @@ _DECLARE_NATIVE_PROCEDURE(type, "type?");
 _DECLARE_NATIVE_PROCEDURE(rand_range, "random:range");
 _DECLARE_NATIVE_PROCEDURE(set_car, "set-car!");
 _DECLARE_NATIVE_PROCEDURE(set_cdr, "set-cdr!");
-DECLARE_NATIVE_PROCEDURE(hashcode);
 _DECLARE_NATIVE_PROCEDURE(gel_sizeof, "sizeof");
 _DECLARE_NATIVE_PROCEDURE(gel_load_bindings, "gel/load-bindings");
 _DECLARE_NATIVE_PROCEDURE(get_event_loop, "get-event-loop");
+
+// ----------------------------------------------------------------------------------------------------
+// Object
+// ----------------------------------------------------------------------------------------------------
+#define _DECLARE_OBJECT_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(object_##Name, "Object:" Sym)
+#define DECLARE_OBJECT_PROCEDURE(Name)       _DECLARE_OBJECT_PROCEDURE(Name, #Name);
+
+DECLARE_OBJECT_PROCEDURE(hashcode);
+
+#undef _DECLARE_OBJECT_PROCEDURE
+#undef DECLARE_OBJECT_PROCEDURE
+// ----------------------------------------------------------------------------------------------------
 
 // ----------------------------------------------------------------------------------------------------
 // Class
@@ -188,7 +199,7 @@ _DECLARE_NATIVE_PROCEDURE(gel_get_debug, "gel/debug?");
 
 #ifdef GEL_DEBUG
 _DECLARE_NATIVE_PROCEDURE(gel_print_args, "gel/print-args");
-_DECLARE_NATIVE_PROCEDURE(gel_get_roots, "gel/get-roots");
+_DECLARE_NATIVE_PROCEDURE(gel_print_roots, "gel/print-roots");
 _DECLARE_NATIVE_PROCEDURE(gel_minor_gc, "gel/minor-gc!");
 _DECLARE_NATIVE_PROCEDURE(gel_major_gc, "gel/major-gc!");
 _DECLARE_NATIVE_PROCEDURE(gel_print_heap, "gel/print-heap");

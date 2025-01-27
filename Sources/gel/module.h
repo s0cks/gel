@@ -5,7 +5,8 @@
 #include <filesystem>
 
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
+#include "gel/macro.h"
 #include "gel/namespace.h"
 #include "gel/object.h"
 #include "gel/pointer.h"
@@ -14,29 +15,40 @@ namespace gel {
 class Module;
 using MacroList = std::vector<Macro*>;
 using ModuleList = std::vector<Module*>;
+
+class ModuleVisitor {
+  DEFINE_NON_COPYABLE_TYPE(ModuleVisitor);
+
+ protected:
+  ModuleVisitor() = default;
+
+ public:
+  virtual ~ModuleVisitor() = default;
+  virtual auto Visit(Module* m) -> bool = 0;
+};
+DECLARE_VISITOR_WRAPPER(Module, Module*);
+
 class Module : public Object {
   friend class Parser;
   friend class Runtime;  // TODO: revoke
   friend class ModuleLoader;
 
  private:
-  String* name_;
   LocalScope* scope_;
-  NamespaceList namespaces_{};
-  MacroList macros_{};
+  Array<Namespace*>* namespaces_ = nullptr;
+  Array<Macro*>* macros_ = nullptr;
+  Array<Lambda*>* lambdas_ = nullptr;
   Lambda* init_ = nullptr;
-
-  void Append(Namespace* ns);
-  void Append(Macro* macro);
-  auto CreateInitFunc(const expr::ExpressionList& body) -> Lambda*;
 
  protected:
   explicit Module(String* name, LocalScope* scope) :
     Object(),
-    name_(name),
     scope_(scope) {
-    ASSERT(name_);
     ASSERT(scope_);
+    SetName(name);
+    SetNamespaces(Array<Namespace*>::New());
+    SetMacros(Array<Macro*>::New());
+    SetLambdas(Array<Lambda*>::New());
   }
 
   void SetInit(Lambda* rhs) {
@@ -44,9 +56,36 @@ class Module : public Object {
     init_ = rhs;
   }
 
+  void SetInitialized(Bool* rhs) {
+    ASSERT(rhs);
+    ASSERT(kFieldInitialized);
+    return SetField(kFieldInitialized, rhs);
+  }
+
   void SetInitialized(const bool rhs = true) {
     ASSERT(kFieldInitialized);
-    SetField(kFieldInitialized, Bool::Box(rhs));
+    return SetInitialized(Bool::Box(rhs));
+  }
+
+  void SetName(String* rhs) {
+    ASSERT(rhs);
+    ASSERT(kNameField);
+    SetField(kNameField, rhs);
+  }
+
+  void SetMacros(Array<Macro*>* rhs) {
+    ASSERT(rhs);
+    macros_ = rhs;
+  }
+
+  void SetLambdas(Array<Lambda*>* rhs) {
+    ASSERT(rhs);
+    lambdas_ = rhs;
+  }
+
+  void SetNamespaces(Array<Namespace*>* rhs) {
+    ASSERT(rhs);
+    namespaces_ = rhs;
   }
 
   inline void ClearInitialized() {
@@ -54,44 +93,64 @@ class Module : public Object {
   }
 
   auto Init(Runtime* runtime) -> bool;
-  auto VisitPointers(PointerPointerVisitor* vis) -> bool override;
+  auto VisitPointers(PointerVisitor* vis) -> bool override;
+  auto VisitPointerPointers(PointerPointerVisitor* vis) -> bool override;
+  auto CreateInitFunc(const expr::ExpressionList& body) -> Lambda*;
+
+  void AddChild(Object* rhs) override;
 
  public:
   ~Module() override = default;
 
-  auto IsInitialized() const -> bool {
+  auto GetInitialized() const -> Bool* {
     ASSERT(kFieldInitialized);
-    return GetField(kFieldInitialized)->AsBool()->Get();
+    return GetField(kFieldInitialized)->AsBool();
+  }
+
+  auto IsInitialized() const -> bool {
+    return GetInitialized()->Get();
   }
 
   auto GetName() const -> String* {
-    return name_;
+    ASSERT(kNameField);
+    return GetField(kNameField)->AsString();
   }
 
   auto GetScope() const -> LocalScope* {
     return scope_;
   }
 
-  auto GetNamespace(const std::string& name) const -> Namespace* {
-    ASSERT(!name.empty());
-    for (const auto& ns : namespaces_) {
-      if (ns->GetName() == name)
-        return ns;
-    }
-    return nullptr;
+  auto FindNamespace(const std::string& name) const -> Namespace* {
+    return namespaces_ ? namespaces_->FindIf(Namespace::IsNamed(name)) : nullptr;
   }
 
-  auto GetNamespaces() const -> const NamespaceList& {
+  auto GetNamespaces() const -> Array<Namespace*>* {
     return namespaces_;
   }
 
   auto GetNumberOfNamespaces() const -> uword {
-    return namespaces_.size();
+    return namespaces_->GetLength();
   }
 
   auto GetNamespaceAt(const uword idx) const -> Namespace* {
     ASSERT(idx >= 0 && idx <= GetNumberOfNamespaces());
-    return namespaces_[idx];
+    return namespaces_->Get(idx);
+  }
+
+  auto GetMacros() const -> Array<Macro*>* {
+    return macros_;
+  }
+
+  auto GetNumberOfMacros() const -> uint64_t {
+    return macros_->GetLength();
+  }
+
+  auto GetLambdas() const -> Array<Lambda*>* {
+    return lambdas_;
+  }
+
+  auto GetNumberOfLambdas() const -> uint64_t {
+    return lambdas_->GetLength();
   }
 
   auto GetInit() const -> Lambda* {
@@ -102,10 +161,20 @@ class Module : public Object {
     return GetInit() != nullptr;
   }
 
+  inline auto HasName() const -> bool {
+    ASSERT(kNameField);
+    return GetName() != nullptr;
+  }
+
+  auto IsKernel() const -> bool {
+    return HasName() && GetName()->Equals("_kernel");
+  }
+
   DECLARE_TYPE(Module);
 
  private:
   static Field* kFieldInitialized;
+  static Field* kNameField;
   static inline auto IsNamed(std::string name) -> std::function<bool(Module*)> {
     return [name](Module* m) {
       ASSERT(m);
@@ -114,14 +183,19 @@ class Module : public Object {
   }
 
  public:
+  static void Init();
   static void GetAllLoadedModules(std::vector<Module*>& modules);
-  static auto IsLoaded(const std::string& name) -> bool;
   static auto Find(const std::string& name) -> Module*;
   static auto New(String* name, LocalScope* scope) -> Module*;
-  static auto LoadFrom(const std::filesystem::path& abs_path) -> Module*;
-  static auto VisitModules(const std::function<bool(Module*)>& vis) -> bool;
-  static auto VisitModulePointers(const std::function<bool(Pointer**)>& vis) -> bool;
   static auto FindOrLoad(const std::string& name) -> Module*;
+  static auto LoadFrom(const std::filesystem::path& abs_path) -> Module*;
+  static auto VisitAllModules(ModuleVisitor* vis) -> bool;
+  static auto VisitAllModulePointers(PointerVisitor* vis) -> bool;
+  static auto VisitAllModulePointerPointers(PointerPointerVisitor* vis) -> bool;
+
+  static inline auto IsLoaded(const std::string& name) -> bool {
+    return Find(name) != nullptr;
+  }
 };
 }  // namespace gel
 

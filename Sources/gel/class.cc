@@ -1,5 +1,7 @@
+#include "gel/array.h"
 #include "gel/buffer.h"
 #include "gel/common.h"
+#include "gel/event_emitter.h"
 #include "gel/event_loop.h"
 #include "gel/macro.h"
 #include "gel/module.h"
@@ -12,13 +14,22 @@
 #include "gel/to_string_helper.h"
 
 namespace gel {
-static uword num_classes_ = 0;
-PointerList classes_;
+static Array<Class*>* classes_ = nullptr;
 
 static inline auto Register(Class* cls) -> Class* {
   ASSERT(cls);
-  classes_.push_back(cls->raw_ptr());
+  classes_->Push(cls);
   return cls;
+}
+
+Class::Class(ClassId id, Class* parent, String* name) :
+  Object(),
+  id_(id),
+  parent_(parent),
+  name_(name),
+  fields_(Array<Field*>::New()) {
+  ASSERT(name_);
+  ASSERT(fields_);
 }
 
 auto Class::New(const ClassId id, Class* parent, String* name) -> Class* {
@@ -36,12 +47,12 @@ auto Class::New(const ClassId id, Class* parent, const std::string& name) -> Cla
 auto Class::New(Class* parent, String* name) -> Class* {
   ASSERT(parent);
   ASSERT(name);
-  return New(++num_classes_, parent, name);
+  return New(classes_->GetLength() + 1, parent, name);
 }
 
 auto Class::New(const ClassId id, String* name) -> Class* {
   ASSERT(name);
-  return Class::New(++num_classes_, nullptr, name);
+  return Class::New(id, nullptr, name);
 }
 
 auto Class::New(const ClassId id, const std::string& name) -> Class* {
@@ -56,7 +67,9 @@ auto Class::New(Class* parent, const std::string& name) -> Class* {
 }
 
 auto Class::CreateClass() -> Class* {
-  return Class::New(Object::GetClass(), kClassName);
+  const auto cls = Class::New(Object::GetClass(), kClassName);
+  ASSERT(cls);
+  return cls;
 }
 
 auto Class::New(const ObjectList& args) -> Class* {
@@ -72,9 +85,18 @@ auto Class::ToString() const -> std::string {
 }
 
 auto Class::GetAllocationSize() const -> uword {
-  if (Equals(Class::kClass))
-    return sizeof(Class);
-  else if (Equals(Field::kClass))
+  if (Equals(Class::kClass)) {
+    const auto cls = Class::GetClass();
+    ASSERT(cls);
+    uword total_size = sizeof(Class);
+    for (auto idx = 0; idx < cls->GetNumberOfFields(); idx++) {
+      const auto field = cls->GetFieldAt(idx);
+      ASSERT(field);
+      field->SetOffset(total_size);
+      total_size += sizeof(uword);
+    }
+    return total_size;
+  } else if (Equals(Field::kClass))
     return sizeof(Field);
   else if (Equals(String::kClass))
     return sizeof(String);
@@ -82,7 +104,8 @@ auto Class::GetAllocationSize() const -> uword {
     const auto cls = Module::GetClass();
     ASSERT(cls);
     uword total_size = sizeof(Module);
-    for (const auto& field : cls->GetFields()) {
+    for (auto idx = 0; idx < cls->GetNumberOfFields(); idx++) {
+      const auto field = cls->GetFieldAt(idx);
       ASSERT(field);
       field->SetOffset(total_size);
       total_size += sizeof(uword);
@@ -102,13 +125,30 @@ auto Class::AddField(const std::string& name) -> Field* {
 
 auto Class::VisitPointers(PointerVisitor* vis) -> bool {
   ASSERT(vis);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return false;
+  if (HasParent()) {
+    if (!vis->Visit(GetParent()->raw_ptr()))
+      return false;
+  }
+  if (!vis->Visit(GetName()->raw_ptr()))
+    return false;
+  if (!vis->Visit(GetFields()->raw_ptr()))
+    return false;
+  for (const auto& func : funcs_) {
+    ASSERT(func);
+    if (!vis->Visit(func->raw_ptr()))
+      return false;
+  }
+  return true;
 }
 
-auto Class::VisitPointers(PointerPointerVisitor* vis) -> bool {
+auto Class::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
   ASSERT(vis);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  if (!VisitPointerPointer(vis, &parent_))
+    return false;
+  if (!VisitPointerPointer(vis, &name_))
+    return false;
+  if (!VisitPointerPointer(vis, &fields_))
+    return false;
   return true;
 }
 
@@ -137,14 +177,15 @@ auto Class::HashCode() const -> uword {
   return hash;
 }
 
+static inline auto IsNamed(const std::string& name) -> std::function<bool(Class*)> {
+  ASSERT(!name.empty());
+  return [name](Class* cls) {
+    return cls && cls->GetName()->Equals(name);
+  };
+}
+
 auto Class::FindClass(const std::string& name) -> Class* {
-  for (const auto& ptr : classes_) {
-    ASSERT(ptr && ptr->GetObjectPointer());
-    const auto cls = ptr->As<Class>();
-    if (cls->GetName()->Get() == name)
-      return cls;
-  }
-  return nullptr;
+  return classes_->FindIf(IsNamed(name));
 }
 
 auto Class::FindClass(String* name) -> Class* {
@@ -153,6 +194,15 @@ auto Class::FindClass(String* name) -> Class* {
 
 auto Class::FindClass(Symbol* name) -> Class* {
   return FindClass(name->GetSymbolName());
+}
+
+auto Class::GetNumberOfFields() const -> uint64_t {
+  return fields_->GetLength();
+}
+
+auto Class::GetFieldAt(const uint64_t idx) const -> Field* {
+  ASSERT(idx >= 0 && idx <= GetNumberOfFields());
+  return fields_->Get(idx);
 }
 
 auto Class::NewInstance(const ObjectList& args) -> Object* {
@@ -169,7 +219,7 @@ auto Class::NewInstance(const ObjectList& args) -> Object* {
   return nullptr;
 }
 
-auto Class::GetFunction(const std::string& name, const bool recursive) const -> Procedure* {
+auto Class::FindFunction(const std::string& name, const bool recursive) const -> Procedure* {
   for (const auto& func : funcs_) {
     if (func->GetSymbol()->GetSymbolName() == name)
       return func;
@@ -177,7 +227,7 @@ auto Class::GetFunction(const std::string& name, const bool recursive) const -> 
   if (recursive && HasParent()) {
     auto cls = GetParent();
     do {
-      const auto func = cls->GetFunction(name, false);
+      const auto func = cls->FindFunction(name, false);
       if (func)
         return func;
       cls = cls->GetParent();
@@ -186,24 +236,33 @@ auto Class::GetFunction(const std::string& name, const bool recursive) const -> 
   return nullptr;
 }
 
-auto Class::GetField(Symbol* symbol, const bool recursive) const -> Field* {
-  for (const auto& field : fields_) {
-    if (field->GetName()->Equals(symbol->GetSymbolName()))
+void Class::Add(Field* field) {
+  ASSERT(field);
+  fields_->Push(field);
+}
+
+auto Field::IsNamed(const std::string& name) -> Field::Predicate {
+  ASSERT(!name.empty());
+  return [&name](Field* field) {
+    return field && field->GetName()->Equals(name);
+  };
+}
+
+auto Class::FindField(Symbol* symbol, const bool recursive) const -> Field* {
+  Class const* cls = this;
+  do {
+    const auto field = cls->GetFields()->FindIf(Field::IsNamed(symbol->GetSymbolName()));
+    if (field)
       return field;
-  }
-  if (recursive && HasParent()) {
-    auto cls = GetParent();
-    do {
-      const auto field = cls->GetField(symbol, false);
-      if (field)
-        return field;
-      cls = cls->GetParent();
-    } while (cls);
-  }
+    if (!recursive)
+      break;
+    cls = cls->GetParent();
+  } while (cls);
+  DLOG(WARNING) << "failed to find field w/ symbol: " << symbol;
   return nullptr;
 }
 
-auto Class::GetFunction(Symbol* symbol, const bool recursive) const -> Procedure* {
+auto Class::FindFunction(Symbol* symbol, const bool recursive) const -> Procedure* {
   for (const auto& func : funcs_) {
     if (func->GetSymbol()->Equals(symbol))
       return func;
@@ -211,7 +270,7 @@ auto Class::GetFunction(Symbol* symbol, const bool recursive) const -> Procedure
   if (recursive && HasParent()) {
     auto cls = GetParent();
     do {
-      const auto func = cls->GetFunction(symbol, false);
+      const auto func = cls->FindFunction(symbol, false);
       if (func)
         return func;
       cls = cls->GetParent();
@@ -236,26 +295,34 @@ auto Class::HasFunction(Symbol* symbol, const bool recursive) const -> bool {
   return false;
 }
 
-template <typename V>
-static inline auto IterateClasses(const V& values, const std::function<bool(Class*)>& vis) -> bool {
-  for (const Pointer* ptr : values) {
-    ASSERT(ptr && ptr->GetObjectPointer());
-    if (!vis(ptr->As<Class>()))
+auto Class::VisitAllClasses(ClassVisitor* vis) -> bool {
+  ASSERT(vis);
+  for (auto idx = 0; idx < classes_->GetLength(); idx++) {
+    const auto cls = classes_->Get(idx);
+    ASSERT(cls);
+    if (!vis->Visit(cls))
       return false;
   }
   return true;
 }
 
-auto Class::VisitClasses(const std::function<bool(Class*)>& vis, const bool reverse) -> bool {
-  return reverse ? IterateClasses(std::ranges::reverse_view(classes_), vis) : IterateClasses(classes_, vis);
+auto Class::VisitAllClassPointers(PointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  return classes_->VisitPointers(vis);
 }
 
-auto Class::VisitClassPointers(const std::function<bool(Pointer**)>& vis) -> bool {
-  for (auto& cls : classes_) {
-    ASSERT(cls && cls->GetObjectPointer());
-    if (!vis(&cls))
-      return false;
-  }
+auto Class::VisitAllClassPointerPointers(PointerPointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  if (!classes_->VisitPointerPointers(vis))
+    return false;
+  if (!VisitPointerPointer(vis, &classes_))
+    return false;
+#define VISIT_CLASS_POINTER_POINTER(Name)   \
+  if (!Name::VisitClassPointerPointer(vis)) \
+    return false;
+  VISIT_CLASS_POINTER_POINTER(Object);
+  FOR_EACH_TYPE(VISIT_CLASS_POINTER_POINTER)
+#undef VISIT_CLASS_POINTER_POINTER
   return true;
 }
 
@@ -264,10 +331,29 @@ auto Field::CreateClass() -> Class* {
   return Class::New(Object::GetClass(), "Field");
 }
 
+auto Field::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  if (!VisitPointerPointer(vis, &owner_))
+    return false;
+  if (!VisitPointerPointer(vis, &name_))
+    return false;
+  return true;
+}
+
+auto Field::VisitPointers(PointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  if (!vis->Visit(GetOwner()->raw_ptr()))
+    return false;
+  if (!vis->Visit(GetName()->raw_ptr()))
+    return false;
+  return true;
+}
+
 auto Field::ToString() const -> std::string {
   ToStringHelper<Field> helper;
   helper.AddField("name", GetName());
   helper.AddField("owner", GetOwner());
+  helper.AddField("offset", GetOffset());
   return helper;
 }
 
@@ -289,7 +375,8 @@ auto Field::New(const ObjectList& args) -> Field* {
 }
 
 void Class::Init() {
-  InitClass();
+  classes_ = Array<Class*>::New(Class::kTotalNumberOfInternalClassIds);
+  ASSERT(classes_);
   using namespace proc;
   InitNative<get_classes>();
   InitNative<get_class>();
@@ -301,11 +388,11 @@ namespace proc {
 NATIVE_PROCEDURE_F(get_classes) {
   ASSERT(args.empty());
   Object* result = Null();
-  const auto visitor = [&result](Class* cls) {
+  ClassVisitorWrapper vis([&result](Class* cls) {
     result = Cons(cls, result);
     return true;
-  };
-  LOG_IF(FATAL, !Class::VisitClasses(visitor, true)) << "failed to visit classes.";
+  });
+  LOG_IF(FATAL, !Class::VisitAllClasses(&vis)) << "failed to visit classes.";
   return Return(result);
 }
 

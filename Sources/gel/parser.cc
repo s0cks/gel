@@ -7,8 +7,9 @@
 
 #include "gel/argument.h"
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/instruction.h"
+#include "gel/lambda.h"
 #include "gel/local.h"
 #include "gel/local_scope.h"
 #include "gel/macro.h"
@@ -17,6 +18,7 @@
 #include "gel/object.h"
 #include "gel/token.h"
 #include "gel/tracing.h"
+#include "gel/type_traits.h"
 
 namespace gel {
 static KeywordTrie::Node* keywords_ = new KeywordTrie::Node();
@@ -24,6 +26,79 @@ static KeywordTrie::Node* keywords_ = new KeywordTrie::Node();
 static inline void RegisterKeyword(const std::string& keyword, const Token::Kind kind) {
   LOG_IF(FATAL, !KeywordTrie::Insert(keywords_, keyword, kind))
       << "failed to define keyword: " << keyword << " (" << kind << ").";
+}
+
+#define CHECK_RESULT(Expr)      \
+  ({                            \
+    const auto status = (Expr); \
+    if (!status) {              \
+      DLOG(ERROR) << status;    \
+      return status;            \
+    }                           \
+  })
+
+#define EXPECT(Token, Kind)   \
+  if ((Token).kind != (Kind)) \
+    return UnexpectedError((Token), (Kind));
+
+#define EXPECT_NEXT(Kind)           \
+  ({                                \
+    const auto& next = NextToken(); \
+    EXPECT(next, Kind);             \
+  })
+
+class ParseScope {
+  DEFINE_NON_COPYABLE_TYPE(ParseScope);
+
+ private:
+  Parser* parser_;
+  LocalScope* scope_{};
+
+ public:
+  ParseScope(Parser* parser) :
+    parser_(parser) {
+    ASSERT(parser_);
+    scope_ = parser_->PushScope();
+  }
+  ~ParseScope() {
+    ASSERT(parser_);
+    parser_->PopScope();
+  }
+
+  auto operator->() const -> LocalScope* {
+    return scope_;
+  }
+
+  operator LocalScope*() const {
+    return scope_;
+  }
+};
+
+template <class T>
+auto Parser::TryParseDocstring(T* owner, std::enable_if_t<gel::has_docs<T>::value>*) -> ParseResult {
+  ASSERT(owner);
+  if (PeekEq(Token::kLiteralString)) {
+    String* docstring = nullptr;
+    CHECK_RESULT(ParseLiteralString(&docstring));
+    ASSERT(docstring);
+    owner->SetDocs(docstring);
+  }
+  return true;
+}
+
+template auto Parser::TryParseDocstring(Lambda*, void*) -> ParseResult;
+template auto Parser::TryParseDocstring(Namespace*, void*) -> ParseResult;
+
+template <class T>
+auto Parser::TryParseSymbol(T* owner, std::enable_if_t<gel::has_symbol<T>::value>*) -> ParseResult {
+  ASSERT(owner);
+  Symbol* symbol = nullptr;
+  if (PeekEq(Token::kIdentifier)) {
+    CHECK_RESULT(ParseLiteralSymbol(&symbol));
+    ASSERT(symbol);
+    owner->SetSymbol(symbol);
+  }
+  return true;
 }
 
 auto Parser::PushScope() -> LocalScope* {
@@ -43,112 +118,137 @@ void Parser::PopScope() {
   SetScope(new_scope);
 }
 
-auto Parser::ParseLiteralString() -> String* {
-  const auto next = ExpectNext(Token::kLiteralString);
-  ASSERT(next.kind == Token::kLiteralString);
-  if (next.text.empty())
-    return String::Empty();
-  return String::New(next.text);
+auto Parser::ParseLiteralString(String** result) -> ParseResult {
+  const auto& next = NextToken();
+  EXPECT(next, Token::kLiteralString);
+  (*result) = next.IsEmpty() ? String::Empty() : String::New(next.text);
+  return true;
 }
 
-auto Parser::ParseSymbol() -> Symbol* {
+auto Parser::ParseLiteralSymbol(Symbol** result) -> ParseResult {
   const auto& next = NextToken();  // TODO: fix the weird logic where kNewExpr check is needed
-  LOG_IF(FATAL, (next.kind != Token::kIdentifier && next.kind != Token::kNewExpr))
-      << "unexpected: " << next << ", expected: " << Token::kIdentifier;
+  if (next.kind != Token::kIdentifier && next.kind != Token::kNewExpr) {
+    std::stringstream ss;
+    ss << "unexpected " << next << ", expected a Symbol or new-expr.";
+    return ReturnError(ss, next.pos);
+  }
   ASSERT(next.kind == Token::kIdentifier || next.kind == Token::kNewExpr);
-  if (InNamespace())
-    return GetNamespace()->CreateSymbol(next.text);
-  return Symbol::New(next.text);
+  ASSERT(!next.text.empty());
+  if (HasOwner() && GetOwner()->IsNamespace()) {
+    (*result) = GetOwner()->AsNamespace()->CreateSymbol(next.text);
+    return true;
+  }
+  (*result) = Symbol::New(next.text);
+  return true;
 }
 
-auto Parser::ParseLiteralLambda(const Token::Kind kind) -> expr::LiteralExpr* {
-  return expr::LiteralExpr::New(ParseLambda(kind));
+auto Parser::ParseLiteralLambda(const Token::Kind kind, expr::LiteralExpr** result) -> ParseResult {
+  Lambda* lambda = nullptr;
+  CHECK_RESULT(ParseLambda(kind, &lambda));
+  ASSERT(lambda);
+  const auto literal = expr::LiteralExpr::New(lambda);
+  ASSERT(literal);
+  (*result) = literal;
+  return true;
 }
 
-auto Parser::ParseMap() -> expr::Expression* {
-  ExpectNext(Token::kLBrace);
+auto Parser::ParseMap(expr::Expression** result) -> ParseResult {
+  EXPECT_NEXT(Token::kLBrace);
+
+  Symbol* key = nullptr;
+  expr::Expression* value = nullptr;
+
   expr::NewMapExpr::EntryList data{};
   while (!PeekEq(Token::kRBrace)) {
-    const auto key = ParseSymbol();
+    CHECK_RESULT(ParseLiteralSymbol(&key));
     ASSERT(key);
-    const auto value = ParseExpression();
+    CHECK_RESULT(ParseExpression(&value));
     ASSERT(value);
     if (PeekEq(Token::kComma))
       NextToken();
     data.emplace_back(key, value);
   }
-  ExpectNext(Token::kRBrace);
-  return expr::NewMapExpr::New(data);
+  EXPECT_NEXT(Token::kRBrace);
+  (*result) = expr::NewMapExpr::New(data);
+  return true;
 }
 
-auto Parser::ParseLiteralBool() -> Bool* {
+auto Parser::ParseLiteralBool(Bool** result) -> ParseResult {
   const auto& next = NextToken();
   switch (next.kind) {
-    case Token::kLiteralTrue:
-      return Bool::True();
+    case Token::kLiteralTrue: {
+      (*result) = Bool::True();
+      break;
+    }
     case Token::kLiteralFalse:
-      return Bool::False();
+      (*result) = Bool::False();
+      break;
     default:
-      Unexpected(next, Token::AnyBool());
-      return nullptr;
+      return UnexpectedError(next);
   }
+  return true;
 }
 
-auto Parser::ParseLiteralNumber() -> Number* {
+auto Parser::ParseLiteralNumber(Number** result) -> ParseResult {
   const auto& next = NextToken();
   switch (next.kind) {
-    case Token::kLiteralLong:
-      return Long::New(next.AsLong());
-    case Token::kLiteralDouble:
-      return Double::New(next.AsDouble());
+    case Token::kLiteralLong: {
+      (*result) = Long::New(next.AsLong());
+      return true;
+    }
+    case Token::kLiteralDouble: {
+      (*result) = Double::New(next.AsDouble());
+      return true;
+    }
     default:
-      Unexpected(next, Token::AnyNumber());
-      return nullptr;
+      return UnexpectedError(next);
   }
 }
 
-auto Parser::ParseLiteralValue() -> Object* {
+auto Parser::ParseLiteralValue(Object** result) -> ParseResult {
   switch (PeekKind()) {
     case Token::kLiteralFalse:
     case Token::kLiteralTrue:
-      return ParseLiteralBool();
+      return ParseLiteralBool((Bool**)result);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
     case Token::kLiteralLong:
     case Token::kLiteralDouble:
-      return ParseLiteralNumber();
-
+      return ParseLiteralNumber((Number**)result);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
     case Token::kLiteralString:
-      return String::New(NextToken().text);
+      return ParseLiteralString((String**)result);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
     case Token::kIdentifier:
-      return Symbol::New(NextToken().text);
+      return ParseLiteralSymbol((Symbol**)result);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
     default:
-      LOG(FATAL) << "unexpected: " << NextToken();
-      return nullptr;
+      return UnexpectedError(NextToken());
   }
 }
 
-auto Parser::ParseLiteralExpr() -> expr::Expression* {
+auto Parser::ParseLiteralExpr(expr::Expression** result) -> ParseResult {
   if (PeekEq(Token::kFn) || PeekEq(Token::kDispatch)) {
-    return ParseLiteralLambda(PeekKind());
+    return ParseLiteralLambda(PeekKind(), (expr::LiteralExpr**)result);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   } else if (PeekEq(Token::kLBrace)) {
-    return ParseMap();
+    return ParseMap(result);
   }
-  const auto value = ParseLiteralValue();
-  ASSERT(value);
-  return LiteralExpr::New(value);
+
+  Object* literal = nullptr;
+  CHECK_RESULT(ParseLiteralValue(&literal));
+  ASSERT(literal);
+  (*result) = expr::LiteralExpr::New(literal);
+  return true;
 }
 
-auto Parser::ParseBeginExpr() -> BeginExpr* {
-  ExpectNext(Token::kBeginExpr);
-  PushScope();
-  const auto begin = BeginExpr::New();
+auto Parser::ParseBeginExpr(expr::Expression** result) -> ParseResult {
+  ParseScope scope(this);
+  EXPECT_NEXT(Token::kBeginExpr);
+  expr::ExpressionList body{};
+  expr::Expression* expr = nullptr;
   while (!PeekEq(Token::kRParen)) {
-    const auto next = ParseExpression();
-    if (next)
-      begin->Append(next);
+    CHECK_RESULT(ParseExpression(&expr));
+    ASSERT(expr);
+    body.push_back(expr);
   }
   ASSERT(PeekEq(Token::kRParen));
-  PopScope();
-  return begin;
+  (*result) = expr::BeginExpr::New(body);
+  return true;
 }
 
 static inline auto IsClassReference(expr::Expression* expr) -> bool {
@@ -160,173 +260,324 @@ static inline auto IsClassReference(expr::Expression* expr) -> bool {
   return false;
 }
 
-auto Parser::ParseCallExpr() -> expr::Expression* {
+static inline auto IsNativeCall(LocalScope* scope, expr::Expression* expr, NativeProcedure** target) -> bool {
+  ASSERT(scope);
+  ASSERT(expr);
+  if (!expr->IsLiteralExpr()) {
+    (*target) = nullptr;
+    return false;
+  }
+
+  const auto literal = expr->AsLiteralExpr();
+  if (literal->GetValue()->IsNativeProcedure()) {
+    (*target) = literal->GetValue()->AsNativeProcedure();
+    return true;
+  } else if (literal->GetValue()->IsSymbol()) {
+    const auto symbol = literal->GetValue()->AsSymbol();
+    ASSERT(symbol);
+    LocalVariable* local = nullptr;
+    if (!scope->Lookup(symbol, &local)) {
+      (*target) = nullptr;
+      return false;
+    }
+    if (!local->HasValue() || !local->GetValue()->IsNativeProcedure()) {
+      (*target) = nullptr;
+      return false;
+    }
+    (*target) = local->GetValue()->AsNativeProcedure();
+    return true;
+  }
+  (*target) = nullptr;
+  return false;
+}
+
+static inline auto IsMacroCall(LocalScope* scope, expr::Expression* expr, Macro** target) -> bool {
+  ASSERT(scope);
+  ASSERT(expr);
+  if (!expr->IsLiteralExpr()) {
+    (*target) = nullptr;
+    return false;
+  }
+
+  const auto literal = expr->AsLiteralExpr();
+  if (literal->GetValue()->IsMacro()) {
+    (*target) = literal->GetValue()->AsMacro();
+    return true;
+  } else if (literal->GetValue()->IsSymbol()) {
+    const auto symbol = literal->GetValue()->AsSymbol();
+    ASSERT(symbol);
+    LocalVariable* local = nullptr;
+    if (!scope->Lookup(symbol, &local)) {
+      (*target) = nullptr;
+      return false;
+    }
+    if (!local->HasValue() || !local->GetValue()->IsMacro()) {
+      (*target) = nullptr;
+      return false;
+    }
+    (*target) = local->GetValue()->AsMacro();
+    return true;
+  }
+  (*target) = nullptr;
+  return false;
+}
+
+static inline auto IsCallable(LocalVariable* local) -> bool {
+  return local && local->HasValue() && (local->GetValue()->IsProcedure() || local->GetValue()->IsMacro());
+}
+
+auto Parser::ParseCallExpr(expr::Expression** result) -> ParseResult {
   Expression* target = nullptr;
   if (PeekEq(Token::kIdentifier)) {
-    const auto symbol = ParseSymbol();
+    Symbol* symbol = nullptr;
+    CHECK_RESULT(ParseLiteralSymbol(&symbol));
     ASSERT(symbol);
     if (symbol->HasSymbolType()) {
       const auto cls = Class::FindClass(symbol->GetSymbolType());
       if (cls) {
         ASSERT(cls);
-        const auto func = cls->GetFunction(symbol);
+        const auto func = cls->FindFunction(symbol);
         if (func) {
-          ExpressionList args;
+          expr::ExpressionList args{};
+          expr::Expression* arg = nullptr;
           while (!PeekEq(Token::kRParen)) {
-            const auto arg = ParseExpression();
+            CHECK_RESULT(ParseExpression(&arg));
             ASSERT(arg);
             args.push_back(arg);
           }
-          return expr::CallProcExpr::New(expr::LiteralExpr::New(func), args);
+          (*result) = expr::InvokeExpr::New(expr::LiteralExpr::New(func), args);
+          return true;
         }
-        const auto field = cls->GetField(symbol);
-        if (field)
-          return expr::LoadFieldExpr::New(ParseExpression(), field);
+        const auto field = cls->FindField(symbol);
+        if (field) {
+          expr::Expression* instance = nullptr;
+          CHECK_RESULT(ParseExpression(&instance));
+          ASSERT(instance);
+          (*result) = expr::LoadFieldExpr::New(instance, field);
+          return true;
+        }
+      }
+
+      LocalVariable* local = nullptr;
+      if (GetScope()->Lookup(symbol->GetSymbolType(), &local) && local && local->HasValue()) {
+        const auto type = local->GetValue()->GetType();
+        const auto func = type->FindFunction(symbol->GetSymbolName());
+        if (func) {
+          expr::ExpressionList args{};
+          expr::Expression* arg = nullptr;
+          while (!PeekEq(Token::kRParen)) {
+            CHECK_RESULT(ParseExpression(&arg));
+            ASSERT(arg);
+            args.push_back(arg);
+          }
+          (*result) = expr::InvokeInstanceExpr::New(func, expr::LiteralExpr::New(local->GetSymbol()), args);
+          return true;
+        }
       }
     }
 
     const auto cls = Class::FindClass(symbol);
     if (cls) {
       ASSERT(cls && cls->GetName()->Equals(symbol));
-      ExpressionList args;
+      expr::ExpressionList args{};
+      expr::Expression* arg = nullptr;
       while (!PeekEq(Token::kRParen)) {
-        const auto arg = ParseExpression();
+        CHECK_RESULT(ParseExpression(&arg));
         ASSERT(arg);
         args.push_back(arg);
       }
-      return expr::NewExpr::New(cls, args);
+      (*result) = expr::NewExpr::New(cls, args);
+      return true;
     }
 
-    target = expr::LiteralExpr::New(symbol);
+    LocalVariable* local = nullptr;
+    if (GetScope()->Lookup(symbol, &local) && IsCallable(local)) {
+      target = expr::LiteralExpr::New(local->GetValue());
+    } else {
+      target = expr::LiteralExpr::New(symbol);
+    }
   } else {
-    target = ParseExpression();
+    CHECK_RESULT(ParseExpression(&target));
   }
   ASSERT(target);
-  ExpressionList args;
+
+  expr::ExpressionList args{};
+  expr::Expression* arg = nullptr;
   while (!PeekEq(Token::kRParen)) {
-    const auto arg = ParseExpression();
+    CHECK_RESULT(ParseExpression(&arg));
     ASSERT(arg);
     args.push_back(arg);
   }
-  return CallProcExpr::New(target, args);
+
+  const auto scope = GetScope();
+  if (target->IsLiteralExpr()) {
+    const auto literal = target->AsLiteralExpr();
+    ASSERT(literal);
+    if (literal->GetValue()->IsMacro()) {
+      (*result) = expr::InvokeMacroExpr::New(literal->GetValue()->AsMacro(), args);
+      return true;
+    } else if (literal->GetValue()->IsNativeProcedure()) {
+      (*result) = expr::InvokeNativeExpr::New(literal->GetValue()->AsNativeProcedure(), args);
+      return true;
+    } else if (literal->GetValue()->IsSymbol()) {
+      const auto symbol = literal->GetValue()->AsSymbol();
+      ASSERT(symbol);
+      LocalVariable* local = nullptr;
+      if (scope->Lookup(symbol, &local) && local && local->HasValue()) {
+        if (local->GetValue()->IsMacro()) {
+          (*result) = expr::InvokeMacroExpr::New(literal->GetValue()->AsMacro(), args);
+          return true;
+        } else if (local->GetValue()->IsNativeProcedure()) {
+          (*result) = expr::InvokeNativeExpr::New(literal->GetValue()->AsNativeProcedure(), args);
+          return true;
+        }
+      }
+    }
+  }
+  (*result) = expr::InvokeExpr::New(target, args);
+  return true;
 }
 
-auto Parser::ParseUnaryExpr() -> expr::UnaryExpr* {
-  const auto op = NextToken().ToUnaryOp();
-  ASSERT(op);
-  const auto value = ParseExpression();
+auto Parser::ParseUnaryOpExpr(expr::Expression** result) -> ParseResult {
+  const auto& next = NextToken();
+  const auto op = next.ToUnaryOp();
+  if (!op)
+    return Unexpected(next);
+  expr::Expression* value = nullptr;
+  CHECK_RESULT(ParseExpression(&value));
   ASSERT(value);
-  return expr::UnaryExpr::New((*op), value);
+  (*result) = expr::UnaryOpExpr::New((*op), value);
+  return true;
 }
 
-auto Parser::ParseBinaryExpr() -> BinaryOpExpr* {
+auto Parser::ParseBinaryExpr(expr::Expression** result) -> ParseResult {
   const auto op = NextToken().ToBinaryOp();
   ASSERT(op);
-  auto left_expr = ParseExpression();
-  auto right_expr = ParseExpression();
+  expr::Expression* left_expr = nullptr;
+  CHECK_RESULT(ParseExpression(&left_expr));
+  ASSERT(left_expr);
+  expr::Expression* right_expr = nullptr;
+  CHECK_RESULT(ParseExpression(&right_expr));
+  ASSERT(right_expr);
   do {
     left_expr = BinaryOpExpr::New((*op), left_expr, right_expr);
+    ASSERT(left_expr);
     if (PeekEq(Token::kRParen))
       break;
-    right_expr = ParseExpression();
+    CHECK_RESULT(ParseExpression(&right_expr));
+    ASSERT(right_expr);
   } while (true);
-  ASSERT(left_expr->IsBinaryOpExpr());
-  return left_expr->AsBinaryOpExpr();
+  ASSERT(left_expr && left_expr->IsBinaryOpExpr());
+  (*result) = left_expr->AsBinaryOpExpr();
+  return true;
 }
 
-auto Parser::ParseCondExpr() -> CondExpr* {
-  ExpectNext(Token::kCond);
+auto Parser::ParseCondExpr(expr::Expression** result) -> ParseResult {
+  const auto start_pos = GetPos();
+  EXPECT_NEXT(Token::kCond);
   expr::ClauseList clauses;
+  expr::Expression* a = nullptr;
+  expr::Expression* b = nullptr;
   expr::Expression* alt = nullptr;
   do {
-    const auto a = ParseExpression();
+    CHECK_RESULT(ParseExpression(&a));
     ASSERT(a);
     if (PeekEq(Token::kRParen)) {
       alt = a;
       break;
     }
-    const auto b = ParseExpression();
+    CHECK_RESULT(ParseExpression(&b));
     ASSERT(b);
     clauses.push_back(expr::ClauseExpr::New(a, b));
   } while (!PeekEq(Token::kRParen));
-  return CondExpr::New(clauses, alt);
+  (*result) = CondExpr::New(clauses, alt);
+  return true;
 }
 
-auto Parser::ParseRxOpExpr() -> expr::RxOpExpr* {
-  ExpectNext(Token::kLParen);
-  const auto symbol = ParseSymbol();
+auto Parser::ParseRxOpExpr(expr::Expression** result) -> ParseResult {
+  EXPECT_NEXT(Token::kLParen);
+  Symbol* symbol = nullptr;
+  CHECK_RESULT(ParseLiteralSymbol(&symbol));
   ASSERT(symbol);
-  expr::ExpressionList args;
-  if (!ParseExpressionList(args))
-    throw Exception(fmt::format("failed to parse rx-operator `{}` args", (*symbol)));
-  ExpectNext(Token::kRParen);
-  return expr::RxOpExpr::New(symbol, args);
+  expr::ExpressionList args{};
+  CHECK_RESULT(ParseExpressionList(args));
+  EXPECT_NEXT(Token::kRParen);
+  (*result) = expr::RxOpExpr::New(symbol, args);
+  return true;
 }
 
-auto Parser::ParseRxOpList(expr::RxOpList& operators) -> bool {
+auto Parser::ParseRxOpList(expr::RxOpList& operators) -> ParseResult {  // TODO: refactor & better error handling
+  expr::Expression* expr = nullptr;
   auto peek = PeekToken();
   while (peek.kind != Token::kRParen && peek.kind != Token::kEndOfStream) {
-    const auto oper = ParseRxOpExpr();
-    if (!oper)
-      return false;
-    operators.push_back(oper);
+    CHECK_RESULT(ParseRxOpExpr(&expr));
+    ASSERT(expr);
+    operators.push_back(expr->AsRxOpExpr());  // TODO: this is an unchecked cast
     peek = PeekToken();
+    expr = nullptr;
   }
   return true;
 }
 
-auto Parser::ParseLetRxExpr() -> expr::LetRxExpr* {
-  ExpectNext(Token::kLetRxExpr);
-  const auto scope = PushScope();
-  ASSERT(scope);
-  const auto observable = ParseExpression();
+auto Parser::ParseLetRxExpr(expr::Expression** result) -> ParseResult {
+  EXPECT_NEXT(Token::kLetRxExpr);
+  ParseScope scope(this);
+  expr::Expression* observable = nullptr;
+  CHECK_RESULT(ParseExpression(&observable));
   ASSERT(observable);
-  expr::RxOpList operators;
+  expr::RxOpList operators{};
   if (PeekEq(Token::kRParen)) {
-    PopScope();
-    return LetRxExpr::New(scope, observable, operators);
+    (*result) = LetRxExpr::New(scope, observable, operators);
+    return true;
   }
-
-  if (!ParseRxOpList(operators))
-    throw Exception("failed to parse rx operators");
-
-  PopScope();
-  return LetRxExpr::New(scope, observable, operators);
+  CHECK_RESULT(ParseRxOpList(operators));
+  (*result) = LetRxExpr::New(scope, observable, operators);
+  return true;
 }
 
-auto Parser::ParseLetExpr() -> expr::LetExpr* {
-  ExpectNext(Token::kLetExpr);
+auto Parser::ParseLetExpr(expr::Expression** result) -> ParseResult {
+  EXPECT_NEXT(Token::kLetExpr);
   const auto scope = PushScope();
   // parse bindings
+  expr::Expression* value = nullptr;
   expr::BindingList bindings;
-  ExpectNext(Token::kLParen);
+  EXPECT_NEXT(Token::kLParen);
   while (!PeekEq(Token::kRParen)) {
-    ExpectNext(Token::kLParen);
-    const auto symbol = ParseSymbol();
+    EXPECT_NEXT(Token::kLParen);
+    Symbol* symbol = nullptr;
+    CHECK_RESULT(ParseLiteralSymbol(&symbol));
     ASSERT(symbol);
-    if (scope->Has(symbol))
-      throw Exception(fmt::format("cannot redefine binding for: `{}`", *symbol));
-    const auto value = ParseExpression();
+    if (scope->Has(symbol)) {
+      std::stringstream ss;
+      ss << "cannot redefine binding for: " << symbol;
+      return ReturnError(ss, pos_);
+    }
+    CHECK_RESULT(ParseExpression(&value));
     ASSERT(value);
     const auto local = LocalVariable::New(scope, symbol);
     ASSERT(local);
-    LOG_IF(FATAL, !scope->Add(local)) << "failed to add " << local << " to scope.";
+    if (!scope->Add(local)) {
+      std::stringstream ss;
+      ss << "failed to add " << (*local) << " to current scope.";
+      return ReturnError(ss, pos_);
+    }
     bindings.emplace_back(Binding::New(local, value));
-    ExpectNext(Token::kRParen);
+    EXPECT_NEXT(Token::kRParen);
   }
-  ExpectNext(Token::kRParen);
+  EXPECT_NEXT(Token::kRParen);
   // parse body
-  ExpressionList body;
-  if (!ParseExpressionList(body))
-    throw Exception("failed to parse let body");
+  ExpressionList body{};
+  CHECK_RESULT(ParseExpressionList(body));
   PopScope();
-  return LetExpr::New(scope, bindings, body);
+  (*result) = LetExpr::New(scope, bindings, body);
+  return true;
 }
 
-auto Parser::ParseArguments(ArgumentSet& args, const bool bind) -> bool {  // TODO: remove bind?
+auto Parser::ParseArguments(Array<Argument*>** args, const bool bind) -> ParseResult {  // TODO: remove bind?
   ExpectNext(Token::kLBracket);
   const auto scope = GetScope();
   ASSERT(scope);
+  std::vector<Argument*> parsed_args{};
   uint64_t num_args = 0;
   SetParsingArgs();
   while (!PeekEq(Token::kRBracket)) {
@@ -352,28 +603,40 @@ auto Parser::ParseArguments(ArgumentSet& args, const bool bind) -> bool {  // TO
       default:
         LOG(FATAL) << "invalid: " << NextToken();
     }
-    const auto arg = Argument(idx, name, optional, vararg);
-    const auto [_, success] = args.insert(arg);
-    LOG_IF(FATAL, !success) << "failed to insert " << arg;
+    parsed_args.push_back(Argument::New(idx, String::New(name), optional, vararg));
     if (bind) {
       const auto local = LocalVariable::New(scope, Symbol::New(name));
       ASSERT(local);
-      LOG_IF(FATAL, !scope->Add(local)) << "failed to add " << (*local) << " to current scope.";
+      if (!scope->Add(local)) {
+        std::stringstream ss;
+        ss << "failed to add " << (*local) << " to current scope.";
+        return ReturnError(ss, pos_);
+      }
     }
+  }
+  if (num_args > 0) {
+    ASSERT(!parsed_args.empty());
+    const auto array = Array<Argument*>::New(static_cast<word>(parsed_args.size()));
+    ASSERT(array);
+    for (const auto& arg : parsed_args) {
+      array->Push(arg);
+    }
+    (*args) = array;
   }
   ClearParsingArgs();
   ExpectNext(Token::kRBracket);
   return true;
 }
 
-auto Parser::ParseExpressionList(expr::ExpressionList& expressions, const bool push_scope) -> bool {
+auto Parser::ParseExpressionList(expr::ExpressionList& expressions, const bool push_scope) -> ParseResult {
   if (push_scope)
     PushScope();
   auto peek = PeekToken();
+  expr::Expression* value = nullptr;
   while (peek.kind != Token::kRParen && peek.kind != Token::kEndOfStream) {
-    const auto expr = ParseExpression();
-    if (expr)
-      expressions.push_back(expr);
+    CHECK_RESULT(ParseExpression(&value));
+    if (value)
+      expressions.push_back(value);
     peek = PeekToken();
   }
   if (push_scope)
@@ -381,38 +644,36 @@ auto Parser::ParseExpressionList(expr::ExpressionList& expressions, const bool p
   return true;
 }
 
-auto Parser::ParseSymbolList(SymbolList& symbols) -> bool {
-  while (PeekEq(Token::kIdentifier)) {
-    const auto next = ParseSymbol();
-    ASSERT(next);
-    symbols.push_back(next);
-  }
+auto Parser::ParseThrowExpr(expr::Expression** result) -> ParseResult {
+  EXPECT_NEXT(Token::kThrowExpr);
+  expr::Expression* value = nullptr;
+  CHECK_RESULT(ParseExpression(&value));
+  ASSERT(value);
+  (*result) = ThrowExpr::New(value);
   return true;
 }
 
-auto Parser::ParseThrowExpr() -> ThrowExpr* {
-  ExpectNext(Token::kThrowExpr);
-  const auto value = ParseExpression();
-  ASSERT(value);
-  return ThrowExpr::New(value);
-}
-
-auto Parser::ParseSetExpr() -> expr::Expression* {
-  ExpectNext(Token::kSet);
-  const auto symbol = ParseSymbol();
+auto Parser::ParseSetExpr(expr::Expression** result) -> ParseResult {
+  const auto start_pos = GetPos();
+  EXPECT_NEXT(Token::kSet);
+  Symbol* symbol = nullptr;
+  CHECK_RESULT(ParseLiteralSymbol(&symbol));
   ASSERT(symbol);
   if (symbol->HasSymbolType()) {
     const auto cls = Class::FindClass(symbol->GetSymbolType());
     if (cls) {
       ASSERT(cls);
-      const auto field = cls->GetField(symbol);
+      const auto field = cls->FindField(symbol);
       if (field) {
         ASSERT(field);
-        const auto instance = ParseExpression();
+        expr::Expression* instance = nullptr;
+        CHECK_RESULT(ParseExpression(&instance));
         ASSERT(instance);
-        const auto value = ParseExpression();
+        expr::Expression* value = nullptr;
+        CHECK_RESULT(ParseExpression(&value));
         ASSERT(value);
-        return expr::SetFieldExpr::New(field, instance, value);
+        (*result) = expr::StoreFieldExpr::New(field, instance, value);
+        return true;
       }
     }
   }
@@ -424,142 +685,148 @@ auto Parser::ParseSetExpr() -> expr::Expression* {
     DLOG(WARNING) << "failed to find local named `" << symbol << "`";
     local = LocalVariable::New(scope, symbol, nullptr);
     ASSERT(local);
-    LOG_IF(ERROR, !scope->Add(local)) << "failed to add `" << local << "` to scope:";
-    LocalScopePrinter::Print<google::ERROR, false>(scope, __FILE__, __LINE__);
-    LOG(FATAL) << "";
+    if (!scope->Add(local)) {
+      std::stringstream ss;
+      ss << "failed to add " << (*local) << " to current scope.";
+      (*result) = nullptr;
+      return ReturnError(ss, start_pos);
+    }
   }
-  const auto value = ParseExpression();
+  expr::Expression* value = nullptr;
+  CHECK_RESULT(ParseExpression(&value));
   ASSERT(value);
-  return expr::SetLocalExpr::New(local, value);
-}
-
-auto Parser::ParseDefNamespace(LocalVariable** result) -> bool {
-  LOG_IF(FATAL, GetDepth() != 1) << "unexpected: " << NextToken() << ", expected: <expression>";
-  const auto ns = ParseNamespace();
-  ASSERT(ns);
-  LocalVariable* local = LocalVariable::New(scope_, ns->GetSymbol(), ns);
-  ASSERT(local);
-  if (!scope_->Add(local)) {
-    LOG(ERROR) << "failed to add " << (*local) << " to current scope.";
-    (*result) = nullptr;
-    return false;
-  }
-  if (script_)
-    script_->Append(ns);
-  if (module_)
-    module_->Append(ns);
-  (*result) = local;
+  (*result) = expr::StoreLocalExpr::New(local, value);
   return true;
 }
 
-auto Parser::ParseExpression(const int depth) -> Expression* {
+auto Parser::ParseExpression(expr::Expression** result, const int depth) -> ParseResult {
   TRACE_ZONE_NAMED("Parser::ParseExpression");
   {
     auto next = PeekToken();
-    if (next.IsLiteral() || next.kind == Token::kIdentifier || next.kind == Token::kDispatch || next.kind == Token::kFn)
-      return ParseLiteralExpr();
-    else if (next.kind == Token::kQuote)
-      return ParseQuotedExpr();
+    if (next.IsLiteral()) {
+      CHECK_RESULT(ParseLiteralExpr(result));
+      return true;
+    } else if (next.kind == Token::kQuote) {
+      CHECK_RESULT(ParseQuotedExpr(result));
+      return true;
+    }
   }
 
-  Expression* expr = nullptr;
-  ExpectNext(Token::kLParen);
+  EXPECT_NEXT(Token::kLParen);
   const auto next = PeekToken();
   if (next.IsUnaryOp()) {
-    expr = ParseUnaryExpr();
+    CHECK_RESULT(ParseUnaryOpExpr(result));
   } else if (next.IsBinaryOp()) {
-    expr = ParseBinaryExpr();
-  } else if (next.IsLiteral()) {
-    expr = ParseListExpr();
+    CHECK_RESULT(ParseBinaryExpr(result));
+  } else if (next.IsLiteral() && !(next.IsSymbol() || next.IsFunctionLiteral())) {
+    CHECK_RESULT(ParseListExpr(result));
   } else {
     switch (next.kind) {
       case Token::kDefNamespace: {
         LocalVariable* local = nullptr;
-        LOG_IF(FATAL, !ParseDefNamespace(&local)) << "failed to parse ns";
+        CHECK_RESULT(ParseDefNamespace(&local));
         ASSERT(local && local->GetValue()->IsNamespace());
         break;
       }
       case Token::kDefMacro: {
         LocalVariable* local = nullptr;
-        LOG_IF(FATAL, !ParseMacroDef(&local)) << "failed to parse macrodef.";
+        CHECK_RESULT(ParseDefMacro(&local));
         ASSERT(local && local->HasValue() && local->GetValue()->IsMacro());
         break;
       }
       case Token::kDefNative: {
         LocalVariable* local = nullptr;
-        LOG_IF(FATAL, !ParseDefNative(&local)) << "failed to parse defnative.";
+        CHECK_RESULT(ParseDefNative(&local));
+        ASSERT(local && local->HasValue() && local->GetValue()->IsNativeProcedure());
         break;
       }
       case Token::kDef: {
-        expr = ParseDef();
+        CHECK_RESULT(ParseDef(result));
         break;
       }
       case Token::kDefn: {
         LocalVariable* local = nullptr;
-        LOG_IF(FATAL, !ParseDefn(&local)) << "failed to parse local";
+        CHECK_RESULT(ParseDefn(&local));
         break;
       }
-      case Token::kNewExpr:
-        expr = ParseNewExpr();
+      case Token::kNewExpr: {
+        CHECK_RESULT(ParseNewExpr(result));
         break;
-      // Expressions
-      case Token::kBeginExpr:
-        expr = ParseBeginExpr();
+      }
+      case Token::kBeginExpr: {
+        CHECK_RESULT(ParseBeginExpr(result));
         break;
-      case Token::kSet:
-        expr = ParseSetExpr();
+      }
+      case Token::kSet: {
+        CHECK_RESULT(ParseSetExpr(result));
         break;
-      case Token::kCond:
-        expr = ParseCondExpr();
+      }
+      case Token::kCond: {
+        CHECK_RESULT(ParseCondExpr(result));
         break;
-      case Token::kThrowExpr:
-        expr = ParseThrowExpr();
+      }
+      case Token::kThrowExpr: {
+        CHECK_RESULT(ParseThrowExpr(result));
         break;
-      case Token::kFn:
-        expr = ParseLiteralLambda(next.kind);
+      }
+      case Token::kFn: {
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
+        CHECK_RESULT(ParseLiteralLambda(next.kind, (expr::LiteralExpr**)result));
         break;
+      }
       case Token::kLParen:
       case Token::kDispatch:
       case Token::kIdentifier: {
-        expr = ParseCallExpr();
+        CHECK_RESULT(ParseCallExpr(result));
         break;
       }
-      case Token::kQuote:
-        expr = ParseQuotedExpr();
+      case Token::kQuote: {
+        CHECK_RESULT(ParseQuotedExpr(result));
         break;
-      case Token::kWhenExpr:
-        expr = ParseWhenExpr();
+      }
+      case Token::kWhenExpr: {
+        CHECK_RESULT(ParseWhenExpr(result));
         break;
-      case Token::kCaseExpr:
-        expr = ParseCaseExpr();
+      }
+      case Token::kCaseExpr: {
+        CHECK_RESULT(ParseCaseExpr(result));
         break;
-      case Token::kWhileExpr:
-        expr = ParseWhileExpr();
+      }
+      case Token::kWhileExpr: {
+        CHECK_RESULT(ParseWhileExpr(result));
         break;
-      case Token::kLetRxExpr:
-        expr = ParseLetRxExpr();
+      }
+      case Token::kLetRxExpr: {
+        CHECK_RESULT(ParseLetRxExpr(result));
         break;
-      case Token::kCastExpr:
-        expr = ParseCastExpr();
+      }
+      case Token::kCastExpr: {
+        CHECK_RESULT(ParseCastExpr(result));
         break;
-      case Token::kInstanceOfExpr:
-        expr = ParseInstanceOfExpr();
+      }
+      case Token::kInstanceOfExpr: {
+        CHECK_RESULT(ParseInstanceOfExpr(result));
         break;
-      case Token::kLetExpr:
-        expr = ParseLetExpr();
+      }
+      case Token::kLetExpr: {
+        CHECK_RESULT(ParseLetExpr(result));
         break;
+      }
+      case Token::kRParen: {
+        NextToken();
+        return expr::ListExpr::New();
+      }
       default:
-        Unexpected(next);
-        return nullptr;
+        return UnexpectedError(next);
     }
   }
-  ExpectNext(Token::kRParen);
-  return expr;
+  EXPECT_NEXT(Token::kRParen);
+  return true;
 }
 
-auto Parser::ParseQuotedExpr() -> expr::Expression* {
+auto Parser::ParseQuotedExpr(expr::Expression** result) -> ParseResult {
   const auto depth = GetDepth();
-  ExpectNext(Token::kQuote);
+  EXPECT_NEXT(Token::kQuote);
   SkipWhitespace();
   token_len_ = 0;
   do {
@@ -575,89 +842,95 @@ auto Parser::ParseQuotedExpr() -> expr::Expression* {
   } while (true);
   ASSERT(depth == GetDepth());
   const auto text = GetBufferedText();
-  if (text == "()")
-    return LiteralExpr::New(Pair::Empty());
-  return QuotedExpr::New(GetBufferedText());
+  if (text == "()") {
+    (*result) = expr::LiteralExpr::New(Pair::Empty());
+    return true;
+  }
+  (*result) = expr::QuotedExpr::New(GetBufferedText());
+  return true;
 }
 
-auto Parser::ParseImportExpr() -> expr::ImportExpr* {
-  ExpectNext(Token::kImportExpr);
-  const auto& next = ExpectNext(Token::kLiteralString);
-  const auto module = Module::FindOrLoad(next.text);
-  LOG_IF(FATAL, !module) << "failed to load Module from `" << next.text << "`";
-  LOG_IF(FATAL, !GetScope()->Add(module->GetScope())) << "failed to import Module from `" << next.text << "` scope.";
-  return expr::ImportExpr::New(module);
+auto Parser::ParseImportExpr(expr::Expression** result) -> ParseResult {
+  const auto start_pos = GetPos();
+  EXPECT_NEXT(Token::kImportExpr);
+  const auto& next = NextToken();
+  EXPECT(next, Token::kLiteralString);
+  const auto target_module = Module::FindOrLoad(next.text);
+  if (!target_module) {
+    const auto& ident = next.text;
+    std::stringstream ss;
+    ss << "failed to import Module from `" << ident << "`";
+    (*result) = nullptr;
+    return ReturnError(ss, start_pos);
+  }
+  GetScope()->AddAll(target_module->GetScope());
+  (*result) = expr::ImportExpr::New(target_module);
+  return true;
 }
 
-auto Parser::ParseWhenExpr() -> expr::WhenExpr* {
-  ExpectNext(Token::kWhenExpr);
-
-  const auto test = ParseExpression();
+auto Parser::ParseWhenExpr(expr::Expression** result) -> ParseResult {
+  EXPECT_NEXT(Token::kWhenExpr);
+  expr::Expression* test = nullptr;
+  CHECK_RESULT(ParseExpression(&test));
   ASSERT(test);
-
-  ExpressionList actions;
-  if (!ParseExpressionList(actions))
-    throw Exception("failed to parse actions.");
-  return WhenExpr::New(test, actions);
+  ExpressionList actions{};
+  CHECK_RESULT(ParseExpressionList(actions));
+  (*result) = expr::WhenExpr::New(test, actions);
+  return true;
 }
 
-auto Parser::ParseClauseList(expr::ClauseList& clauses) -> bool {
+auto Parser::ParseClauseList(expr::ClauseList& clauses) -> ParseResult {
   auto peek = PeekToken();
   while (peek.kind != Token::kRParen && peek.kind != Token::kEndOfStream) {
-    ExpectNext(Token::kLParen);
-    const auto key = ParseLiteralExpr();
+    EXPECT_NEXT(Token::kLParen);
+    expr::Expression* key = nullptr;
+    CHECK_RESULT(ParseLiteralExpr(&key));
     ASSERT(key);
-
-    expr::ExpressionList actions;
-    if (!ParseExpressionList(actions))
-      throw Exception("failed to parse actions.");
-
+    expr::ExpressionList actions{};
+    CHECK_RESULT(ParseExpressionList(actions));
     clauses.push_back(ClauseExpr::New(key, actions));
-    ExpectNext(Token::kRParen);
+    EXPECT_NEXT(Token::kRParen);
     peek = PeekToken();
   }
   return true;
 }
 
-auto Parser::ParseCaseExpr() -> expr::CaseExpr* {
-  ExpectNext(Token::kCaseExpr);
-  const auto key = ParseExpression();
+auto Parser::ParseCaseExpr(expr::Expression** result) -> ParseResult {
+  EXPECT_NEXT(Token::kCaseExpr);
+  expr::Expression* key = nullptr;
+  CHECK_RESULT(ParseExpression(&key));
   ASSERT(key);
-  expr::ClauseList clauses;
-  if (!ParseClauseList(clauses))
-    throw Exception("failed to parse case clauses.");
-  return CaseExpr::New(key, clauses);
+  expr::ClauseList clauses{};
+  CHECK_RESULT(ParseClauseList(clauses));
+  (*result) = expr::CaseExpr::New(key, clauses);
+  return true;
 }
 
-auto Parser::ParseWhileExpr() -> expr::WhileExpr* {
-  ExpectNext(Token::kWhileExpr);
-  const auto test = ParseExpression();
+auto Parser::ParseWhileExpr(expr::Expression** result) -> ParseResult {
+  EXPECT_NEXT(Token::kWhileExpr);
+  expr::Expression* test = nullptr;
+  CHECK_RESULT(ParseExpression(&test));
   ASSERT(test);
-  ExpressionList body;
-  if (!ParseExpressionList(body))
-    throw Exception("failed to parse loop expression body.");
-  return expr::WhileExpr::New(test, body);
+  ExpressionList body{};
+  CHECK_RESULT(ParseExpressionList(body));
+  (*result) = expr::WhileExpr::New(test, body);
+  return true;
 }
 
-auto Parser::ParseNewExpr() -> expr::NewExpr* {
-  const auto new_expr_token = ExpectNext(Token::kNewExpr);
+auto Parser::ParseNewExpr(expr::Expression** result) -> ParseResult {
+  const auto new_expr_token = NextToken();
+  EXPECT(new_expr_token, Token::kNewExpr);
   const auto symbol = Symbol::New(new_expr_token.text);
   ASSERT(symbol);
   const auto cls = Class::FindClass(symbol);
-  LOG_IF(FATAL, !cls) << "failed to find class named: " << symbol;
-  expr::ExpressionList args;
-  LOG_IF(FATAL, !ParseExpressionList(args)) << "failed to parse new expression args for type: " << cls;
-  LOG_IF(FATAL, !PeekEq(Token::kRParen)) << "expected `)`";
-  return expr::NewExpr::New(cls, args);
-}
-
-auto Parser::ParseIdentifier(std::string& result) -> bool {
-  const auto& next = NextToken();
-  if (next.kind != Token::kIdentifier) {
-    result.clear();
-    return Unexpected(Token::kIdentifier, next);
+  if (!cls) {
+    std::stringstream ss;
+    ss << "failed to find Class w/ symbol: " << symbol;
+    return ReturnError(ss, new_expr_token.pos);
   }
-  result = next.text;
+  expr::ExpressionList args{};
+  CHECK_RESULT(ParseExpressionList(args));
+  (*result) = expr::NewExpr::New(cls, args);
   return true;
 }
 
@@ -883,7 +1156,8 @@ auto Parser::NextToken() -> const Token& {
     while (IsValidStringCharacter(PeekChar())) {
       buffer_[token_len_++] = NextChar();
     }
-    ASSERT(IsDoubleQuote(PeekChar()));
+    if (!IsDoubleQuote(PeekChar()))
+      return NextToken(Token::kInvalid, GetBufferedText());
     Advance();
     return NextToken(Token::kLiteralString, GetBufferedText());
   } else if (isdigit(next)) {
@@ -906,12 +1180,10 @@ auto Parser::NextToken() -> const Token& {
         if (!IsValidIdentifierChar(PeekChar(1))) {
           const auto ident = GetBufferedText();
           const auto cls = Class::FindClass(ident);
-          if (!cls) {
-            buffer_[token_len_++] = NextChar();
-            continue;
+          if (cls) {
+            NextChar();
+            return NextToken(Token::kInstanceOfExpr, ident);
           }
-          NextChar();
-          return NextToken(Token::kInstanceOfExpr, ident);
         } else if (IsParsingArgs()) {
           break;
         }
@@ -929,6 +1201,7 @@ auto Parser::NextToken() -> const Token& {
     if (ckw && !ckw->epsilon)
       ckw = nullptr;
     const auto ident = GetBufferedText();
+    LOG_IF(FATAL, ident == "eq?" && ckw == nullptr) << "checking eq";
     if (IsParsingArgs())
       return NextToken(Token::kIdentifier, ident);
     if (ckw) {
@@ -941,170 +1214,51 @@ auto Parser::NextToken() -> const Token& {
   return NextToken(Token::kInvalid, GetRemaining());
 }
 
-auto Parser::ParseCastExpr() -> expr::CastExpr* {
-  const auto token = ExpectNext(Token::kCastExpr);
+auto Parser::ParseCastExpr(expr::Expression** result) -> ParseResult {
+  const auto start_pos = GetPos();
+  const auto token = NextToken();
+  EXPECT(token, Token::kCastExpr);
   ASSERT(!token.text.empty());
   const auto symbol = Symbol::New(token.text);
   const auto cls = Class::FindClass(symbol);
   if (!cls) {
-    LOG(FATAL) << "cannot create cast, failed to find type: " << symbol;
-    return nullptr;
+    std::stringstream ss;
+    ss << "cannot create cast, failed to find type: " << symbol;
+    return ReturnError(ss, start_pos);
   }
-  return expr::CastExpr::New(cls, ParseExpression());
-}
-
-auto Parser::ParseInstanceOfExpr() -> expr::InstanceOfExpr* {
-  const auto token = ExpectNext(Token::kInstanceOfExpr);
-  ASSERT(!token.text.empty());
-  const auto symbol = Symbol::New(token.text);
-  const auto cls = Class::FindClass(symbol);
-  if (!cls) {
-    LOG(FATAL) << "cannot create cast, failed to find type: " << symbol;
-    return nullptr;
-  }
-  return expr::InstanceOfExpr::New(cls, ParseExpression());
-}
-
-auto Parser::ParseNamespace() -> Namespace* {
-  ExpectNext(Token::kDefNamespace);
-  const auto name = ParseSymbol();
-  ASSERT(name);
-  const auto scope = PushScope();
-  const auto ns = Namespace::New(name, scope);
-  ASSERT(ns);
-  SetNamespace(ns);
-  if (PeekEq(Token::kLiteralString)) {
-    const auto docstring = ParseLiteralString();
-    ASSERT(docstring);
-    ns->SetDocs(docstring);
-  }
-  while (!PeekEq(Token::kRParen)) {
-    ExpectNext(Token::kLParen);
-    switch (PeekKind()) {
-      case Token::kDefn: {
-        LocalVariable* local = nullptr;
-        LOG_IF(FATAL, !ParseDefn(&local)) << "failed to parse defn in " << ns;
-        ASSERT(local && local->HasValue() && local->GetValue()->IsLambda());
-        break;
-      }
-      case Token::kDefMacro: {
-        LocalVariable* local = nullptr;
-        LOG_IF(FATAL, !ParseMacroDef(&local)) << "failed to parse defmacro in " << ns;
-        ASSERT(local && local->HasValue() && local->GetValue()->IsMacro());
-        break;
-      }
-      case Token::kDefNative: {
-        LocalVariable* local = nullptr;
-        LOG_IF(FATAL, !ParseDefNative(&local)) << "failed to parse defnative in: " << ns;
-        ASSERT(local && local->HasValue() && local->GetValue()->IsNativeProcedure());
-        break;
-      }
-      default:
-        Unexpected(NextToken());
-        return nullptr;
-    }
-    ExpectNext(Token::kRParen);
-  }
-  ClearNamespace();
-  PopScope();
-  return ns;
-}
-
-auto Parser::ParseDefNative(LocalVariable** local) -> bool {
-  ASSERT(local);
-  ExpectNext(Token::kDefNative);
-  const auto symbol = ParseSymbol();
-  ASSERT(symbol);
-  const auto native = NativeProcedure::FindOrCreate(symbol);
-  if (!native) {
-    (*local) = nullptr;
-    LOG(ERROR) << "failed to find NativeProcedure w/ Symbol: " << symbol;
-    return false;
-  }
-  // arguments
-  ArgumentSet args;
-  if (!ParseArguments(args)) {
-    (*local) = nullptr;
-    LOG(ERROR) << "failed to parse NativeProcedure arguments.";
-    return false;
-  }
-  native->SetArgs(args);
-  // docstring
-  if (PeekEq(Token::kLiteralString)) {
-    const auto docs = ParseLiteralString();
-    ASSERT(docs);
-    native->SetDocs(docs);
-  }
-  if (!((*local) = LocalVariable::New(GetScope(), symbol, native))) {
-    (*local) = nullptr;
-    LOG(ERROR) << "failed to create local for NativeProcedure: " << native;
-    return false;
-  }
-  ASSERT((*local));
-  if (!GetScope()->Add((*local))) {
-    LOG(ERROR) << "failed to add local " << *(*local) << " to current scope.";
-    (*local) = nullptr;
-    return false;
-  }
-  DVLOG(1000) << "created local " << *(*local) << " for native: " << native;
+  ASSERT(cls);
+  expr::Expression* value = nullptr;
+  CHECK_RESULT(ParseExpression(&value));
+  ASSERT(value);
+  (*result) = expr::CastExpr::New(cls, value);
   return true;
 }
 
-auto Parser::ParseMacro() -> Macro* {
-  ExpectNext(Token::kDefMacro);
-
-  const auto macro = Macro::New();
-  ASSERT(macro);
-  const auto scope = PushScope();
-  ASSERT(scope);
-  {
-    // name
-    Symbol* name = nullptr;
-    if (PeekEq(Token::kIdentifier)) {
-      name = ParseSymbol();
-      ASSERT(name);
-    }
-    if (name)
-      macro->SetSymbol(name);
-    const auto local = LocalVariable::New(scope, name ? name : Symbol::New("$"), macro);
-    ASSERT(local);
-    LOG_IF(FATAL, !GetScope()->Add(local)) << "cannot add " << local << " to scope.";
-    // arguments
-    ArgumentSet args{};
-    if (!ParseArguments(args))
-      throw Exception("failed to parse ArgumentSet");
-    macro->SetArgs(args);
-    // docstring
-    String* docs = nullptr;
-    if (PeekEq(Token::kLiteralString)) {
-      docs = ParseLiteralString();
-      ASSERT(docs);
-    }
-    // body
-    expr::ExpressionList body{};
-    if (!ParseExpressionList(body, false)) {
-      LOG(FATAL) << "failed to parse lambda body.";
-      return nullptr;
-    }
-    if (docs) {
-      if (body.empty()) {
-        body.push_back(expr::LiteralExpr::New(docs));
-      } else {
-        macro->SetDocstring(docs);
-      }
-    }
-    macro->SetBody(body);
+auto Parser::ParseInstanceOfExpr(expr::Expression** result) -> ParseResult {
+  const auto start_pos = GetPos();
+  const auto token = NextToken();
+  EXPECT(token, Token::kInstanceOfExpr);
+  ASSERT(!token.text.empty());
+  const auto symbol = Symbol::New(token.text);
+  const auto cls = Class::FindClass(symbol);
+  if (!cls) {
+    std::stringstream ss;
+    ss << "cannot create instanceof expr, failed to find type: " << symbol;
+    return ReturnError(ss, start_pos);
   }
-  PopScope();
-  macro->SetScope(scope);
-  return macro;
+  ASSERT(cls);
+  expr::Expression* value = nullptr;
+  CHECK_RESULT(ParseExpression(&value));
+  ASSERT(value);
+  (*result) = expr::InstanceOfExpr::New(cls, value);
+  return true;
 }
 
-auto Parser::ParseLambda(const Token::Kind kind) -> Lambda* {
+auto Parser::ParseLambda(const Token::Kind kind, Lambda** result) -> ParseResult {
   const auto lambda = Lambda::New();
   ASSERT(lambda);
-  const auto scope = PushScope();
-  ASSERT(scope);
+  PushOwner(lambda);
+  ParseScope scope(this);
   if (kind == Token::kDispatch) {
     ExpectNext(Token::kDispatch);
     SetDispatching();
@@ -1117,71 +1271,57 @@ auto Parser::ParseLambda(const Token::Kind kind) -> Lambda* {
     LOG_IF(FATAL, !ParseExpressionList(body)) << "failed to parse expression list.";
     lambda->SetBody(body);
 
-    ArgumentSet args{};
+    std::vector<Argument*> parsed_args{};
     if (dispatched_ > 0) {
       for (auto idx = 0; idx < dispatched_; idx++) {
         const auto name = fmt::format("${}", idx);
-        const auto arg = Argument(idx, name, false, false);
-        const auto [_, success] = args.insert(arg);
-        LOG_IF(FATAL, !success) << "failed to insert: " << arg;
+        parsed_args.push_back(Argument::New(idx, String::New(name), false, false));
         const auto local = LocalVariable::New(scope, Symbol::New(name));
         ASSERT(local);
         LOG_IF(FATAL, !scope->Add(local)) << "failed to add " << (*local) << " to current scope.";
       }
     }
 
-    lambda->SetArgs(args);
-    lambda->SetScope(scope);
-
-    PopScope();
-    ClearDispatched();
-
+    if (!parsed_args.empty()) {  // TODO this is really dumb
+      Array<Argument*>* args = Array<Argument*>::New(static_cast<word>(parsed_args.size()));
+      for (const auto& arg : parsed_args) args->Push(arg);
+      if (args)
+        lambda->SetArgs(args);
+    }
     ExpectNext(Token::kRParen);
-    return lambda;
+    ClearDispatched();
+    lambda->SetScope(scope);
+    PopOwner();
+    if (HasOwner())
+      GetOwner()->AddChild(lambda);
+    (*result) = lambda;
+    return true;
   }
 
   ExpectNext(kind);
   lambda->SetScope(scope);
-  {
-    // name
-    Symbol* name = nullptr;
-    if (PeekEq(Token::kIdentifier)) {
-      name = ParseSymbol();
-      ASSERT(name);
-    }
-    if (name)
-      lambda->SetSymbol(name);
-    const auto local = LocalVariable::New(scope, name ? name : Symbol::New("$"), lambda);
-    ASSERT(local);
-    LOG_IF(FATAL, !GetScope()->Add(local)) << "cannot add " << local << " to scope.";
-    // arguments
-    ArgumentSet args{};
-    if (!ParseArguments(args, true))
-      throw Exception("failed to parse ArgumentSet");
+  CHECK_RESULT(TryParseSymbol(lambda));
+  const auto local = LocalVariable::New(scope, lambda->HasSymbol() ? lambda->GetSymbol() : Symbol::New("$"), lambda);
+  ASSERT(local);
+  LOG_IF(FATAL, !GetScope()->Add(local)) << "cannot add " << local << " to scope.";
+  // arguments
+  Array<Argument*>* args = nullptr;
+  CHECK_RESULT(ParseArguments(&args, true));
+  if (args)
     lambda->SetArgs(args);
-    // docstring
-    String* docs = nullptr;
-    if (PeekEq(Token::kLiteralString)) {
-      docs = ParseLiteralString();
-      ASSERT(docs);
-    }
-    // body
-    expr::ExpressionList body{};
-    if (!ParseExpressionList(body, false)) {
-      LOG(FATAL) << "failed to parse lambda body.";
-      return nullptr;
-    }
-    if (docs) {
-      if (body.empty()) {
-        body.push_back(expr::LiteralExpr::New(docs));
-      } else {
-        lambda->SetDocstring(docs);
-      }
-    }
-    lambda->SetBody(body);
-  }
-  PopScope();
-  return lambda;
+  // docstring
+  CHECK_RESULT(TryParseDocstring(lambda));
+  // body
+  expr::ExpressionList body{};
+  CHECK_RESULT(ParseExpressionList(body, false));
+  if (body.empty() && lambda->HasDocstring())
+    body.push_back(expr::LiteralExpr::New(lambda->GetDocstring()));  // TODO: should we remove the docstring
+  lambda->SetBody(body);
+  PopOwner();
+  if (HasOwner())
+    GetOwner()->AddChild(lambda);
+  (*result) = lambda;
+  return true;
 }
 
 static inline auto IsLiteralLong(Expression* expr) -> bool {
@@ -1192,164 +1332,226 @@ static inline auto IsLiteralLong(Expression* expr) -> bool {
   return literal->HasValue() && literal->GetValue()->IsLong();
 }
 
-auto Parser::ParseListExpr() -> expr::Expression* {
-  const auto first = ParseExpression();
+auto Parser::ParseListExpr(expr::Expression** result) -> ParseResult {
+  expr::Expression* first = nullptr;
+  CHECK_RESULT(ParseExpression(&first));
+  ASSERT(first);
   if (PeekEq(Token::kRange)) {
     NextToken();
-    LOG_IF(FATAL, !IsLiteralLong(first)) << "expected " << first << " to be a literal Long.";
-    const auto end = ParseExpression();
-    LOG_IF(FATAL, !IsLiteralLong(end)) << "expected " << end << " to be a literal Long.";
+    if (!IsLiteralLong(first)) {
+      std::stringstream ss;
+      ss << "expected " << first << " to be a literal number.";
+      return ReturnError(ss, pos_);  // TODO: fix pos
+    }
+    expr::Expression* end = nullptr;
+    CHECK_RESULT(ParseExpression(&end));
+    ASSERT(end);
+    if (!IsLiteralLong(end)) {
+      std::stringstream ss;
+      ss << "unexpected " << end << ", expected a literal number.";
+      return ReturnError(ss, pos_);  // TODO: fix pos
+    }
     const auto from = first->AsLiteralExpr()->GetValue()->AsLong()->Get();
     const auto to = end->AsLiteralExpr()->GetValue()->AsLong()->Get();
-    return expr::LiteralExpr::New(gel::ListFromRange(from, to));
+    (*result) = expr::LiteralExpr::New(gel::ListFromRange(from, to));
+    return true;
   }
   const auto list = expr::ListExpr::New();
   list->Append(first);
   while (!PeekEq(Token::kRParen)) {
-    list->Append(ParseExpression());
+    expr::Expression* value = nullptr;
+    CHECK_RESULT(ParseExpression(&value));
+    ASSERT(value);
+    list->Append(value);
   }
-  return list;
+  (*result) = list;
+  return true;
 }
 
-auto Parser::ParseModule(const std::string& name) -> Module* {
-  const auto scope = PushScope();
-  ASSERT(scope);
+auto Parser::ParseModule(const std::string& name, Module** result) -> ParseResult {
+  ParseScope scope(this);
   const auto new_module = Module::New(String::New(name), scope);
   ASSERT(new_module);
-  SetModule(new_module);
+  PushOwner(new_module);
   expr::ExpressionList init_body{};
   while (!PeekEq(Token::kEndOfStream)) {
-    const auto expr = ParseExpression();
-    if (expr)
+    expr::Expression* expr = nullptr;
+    CHECK_RESULT(ParseExpression(&expr));
+    if (expr) {
       init_body.push_back(expr);
+    }
   }
-
   if (!init_body.empty()) {
     const auto init = new_module->CreateInitFunc(init_body);
     ASSERT(init);
     DVLOG(1000) << "created init function for " << new_module << ": " << init;
   }
-
-  PopScope();
-  ClearModule();
-  return new_module;
+  PopOwner();
+  (*result) = new_module;
+  return true;
 }
 
-auto Parser::ParseScript() -> Script* {
-  const auto scope = PushScope();
-  ASSERT(scope);
+auto Parser::ParseScript(Script** result) -> ParseResult {
+  ParseScope scope(this);
   const auto script = Script::New(scope);
   ASSERT(script);
-  script_ = script;
+  PushOwner(script);
   while (!PeekEq(Token::kEndOfStream)) {
     const auto& peek = PeekToken();
     if (peek.IsLiteral() || peek.IsIdentifier() || peek.kind == Token::kFn || peek.kind == Token::kDispatch) {
-      script->Append(ParseLiteralExpr());
+      expr::Expression* literal = nullptr;
+      CHECK_RESULT(ParseLiteralExpr(&literal));
+      ASSERT(literal);
+      script->Append(literal);
     } else if (peek.IsQuote()) {
-      script->Append(ParseQuotedExpr());
+      expr::Expression* quote = nullptr;
+      CHECK_RESULT(ParseQuotedExpr(&quote));
+      ASSERT(quote);
+      script->Append(quote);
     }
 
     Expression* expr = nullptr;
-    ExpectNext(Token::kLParen);
+    EXPECT_NEXT(Token::kLParen);
     const auto next = PeekToken();
     if (next.IsUnaryOp()) {
-      expr = ParseUnaryExpr();
+      CHECK_RESULT(ParseUnaryOpExpr(&expr));
     } else if (next.IsBinaryOp()) {
-      expr = ParseBinaryExpr();
-    } else if (next.IsLiteral()) {
-      expr = ParseListExpr();
+      CHECK_RESULT(ParseBinaryExpr(&expr));
+    } else if (next.IsLiteral() && !next.IsIdentifier()) {
+      CHECK_RESULT(ParseLiteralExpr(&expr));
     } else {
       switch (next.kind) {
         case Token::kDefNamespace: {
           LocalVariable* local = nullptr;
-          LOG_IF(FATAL, !ParseDefNamespace(&local)) << "failed to parse ns";
-          ASSERT(local && local->GetValue()->IsNamespace());
+          CHECK_RESULT(ParseDefNamespace(&local));
+          ASSERT(local && local->HasValue() && local->GetValue()->IsNamespace());
           break;
         }
-        // Definitions
-        case Token::kDef:
-          expr = ParseDef();
+        case Token::kDef: {
+          CHECK_RESULT(ParseDef(&expr));
           break;
+        }
         case Token::kDefn: {
           LocalVariable* local = nullptr;
-          LOG_IF(FATAL, !ParseDefn(&local)) << "failed to parse defn in " << script;
+          CHECK_RESULT(ParseDefn(&local));
           ASSERT(local && local->HasValue() && local->GetValue()->IsLambda());
-          script->Append(local->GetValue()->AsLambda());
           break;
         }
         case Token::kDefMacro: {
           LocalVariable* local = nullptr;
-          LOG_IF(FATAL, !ParseMacroDef(&local)) << "failed to parse macrodef in " << script;
+          CHECK_RESULT(ParseDefMacro(&local));
           ASSERT(local && local->HasValue() && local->GetValue()->IsMacro());
           break;
         }
         // Expressions
-        case Token::kBeginExpr:
-          expr = ParseBeginExpr();
+        case Token::kBeginExpr: {
+          CHECK_RESULT(ParseBeginExpr(&expr));
           break;
-        case Token::kSet:
-          expr = ParseSetExpr();
+        }
+        case Token::kSet: {
+          CHECK_RESULT(ParseSetExpr(&expr));
           break;
-        case Token::kCond:
-          expr = ParseCondExpr();
+        }
+        case Token::kCond: {
+          CHECK_RESULT(ParseCondExpr(&expr));
           break;
-        case Token::kThrowExpr:
-          expr = ParseThrowExpr();
+        }
+        case Token::kThrowExpr: {
+          CHECK_RESULT(ParseThrowExpr(&expr));
           break;
+        }
         case Token::kFn:
-          expr = ParseLiteralLambda(next.kind);
+          // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
+          CHECK_RESULT(ParseLiteralLambda(next.kind, (expr::LiteralExpr**)&expr));
           break;
         case Token::kLParen:
         case Token::kDispatch:
         case Token::kIdentifier: {
-          expr = ParseCallExpr();
+          CHECK_RESULT(ParseCallExpr(&expr));
           break;
         }
-        case Token::kQuote:
-          expr = ParseQuotedExpr();
+        case Token::kQuote: {
+          CHECK_RESULT(ParseQuotedExpr(&expr));
           break;
-        case Token::kWhenExpr:
-          expr = ParseWhenExpr();
+        }
+        case Token::kWhenExpr: {
+          CHECK_RESULT(ParseWhenExpr(&expr));
           break;
-        case Token::kCaseExpr:
-          expr = ParseCaseExpr();
+        }
+        case Token::kCaseExpr: {
+          CHECK_RESULT(ParseCaseExpr(&expr));
           break;
-        case Token::kWhileExpr:
-          expr = ParseWhileExpr();
+        }
+        case Token::kWhileExpr: {
+          CHECK_RESULT(ParseWhileExpr(&expr));
           break;
-        case Token::kLetExpr:
-          expr = ParseLetExpr();
+        }
+        case Token::kLetExpr: {
+          CHECK_RESULT(ParseLetExpr(&expr));
           break;
-        case Token::kLetRxExpr:
-          expr = ParseLetRxExpr();
+        }
+        case Token::kLetRxExpr: {
+          CHECK_RESULT(ParseLetRxExpr(&expr));
           break;
-        case Token::kCastExpr:
-          expr = ParseCastExpr();
+        }
+        case Token::kCastExpr: {
+          CHECK_RESULT(ParseCastExpr(&expr));
           break;
-        case Token::kInstanceOfExpr:
-          expr = ParseInstanceOfExpr();
+        }
+        case Token::kInstanceOfExpr: {
+          CHECK_RESULT(ParseInstanceOfExpr(&expr));
           break;
-        case Token::kImportExpr:
-          expr = ParseImportExpr();
+        }
+        case Token::kImportExpr: {
+          CHECK_RESULT(ParseImportExpr(&expr));
           break;
-        default:
-          Unexpected(next);
-          return nullptr;
+        }
+        default: {
+          (*result) = nullptr;
+          return UnexpectedError(NextToken());
+        }
       }
     }
-    ExpectNext(Token::kRParen);
+    EXPECT_NEXT(Token::kRParen);
     if (expr) {
       script->Append(expr);
       DVLOG(100) << "parsed: " << expr->ToString();
     }
   }
-  PopScope();
-  return script;
+  PopOwner();
+  (*result) = script;
+  return true;
 }
 
-auto Parser::ParseDefn(LocalVariable** result) -> bool {
+auto Parser::ParseDef(expr::Expression** result) -> ParseResult {
+  EXPECT_NEXT(Token::kDef);
+  Symbol* symbol = nullptr;
+  CHECK_RESULT(ParseLiteralSymbol(&symbol));
+  ASSERT(symbol);
   const auto scope = GetScope();
-  const auto lambda = ParseLambda(Token::kDefn);
+  ASSERT(scope);
+  const auto local = LocalVariable::New(scope, symbol);
+  ASSERT(local);
+  if (!scope->Add(local)) {
+    std::stringstream ss;
+    ss << "failed to add " << (*local) << " to current scope.";
+    return ReturnError(ss, pos_);
+  }
+  expr::Expression* value = nullptr;
+  CHECK_RESULT(ParseExpression(&value));
+  ASSERT(value);
+  if (value->IsConstantExpr()) {
+    local->SetValue(value->EvalToConstant(scope));
+    return true;
+  }
+  (*result) = expr::StoreLocalExpr::New(local, value);
+  return true;
+}
+
+auto Parser::ParseDefn(LocalVariable** result) -> ParseResult {
+  const auto scope = GetScope();
+  Lambda* lambda = nullptr;
+  CHECK_RESULT(ParseLambda(Token::kDefn, &lambda));
   ASSERT(lambda && lambda->HasSymbol());
   const auto local = LocalVariable::New(scope, lambda->GetSymbol(), lambda);
   ASSERT(local);
@@ -1358,9 +1560,41 @@ auto Parser::ParseDefn(LocalVariable** result) -> bool {
   return true;
 }
 
-auto Parser::ParseMacroDef(LocalVariable** result) -> bool {
+auto Parser::ParseMacro(Macro** result) -> ParseResult {
+  EXPECT_NEXT(Token::kDefMacro);
+  const auto macro = Macro::New();
+  ASSERT(macro);
+  PushOwner(macro);
+  CHECK_RESULT(TryParseSymbol(macro));
+  ParseScope scope(this);
+  const auto local = LocalVariable::New(scope, macro->GetSymbol() ? macro->GetSymbol() : Symbol::New("$"), macro);
+  ASSERT(local);
+  LOG_IF(FATAL, !GetScope()->Add(local)) << "cannot add " << local << " to scope.";
+  macro->SetScope(scope);
+  // arguments
+  Array<Argument*>* args = nullptr;
+  CHECK_RESULT(ParseArguments(&args));
+  if (args)
+    macro->SetArgs(args);
+  // docstring
+  CHECK_RESULT(TryParseDocstring(macro));
+  // body
+  expr::ExpressionList body{};
+  CHECK_RESULT(ParseExpressionList(body, false));
+  if (body.empty() && macro->HasDocstring())
+    body.push_back(expr::LiteralExpr::New(macro->GetDocstring()));
+  macro->SetBody(body);
+  PopOwner();
+  if (HasOwner())
+    GetOwner()->AddChild(macro);
+  (*result) = macro;
+  return true;
+}
+
+auto Parser::ParseDefMacro(LocalVariable** result) -> ParseResult {
   const auto scope = GetScope();
-  const auto macro = ParseMacro();
+  Macro* macro = nullptr;
+  CHECK_RESULT(ParseMacro(&macro));
   ASSERT(macro);
   const auto local = LocalVariable::New(scope, macro->GetSymbol(), macro);
   ASSERT(local);
@@ -1369,30 +1603,112 @@ auto Parser::ParseMacroDef(LocalVariable** result) -> bool {
     (*result) = nullptr;
     return false;
   }
-  if (script_)
-    script_->Append(local->GetValue()->AsMacro());
-  if (module_)
-    module_->Append(local->GetValue()->AsMacro());
   (*result) = local;
   return true;
 }
 
-auto Parser::ParseDef() -> expr::Expression* {
-  ExpectNext(Token::kDef);
-  const auto symbol = ParseSymbol();
-  ASSERT(symbol);
-  const auto scope = GetScope();
-  ASSERT(scope);
-  const auto local = LocalVariable::New(scope, symbol);
-  ASSERT(local);
-  LOG_IF(FATAL, !scope->Add(local)) << "cannot add duplicate local " << (*local) << " to scope.";
-  const auto value = ParseExpression();
-  ASSERT(value);
-  if (value->IsConstantExpr()) {
-    local->SetValue(value->EvalToConstant(scope));
-    return nullptr;
+auto Parser::ParseNamespace(Namespace** result) -> ParseResult {
+  ParseScope scope(this);
+  EXPECT_NEXT(Token::kDefNamespace);
+  Symbol* name = nullptr;
+  CHECK_RESULT(ParseLiteralSymbol(&name));
+  ASSERT(name);
+  const auto ns = Namespace::New(name, scope);
+  ASSERT(ns);
+  PushOwner(ns);
+  TryParseDocstring(ns);
+  while (!PeekEq(Token::kRParen)) {
+    ExpectNext(Token::kLParen);
+    switch (PeekKind()) {
+      case Token::kDefn: {
+        LocalVariable* local = nullptr;
+        CHECK_RESULT(ParseDefn(&local));
+        ASSERT(local && local->HasValue() && local->GetValue()->IsLambda());
+        break;
+      }
+      case Token::kDefMacro: {
+        LocalVariable* local = nullptr;
+        CHECK_RESULT(ParseDefMacro(&local));
+        ASSERT(local && local->HasValue() && local->GetValue()->IsMacro());
+        break;
+      }
+      case Token::kDefNative: {
+        LocalVariable* local = nullptr;
+        CHECK_RESULT(ParseDefNative(&local));
+        ASSERT(local && local->HasValue() && local->GetValue()->IsNativeProcedure());
+        break;
+      }
+      default: {
+        (*result) = nullptr;
+        return UnexpectedError(NextToken());
+      }
+    }
+    ExpectNext(Token::kRParen);
   }
-  return expr::SetLocalExpr::New(local, value);
+  PopOwner();
+  if (HasOwner())
+    GetOwner()->AddChild(ns);
+  (*result) = ns;
+  return true;
+}
+
+auto Parser::ParseDefNamespace(LocalVariable** result) -> ParseResult {
+  const auto start_pos = GetPos();
+  if (GetDepth() > 1)
+    return UnexpectedError(NextToken());
+  Namespace* ns = nullptr;
+  CHECK_RESULT(ParseNamespace(&ns));
+  ASSERT(ns);
+  LocalVariable* local = LocalVariable::New(scope_, ns->GetSymbol(), ns);
+  ASSERT(local);
+  if (!scope_->Add(local)) {
+    (*result) = nullptr;
+    std::stringstream ss;
+    ss << "failed to add " << (*local) << " to current scope.";
+    return ReturnError(ss, start_pos);
+  }
+  (*result) = local;
+  return true;
+}
+
+auto Parser::ParseDefNative(LocalVariable** local) -> ParseResult {
+  ASSERT(local);
+  const auto start_pos = GetPos();
+  EXPECT_NEXT(Token::kDefNative);
+  Symbol* symbol = nullptr;
+  CHECK_RESULT(ParseLiteralSymbol(&symbol));
+  ASSERT(symbol);
+  const auto native = NativeProcedure::FindOrCreate(symbol);
+  if (!native) {
+    (*local) = nullptr;
+    std::stringstream ss;
+    ss << "failed to find NativeProcedure w/ Symbol: " << symbol;
+    return ReturnError(ss, start_pos);
+  }
+  // arguments
+  Array<Argument*>* args = nullptr;
+  CHECK_RESULT(ParseArguments(&args));
+  if (args)
+    native->SetArgs(args);
+  // docstring
+  CHECK_RESULT(TryParseDocstring(native));
+  if (!((*local) = LocalVariable::New(GetScope(), symbol, native))) {
+    (*local) = nullptr;
+    std::stringstream ss;
+    ss << "failed to create local for: " << native;
+    return ReturnError(ss, start_pos);
+  }
+  ASSERT((*local));
+  if (!GetScope()->Add((*local))) {
+    std::stringstream ss;
+    ss << "failed to add " << *(*local) << " to current scope.";
+    (*local) = nullptr;
+    return ReturnError(ss, start_pos);
+  }
+  if (HasOwner())
+    GetOwner()->AddChild(native);
+  DVLOG(1000) << "created local " << *(*local) << " for native: " << native;
+  return true;
 }
 
 #define DEF_TOKEN(Keyword, Kind) RegisterKeyword(Keyword, Kind)

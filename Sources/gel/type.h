@@ -36,7 +36,8 @@ class Definition;
   V(Module)                        \
   V(EventLoop)                     \
   V(Timer)                         \
-  V(Buffer)
+  V(Buffer)                        \
+  V(EventEmitter)
 
 #define FOR_EACH_TYPE(V)     \
   FOR_EACH_PRIMITIVE_TYPE(V) \
@@ -46,6 +47,9 @@ class Object;
 #define FORWARD_DECLARE(Name) class Name;
 FOR_EACH_TYPE(FORWARD_DECLARE)
 #undef FORWARD_DECLARE
+
+template <typename T>
+class Array;
 
 using ObjectList = std::vector<Object*>;
 }  // namespace gel

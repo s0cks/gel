@@ -2,7 +2,7 @@
 #define GEL_SCRIPT_H
 
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/lambda.h"
 #include "gel/local_scope.h"
 #include "gel/namespace.h"
@@ -37,6 +37,14 @@ class Script : public Object, public Executable {
 
   inline auto at(const uint64_t idx) const -> expr::ExpressionList::const_iterator {
     return std::begin(body_) + static_cast<expr::ExpressionList::difference_type>(idx);
+  }
+
+  inline void Append(const MacroList& macros) {
+    macros_.insert(std::end(macros_), std::begin(macros), std::end(macros));
+  }
+
+  inline void Append(const NamespaceList& namespaces) {
+    namespaces_.insert(std::end(namespaces_), std::begin(namespaces), std::end(namespaces));
   }
 
   inline void Append(expr::Expression* expr) {
@@ -85,6 +93,17 @@ class Script : public Object, public Executable {
     ASSERT(!body.empty());
     RemoveExpressionAt(idx);
     InsertAt(idx, body);
+  }
+
+  void AddChild(Object* rhs) override {
+    ASSERT(rhs);
+    if (rhs->IsMacro()) {
+      macros_.push_back(rhs->AsMacro());
+    } else if (rhs->IsLambda()) {
+      lambdas_.push_back(rhs->AsLambda());
+    } else if (rhs->IsNamespace()) {
+      namespaces_.push_back(rhs->AsNamespace());
+    }
   }
 
  public:

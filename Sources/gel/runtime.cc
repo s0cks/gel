@@ -11,7 +11,7 @@
 
 #include "gel/common.h"
 #include "gel/error.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/flow_graph_compiler.h"
 #include "gel/instruction.h"
 #include "gel/interpreter.h"
@@ -25,6 +25,7 @@
 #include "gel/object.h"
 #include "gel/os_thread.h"
 #include "gel/parser.h"
+#include "gel/pointer.h"
 #include "gel/procedure.h"
 #include "gel/script.h"
 #include "gel/stack_frame.h"
@@ -50,8 +51,7 @@ auto GetRuntime() -> Runtime* {
 
 Runtime::Runtime(LocalScope* scope) :
   init_scope_(scope),
-  curr_scope_(scope),
-  interpreter_(this) {
+  curr_scope_(scope) {
   ASSERT(init_scope_);
   ASSERT(curr_scope_);
 }
@@ -59,22 +59,28 @@ Runtime::Runtime(LocalScope* scope) :
 namespace fs = std::filesystem;
 
 void Runtime::LoadKernelModule() {
-  if (!FLAGS_kernel)
-    return;
   const auto home = kHomeVar.value();
   if (!home) {
     LOG(WARNING) << "${GEL_HOME} environment variable not set, skipping loading kernel.";
     return;
   }
   const auto kernel = Module::LoadFrom(fmt::format("{}/_kernel.cl", (*home)));
-  LOG_IF(FATAL, !kernel) << "failed to load the _kernel Module.";
+  LOG_IF(FATAL, !(kernel && kernel->IsKernel())) << "failed to load the _kernel Module.";
+  if (kernel->HasInit())
+    LOG_IF(FATAL, !kernel->Init(this)) << "failed to initialize the _kernel Module: " << kernel;
+
   if (VLOG_IS_ON(100)) {
     DLOG(INFO) << "_kernel Module scope: ";
     PRINT_SCOPE(INFO, kernel->GetScope());
   }
-  LOG_IF(ERROR, !GetInitScope()->Add(kernel->GetScope())) << "failed to import the _kernel Module.";
-  if (kernel->HasInit())
-    LOG_IF(FATAL, !kernel->Init(this)) << "failed to initialize the _kernel Module: " << kernel;
+  GetInitScope()->AddAll(kernel->GetScope());
+  const auto kernel_ns = kernel->FindNamespace("_kernel");
+  ASSERT(kernel_ns);
+  if (VLOG_IS_ON(100)) {
+    DLOG(INFO) << "_kernel Namespace scope: ";
+    PRINT_SCOPE(INFO, kernel_ns->GetScope());
+  }
+  GetInitScope()->AddAll(kernel_ns->GetScope());
 }
 
 auto GetGelPathEnvVar() -> const EnvironmentVariable& {
@@ -89,7 +95,8 @@ static inline auto FileExists(const std::string& filename) -> bool {  // TODO: r
 
 auto Runtime::Import(Module* m) -> bool {
   ASSERT(m);
-  return curr_scope_->Add(m->GetScope());
+  curr_scope_->AddAll(m->GetScope());
+  return true;
 }
 
 auto Runtime::Import(Symbol* symbol, LocalScope* scope) -> bool {
@@ -110,41 +117,62 @@ void Runtime::Call(Lambda* lambda, const ObjectList& args) {
   ASSERT(lambda);
   const auto locals = PushScope();
   ASSERT(locals);
-  const auto self_local = LocalVariable::New(locals, lambda->HasSymbol() ? lambda->GetSymbol() : Symbol::New("$"), lambda);
+  const auto self_local = LocalVariable::New(locals, lambda->HasSymbol() ? lambda->GetSymbol() : Symbol::New("this"), lambda);
   ASSERT(self_local);
   LOG_IF(FATAL, !locals->Add(self_local)) << "failed to add " << (*self_local) << " to scope.";
   {
-    const auto& lambda_args = lambda->GetArgs();
-    ASSERT(lambda_args.size() == args.size());
-    auto idx = 0;
-    for (const auto& arg : std::ranges::reverse_view(lambda_args)) {
-      const auto symbol = Symbol::New(arg.GetName());
-      ASSERT(symbol);
-      const auto value = args[idx++];
-      ASSERT(value);
-      const auto local = LocalVariable::New(locals, symbol, value);
-      ASSERT(local);
-      LOG_IF(FATAL, !locals->Add(local)) << "failed to add parameter local";
+    if (lambda->HasArgs()) {
+      const auto& lambda_args = lambda->GetArgs();
+      ASSERT(lambda_args);
+      for (int idx = static_cast<int>(args.size()); idx > 0; idx--) {
+        const auto arg = lambda_args->Get(static_cast<uword>(idx) - 1);
+        ASSERT(arg);
+        ASSERT((idx - 1) == arg->GetIndex());
+        const auto symbol = Symbol::New(arg->GetName()->Get());
+        ASSERT(symbol);
+        const auto value = args[args.size() - idx];
+        ASSERT(value);
+        const auto local = LocalVariable::New(locals, symbol, value);
+        ASSERT(local);
+        LOG_IF(FATAL, !locals->Add(local)) << "failed to add parameter: " << (*local);
+      }
     }
     if (!lambda->IsCompiled())
       LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, locals)) << "failed to compile: " << lambda;
-    StackFrameGuard<Lambda> stack_guard(lambda);
     {
+      StackFrameGuard<Lambda> stack_guard(lambda);
       PushStackFrame(lambda, locals);
-      interpreter_.Run(lambda->GetCode().GetStartingAddress());
+      Interpreter interpreter(this);
+      interpreter.Run(lambda->GetCode().GetStartingAddress());
       const auto frame = PopStackFrame();
-      const auto result = !frame.stack().IsEmpty() ? frame.stack().top() : Null();
+      ASSERT(frame);
+      const auto result = frame->HasReturnAddress() ? frame->GetReturnObjectPointer() : Null();
       ASSERT(result);
-      if (!stack_.empty()) {
-        stack_.top().GetOperationStack()->Push(result);
+      if (HasStackFrame()) {
+        GetCurrentStackFrame()->GetOperationStack()->Push(result);
       } else {
         result_ = result;
       }
-      if (frame.HasReturnAddress())
-        interpreter_.SetCurrentAddress(frame.GetReturnAddress());
     }
   }
   PopScope();
+}
+
+auto Runtime::VisitPointers(PointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  return vis->Visit(curr_scope_->raw_ptr());
+}
+
+auto Runtime::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  auto current_scope = curr_scope_->raw_ptr();
+  if (!vis->Visit(&current_scope))
+    return false;
+  if (!curr_scope_->raw_ptr()->Equals(current_scope)) {
+    curr_scope_ = current_scope->As<LocalScope>();
+    ASSERT(curr_scope_);
+  }
+  return true;
 }
 
 void Runtime::Call(NativeProcedure* native, const ObjectList& args) {
@@ -160,15 +188,14 @@ void Runtime::Call(NativeProcedure* native, const ObjectList& args) {
       PushStackFrame(native, locals);
       LOG_IF(FATAL, !native->GetEntry()->Apply(args)) << "failed to apply: " << native->ToString() << " with args: " << args;
       const auto frame = PopStackFrame();
-      const auto result = !frame.stack().IsEmpty() ? frame.stack().top() : Null();
+      ASSERT(frame);
+      const auto result = frame->HasReturnAddress() ? frame->GetReturnObjectPointer() : Null();
       ASSERT(result);
-      if (!stack_.empty()) {
-        stack_.top().GetOperationStack()->Push(result);
+      if (HasStackFrame()) {
+        GetCurrentStackFrame()->GetOperationStack()->Push(result);
       } else {
         result_ = result;
       }
-      if (frame.HasReturnAddress())
-        interpreter_.SetCurrentAddress(frame.GetReturnAddress());
     }
   }
   PopScope();
@@ -179,21 +206,21 @@ void Runtime::Call(Script* script, const ObjectList& args) {
   const auto locals = PushScope();
   ASSERT(locals);
   {
-    locals->Add(script->GetScope());
+    locals->AddAll(script->GetScope());
     StackFrameGuard<Script> stack_guard(script);
     {
       PushStackFrame(script, locals);
-      interpreter_.Run(script->GetCode().GetStartingAddress());
+      Interpreter interpreter(this);
+      interpreter.Run(script->GetCode().GetStartingAddress());
       const auto frame = PopStackFrame();
-      const auto result = !frame.stack().IsEmpty() ? frame.stack().top() : Null();
+      ASSERT(frame);
+      const auto result = frame->HasReturnAddress() ? frame->GetReturnObjectPointer() : Null();
       ASSERT(result);
-      if (!stack_.empty()) {
-        stack_.top().GetOperationStack()->Push(result);
+      if (HasStackFrame()) {
+        GetCurrentStackFrame()->GetOperationStack()->Push(result);
       } else {
         result_ = result;
       }
-      if (frame.HasReturnAddress())
-        interpreter_.SetCurrentAddress(frame.GetReturnAddress());
     }
   }
   PopScope();
@@ -205,7 +232,8 @@ auto Runtime::Eval(const std::string& expr) -> Object* {
   const auto runtime = GetRuntime();
   ASSERT(runtime);
   const auto scope = runtime->PushScope();
-  ArgumentSet args{};
+  const auto args = Array<Argument*>::New(0);
+  ASSERT(args);
   const auto lambda = Lambda::New(args, {});
   ASSERT(lambda);
   const auto this_local = LocalVariable::New(scope, "this", lambda);
@@ -227,16 +255,17 @@ auto Runtime::Exec(Script* script) -> Object* {
   return GetRuntime()->CallPop(script);
 }
 
-void Runtime::Init() {
+void Runtime::Init(const bool load_kernel) {
 #ifdef GEL_DEBUG
   const auto start_ts = Clock::now();
 #endif  // GEL_DEBUG
 
-  DVLOG(10) << "initializing runtime....";
+  DLOG(INFO) << "initializing runtime....";
   const auto runtime = new Runtime();
   runtime_.Set(runtime);
   Object::Init();
-  runtime->LoadKernelModule();
+  if (load_kernel && FLAGS_kernel)
+    runtime->LoadKernelModule();
 
 #ifdef GEL_DEBUG
   const auto stop_ts = Clock::now();
@@ -245,38 +274,34 @@ void Runtime::Init() {
 #endif  // GEL_DEBUG
 }
 
-auto Runtime::PushStackFrame(NativeProcedure* native, LocalScope* locals) -> const StackFrame& {
+auto Runtime::PushStackFrame(NativeProcedure* native, LocalScope* locals) -> const StackFrame* {
   ASSERT(locals);
-  const auto frame_id = HasStackFrame() ? GetCurrentStackFrame().GetId() + 1 : 1;
-  const auto new_frame = StackFrame(frame_id, native, locals, interpreter_.GetCurrentAddress());
+  const auto frame_id = HasStackFrame() ? GetCurrentStackFrame()->GetId() + 1 : 1;
+  const auto new_frame = new StackFrame(frame_id, native, locals);
   stack_.push(new_frame);
-  LOG_IF(ERROR, !new_frame.HasReturnAddress() && frame_id != 1) << "return address empty";
   DVLOG(1000) << "pushed: " << stack_.top();
   return stack_.top();
 }
 
-auto Runtime::PushStackFrame(Script* target, LocalScope* locals) -> const StackFrame& {
+auto Runtime::PushStackFrame(Script* target, LocalScope* locals) -> const StackFrame* {
   ASSERT(target);
-  const auto frame_id = HasStackFrame() ? GetCurrentStackFrame().GetId() + 1 : 1;
-  const auto new_frame = StackFrame(frame_id, target, locals, interpreter_.GetCurrentAddress());
+  const auto frame_id = HasStackFrame() ? GetCurrentStackFrame()->GetId() + 1 : 1;
+  const auto new_frame = new StackFrame(frame_id, target, locals);
   stack_.push(new_frame);
-  LOG_IF(ERROR, !new_frame.HasReturnAddress() && frame_id != 1) << "return address empty";
   DVLOG(1000) << "pushed: " << stack_.top();
   return stack_.top();
 }
 
-auto Runtime::PushStackFrame(Lambda* target, LocalScope* locals) -> const StackFrame& {
+auto Runtime::PushStackFrame(Lambda* target, LocalScope* locals) -> const StackFrame* {
   ASSERT(target);
-  const auto frame_id = HasStackFrame() ? GetCurrentStackFrame().GetId() + 1 : 1;
-  const auto return_address = interpreter_.GetCurrentAddress();
-  const auto new_frame = StackFrame(frame_id, target, locals, return_address);
+  const auto frame_id = HasStackFrame() ? GetCurrentStackFrame()->GetId() + 1 : 1;
+  const auto new_frame = new StackFrame(frame_id, target, locals);
   stack_.push(new_frame);
-  LOG_IF(ERROR, !new_frame.HasReturnAddress() && frame_id != 1) << "return address empty";
   DVLOG(1000) << "pushed: " << stack_.top();
   return stack_.top();
 }
 
-auto Runtime::PopStackFrame() -> StackFrame {
+auto Runtime::PopStackFrame() -> StackFrame* {
   if (stack_.empty()) {
     DLOG(WARNING) << "stack empty";
     return {};

@@ -16,11 +16,11 @@
 #include <unordered_set>
 #include <utility>
 
+#include "gel/allocator.h"
 #include "gel/common.h"
 #include "gel/platform.h"
-#include "gel/pointer.h"
+#include "gel/region.h"
 #include "gel/rx.h"
-#include "gel/section.h"
 #include "gel/type.h"
 #include "gel/type_traits.h"
 
@@ -34,23 +34,12 @@ class rx_buffer;
 class Pointer;
 class Object;
 class PointerVisitor;
-class Object {
+class Object : public HeapObject {
+  friend class Parser;
   friend class Pointer;
   DEFINE_NON_COPYABLE_TYPE(Object)
  protected:
   Object() = default;
-
-  virtual auto VisitPointers(PointerVisitor* vis) -> bool {
-    ASSERT(vis);
-    // do nothing
-    return true;
-  }
-
-  virtual auto VisitPointers(PointerPointerVisitor* vis) -> bool {
-    ASSERT(vis);
-    // do nothing
-    return true;
-  }
 
   template <typename T>
   static inline void CombineHash(uword& seed, const T& rhs) {
@@ -65,12 +54,16 @@ class Object {
 
   auto FieldAddr(Field* field) const -> Object**;
 
+  virtual void AddChild(Object* rhs) {
+    ASSERT(rhs);
+    // do nothing
+  }
+
  public:
-  virtual ~Object() = default;
+  ~Object() override = default;
   virtual auto GetType() const -> Class* = 0;
   virtual auto HashCode() const -> uword = 0;
   virtual auto Equals(Object* rhs) const -> bool = 0;
-  virtual auto ToString() const -> std::string = 0;
   virtual auto Add(Object* rhs) const -> Object*;
   virtual auto Sub(Object* rhs) const -> Object*;
   virtual auto Mul(Object* rhs) const -> Object*;
@@ -89,21 +82,19 @@ class Object {
     (*FieldAddr(field)) = rhs;
   }
 
-  auto raw_ptr() const -> Pointer*;
-
-  inline auto GetStartingAddress() const -> uword {
-    return (uword)this;  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  virtual auto IsLocal() const -> bool {
+    return false;
   }
 
-  inline auto GetStartingAddressPointer() const -> void* {
-    return ((void*)GetStartingAddress());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-  }
-
-  virtual auto IsAtom() const -> bool {
+  virtual auto IsArgument() const -> bool {
     return false;
   }
 
   virtual auto IsArray() const -> bool {
+    return false;
+  }
+
+  virtual auto IsAtom() const -> bool {
     return false;
   }
 
@@ -133,6 +124,12 @@ class Object {
 
  public:
   static void Init();
+  static auto VisitClassPointerPointer(PointerPointerVisitor* vis) -> bool;
+
+  static inline auto VisitClassPointerPointer(const std::function<bool(Pointer**)>& func) -> bool {
+    PointerPointerVisitorWrapper vis = func;
+    return VisitClassPointerPointer(&vis);
+  }
 
   static inline auto GetClass() -> Class* {
     ASSERT(kClass);
@@ -200,37 +197,38 @@ static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream
   return stream << rhs->ToString();
 }
 
-#define DECLARE_TYPE(Name)                                        \
-  friend class Class;                                             \
-  friend class Object;                                            \
-  DEFINE_NON_COPYABLE_TYPE(Name)                                  \
- private:                                                         \
-  static Class* kClass;                                           \
-  static void InitClass();                                        \
-  static auto CreateClass() -> Class*;                            \
-                                                                  \
- public:                                                          \
-  static auto New(const ObjectList& args) -> Name*;               \
-  static constexpr const auto kClassId = Class::k##Name##ClassId; \
-  static constexpr const auto kClassName = #Name;                 \
-  static auto operator new(const size_t sz)->void*;               \
-  static inline void operator delete(void* ptr) {                 \
-    ASSERT(ptr);                                                  \
-  }                                                               \
-  static inline auto GetClass() -> Class* {                       \
-    ASSERT(kClass);                                               \
-    return kClass;                                                \
-  }                                                               \
-                                                                  \
- public:                                                          \
-  auto HashCode() const -> uword override;                        \
-  auto Equals(Object* rhs) const -> bool override;                \
-  auto GetType() const -> Class* override {                       \
-    return GetClass();                                            \
-  }                                                               \
-  auto ToString() const -> std::string override;                  \
-  auto As##Name()->Name* override {                               \
-    return this;                                                  \
+#define DECLARE_TYPE(Name)                                                  \
+  friend class Class;                                                       \
+  friend class Object;                                                      \
+  DEFINE_NON_COPYABLE_TYPE(Name)                                            \
+ private:                                                                   \
+  static Class* kClass;                                                     \
+  static void InitClass();                                                  \
+  static auto CreateClass() -> Class*;                                      \
+                                                                            \
+ public:                                                                    \
+  static auto New(const ObjectList& args) -> Name*;                         \
+  static constexpr const auto kClassId = Class::k##Name##ClassId;           \
+  static constexpr const auto kClassName = #Name;                           \
+  static auto operator new(const size_t sz)->void*;                         \
+  static inline void operator delete(void* ptr) {                           \
+    ASSERT(ptr);                                                            \
+  }                                                                         \
+  static inline auto GetClass() -> Class* {                                 \
+    ASSERT(kClass);                                                         \
+    return kClass;                                                          \
+  }                                                                         \
+  static auto VisitClassPointerPointer(PointerPointerVisitor* vis) -> bool; \
+                                                                            \
+ public:                                                                    \
+  auto HashCode() const -> uword override;                                  \
+  auto Equals(Object* rhs) const -> bool override;                          \
+  auto GetType() const -> Class* override {                                 \
+    return GetClass();                                                      \
+  }                                                                         \
+  auto ToString() const -> std::string override;                            \
+  auto As##Name()->Name* override {                                         \
+    return this;                                                            \
   }
 }  // namespace gel
 
@@ -272,6 +270,8 @@ class Seq : public Object {
   static auto CreateClass() -> Class*;
 
  public:
+  static auto VisitClassPointerPointer(PointerPointerVisitor* vis) -> bool;
+
   static inline auto GetClass() -> Class* {
     ASSERT(kClass);
     return kClass;
@@ -291,6 +291,10 @@ class Bool : public Object {
 
   auto Get() const -> bool {
     return value_;
+  }
+
+  auto Negate() const -> Bool* {
+    return Get() ? False() : True();
   }
 
   auto And(Object* rhs) const -> Object* override;
@@ -474,6 +478,9 @@ class Pair : public Seq {
   static inline auto New(Object* car, Object* cdr) -> Pair* {
     return new Pair(car, cdr);
   }
+
+  static auto VisitEmptyPointerPointer(const std::function<bool(Pointer**)>& vis) -> bool;
+  static auto VisitEmptyPointerPointer(PointerPointerVisitor* vis) -> bool;
 };
 
 class StringObject : public Object {
@@ -635,7 +642,6 @@ auto PrintValue(std::ostream& stream, Object* value) -> std::ostream&;
   static inline auto Is##Name(Object* rhs)->bool { \
     return rhs && rhs->Is##Name();                 \
   }
-DEFINE_TYPE_PRED(Array);
 FOR_EACH_TYPE(DEFINE_TYPE_PRED)
 #undef DEFINE_TYPE_PRED
 
@@ -651,7 +657,9 @@ static inline auto Null() -> Object* {
 }
 
 static inline auto IsNull(Object* rhs) -> bool {
-  return !rhs || (rhs->IsPair() && rhs->AsPair()->IsEmpty());
+  if (!rhs)
+    return true;
+  return (rhs->IsPair() && rhs->AsPair()->IsEmpty());
 }
 
 static inline auto BinaryAnd(Object* lhs, Object* rhs) -> Object* {

@@ -19,6 +19,28 @@ class OperationStack {
   using ValueStack = std::stack<Value>;
   using OptionalValue = std::optional<Value>;
 
+  class Iterator {
+    DEFINE_NON_COPYABLE_TYPE(Iterator);
+
+   private:
+    ValueStack stack_;
+
+   public:
+    Iterator(const OperationStack& stack) :
+      stack_(stack.data()) {}
+    ~Iterator() = default;
+
+    auto HasNext() const -> bool {
+      return !stack_.empty();
+    }
+
+    auto Next() -> Value {
+      const auto next = stack_.top();
+      stack_.pop();
+      return next;
+    }
+  };
+
  private:
   ValueStack stack_{};
 

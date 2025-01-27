@@ -1,18 +1,18 @@
 #ifndef GEL_LOCAL_SCOPE_H
 #define GEL_LOCAL_SCOPE_H
 
-#include "gel/common.h"
+#include "gel/allocator.h"
+#include "gel/array.h"
 #include "gel/local.h"
 #include "gel/pointer.h"
 
 namespace gel {
 class Symbol;
-class LocalScope {
+class LocalScope : public HeapObject {
   friend class Repl;
   friend class Parser;
   friend class Runtime;
   using LocalList = std::vector<LocalVariable*>;
-  DEFINE_NON_COPYABLE_TYPE(LocalScope);
 
  private:
   template <const bool Recursive>
@@ -94,15 +94,20 @@ class LocalScope {
 
  private:
   LocalScope* parent_;
-  std::vector<LocalVariable*> locals_;
+  Array<LocalVariable*>* locals_;
 
  protected:
-  explicit LocalScope(LocalScope* parent = nullptr, const LocalList& locals = {}) :  // NOLINT(modernize-pass-by-value)
+  explicit LocalScope(LocalScope* parent, Array<LocalVariable*>* locals) :
     parent_(parent),
     locals_(locals) {}
+  LocalScope() :
+    LocalScope(nullptr, nullptr) {}
+
+  auto VisitPointers(PointerVisitor* vis) -> bool override;
+  auto VisitPointerPointers(PointerPointerVisitor* vis) -> bool override;
 
  public:
-  virtual ~LocalScope() = default;
+  ~LocalScope() override = default;
 
   virtual auto GetParent() const -> LocalScope* {
     return parent_;
@@ -116,69 +121,74 @@ class LocalScope {
     return GetParent() == nullptr;
   }
 
-  virtual auto Has(const std::string& name, const bool recursive = false) -> bool;
-  virtual auto Has(const Symbol* symbol, const bool recursive = false) -> bool;
-  virtual auto Add(LocalVariable* local) -> bool;
-  auto Add(Symbol* symbol, Object* value = nullptr) -> bool;
-  virtual auto Add(LocalScope* scope) -> bool;
-  virtual auto Lookup(const std::string& name, LocalVariable** result, const bool recursive = true) -> bool;
-  auto Lookup(const Symbol* symbol, LocalVariable** result, const bool recursive = true) -> bool;
+  auto GetLocals() const -> Array<LocalVariable*>* {
+    return locals_;
+  }
 
   virtual auto GetLocalAt(const uword index) const -> LocalVariable* {
+    ASSERT(locals_);
     ASSERT(index >= 0 && index <= GetNumberOfLocals());
-    return locals_[index];
+    return locals_->Get(index);
   }
 
   virtual auto IsEmpty() const -> bool {
-    return locals_.empty();
+    ASSERT(locals_);
+    return locals_->IsEmpty();
   }
 
   virtual auto GetNumberOfLocals() const -> uint64_t {
-    return locals_.size();
+    ASSERT(locals_);
+    return locals_->GetLength();
   }
 
-  inline auto Add(const std::string& name, Object* value = nullptr) -> bool {
-    ASSERT(!name.empty());
+  virtual auto Has(Symbol* rhs, const bool recursive = true) const -> bool;
+  auto Has(const std::string& symbol, const bool recursive = true) const -> bool;
 
-    LocalVariable* local = nullptr;
-    if (!Lookup(name, &local, false))
-      return Add(local = new LocalVariable(this, GetNumberOfLocals(), name, value));
-    if (local->HasValue()) {
-      DLOG(ERROR) << "cannot overwrite local: " << (*local);
-      return false;
-    }
-    DLOG(INFO) << (*local) << " := " << value;
-    local->SetValue(value);
-    return true;
+  inline auto HasLocal(Symbol* rhs) const -> bool {
+    return Has(rhs, false);
   }
 
-  auto Accept(PointerVisitor* vis) -> bool;
-  auto Accept(PointerPointerVisitor* vis) -> bool;
-  auto VisitLocalPointers(const std::function<bool(Pointer**)>& vis, const bool recursive = true) -> bool;
-  auto VisitLocals(const std::function<bool(Pointer*)>& vis, const bool recursive = true) -> bool;
-  virtual auto VisitAllLocals(LocalVariableVisitor* vis) -> bool;
-  virtual auto ToString() const -> std::string;
+  auto HasLocal(const std::string& symbol) const -> bool;
+
+  virtual auto Lookup(Symbol* symbol, LocalVariable** local, const bool recursive = true) const -> bool;
+  auto Lookup(const std::string& symbol, LocalVariable** local, const bool recursive = true) const -> bool;
+
+  virtual auto Add(LocalVariable* local) -> LocalVariable* {
+    ASSERT(local);
+    locals_->Push(local);
+    return local;
+  }
+
+  auto Add(Symbol* symbol, Object* value = nullptr) -> LocalVariable*;
+  auto Add(const std::string& symbol, Object* value = nullptr) -> LocalVariable*;
+
+  auto FindIf(const LocalVariable::Predicate& predicate) const -> LocalVariable* {
+    return locals_->FindIf(predicate);
+  }
+
+  virtual void AddAll(LocalScope* rhs) {
+    ASSERT(rhs);
+    return locals_->AddAll(rhs->GetLocals());
+  }
 
   template <class T>
-  inline auto Add(T* value, std::enable_if_t<gel::is_object<T>::value && gel::has_symbol<T>::value>* = nullptr) -> bool {
+  inline auto Add(T* value, std::enable_if_t<gel::is_object<T>::value && gel::has_symbol<T>::value>* = nullptr)
+      -> LocalVariable* {
     ASSERT(value);
     return Add(value->GetSymbol(), value);
   }
 
- public:
-  static inline auto New(LocalScope* parent = nullptr) -> LocalScope* {
-    return new LocalScope(parent);
-  }
+  virtual auto VisitAllLocals(LocalVariableVisitor* vis, const bool recursive = false) -> bool;
+  auto ToString() const -> std::string override;
+  DECLARE_HEAP_ALLOC_TYPE(LocalScope);
 
-  static inline auto Union(const std::vector<LocalScope*>& scopes, LocalScope* parent = nullptr) -> LocalScope* {
-    if (scopes.empty())
-      return New(parent);
-    LocalList locals{};
-    std::ranges::for_each(std::begin(scopes), std::end(scopes), [&locals](LocalScope* scope) {
-      locals.insert(std::end(locals), std::begin(scope->locals_), std::end(scope->locals_));
-    });
+ public:
+  static inline auto New(LocalScope* parent = nullptr, Array<LocalVariable*>* locals = Array<LocalVariable*>::New())
+      -> LocalScope* {
     return new LocalScope(parent, locals);
   }
+
+  static auto Union(const std::vector<LocalScope*>& scopes, LocalScope* parent = nullptr) -> LocalScope*;
 };
 
 class LocalScopeIterator {

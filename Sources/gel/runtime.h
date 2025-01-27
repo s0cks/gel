@@ -19,6 +19,7 @@
 #include "gel/native_procedure.h"
 #include "gel/natives.h"
 #include "gel/object.h"
+#include "gel/pointer.h"
 #include "gel/stack_frame.h"
 #include "gel/type_traits.h"
 
@@ -27,6 +28,7 @@ DECLARE_bool(log_script_instrs);
 
 class Module;
 class Runtime {
+  friend class Collector;
   friend class proc::import;
   friend class proc::exit;
   friend class proc::format;  // TODO: remove
@@ -45,14 +47,14 @@ class Runtime {
   friend class DirModuleLoader;
   friend class NativeProcedure;
   friend class RuntimeScopeScope;
+  friend class StackFrameIterator;
   friend class NativeProcedureEntry;
   DEFINE_NON_COPYABLE_TYPE(Runtime);
 
  private:
   LocalScope* init_scope_;
   LocalScope* curr_scope_;
-  Interpreter interpreter_;
-  std::stack<StackFrame> stack_{};
+  std::stack<StackFrame*> stack_{};
   bool executing_ = false;
   Object* result_ = nullptr;
 
@@ -62,7 +64,7 @@ class Runtime {
 
   inline auto GetOperationStack() -> OperationStack* {
     ASSERT(!stack_.empty());
-    return stack_.top().GetOperationStack();
+    return stack_.top()->GetOperationStack();
   }
 
   template <class E>
@@ -73,28 +75,31 @@ class Runtime {
     ASSERT(stack);
     std::vector<Object*> args{};
     word remaining = static_cast<word>(num_args);
-    for (const auto& arg : exec->GetArgs()) {
-      if (arg.IsVararg()) {
-        while (remaining > 0) {
+    if (exec->HasArgs()) {
+      for (auto idx = 0; idx < exec->GetNumberOfArgs(); idx++) {
+        const auto arg = exec->GetArgAt(idx);
+        if (arg->IsVararg()) {
+          while (remaining > 0) {
+            const auto value = stack->Pop();
+            ASSERT(value);
+            args.push_back((*value));
+            remaining--;
+          }
+          break;
+        } else if (remaining > 0) {
           const auto value = stack->Pop();
           ASSERT(value);
           args.push_back((*value));
           remaining--;
+          continue;
         }
-        break;
-      } else if (remaining > 0) {
-        const auto value = stack->Pop();
-        ASSERT(value);
-        args.push_back((*value));
-        remaining--;
-        continue;
+        ASSERT(remaining <= 0);
+        if (arg->IsOptional()) {
+          remaining--;
+          continue;
+        }
+        LOG(FATAL) << arg->ToString() << " is not optional.";
       }
-      ASSERT(remaining <= 0);
-      if (arg.IsOptional()) {
-        remaining--;
-        continue;
-      }
-      LOG(FATAL) << arg << " is not optional.";
     }
     std::ranges::reverse(std::begin(args), std::end(args));
     while (remaining < 0) {
@@ -120,10 +125,10 @@ class Runtime {
     curr_scope_ = curr_scope_->GetParent();
   }
 
-  auto PopStackFrame() -> StackFrame;
-  auto PushStackFrame(Script* script, LocalScope* locals) -> const StackFrame&;
-  auto PushStackFrame(Lambda* lambda, LocalScope* locals) -> const StackFrame&;
-  auto PushStackFrame(NativeProcedure* native, LocalScope* locals) -> const StackFrame&;
+  auto PopStackFrame() -> StackFrame*;
+  auto PushStackFrame(Script* script, LocalScope* locals) -> const StackFrame*;
+  auto PushStackFrame(Lambda* lambda, LocalScope* locals) -> const StackFrame*;
+  auto PushStackFrame(NativeProcedure* native, LocalScope* locals) -> const StackFrame*;
 
  public:  // TODO: reduce visibility
   void LoadKernelModule();
@@ -158,6 +163,9 @@ class Runtime {
     return PushError(Error::New(message));
   }
 
+  auto VisitPointers(PointerVisitor* vis) -> bool;
+  auto VisitPointerPointers(PointerPointerVisitor* vis) -> bool;
+
  public:
   ~Runtime() = default;
 
@@ -177,7 +185,7 @@ class Runtime {
     return !stack_.empty();
   }
 
-  auto GetCurrentStackFrame() const -> const StackFrame& {
+  auto GetCurrentStackFrame() const -> StackFrame* {
     return stack_.top();
   }
 
@@ -187,11 +195,8 @@ class Runtime {
     ASSERT(exec);
     Call(exec, args);
     if (!stack_.empty())
-      return GetOperationStack()->PopOr(Null());
-    const auto result = result_ ? result_ : Null();
-    ASSERT(result);
-    result_ = nullptr;
-    return result;
+      return result_ = GetOperationStack()->PopOr(Null());
+    return result_ ? result_ : (result_ = Null());
   }
 
  private:
@@ -206,7 +211,7 @@ class Runtime {
   static auto Exec(Script* script) -> Object*;
 
  public:
-  static void Init();
+  static void Init(const bool load_kernel = true);
 };
 
 auto GetRuntime() -> Runtime*;

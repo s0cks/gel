@@ -70,6 +70,12 @@ static constexpr int kBitsPerWordLog2 = kWordSizeLog2 + kBitsPerByteLog2;
 static constexpr int kBitsPerWord = 1 << kBitsPerWordLog2;
 
 static constexpr uword kUWordOne = 1U;
+
+namespace sys {
+auto malloc(const uword sz) -> uword;
+auto realloc(const uword ptr, const uword sz) -> uword;
+void free(const uword ptr);
+}  // namespace sys
 }  // namespace gel
 
 #endif  // GEL_PLATFORM_H

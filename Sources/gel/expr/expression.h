@@ -9,13 +9,37 @@
 #include "gel/common.h"
 #include "gel/local.h"
 #include "gel/local_scope.h"
+#include "gel/native_procedure.h"
 #include "gel/object.h"
 #include "gel/symbol.h"
 #include "gel/variable.h"
 
+#define FOR_EACH_UNARY_OP(V) \
+  V(Not)                     \
+  V(Car)                     \
+  V(Cdr)                     \
+  V(Nonnull)                 \
+  V(Null)
+
+#define FOR_EACH_BINARY_OP(V) \
+  V(Add)                      \
+  V(Subtract)                 \
+  V(Multiply)                 \
+  V(Divide)                   \
+  V(Modulus)                  \
+  V(Equals)                   \
+  V(BinaryAnd)                \
+  V(BinaryOr)                 \
+  V(GreaterThan)              \
+  V(GreaterThanEqual)         \
+  V(LessThan)                 \
+  V(LessThanEqual)            \
+  V(Cons)                     \
+  V(InstanceOf)
+
 #define FOR_EACH_EXPRESSION_NODE(V) \
   V(LiteralExpr)                    \
-  V(UnaryExpr)                      \
+  V(UnaryOpExpr)                    \
   V(BinaryOpExpr)                   \
   V(BeginExpr)                      \
   V(WhileExpr)                      \
@@ -23,12 +47,14 @@
   V(ClauseExpr)                     \
   V(WhenExpr)                       \
   V(CaseExpr)                       \
-  V(LocalDef)                       \
   V(ImportExpr)                     \
-  V(CallProcExpr)                   \
+  V(InvokeExpr)                     \
+  V(InvokeMacroExpr)                \
+  V(InvokeNativeExpr)               \
+  V(InvokeInstanceExpr)             \
   V(LoadInstanceMethodExpr)         \
-  V(SetFieldExpr)                   \
-  V(SetLocalExpr)                   \
+  V(StoreFieldExpr)                 \
+  V(StoreLocalExpr)                 \
   V(Binding)                        \
   V(LetExpr)                        \
   V(RxOpExpr)                       \
@@ -295,6 +321,10 @@ class LiteralExpr : public Expression {
     return value_;
   }
 
+  auto IsLiteralSymbol() const -> bool {
+    return HasValue() && GetValue()->IsSymbol();
+  }
+
   DECLARE_EXPRESSION(LiteralExpr);
 
  public:
@@ -303,22 +333,6 @@ class LiteralExpr : public Expression {
     return new LiteralExpr(value);
   }
 };
-
-#define FOR_EACH_BINARY_OP(V) \
-  V(Add)                      \
-  V(Subtract)                 \
-  V(Multiply)                 \
-  V(Divide)                   \
-  V(Modulus)                  \
-  V(Equals)                   \
-  V(BinaryAnd)                \
-  V(BinaryOr)                 \
-  V(GreaterThan)              \
-  V(GreaterThanEqual)         \
-  V(LessThan)                 \
-  V(LessThanEqual)            \
-  V(Cons)                     \
-  V(InstanceOf)
 
 template <class Op, const uword NumInputs>
 class TemplateOpExpression : public TemplateExpression<NumInputs> {
@@ -342,6 +356,73 @@ class TemplateOpExpression : public TemplateExpression<NumInputs> {
   auto GetOp() const -> Op {
     return op_;
   }
+};
+
+enum UnaryOp : uint64_t {
+#define DEFINE_UNARY_OP(Name) k##Name,
+  FOR_EACH_UNARY_OP(DEFINE_UNARY_OP)
+#undef DEFINE_UNARY_OP
+};
+
+static inline auto operator<<(std::ostream& stream, const UnaryOp& rhs) -> std::ostream& {
+  switch (rhs) {
+#define DEFINE_TO_STRING(Name) \
+  case UnaryOp::k##Name:       \
+    return stream << #Name;
+    FOR_EACH_UNARY_OP(DEFINE_TO_STRING)
+#undef DEFINE_TO_STRING
+    default:
+      return stream << "Unknown UnaryOp: " << static_cast<uint64_t>(rhs);
+  }
+}
+
+class UnaryOpExpr : public TemplateOpExpression<UnaryOp, 1> {
+ protected:
+  UnaryOpExpr(const UnaryOp op, Expression* value) :
+    TemplateOpExpression<UnaryOp, 1>(op) {
+    SetChildAt(0, value);
+  }
+
+ public:
+  ~UnaryOpExpr() override = default;
+
+  inline auto GetValue() const -> Expression* {
+    return GetChildAt(0);
+  }
+
+  inline auto HasValue() const -> bool {
+    return GetValue() != nullptr;
+  }
+
+  inline void SetValue(Expression* expr) {
+    ASSERT(expr);
+    SetChildAt(0, expr);
+  }
+
+#define DEFINE_OP_CHECK(Name)              \
+  inline auto Is##Name##Op() const->bool { \
+    return GetOp() == UnaryOp::k##Name;    \
+  }
+  FOR_EACH_UNARY_OP(DEFINE_OP_CHECK)
+#undef DEFINE_OP_CHECK
+
+  auto IsConstantExpr() const -> bool override;
+  auto EvalToConstant(LocalScope* scope) const -> Object* override;
+  DECLARE_EXPRESSION(UnaryOpExpr);
+
+ public:
+  static inline auto New(const UnaryOp op, Expression* value) -> UnaryOpExpr* {
+    ASSERT(value);
+    return new UnaryOpExpr(op, value);
+  }
+
+#define DEFINE_NEW_OP(Name)                                       \
+  static inline auto New##Name(Expression* value)->UnaryOpExpr* { \
+    ASSERT(value);                                                \
+    return New(UnaryOp::k##Name, value);                          \
+  }
+  FOR_EACH_UNARY_OP(DEFINE_NEW_OP)
+#undef DEFINE_NEW_OP
 };
 
 enum BinaryOp : uint64_t {
@@ -388,7 +469,7 @@ class BinaryOpExpr : public TemplateOpExpression<BinaryOp, 2> {
  public:
   ~BinaryOpExpr() override = default;
 
-  auto GetLeft() const -> Expression* {
+  inline auto GetLeft() const -> Expression* {
     return GetChildAt(kLeftInput);
   }
 
@@ -440,78 +521,6 @@ class BinaryOpExpr : public TemplateOpExpression<BinaryOp, 2> {
     return New(BinaryOp::k##Name, lhs, rhs);                                      \
   }
   FOR_EACH_BINARY_OP(DEFINE_NEW_OP)
-#undef DEFINE_NEW_OP
-};
-
-#define FOR_EACH_UNARY_OP(V) \
-  V(Not)                     \
-  V(Car)                     \
-  V(Cdr)                     \
-  V(Nonnull)                 \
-  V(Null)
-
-enum UnaryOp : uint64_t {
-#define DEFINE_UNARY_OP(Name) k##Name,
-  FOR_EACH_UNARY_OP(DEFINE_UNARY_OP)
-#undef DEFINE_UNARY_OP
-};
-
-static inline auto operator<<(std::ostream& stream, const UnaryOp& rhs) -> std::ostream& {
-  switch (rhs) {
-#define DEFINE_TO_STRING(Name) \
-  case UnaryOp::k##Name:       \
-    return stream << #Name;
-    FOR_EACH_UNARY_OP(DEFINE_TO_STRING)
-#undef DEFINE_TO_STRING
-    default:
-      return stream << "Unknown UnaryOp: " << static_cast<uint64_t>(rhs);
-  }
-}
-
-class UnaryExpr : public TemplateOpExpression<UnaryOp, 1> {
- protected:
-  UnaryExpr(const UnaryOp op, Expression* value) :
-    TemplateOpExpression<UnaryOp, 1>(op) {
-    SetChildAt(0, value);
-  }
-
- public:
-  ~UnaryExpr() override = default;
-
-  inline auto GetValue() const -> Expression* {
-    return GetChildAt(0);
-  }
-
-  inline auto HasValue() const -> bool {
-    return GetValue() != nullptr;
-  }
-
-  inline void SetValue(Expression* expr) {
-    ASSERT(expr);
-    SetChildAt(0, expr);
-  }
-
-#define DEFINE_OP_CHECK(Name)              \
-  inline auto Is##Name##Op() const->bool { \
-    return GetOp() == UnaryOp::k##Name;    \
-  }
-  FOR_EACH_UNARY_OP(DEFINE_OP_CHECK)
-#undef DEFINE_OP_CHECK
-
-  DECLARE_EXPRESSION(UnaryExpr);
-
- public:
-  static inline auto New(const UnaryOp op, Expression* value) -> UnaryExpr* {
-    ASSERT(value);
-    return new UnaryExpr(op, value);
-  }
-
-#define DEFINE_NEW_OP(Name)                                     \
-  static inline auto New##Name(Expression* value)->UnaryExpr* { \
-    ASSERT(value);                                              \
-    return New(UnaryOp::k##Name, value);                        \
-  }
-  FOR_EACH_UNARY_OP(DEFINE_NEW_OP)
 #undef DEFINE_NEW_OP
 };
 
@@ -651,21 +660,23 @@ class BeginExpr : public SequenceExpr {
   }
 };
 
-class CallProcExpr : public Expression {
-  friend class gel::MacroEffectVisitor;
+template <class Target>
+class TemplateInvokeExpr : public Expression {
+  DEFINE_NON_COPYABLE_TYPE(TemplateInvokeExpr);
 
  private:
-  Expression* target_ = nullptr;
+  Target* target_;
   ExpressionList args_{};
 
  protected:
-  explicit CallProcExpr(Expression* target, const ExpressionList& args) :  // NOLINT(modernize-pass-by-value)
+  TemplateInvokeExpr(Target* target, const ExpressionList& args) :
     Expression(),
+    target_(target),
     args_(args) {
-    SetTarget(target);
+    ASSERT(target_);
   }
 
-  inline void SetTarget(Expression* target) {
+  void SetTarget(Target* target) {
     ASSERT(target);
     target_ = target;
   }
@@ -677,17 +688,13 @@ class CallProcExpr : public Expression {
   }
 
  public:
-  ~CallProcExpr() override = default;
+  ~TemplateInvokeExpr() override = default;
 
-  auto GetTarget() const -> Expression* {
+  auto GetTarget() const -> Target* {
     return target_;
   }
 
-  inline auto HasTarget() const -> bool {
-    return GetTarget() != nullptr;
-  }
-
-  inline auto GetNumberOfArgs() const -> uint64_t {
+  auto GetNumberOfArgs() const -> uint64_t {
     return args_.size();
   }
 
@@ -695,36 +702,258 @@ class CallProcExpr : public Expression {
     return args_;
   }
 
+  auto GetArgAt(const uint64_t idx) const -> Expression* {
+    ASSERT(idx >= 0 && idx <= GetNumberOfArgs());
+    return args_[idx];
+  }
+
+  inline auto HasArgs() const -> bool {
+    return GetNumberOfArgs() > 0;
+  }
+
+  inline auto HasArgAt(const uint64_t idx) const -> bool {
+    ASSERT(idx >= 0 && idx <= GetNumberOfArgs());
+    return GetArgAt(idx) != nullptr;
+  }
+
+  auto VisitArgs(ExpressionVisitor* vis) -> bool {
+    ASSERT(vis);
+    for (const auto& arg : args_) {
+      ASSERT(arg);
+      if (!arg->Accept(vis))
+        return false;
+    }
+    return true;
+  }
+};
+
+class InvokeExpr : public TemplateInvokeExpr<Expression> {
+  friend class gel::MacroEffectVisitor;
+
+ protected:
+  explicit InvokeExpr(Expression* target, const ExpressionList& args) :  // NOLINT(modernize-pass-by-value)
+    TemplateInvokeExpr(target, args) {}
+
+ public:
+  ~InvokeExpr() override = default;
+
   auto GetNumberOfChildren() const -> uint64_t override {
     return GetNumberOfArgs() + 1;
   }
 
-  auto GetArgAt(const uint64_t idx) const -> Expression* {
-    return GetChildAt(idx + 1);
-  }
-
   auto GetChildAt(const uint64_t idx) const -> Expression* override {
     ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
-    return idx == 0 ? GetTarget() : args_[idx - 1];
+    return idx == 0 ? GetTarget() : GetArgAt(idx - 1);
   }
 
   auto VisitChildren(ExpressionVisitor* vis) -> bool override {
     ASSERT(vis);
     if (!GetTarget()->Accept(vis))
       return false;
-    for (const auto& arg : args_) {
+    return VisitArgs(vis);
+  }
+
+  auto IsMacroCall(LocalScope* scope) const -> bool;
+  DECLARE_EXPRESSION(InvokeExpr);
+
+ public:
+  static inline auto New(Expression* target, const ExpressionList& args = {}) -> InvokeExpr* {
+    return new InvokeExpr(target, args);
+  }
+};
+
+class MacroExpansionSite {
+  friend class InvokeMacroExpr;
+  DEFINE_DEFAULT_COPYABLE_TYPE(MacroExpansionSite);
+
+ private:
+  Macro* target_;
+  ExpressionList args_;
+
+  inline void SetArgAt(const uint64_t idx, Expression* expr) {
+    ASSERT(idx >= 0 && idx <= GetNumberOfArgs());
+    ASSERT(expr);
+    args_[idx] = expr;
+  }
+
+ public:
+  MacroExpansionSite(Macro* target, const ExpressionList& args) :
+    target_(target),
+    args_(args) {
+    ASSERT(target_);
+  }
+  ~MacroExpansionSite() = default;
+
+  auto GetTarget() const -> Macro* {
+    return target_;
+  }
+
+  auto GetArgs() const -> const ExpressionList& {
+    return args_;
+  }
+
+  auto GetNumberOfArgs() const -> uint64_t {
+    return args_.size();
+  }
+
+  auto GetArgAt(const uint64_t idx) const -> Expression* {
+    ASSERT(idx >= 0 && idx <= GetNumberOfArgs());
+    return args_[idx];
+  }
+
+  auto begin() const -> ExpressionList::const_iterator {
+    return std::begin(args_);
+  }
+
+  auto end() const -> ExpressionList::const_iterator {
+    return std::end(args_);
+  }
+};
+
+class InvokeMacroExpr : public Expression {
+  friend class gel::MacroEffectVisitor;
+
+ private:
+  MacroExpansionSite site_;
+
+ protected:
+  explicit InvokeMacroExpr(Macro* target, const ExpressionList& args) :  // NOLINT(modernize-pass-by-value)
+    Expression(),
+    site_(target, args) {}
+
+  void SetArgAt(const uint64_t idx, Expression* expr) {
+    ASSERT(idx >= 0 && idx <= GetNumberOfArgs());
+    ASSERT(expr);
+    return site_.SetArgAt(idx, expr);
+  }
+
+ public:
+  ~InvokeMacroExpr() override = default;
+
+  auto GetExpansionSite() const -> const MacroExpansionSite& {
+    return site_;
+  }
+
+  auto GetTarget() const -> Macro* {
+    return site_.GetTarget();
+  }
+
+  inline auto HasTarget() const -> bool {
+    return GetTarget() != nullptr;
+  }
+
+  auto GetNumberOfArgs() const -> uint64_t {
+    return site_.GetNumberOfArgs();
+  }
+
+  auto GetArgs() const -> const ExpressionList& {
+    return site_.GetArgs();
+  }
+
+  auto GetNumberOfChildren() const -> uint64_t override {
+    return GetNumberOfArgs();
+  }
+
+  auto GetArgAt(const uint64_t idx) const -> Expression* {
+    return GetChildAt(idx);
+  }
+
+  auto GetChildAt(const uint64_t idx) const -> Expression* override {
+    ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
+    return site_.GetArgAt(idx);
+  }
+
+  auto VisitChildren(ExpressionVisitor* vis) -> bool override {
+    ASSERT(vis);
+    for (const auto& arg : site_) {
       if (!arg->Accept(vis))
         return false;
     }
     return true;
   }
 
-  auto IsMacroCall(LocalScope* scope) const -> bool;
-  DECLARE_EXPRESSION(CallProcExpr);
+  DECLARE_EXPRESSION(InvokeMacroExpr);
 
  public:
-  static inline auto New(Expression* target, const ExpressionList& args = {}) -> CallProcExpr* {
-    return new CallProcExpr(target, args);
+  static inline auto New(Macro* target, const ExpressionList& args = {}) -> InvokeMacroExpr* {
+    return new InvokeMacroExpr(target, args);
+  }
+};
+
+class InvokeInstanceExpr : public TemplateInvokeExpr<Procedure> {
+ private:
+  Expression* instance_;
+
+  explicit InvokeInstanceExpr(Procedure* target, Expression* instance, const ExpressionList& args) :
+    TemplateInvokeExpr(target, args),
+    instance_(instance) {
+    ASSERT(instance_);
+  }
+
+  void SetInstance(Expression* expr) {
+    ASSERT(expr);
+    instance_ = expr;
+  }
+
+  void SetChildAt(const uint64_t idx, Expression* expr) override {
+    ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
+    return idx == 0 ? SetInstance(expr) : SetArgAt(idx - 1, expr);
+  }
+
+ public:
+  ~InvokeInstanceExpr() override = default;
+
+  auto GetInstance() const -> Expression* {
+    return instance_;
+  }
+
+  auto GetChildAt(const uint64_t idx) const -> Expression* override {
+    ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
+    return idx == 0 ? GetInstance() : GetArgAt(idx - 1);
+  }
+
+  auto GetNumberOfChildren() const -> uint64_t override {
+    return GetNumberOfArgs() + 1;
+  }
+
+  auto VisitChildren(ExpressionVisitor* vis) -> bool override;
+  DECLARE_EXPRESSION(InvokeInstanceExpr);
+
+ public:
+  static inline auto New(Procedure* target, Expression* instance, const ExpressionList& args) -> InvokeInstanceExpr* {
+    ASSERT(target);
+    ASSERT(instance);
+    return new InvokeInstanceExpr(target, instance, args);
+  }
+};
+
+class InvokeNativeExpr : public TemplateInvokeExpr<NativeProcedure> {
+ private:
+  explicit InvokeNativeExpr(NativeProcedure* target, const ExpressionList& args) :
+    TemplateInvokeExpr<NativeProcedure>(target, args) {}
+
+  void SetChildAt(const uint64_t idx, Expression* expr) override {
+    return SetArgAt(idx, expr);
+  }
+
+ public:
+  ~InvokeNativeExpr() override = default;
+
+  auto GetChildAt(const uint64_t idx) const -> Expression* override {
+    return GetArgAt(idx);
+  }
+
+  auto GetNumberOfChildren() const -> uint64_t override {
+    return GetNumberOfArgs();
+  }
+
+  auto VisitChildren(ExpressionVisitor* vis) -> bool override;
+  DECLARE_EXPRESSION(InvokeNativeExpr);
+
+ public:
+  static inline auto New(NativeProcedure* target, const ExpressionList& args) -> InvokeNativeExpr* {
+    ASSERT(target);
+    return new InvokeNativeExpr(target, args);
   }
 };
 
@@ -1025,7 +1254,7 @@ class WhileExpr : public SequenceExpr {
   }
 };
 
-class SetLocalExpr : public Expression {
+class StoreLocalExpr : public Expression {
   friend class gel::MacroEffectVisitor;
 
  private:
@@ -1033,7 +1262,7 @@ class SetLocalExpr : public Expression {
   Expression* value_;
 
  protected:
-  SetLocalExpr(LocalVariable* local, Expression* value) :
+  StoreLocalExpr(LocalVariable* local, Expression* value) :
     Expression(),
     local_(local),
     value_(value) {
@@ -1046,7 +1275,7 @@ class SetLocalExpr : public Expression {
   }
 
  public:
-  ~SetLocalExpr() override = default;
+  ~StoreLocalExpr() override = default;
 
   auto GetLocal() const -> LocalVariable* {
     return local_;
@@ -1067,16 +1296,16 @@ class SetLocalExpr : public Expression {
     return GetValue()->Accept(vis);
   }
 
-  DECLARE_EXPRESSION(SetLocalExpr);
+  DECLARE_EXPRESSION(StoreLocalExpr);
 
  public:
-  static inline auto New(LocalVariable* local, Expression* value) -> SetLocalExpr* {
+  static inline auto New(LocalVariable* local, Expression* value) -> StoreLocalExpr* {
     ASSERT(local);
-    return new SetLocalExpr(local, value);
+    return new StoreLocalExpr(local, value);
   }
 };
 
-class SetFieldExpr : public Expression {
+class StoreFieldExpr : public Expression {
   friend class gel::MacroEffectVisitor;
 
  private:
@@ -1085,7 +1314,7 @@ class SetFieldExpr : public Expression {
   Expression* value_;
 
  protected:
-  SetFieldExpr(Field* field, Expression* instance, Expression* value) :
+  StoreFieldExpr(Field* field, Expression* instance, Expression* value) :
     Expression(),
     field_(field),
     instance_(instance),
@@ -1101,7 +1330,7 @@ class SetFieldExpr : public Expression {
   }
 
  public:
-  ~SetFieldExpr() override = default;
+  ~StoreFieldExpr() override = default;
 
   auto GetField() const -> Field* {
     return field_;
@@ -1132,12 +1361,12 @@ class SetFieldExpr : public Expression {
     return true;
   }
 
-  DECLARE_EXPRESSION(SetFieldExpr);
+  DECLARE_EXPRESSION(StoreFieldExpr);
 
  public:
-  static inline auto New(Field* field, Expression* instance, Expression* value) -> SetFieldExpr* {
+  static inline auto New(Field* field, Expression* instance, Expression* value) -> StoreFieldExpr* {
     ASSERT(field);
-    return new SetFieldExpr(field, instance, value);
+    return new StoreFieldExpr(field, instance, value);
   }
 };
 
@@ -1582,6 +1811,7 @@ class LoadInstanceMethodExpr : Expression {
   }
 };
 
+// TODO: convert to constructor call and genericize it
 class NewMapExpr : public Expression {
  public:
   using Entry = std::pair<Symbol*, Expression*>;
@@ -1643,8 +1873,7 @@ class NewMapExpr : public Expression {
   }
 };
 
-// Definitions
-
+// TODO: remove, only useful in CFG
 class Definition : public Expression {
   DEFINE_NON_COPYABLE_TYPE(Definition);
 
@@ -1708,42 +1937,6 @@ class TemplateDefinition : public Definition {
         return false;
     }
     return true;
-  }
-};
-
-class LocalDef : public TemplateDefinition<1> {
- private:
-  LocalVariable* local_;
-
- protected:
-  LocalDef(LocalVariable* local, Expression* value) :
-    TemplateDefinition<1>(),
-    local_(local) {
-    SetChildAt(0, value);
-  }
-
- public:
-  ~LocalDef() override = default;
-
-  auto GetLocal() const -> LocalVariable* {
-    return local_;
-  }
-
-  auto GetValue() const -> Expression* {
-    return GetChildAt(0);
-  }
-
-  auto HasValue() const -> bool {
-    return GetValue() != nullptr;
-  }
-
-  DECLARE_EXPRESSION(LocalDef);
-
- public:
-  static inline auto New(LocalVariable* local, Expression* value) -> LocalDef* {
-    ASSERT(local);
-    ASSERT(value);
-    return new LocalDef(local, value);
   }
 };
 

@@ -6,6 +6,7 @@
 #include "gel/tag.h"
 
 namespace gel {
+class Object;
 class Pointer;
 class PointerVisitor {
   DEFINE_NON_COPYABLE_TYPE(PointerVisitor);
@@ -16,7 +17,10 @@ class PointerVisitor {
  public:
   virtual ~PointerVisitor() = default;
   virtual auto Visit(Pointer* ptr) -> bool = 0;
+
+  auto Visit(Object* ptr) -> bool;
 };
+DECLARE_VISITOR_WRAPPER(Pointer, Pointer*);
 
 class PointerPointerVisitor {
   DEFINE_NON_COPYABLE_TYPE(PointerPointerVisitor);
@@ -28,6 +32,7 @@ class PointerPointerVisitor {
   virtual ~PointerPointerVisitor() = default;
   virtual auto Visit(Pointer** ptr) -> bool = 0;
 };
+DECLARE_VISITOR_WRAPPER(PointerPointer, Pointer**);
 
 class PointerIterator {
   DEFINE_NON_COPYABLE_TYPE(PointerIterator);
@@ -43,6 +48,7 @@ class PointerIterator {
 
 class Object;
 class Pointer {
+  friend class Marker;
   friend class NewZone;
   friend class OldZone;
   friend class Collector;
@@ -73,7 +79,8 @@ class Pointer {
   }
 
  protected:
-  auto VisitPointers(PointerPointerVisitor* vis) -> bool;
+  auto VisitPointers(PointerVisitor* vis) -> bool;
+  auto VisitPointerPointers(PointerPointerVisitor* vis) -> bool;
 
  public:
   ~Pointer() = default;
@@ -131,6 +138,28 @@ class Pointer {
     return GetForwardingAddress() != UNALLOCATED;
   }
 
+  auto IsRemembered() const -> bool {
+    return GetTag().IsRemembered();
+  }
+
+  inline auto IsMarked() const -> bool {
+    return GetTag().IsMarked();
+  }
+
+  void SetMarked() {
+    return tag_.SetMarkedBit();
+  }
+
+  void SetRemembered() {
+    return tag_.SetRememberedBit();
+  }
+
+  auto Equals(Pointer* rhs) const -> bool {
+    if (!rhs)
+      return false;
+    return GetStartingAddress() == rhs->GetStartingAddress() && GetTotalSize() == rhs->GetTotalSize();
+  }
+
   auto GetTag() const -> const Tag& {
     return tag_;
   }
@@ -138,7 +167,7 @@ class Pointer {
   friend auto operator<<(std::ostream& stream, const Pointer& rhs) -> std::ostream& {
     stream << "Pointer(";
     stream << "tag=" << rhs.GetTag() << ", ";
-    stream << "starting_address=" << rhs.GetStartingAddress() << ", ";
+    stream << "starting_address=" << rhs.GetStartingAddressPointer() << ", ";
     stream << "forwarding_address=" << rhs.GetForwardingAddressPointer();
     stream << ")";
     return stream;
@@ -151,6 +180,10 @@ class Pointer {
 
   static inline auto New(const uword address, const uword size) -> Pointer* {
     return New(address, Tag::New(size));
+  }
+
+  static inline auto Old(const uword address, const uword size) -> Pointer* {
+    return New(address, Tag::Old(size));
   }
 
   static inline auto Copy(const uword address, const Pointer* ptr) -> Pointer* {

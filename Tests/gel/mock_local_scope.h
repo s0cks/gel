@@ -13,15 +13,13 @@ class MockLocalScope : public LocalScope {
  public:
   MockLocalScope() = default;
   ~MockLocalScope() override = default;
-  MOCK_METHOD(LocalScope*, GetParent, (), (const, override));                                                      // NOLINT
-  MOCK_METHOD(bool, Has, (const std::string& name, const bool recursive), (override));                             // NOLINT
-  MOCK_METHOD(bool, Has, (const Symbol* symbol, const bool recursive), (override));                                // NOLINT
-  MOCK_METHOD(bool, Add, (LocalVariable * local), (override));                                                     // NOLINT
-  MOCK_METHOD(bool, Add, (LocalScope * scope), (override));                                                        // NOLINT
-  MOCK_METHOD(bool, Lookup, (const std::string& name, LocalVariable** result, const bool recursive), (override));  // NOLINT
-  MOCK_METHOD(bool, IsEmpty, (), (const, override));                                                               // NOLINT
-  MOCK_METHOD(uint64_t, GetNumberOfLocals, (), (const, override));                                                 // NOLINT
-  MOCK_METHOD(bool, VisitAllLocals, (LocalVariableVisitor * vis), (override));                                     // NOLINT
+  MOCK_METHOD(LocalScope*, GetParent, (), (const, override));                                                     // NOLINT
+  MOCK_METHOD(bool, Has, (Symbol * symbol, const bool recursive), (const, override));                             // NOLINT
+  MOCK_METHOD(LocalVariable*, Add, (LocalVariable * local), (override));                                          // NOLINT
+  MOCK_METHOD(void, AddAll, (LocalScope * scope), (override));                                                    // NOLINT
+  MOCK_METHOD(bool, Lookup, (Symbol * symbol, LocalVariable** result, const bool recursive), (const, override));  // NOLINT
+  MOCK_METHOD(bool, IsEmpty, (), (const, override));                                                              // NOLINT
+  MOCK_METHOD(uint64_t, GetNumberOfLocals, (), (const, override));                                                // NOLINT
 };
 }  // namespace gel
 

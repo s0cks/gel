@@ -14,6 +14,8 @@ if(ENABLE_TRACING)
   list(APPEND GEL_LIBRARIES Tracy::TracyClient)
 endif()
 
+find_path(TERMCOLOR_INCLUDE_DIRS "termcolor/termcolor.hpp")
+
 add_library(gelle-api INTERFACE
   "${CMAKE_CURRENT_SOURCE_DIR}/gel/plugin.h")
 target_include_directories(gelle-api
@@ -27,7 +29,8 @@ target_compile_options(gelle
   PUBLIC ${GEL_CXX_FLAGS} -fPIC)
 target_include_directories(gelle
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
-         ${CMAKE_CURRENT_BINARY_DIR})
+         ${CMAKE_CURRENT_BINARY_DIR}
+  PRIVATE ${TERMCOLOR_INCLUDE_DIRS})
 target_link_libraries(gelle
   PUBLIC ${GEL_LIBRARIES} gelle-api gflags::gflags)
 

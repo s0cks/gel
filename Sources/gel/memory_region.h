@@ -7,7 +7,7 @@
 
 #include "gel/common.h"
 #include "gel/platform.h"
-#include "gel/section.h"
+#include "gel/region.h"
 
 namespace gel {
 class MemoryRegion : public Region {

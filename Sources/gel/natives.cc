@@ -43,7 +43,6 @@ namespace gel {
 void NativeProcedure::InitNatives() {
   using namespace proc;
   InitNative<gel_get_version>();
-  InitNative<hashcode>();
   InitNative<gel_sizeof>();
   InitNative<print>();
   InitNative<type>();
@@ -133,7 +132,7 @@ void NativeProcedure::InitNatives() {
   InitNative<gel_print_heap>();
   InitNative<gel_print_new_zone>();
   InitNative<gel_print_old_zone>();
-  InitNative<gel_get_roots>();
+  InitNative<gel_print_roots>();
   InitNative<gel_minor_gc>();
   InitNative<gel_major_gc>();
   InitNative<gel_get_frame>();
@@ -151,14 +150,6 @@ void NativeProcedure::InitNatives() {
 namespace proc {
 NATIVE_PROCEDURE_F(gel_get_version) {
   return ReturnNew<String>(gel::GetVersion());
-}
-
-NATIVE_PROCEDURE_F(hashcode) {
-  ASSERT(args.size() == 1);
-  NativeArgument<0> value(args);
-  if (!value)
-    return Throw(value.GetError());
-  return ReturnNew<Long>(value->HashCode());
 }
 
 NATIVE_PROCEDURE_F(gel_sizeof) {
@@ -185,11 +176,11 @@ NATIVE_PROCEDURE_F(gel_docs) {
     ss << std::endl;
     ss << "([";
     const auto& args = lambda->GetArgs();
-    if (!args.empty()) {
-      auto remaining = args.size();
-      for (const auto& arg : args) {
-        ss << arg.GetName();
-        if (--remaining > 0)
+    if (args && !args->IsEmpty()) {
+      for (word idx = static_cast<word>(args->GetLength() - 1); idx >= 0; idx--) {
+        const auto arg = args->Get(idx);
+        ss << arg->GetName()->Get();
+        if (idx > 0)
           ss << ", ";
       }
     }
@@ -205,11 +196,11 @@ NATIVE_PROCEDURE_F(gel_docs) {
     ss << native->GetSymbol()->GetFullyQualifiedName() << std::endl;
     ss << "([";
     const auto& args = native->GetArgs();
-    if (!args.empty()) {
-      auto remaining = args.size();
-      for (const auto& arg : args) {
-        ss << arg.GetName();
-        if (--remaining > 0)
+    if (args && !args->IsEmpty()) {
+      for (word idx = static_cast<word>(args->GetLength() - 1); idx >= 0; idx--) {
+        const auto arg = args->Get(idx);
+        ss << arg->GetName()->Get();
+        if (idx > 0)
           ss << ", ";
       }
     }
@@ -243,6 +234,10 @@ NATIVE_PROCEDURE_F(import) {
 
 NATIVE_PROCEDURE_F(print) {
   ASSERT(!args.empty());
+#ifdef GEL_DEBUG
+  if (VLOG_IS_ON(100))
+    PrintValue(google::LogMessage(__FILE__, __LINE__, google::LogSeverity::INFO).stream(), args[0]);
+#endif  // GEL_DEBUG
   PrintValue(std::cout, args[0]) << std::endl;
   return ReturnNull();
 }
@@ -357,6 +352,18 @@ NATIVE_PROCEDURE_F(ns_get) {
 NATIVE_PROCEDURE_F(get_event_loop) {
   return Return(GetThreadEventLoop());
 }
+
+#define OBJECT_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(object_##Name)
+
+OBJECT_PROCEDURE_F(hashcode) {
+  ASSERT(args.size() == 1);
+  NativeArgument<0> value(args);
+  if (!value)
+    return Throw(value.GetError());
+  return ReturnNew<Long>(value->HashCode());
+}
+
+#undef OBJECT_PROCEDURE_F
 
 #define TIMER_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(timer_##Name)
 

@@ -5,7 +5,7 @@
 #include <algorithm>
 
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/flags.h"
 #include "gel/gel.h"
 #include "gel/instruction.h"
@@ -135,8 +135,38 @@ auto EffectVisitor::ReturnCallTo(Procedure* target, const uword num_args) -> boo
   return ReturnCallTo(defn, num_args);
 }
 
-auto EffectVisitor::VisitCallProcExpr(CallProcExpr* expr) -> bool {
-  ASSERT(expr && expr->HasTarget());
+auto EffectVisitor::VisitInvokeInstanceExpr(InvokeInstanceExpr* expr) -> bool {
+  ASSERT(expr);
+  ValueVisitor for_instance(GetOwner());
+  if (!expr->GetInstance()->Accept(&for_instance)) {
+    LOG(ERROR) << "failed to visit: " << expr->GetInstance()->ToString();
+    return false;
+  }
+  Append(for_instance);
+  for (auto idx = 0; idx < expr->GetNumberOfArgs(); idx++) {
+    const auto arg = expr->GetArgAt(idx);
+    ASSERT(arg);
+    ValueVisitor for_value(GetOwner());
+    LOG_IF(ERROR, !arg->Accept(&for_value)) << "failed to determine value for: " << expr->ToString();
+    Append(for_value);
+  }
+  return ReturnCallTo(expr->GetTarget(), expr->GetNumberOfArgs() + 1);
+}
+
+auto EffectVisitor::VisitInvokeNativeExpr(InvokeNativeExpr* expr) -> bool {
+  ASSERT(expr);
+  for (auto idx = 0; idx < expr->GetNumberOfChildren(); idx++) {
+    const auto arg = expr->GetChildAt(idx);
+    ASSERT(arg);
+    ValueVisitor for_value(GetOwner());
+    LOG_IF(ERROR, !arg->Accept(&for_value)) << "failed to determine value for: " << expr->ToString();
+    Append(for_value);
+  }
+  return ReturnCallTo(expr->GetTarget(), expr->GetNumberOfArgs());
+}
+
+auto EffectVisitor::VisitInvokeExpr(InvokeExpr* expr) -> bool {
+  ASSERT(expr);
   for (auto idx = 1; idx < expr->GetNumberOfChildren(); idx++) {
     const auto arg = expr->GetChildAt(idx);
     ASSERT(arg);
@@ -291,6 +321,12 @@ auto EffectVisitor::VisitImportExpr(expr::ImportExpr* expr) -> bool {
   return true;
 }
 
+auto EffectVisitor::VisitInvokeMacroExpr(expr::InvokeMacroExpr* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(FATAL);
+  return false;
+}
+
 auto EffectVisitor::VisitNewMapExpr(expr::NewMapExpr* expr) -> bool {
   ASSERT(expr);
   for (const auto& e : expr->data()) {
@@ -314,11 +350,11 @@ static inline auto IsLiteralSymbol(expr::LiteralExpr* expr, Symbol* value) -> bo
   return expr && expr->HasValue() && expr->GetValue()->IsSymbol() && expr->GetValue()->AsSymbol()->Equals(value);
 }
 
-static inline auto IsCallSymbol(expr::CallProcExpr* expr, Symbol* value) -> bool {
+static inline auto IsCallSymbol(expr::InvokeExpr* expr, Symbol* value) -> bool {
   ASSERT(expr);
-  if (!expr->IsCallProcExpr())
+  if (!expr->IsInvokeExpr())
     return false;
-  const auto target = expr->AsCallProcExpr()->GetTarget();
+  const auto target = expr->AsInvokeExpr()->GetTarget();
   ASSERT(target);
   if (!target->IsLiteralExpr())
     return false;
@@ -326,21 +362,21 @@ static inline auto IsCallSymbol(expr::CallProcExpr* expr, Symbol* value) -> bool
 }
 
 template <class N>
-static inline auto IsCallNativeSymbol(expr::CallProcExpr* expr) -> bool {
+static inline auto IsCallNativeSymbol(expr::InvokeExpr* expr) -> bool {
   ASSERT(expr);
   return IsCallSymbol(expr, N::GetNativeSymbol());
 }
 
 static inline auto IsInvokePublishSubject(expr::Expression* expr) -> bool {
-  if (!expr || !expr->IsCallProcExpr())
+  if (!expr || !expr->IsInvokeExpr())
     return false;
-  return IsCallNativeSymbol<proc::rx_publish_subject>(expr->AsCallProcExpr());
+  return IsCallNativeSymbol<proc::rx_publish_subject>(expr->AsInvokeExpr());
 }
 
 static inline auto IsInvokeReplaySubject(expr::Expression* expr) -> bool {
-  if (!expr || !expr->IsCallProcExpr())
+  if (!expr || !expr->IsInvokeExpr())
     return false;
-  return IsCallSymbol(expr->AsCallProcExpr(), proc::rx_replay_subject::GetNativeSymbol());
+  return IsCallSymbol(expr->AsInvokeExpr(), proc::rx_replay_subject::GetNativeSymbol());
 }
 
 auto EffectVisitor::VisitNewExpr(expr::NewExpr* expr) -> bool {
@@ -410,13 +446,13 @@ auto RxEffectVisitor::VisitRxOpExpr(expr::RxOpExpr* expr) -> bool {
   if (IsNativeCall(target)) {
     // if (IsPedantic())
     //   AddInstanceOf(target, NativeProcedure::GetClass());
-    Add(ir::InvokeNativeInstr::New(target, expr->GetNumberOfChildren()));
+    Add(ir::InvokeNativeInstr::New(target, expr->GetNumberOfChildren() + 1));
   } else if (IsLambdaCall(target)) {
-    Add(ir::InvokeInstr::New(target, expr->GetNumberOfChildren()));
+    Add(ir::InvokeInstr::New(target, expr->GetNumberOfChildren() + 1));
   } else {
     if (gel::IsPedantic())
       AddInstanceOf(target, Procedure::GetClass());
-    Add(ir::InvokeDynamicInstr::New(target, expr->GetNumberOfChildren()) + 1);
+    Add(ir::InvokeDynamicInstr::New(target, expr->GetNumberOfChildren() + 1));
   }
   return true;
 }
@@ -703,7 +739,7 @@ auto EffectVisitor::VisitCondExpr(CondExpr* expr) -> bool {
   return true;
 }
 
-auto EffectVisitor::VisitUnaryExpr(expr::UnaryExpr* expr) -> bool {
+auto EffectVisitor::VisitUnaryOpExpr(expr::UnaryOpExpr* expr) -> bool {
   ASSERT(expr && expr->HasValue());
   ValueVisitor for_value(GetOwner());
   if (!expr->GetValue()->Accept(&for_value)) {
@@ -719,23 +755,6 @@ auto EffectVisitor::VisitUnaryExpr(expr::UnaryExpr* expr) -> bool {
     default:
       ReturnDefinition(ir::UnaryOpInstr::New(expr->GetOp(), for_value.GetValue()));
   }
-  return true;
-}
-
-auto EffectVisitor::VisitLocalDef(LocalDef* expr) -> bool {
-  ASSERT(expr);
-  LocalVariable* local = expr->GetLocal();
-  ASSERT(local);
-  const auto value = expr->GetValue();
-  ASSERT(value);
-  ValueVisitor for_value(GetOwner());
-  if (!value->Accept(&for_value)) {
-    LOG(FATAL) << "failed to determine value for: " << expr->ToString();
-    return false;
-  }
-  Append(for_value);
-  ASSERT(for_value.HasValue());
-  Add(ir::StoreLocalInstr::New(local, for_value.GetValue()));
   return true;
 }
 
@@ -875,7 +894,7 @@ auto EffectVisitor::VisitThrowExpr(expr::ThrowExpr* expr) -> bool {
   return true;
 }
 
-auto EffectVisitor::VisitSetLocalExpr(expr::SetLocalExpr* expr) -> bool {
+auto EffectVisitor::VisitStoreLocalExpr(expr::StoreLocalExpr* expr) -> bool {
   ASSERT(expr && expr->HasValue());
   LocalVariable* local = expr->GetLocal();
   ASSERT(local);
@@ -890,7 +909,7 @@ auto EffectVisitor::VisitSetLocalExpr(expr::SetLocalExpr* expr) -> bool {
   return true;
 }
 
-auto EffectVisitor::VisitSetFieldExpr(expr::SetFieldExpr* expr) -> bool {
+auto EffectVisitor::VisitStoreFieldExpr(expr::StoreFieldExpr* expr) -> bool {
   ASSERT(expr && expr->HasValue() && expr->HasInstance());
   const auto field = expr->GetField();
   ASSERT(field);
@@ -961,7 +980,7 @@ auto EffectVisitor::VisitLambda(Lambda* lambda) -> bool {
   const auto scope = GetOwner()->PushScope();
   ASSERT(scope);
   if (lambda->HasScope())
-    LOG_IF(FATAL, !scope->Add(lambda->GetScope())) << "failed to add lambda scope to current scope.";
+    scope->AddAll(lambda->GetScope());
   auto index = 0;
   const auto& body = lambda->GetBody();
   while (IsOpen() && (index < body.size())) {

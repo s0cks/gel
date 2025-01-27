@@ -81,8 +81,10 @@ FOR_EACH_TYPE(DECLARE_HAS_TO_STRING)
 
 DECLARE_TRAIT(has_docs);
 #define DECLARE_HAS_DOCS(Name) DECLARE_HAS_TRAIT(has_docs, Name);
+DECLARE_HAS_DOCS(Macro);
 DECLARE_HAS_DOCS(Lambda);
 DECLARE_HAS_DOCS(Namespace);
+DECLARE_HAS_DOCS(NativeProcedure);
 #undef DECLARE_HAS_DOCS
 
 template <class T>

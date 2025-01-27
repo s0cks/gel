@@ -16,6 +16,7 @@
     {
       "name": "pdcurses",
       "platform": "windows & !uwp & !mingw"
-    }
+    },
+    "termcolor"
   ]
 }

@@ -1,10 +1,18 @@
-(defmacro debug-only [expr]
+(defmacro debug-only [exprs...]
   (when (gel/debug?)
-    expr))
-(print (format "gel v{}" (gel/get-version)))
+    exprs))
+(defmacro printf [fmt args...]
+  (print (format fmt args)))
+
+(printf "gel v{}" (gel/get-version))
 (debug-only
+  (printf "{} initialized" (Module:name this))
   (print "debug mode enabled."))
-(set! Module:initialized this #t)
+
+(defnative EventEmitter:on [emitter event func]
+  "")
+(defnative EventEmitter:emit [emitter event data?]
+  "")
 ;; ---------------------------------------------------------------------------------
 ;; Timers
 ;; ---------------------------------------------------------------------------------
@@ -92,7 +100,7 @@
     "Sets the second value of Pair [p] to [v].")
   (defnative create-timer [on_tick timeout repeat]
     "Starts a new Timer on the EventLoop.")
-  (defmacro interval [on_tick repeat]
+  (defn interval [on_tick repeat]
     (create-timer on_tick 0 repeat))
   (defmacro timeout [on_tick timeout]
     (create-timer on_tick timeout 0))
@@ -147,8 +155,8 @@
     "Returns a list of native functions register in gelrt.")
   (defnative gel/compile-time? [f]
     "Returns the compilation time of a function [f] in nanoseconds.")
-  (defnative gel/get-roots []
-    "Returns the roots for the GC.")
+  (defnative gel/print-roots []
+    "Prints the roots for the GC.")
   (defn gel/inspect [o]
     (when (#Procedure? o)
       (print (format "compiled in {}ns." (gel:compile-time? o)))))
@@ -244,7 +252,7 @@
   ;; - (def PI 3.14159)
   ;; - (def TAU (* 2 PI))
   (defmacro sq [x]
-    "[x] * [x]"
+    "[x] squared."
     (* x x))
   (defmacro zero? [x]
     "Returns true if x is 0."

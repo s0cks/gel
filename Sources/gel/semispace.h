@@ -5,7 +5,7 @@
 
 #include "gel/common.h"
 #include "gel/pointer.h"
-#include "gel/section.h"
+#include "gel/region.h"
 
 namespace gel {
 class Semispace : public AllocationRegion {

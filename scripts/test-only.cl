@@ -2,4 +2,4 @@
 (defn test-only [func]
   (when test
     (func)))
-(test-only (fn [] (print "Hello World")))
+(test-only $((print "Hello World")))

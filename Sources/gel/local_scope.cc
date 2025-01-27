@@ -3,18 +3,48 @@
 #include <glog/logging.h>
 
 #include "gel/common.h"
+#include "gel/heap.h"
 #include "gel/local.h"
 #include "gel/object.h"
+#include "gel/platform.h"
 #include "gel/pointer.h"
 #include "gel/to_string_helper.h"
 
 namespace gel {
+auto LocalScope::operator new(const size_t sz) -> void* {
+  const auto heap = GetCurrentThreadHeap();
+  ASSERT(heap);
+  const auto address = heap->TryAllocate(sz);
+  ASSERT(address != UNALLOCATED);
+  return (void*)address;  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+}
+
+void LocalScope::operator delete(void* ptr) {
+  ASSERT(ptr);
+  // do nothing
+}
+
+auto LocalScope::Union(const std::vector<LocalScope*>& scopes, LocalScope* parent) -> LocalScope* {
+  if (scopes.empty())
+    return New(parent);
+  Array<LocalVariable*>* locals = Array<LocalVariable*>::New();
+  std::ranges::for_each(std::begin(scopes), std::end(scopes), [&locals](LocalScope* scope) {
+    for (auto idx = 0; idx < scope->GetNumberOfLocals(); idx++) {
+      const auto local = scope->GetLocalAt(idx);
+      ASSERT(local);
+      locals->Add(local->GetValue());
+    }
+  });
+  return new LocalScope(parent, locals);
+}
+
 auto LocalScope::Iterator::HasNext() const -> bool {
   return GetIndex() < GetScope()->GetNumberOfLocals();
 }
 
 auto LocalScope::Iterator::Next() -> LocalVariable* {
   const auto next = GetScope()->GetLocalAt(GetIndex());
+  ASSERT(next);
   IncrementIndex();
   return next;
 }
@@ -32,79 +62,110 @@ auto LocalScope::RecursiveIterator::Next() -> LocalVariable* {
   return next;
 }
 
-auto LocalScope::Has(const std::string& name, const bool recursive) -> bool {
-  for (const auto& local : locals_) {
-    if (local->GetName() == name)
-      return true;
-  }
-  return recursive && HasParent() ? GetParent()->Has(name, recursive) : false;
-}
-
-auto LocalScope::Has(const Symbol* symbol, const bool recursive) -> bool {
-  ASSERT(symbol);
-  return Has(symbol->GetFullyQualifiedName(), recursive);
-}
-
-auto LocalScope::Add(LocalVariable* local) -> bool {
-  ASSERT(local);
-  if (Has(local->GetName()))
-    return false;
-  locals_.push_back(local);
-  if (!local->HasOwner())
-    local->SetOwner(this);
+auto LocalScope::VisitAllLocals(LocalVariableVisitor* vis, const bool recursive) -> bool {
+  ASSERT(vis);
+  LocalScope* current = this;
+  do {
+    LocalScope::Iterator iter(current);
+    while (iter.HasNext()) {
+      const auto next = iter.Next();
+      ASSERT(next);
+      if (!vis->VisitLocal(next))
+        return false;
+    }
+    if (!recursive)
+      break;
+    current = current->GetParent();
+  } while (current);
   return true;
 }
 
-auto LocalScope::Add(Symbol* symbol, Object* value) -> bool {
+auto LocalScope::HasLocal(const std::string& rhs) const -> bool {
+  ASSERT(!rhs.empty());
+  return HasLocal(Symbol::New(rhs));
+}
+
+auto LocalScope::Has(const std::string& symbol, const bool recursive) const -> bool {
+  ASSERT(!symbol.empty());
+  return Has(Symbol::New(symbol), recursive);
+}
+
+auto LocalScope::Has(Symbol* symbol, const bool recursive) const -> bool {
   ASSERT(symbol);
-  return Add(symbol->GetFullyQualifiedName(), value);
+  LocalScope const* current = this;
+  do {
+    ASSERT(current);
+    const auto local = current->FindIf(LocalVariable::HasSymbol(symbol));
+    if (local)
+      return true;
+    if (!recursive)
+      break;
+    current = current->GetParent();
+  } while (current);
+  return false;
 }
 
-auto LocalScope::Add(LocalScope* scope) -> bool {
-  ASSERT(scope);
-  auto num_added = 0;
-  for (const auto& local : scope->locals_) {
-    if (local->IsNativeProcedure()) {
-      num_added++;
-      continue;
-    }
-    if (!Add(local->GetName(), local->GetValue())) {
-      LOG(ERROR) << "failed to add local " << local->GetName() << " to scope.";
-      continue;
-    }
-    num_added++;
-  }
-  DLOG_IF(ERROR, num_added != scope->GetNumberOfLocals())
-      << "failed to add " << (scope->GetNumberOfLocals() - num_added) << " locals to scope.";
-  return num_added == scope->GetNumberOfLocals();
-}
-
-auto LocalScope::Lookup(const std::string& name, LocalVariable** result, const bool recursive) -> bool {
-  ASSERT(!name.empty());
-  for (const auto& local : locals_) {
-    if (local->GetName() == name) {
+auto LocalScope::Lookup(Symbol* symbol, LocalVariable** result, const bool recursive) const -> bool {
+  ASSERT(symbol);
+  LocalScope const* current = this;
+  do {
+    ASSERT(current);
+    const auto local = current->FindIf(LocalVariable::HasSymbol(symbol));
+    if (local) {
       (*result) = local;
       return true;
     }
-  }
-  return recursive && HasParent() ? GetParent()->Lookup(name, result, recursive) : false;
+    if (!recursive)
+      break;
+    current = current->GetParent();
+  } while (current);
+  (*result) = nullptr;
+  return false;
 }
 
-auto LocalScope::Lookup(const Symbol* symbol, LocalVariable** result, const bool recursive) -> bool {
+auto LocalScope::Lookup(const std::string& symbol, LocalVariable** result, const bool recursive) const -> bool {
+  ASSERT(!symbol.empty());
+  return Lookup(Symbol::New(symbol), result, recursive);
+}
+
+auto LocalScope::Add(Symbol* symbol, Object* value) -> LocalVariable* {
   ASSERT(symbol);
-  return Lookup(symbol->GetFullyQualifiedName(), result, recursive);
+  return Add(LocalVariable::New(this, symbol, value));
 }
 
-static inline auto operator<<(std::ostream& stream, const std::vector<LocalVariable*>& rhs) -> std::ostream& {
-  stream << "[";
-  auto remaining = rhs.size();
-  for (const auto& local : rhs) {
-    stream << (*local);
-    if (--remaining >= 1)
-      stream << ", ";
+auto LocalScope::Add(const std::string& symbol, Object* value) -> LocalVariable* {
+  ASSERT(!symbol.empty());
+  return Add(Symbol::New(symbol), value);
+}
+
+auto LocalScope::VisitPointers(PointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
+}
+
+auto LocalScope::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  if (HasParent()) {
+    auto parent = GetParent()->raw_ptr();
+    if (!vis->Visit(&parent))
+      return false;
+    if (!GetParent()->raw_ptr()->Equals(parent)) {
+      parent_ = parent->As<LocalScope>();
+      ASSERT(parent_);
+    }
   }
-  stream << "]";
-  return stream;
+
+  if (locals_) {
+    auto locals = GetLocals()->raw_ptr();
+    if (!vis->Visit(&locals))
+      return false;
+    if (!GetLocals()->raw_ptr()->Equals(locals)) {
+      locals_ = locals->As<Array<LocalVariable*>>();
+      ASSERT(locals_);
+    }
+  }
+  return true;
 }
 
 auto LocalScope::ToString() const -> std::string {
@@ -114,67 +175,6 @@ auto LocalScope::ToString() const -> std::string {
   if (HasParent())
     helper.AddField("parent", (void*)GetParent());
   return helper;
-}
-
-auto LocalScope::VisitAllLocals(LocalVariableVisitor* vis) -> bool {
-  ASSERT(vis);
-  for (const auto& local : locals_) {
-    if (!vis->VisitLocal(local))
-      return false;
-  }
-  return true;
-}
-
-auto LocalScope::Accept(PointerVisitor* vis) -> bool {
-  ASSERT(vis);
-  auto scope = this;
-  while (scope) {
-    for (const auto& local : scope->locals_) {
-      if (!local->Accept(vis))
-        return false;
-    }
-    scope = scope->GetParent();
-  }
-  return true;
-}
-
-auto LocalScope::VisitLocalPointers(const std::function<bool(Pointer**)>& vis, const bool recursive) -> bool {
-  auto scope = this;
-  do {
-    for (const auto& local : scope->locals_) {
-      ASSERT(local);
-      if (!local->Accept(vis))
-        return false;
-    }
-    scope = scope->GetParent();
-  } while (scope && recursive);
-  return true;
-}
-
-auto LocalScope::VisitLocals(const std::function<bool(Pointer*)>& vis, const bool recursive) -> bool {
-  auto scope = this;
-  do {
-    for (const auto& local : scope->locals_) {
-      ASSERT(local);
-      if (!vis(local->ptr()))
-        return false;
-    }
-    scope = scope->GetParent();
-  } while (scope && recursive);
-  return true;
-}
-
-auto LocalScope::Accept(PointerPointerVisitor* vis) -> bool {
-  ASSERT(vis);
-  auto scope = this;
-  while (scope) {
-    for (const auto& local : scope->locals_) {
-      if (!local->Accept(vis))
-        return false;
-    }
-    scope = scope->GetParent();
-  }
-  return true;
 }
 
 #define __ (google::LogMessage(GetFile(), GetLine(), GetSeverity()).stream()) << GetIndentString()
