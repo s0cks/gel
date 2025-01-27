@@ -50,17 +50,17 @@ _DECLARE_NATIVE_PROCEDURE(ns_get, "ns:get");
 // ----------------------------------------------------------------------------------------------------
 // Timers
 // ----------------------------------------------------------------------------------------------------
-#define _DECLARE_TIMER_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(timer_##Name, "Timer/" Sym)
+#define _DECLARE_TIMER_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(timer_##Name, "Timer:" Sym)
 #define DECLARE_TIMER_PROCEDURE(Name)       _DECLARE_TIMER_PROCEDURE(Name, #Name);
 
-DECLARE_TIMER_PROCEDURE(start);
-DECLARE_TIMER_PROCEDURE(stop);
-DECLARE_TIMER_PROCEDURE(again);
+_DECLARE_TIMER_PROCEDURE(start, "start!");
+_DECLARE_TIMER_PROCEDURE(stop, "stop!");
+_DECLARE_TIMER_PROCEDURE(again, "again!");
 _DECLARE_TIMER_PROCEDURE(get_due_in, "get-due-in");
 _DECLARE_TIMER_PROCEDURE(get_repeat, "get-repeat");
 _DECLARE_TIMER_PROCEDURE(set_repeat, "set-repeat!");
+DECLARE_TIMER_PROCEDURE(create);
 
-_DECLARE_NATIVE_PROCEDURE(create_timer, "create-timer");
 #undef _DECLARE_TIMER_PROCEDURE
 #undef DECLARE_TIMER_PROCEDURE
 // ----------------------------------------------------------------------------------------------------
@@ -207,6 +207,7 @@ _DECLARE_NATIVE_PROCEDURE(gel_print_old_zone, "gel/print-old-zone");
 _DECLARE_NATIVE_PROCEDURE(gel_get_frame, "gel/get-frame");
 _DECLARE_NATIVE_PROCEDURE(gel_get_modules, "gel/get-modules");
 _DECLARE_NATIVE_PROCEDURE(gel_get_fields, "gel/get-fields");
+_DECLARE_NATIVE_PROCEDURE(gel_get_procedures, "gel/get-procedures");
 _DECLARE_NATIVE_PROCEDURE(gel_print_st, "gel/print-st");
 _DECLARE_NATIVE_PROCEDURE(gel_get_locals, "gel/get-locals");
 _DECLARE_NATIVE_PROCEDURE(gel_get_target_triple, "gel/get-target-triple");

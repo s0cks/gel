@@ -478,6 +478,7 @@ class Parser {
   auto ParseDef(expr::Expression**) -> ParseResult;
   auto ParseDefNative(LocalVariable** local) -> ParseResult;
   auto ParseDefn(LocalVariable** local) -> ParseResult;
+  auto ParseDefType(LocalVariable** local) -> ParseResult;
   auto ParseDefMacro(LocalVariable** local) -> ParseResult;
 
   auto ParseExpression(Expression** result, const int depth = 0) -> ParseResult;

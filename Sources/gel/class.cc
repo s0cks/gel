@@ -152,6 +152,18 @@ auto Class::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
   return true;
 }
 
+auto Class::FindOrCreateNativeProcedure(Symbol* symbol) -> NativeProcedure* {
+  ASSERT(symbol);
+  for (const auto& proc : funcs_) {
+    if (proc->IsNativeProcedure() && proc->GetSymbol()->Equals(symbol))
+      return proc->AsNativeProcedure();
+  }
+  const auto native = NativeProcedure::FindOrCreate(symbol);
+  if (native)
+    AddFunction(native);
+  return native;
+}
+
 auto Class::IsInstanceOf(Class* rhs) const -> bool {
   ASSERT(rhs);
   auto cls = this;
@@ -196,6 +208,20 @@ auto Class::FindClass(Symbol* name) -> Class* {
   return FindClass(name->GetSymbolName());
 }
 
+void Class::AddChild(Object* rhs) {
+  ASSERT(rhs);
+  if (rhs->IsField()) {
+    fields_->Push(rhs->AsField());
+  } else if (rhs->IsProcedure()) {
+    funcs_.push_back(rhs->AsProcedure());
+  }
+}
+
+auto Class::CreateSymbol(const std::string& name) -> Symbol* {
+  ASSERT(!name.empty());
+  return Symbol::New("", name_->Get(), name);
+}
+
 auto Class::GetNumberOfFields() const -> uint64_t {
   return fields_->GetLength();
 }
@@ -203,6 +229,15 @@ auto Class::GetNumberOfFields() const -> uint64_t {
 auto Class::GetFieldAt(const uint64_t idx) const -> Field* {
   ASSERT(idx >= 0 && idx <= GetNumberOfFields());
   return fields_->Get(idx);
+}
+
+auto Class::GetNumberOfProcedures() const -> uint64_t {
+  return funcs_.size();
+}
+
+auto Class::GetProcedureAt(const uint64_t idx) const -> Procedure* {
+  ASSERT(idx >= 0 && idx <= GetNumberOfProcedures());
+  return funcs_[idx];
 }
 
 auto Class::NewInstance(const ObjectList& args) -> Object* {
@@ -246,6 +281,20 @@ auto Field::IsNamed(const std::string& name) -> Field::Predicate {
   return [&name](Field* field) {
     return field && field->GetName()->Equals(name);
   };
+}
+
+auto Class::FindField(const std::string& name, const bool recursive) const -> Field* {
+  Class const* cls = this;
+  do {
+    const auto field = cls->GetFields()->FindIf(Field::IsNamed(name));
+    if (field)
+      return field;
+    if (!recursive)
+      break;
+    cls = cls->GetParent();
+  } while (cls);
+  DLOG(WARNING) << "failed to find field w/ symbol: " << name;
+  return nullptr;
 }
 
 auto Class::FindField(Symbol* symbol, const bool recursive) const -> Field* {

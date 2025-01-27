@@ -41,10 +41,8 @@ auto Symbol::Equals(Object* rhs) const -> bool {
     return false;
   const auto other = rhs->AsSymbol();
   ASSERT(other);
-  if ((HasNamespace() && !other->HasNamespace()) || (!HasNamespace() && other->HasNamespace()) ||
-      (GetNamespace() != other->GetNamespace()))
-    return false;
-  return GetSymbolName() == other->GetSymbolName();
+  return GetNamespace() == other->GetNamespace() && GetSymbolType() == other->GetSymbolType() &&
+         GetSymbolName() == other->GetSymbolName();
 }
 
 auto Symbol::HashCode() const -> uword {

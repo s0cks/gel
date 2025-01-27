@@ -9,19 +9,30 @@
   (printf "{} initialized" (Module:name this))
   (print "debug mode enabled."))
 
-(defnative EventEmitter:on [emitter event func]
-  "")
-(defnative EventEmitter:emit [emitter event data?]
-  "")
-;; ---------------------------------------------------------------------------------
-;; Timers
-;; ---------------------------------------------------------------------------------
-(ns Timer
-  (defnative start [idx]
+(deftype Object
+  (defnative hashcode [o]
+    "Returns the HashCode of Object [o]."))
+
+(deftype EventEmitter
+  (defnative on [emitter event func]
+    "")
+  (defnative emit [emitter event data?]
+    ""))
+
+(deftype Buffer
+  (defnative get-capacity [b]
+    "Returns the capacity of Buffer [b].")
+  (defnative get-length [b]
+    "Returns the length of Buffer [b]."))
+
+(deftype Timer
+  (defnative create [on_tick timeout repeat]
+    "Creates a new Timer on the current thread EventLoop.")
+  (defnative start! [idx]
     "Starts Timer [idx].")
-  (defnative stop [idx]
+  (defnative stop! [idx]
     "Stops Timer [idx].")
-  (defnative again [idx]
+  (defnative again! [idx]
     "Runs Timer [idx] again.")
   (defnative get-due-in [idx]
     "Returns the number of milliseconds Timer [idx] is due in.")
@@ -29,6 +40,11 @@
     "Returns the repeat value of Timer [idx].")
   (defnative set-repeat! [idx repeat]
     "Sets the repeat value of Timer [idx] to [repeat]."))
+(defmacro interval [on_tick repeat]
+  (Timer:create on_tick 0 repeat))
+(defmacro timeout [on_tick timeout]
+  (Timer:create on_tick timeout 0))
+
 ;; ---------------------------------------------------------------------------------
 ;; Maps
 ;; ---------------------------------------------------------------------------------
@@ -78,8 +94,6 @@
       "Returns a formatted String using the supplied [pattern] and [args...].")
   (defnative print [value] ;; TODO: move to gel/ namespace
     "Prints the supplied [value] to the console.")
-  (defnative hashcode [v]
-    "Returns the hashcode of value [v].")
   (defnative sizeof [o]
     "Returns the size of Object [o] in bytes.")
   (defnative gel/docs? [o]
@@ -98,27 +112,12 @@
     "Sets the first value of Pair [p] to [v].")
   (defnative set-cdr! [p v]
     "Sets the second value of Pair [p] to [v].")
-  (defnative create-timer [on_tick timeout repeat]
-    "Starts a new Timer on the EventLoop.")
-  (defn interval [on_tick repeat]
-    (create-timer on_tick 0 repeat))
-  (defmacro timeout [on_tick timeout]
-    (create-timer on_tick timeout 0))
 
   ;; ---------------------------------------------------------------------------------
   ;; Event Loop
   ;; ---------------------------------------------------------------------------------
   (defnative get-event-loop []
     "Returns the EventLoop for the current thread.")
-  ;; ---------------------------------------------------------------------------------
-
-  ;; ---------------------------------------------------------------------------------
-  ;; Buffers
-  ;; ---------------------------------------------------------------------------------
-  (defnative Buffer:get-capacity [b]
-    "Returns the capacity of Buffer [b].")
-  (defnative Buffer:get-length [b]
-    "Returns the number of written bytes in Buffer [b].")
   ;; ---------------------------------------------------------------------------------
 
 
@@ -141,6 +140,8 @@
     "Returns a list of the current register Classes in gelrt.")
   (defnative gel/get-class [s]
     "Returns the Class for Symbol [s].")
+  (defnative gel/get-procedures [c]
+    "Returns the Procedures for Class [c].")
   (defnative gel/get-class-id [c]
     "Returns the ClassId for Class [c].")
   (defnative gel/is-primitive? [clsOrSymbol]

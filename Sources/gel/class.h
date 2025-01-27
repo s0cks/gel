@@ -37,6 +37,7 @@ DECLARE_VISITOR_WRAPPER(Class, Class*);
 class Class : public Object {
   friend class Long;
   friend class Object;
+  friend class Parser;
 
  public:
   enum ClassIds : ClassId {
@@ -96,8 +97,12 @@ class Class : public Object {
     name_ = name;
   }
 
+  void AddChild(Object* rhs) override;
+  auto CreateSymbol(const std::string& name) -> Symbol*;
   auto VisitPointers(PointerVisitor* vis) -> bool override;
   auto VisitPointerPointers(PointerPointerVisitor* vis) -> bool override;
+
+  auto FindOrCreateNativeProcedure(Symbol* symbol) -> NativeProcedure*;
 
  public:
   ~Class() override = default;
@@ -147,6 +152,9 @@ class Class : public Object {
   auto GetNumberOfFields() const -> uint64_t;
   auto GetFieldAt(const uint64_t idx) const -> Field*;
 
+  auto GetNumberOfProcedures() const -> uint64_t;
+  auto GetProcedureAt(const uint64_t idx) const -> Procedure*;
+
   auto NewInstance(const ObjectList& args) -> Object*;
   auto GetAllocationSize() const -> uword;
   auto IsInstanceOf(Class* rhs) const -> bool;
@@ -154,6 +162,7 @@ class Class : public Object {
   auto FindFunction(const std::string& name, const bool recursive = true) const -> Procedure*;
   auto FindFunction(Symbol* symbol, const bool recursive = true) const -> Procedure*;
   auto FindField(Symbol* symbol, const bool recursive = true) const -> Field*;
+  auto FindField(const std::string& name, const bool recursive = true) const -> Field*;
   DECLARE_TYPE(Class);
 
  private:

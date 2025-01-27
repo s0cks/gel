@@ -136,9 +136,12 @@ auto Parser::ParseLiteralSymbol(Symbol** result) -> ParseResult {
   ASSERT(!next.text.empty());
   if (HasOwner() && GetOwner()->IsNamespace()) {
     (*result) = GetOwner()->AsNamespace()->CreateSymbol(next.text);
-    return true;
+  } else if (HasOwner() && GetOwner()->IsClass()) {
+    (*result) = GetOwner()->AsClass()->CreateSymbol(next.text);
+  } else {
+    (*result) = Symbol::New(next.text);
   }
-  (*result) = Symbol::New(next.text);
+  ASSERT((*result));
   return true;
 }
 
@@ -371,6 +374,12 @@ auto Parser::ParseCallExpr(expr::Expression** result) -> ParseResult {
             args.push_back(arg);
           }
           (*result) = expr::InvokeInstanceExpr::New(func, expr::LiteralExpr::New(local->GetSymbol()), args);
+          return true;
+        }
+
+        const auto field = type->FindField(symbol->GetSymbolName());
+        if (field) {
+          (*result) = expr::LoadFieldExpr::New(expr::LiteralExpr::New(local->GetSymbol()), field);
           return true;
         }
       }
@@ -742,6 +751,12 @@ auto Parser::ParseExpression(expr::Expression** result, const int depth) -> Pars
       }
       case Token::kDef: {
         CHECK_RESULT(ParseDef(result));
+        break;
+      }
+      case Token::kDefType: {
+        LocalVariable* local = nullptr;
+        CHECK_RESULT(ParseDefType(&local));
+        ASSERT(local && local->HasValue() && local->GetValue()->IsClass());
         break;
       }
       case Token::kDefn: {
@@ -1431,6 +1446,12 @@ auto Parser::ParseScript(Script** result) -> ParseResult {
           CHECK_RESULT(ParseDef(&expr));
           break;
         }
+        case Token::kDefType: {
+          LocalVariable* local = nullptr;
+          CHECK_RESULT(ParseDefType(&local));
+          ASSERT(local && local->HasValue() && local->GetValue()->IsClass());
+          break;
+        }
         case Token::kDefn: {
           LocalVariable* local = nullptr;
           CHECK_RESULT(ParseDefn(&local));
@@ -1545,6 +1566,45 @@ auto Parser::ParseDef(expr::Expression** result) -> ParseResult {
     return true;
   }
   (*result) = expr::StoreLocalExpr::New(local, value);
+  return true;
+}
+
+auto Parser::ParseDefType(LocalVariable** result) -> ParseResult {
+  const auto scope = GetScope();
+  ASSERT(scope);
+
+  const auto start_pos = GetPos();
+
+  EXPECT_NEXT(Token::kDefType);
+  Symbol* symbol = nullptr;
+  CHECK_RESULT(ParseLiteralSymbol(&symbol));
+  ASSERT(symbol);
+  const auto cls = Class::FindClass(symbol);
+  if (!cls) {
+    std::stringstream ss;
+    ss << "cannot find type: " << symbol;
+    return NewParseError(ss.str(), start_pos);
+  }
+  PushOwner(cls);
+
+  expr::ExpressionList init_body{};
+  while (!PeekEq(Token::kRParen)) {
+    expr::Expression* expr = nullptr;
+    CHECK_RESULT(ParseExpression(&expr));
+    if (expr) {
+      init_body.push_back(expr);
+    }
+  }
+  if (!init_body.empty()) {
+    DLOG(INFO) << "init function: " << init_body;
+  }
+
+  PopOwner();
+  if (!PeekEq(Token::kRParen))
+    return Unexpected(Token::kRParen, NextToken());
+  const auto local = LocalVariable::New(scope, symbol, cls);
+  ASSERT(local);
+  (*result) = local;
   return true;
 }
 
@@ -1678,7 +1738,9 @@ auto Parser::ParseDefNative(LocalVariable** local) -> ParseResult {
   Symbol* symbol = nullptr;
   CHECK_RESULT(ParseLiteralSymbol(&symbol));
   ASSERT(symbol);
-  const auto native = NativeProcedure::FindOrCreate(symbol);
+
+  const auto native = HasOwner() && GetOwner()->IsClass() ? GetOwner()->AsClass()->FindOrCreateNativeProcedure(symbol)
+                                                          : NativeProcedure::FindOrCreate(symbol);
   if (!native) {
     (*local) = nullptr;
     std::stringstream ss;
@@ -1705,7 +1767,7 @@ auto Parser::ParseDefNative(LocalVariable** local) -> ParseResult {
     (*local) = nullptr;
     return ReturnError(ss, start_pos);
   }
-  if (HasOwner())
+  if (HasOwner() && !GetOwner()->IsClass())
     GetOwner()->AddChild(native);
   DVLOG(1000) << "created local " << *(*local) << " for native: " << native;
   return true;
@@ -1745,5 +1807,6 @@ void Parser::Init() {
   DEF_TOKEN("let", Token::kLetExpr);
   DEF_TOKEN("let:rx", Token::kLetRxExpr);
   DEF_TOKEN("defnative", Token::kDefNative);
+  DEF_TOKEN("deftype", Token::kDefType);
 }
 }  // namespace gel

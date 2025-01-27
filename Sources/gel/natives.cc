@@ -60,8 +60,8 @@ void NativeProcedure::InitNatives() {
   InitNative<get_namespace>();
   InitNative<ns_get>();
 
-  InitNative<create_timer>();
 #define InitTimerNative(Name) InitNative<timer_##Name>()
+  InitTimerNative(create);
   InitTimerNative(start);
   InitTimerNative(stop);
   InitTimerNative(again);
@@ -143,6 +143,7 @@ void NativeProcedure::InitNatives() {
   InitNative<gel_print_st>();
   InitNative<gel_get_fields>();
   InitNative<gel_get_modules>();
+  InitNative<gel_get_procedures>();
 #endif  // GEL_DEBUG
 }
 
@@ -441,9 +442,7 @@ TIMER_PROCEDURE_F(get_due_in) {
   return ReturnNew<Long>(timer->GetDueIn());
 }
 
-#undef TIMER_PROCEDURE_F
-
-NATIVE_PROCEDURE_F(create_timer) {
+TIMER_PROCEDURE_F(create) {
   NativeArgument<0, Procedure> on_tick(args);
   if (!on_tick)
     return Throw(on_tick.GetError());
@@ -460,5 +459,7 @@ NATIVE_PROCEDURE_F(create_timer) {
   timer->Start(timeout->Get(), repeat->Get());
   return ReturnNew<Long>(timer->GetId());
 }
+
+#undef TIMER_PROCEDURE_F
 }  // namespace proc
 }  // namespace gel
