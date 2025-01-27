@@ -144,6 +144,10 @@ class NativeProcedureEntry {
     return ReturnNew<Long>(rhs);
   }
 
+  inline auto ReturnDouble(const double rhs) const -> bool {
+    return ReturnNew<Double>(rhs);
+  }
+
   inline auto Throw(Error* error) const -> bool {
     ASSERT(error);
     LOG(ERROR) << "error: " << error->ToString();

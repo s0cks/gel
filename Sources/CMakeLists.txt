@@ -42,6 +42,10 @@ add_library(env-bindings SHARED
   bindings_env.cc)
 target_link_libraries(env-bindings PUBLIC gelle)
 
+add_library(math-bindings SHARED
+  bindings_math.cc)
+target_link_libraries(math-bindings PUBLIC gelle)
+
 add_executable(gelrt
   main.cc)
 target_link_libraries(gelrt
