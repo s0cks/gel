@@ -49,7 +49,6 @@ void NativeProcedure::InitNatives() {
   InitNative<import>();
   InitNative<exit>();
   InitNative<format>();
-  InitNative<list>();
   InitNative<set_car>();
   InitNative<set_cdr>();
   InitNative<random>();
@@ -280,16 +279,6 @@ NATIVE_PROCEDURE_F(type) {
 NATIVE_PROCEDURE_F(exit) {
   // TODO: GetRuntime()->StopRunning();
   return true;
-}
-
-NATIVE_PROCEDURE_F(list) {
-  if (args.empty())
-    return Pair::Empty();
-  Object* result = Pair::Empty();
-  for (auto arg : std::ranges::reverse_view(args)) {
-    result = Pair::New(arg, result);
-  }
-  return Return(result);  // TODO: use gel::ToList
 }
 
 NATIVE_PROCEDURE_F(format) {

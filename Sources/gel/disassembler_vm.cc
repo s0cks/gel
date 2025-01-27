@@ -169,6 +169,12 @@ void Disassembler::Disassemble(const Region& region, const char* label) {
         Comment(cls) << ", num_args=" << decoder.NextUWord();
         break;
       }
+      case Bytecode::kList: {
+        const auto length = decoder.NextUWord();
+        ASSERT(length >= 0);
+        Comment() << "length=" << length;
+        break;
+      }
       case Bytecode::kInvoke:
       case Bytecode::kInvokeNative:
       case Bytecode::kInvokeDynamic:

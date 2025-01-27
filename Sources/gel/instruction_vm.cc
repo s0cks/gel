@@ -6,38 +6,40 @@
 // TODO: add platform guard
 
 namespace gel::ir {
-#define __ compiler->assembler()->
-void GraphEntryInstr::Compile(FlowGraphCompiler* compiler) {
+#define COMPILE(Name) void Name::Compile(FlowGraphCompiler* compiler)
+
+#define __            compiler->assembler()->
+COMPILE(GraphEntryInstr) {
   ASSERT(compiler);
   // do nothing
 }
 
-void TargetEntryInstr::Compile(FlowGraphCompiler* compiler) {
+COMPILE(TargetEntryInstr) {
   ASSERT(compiler);
   // do nothing
 }
 
-void JoinEntryInstr::Compile(FlowGraphCompiler* compiler) {
+COMPILE(JoinEntryInstr) {
   ASSERT(compiler);
   // do nothing
 }
 
-void ConstantInstr::Compile(FlowGraphCompiler* compiler) {
+COMPILE(ConstantInstr) {
   ASSERT(compiler);
   __ Push(GetValue());
 }
 
-void StoreLocalInstr::Compile(FlowGraphCompiler* compiler) {
+COMPILE(StoreLocalInstr) {
   ASSERT(compiler);
   __ StoreLocal(GetLocal()->GetIndex());
 }
 
-void LoadLocalInstr::Compile(FlowGraphCompiler* compiler) {
+COMPILE(LoadLocalInstr) {
   ASSERT(compiler);
   __ LoadLocal(GetLocal()->GetIndex());
 }
 
-void BinaryOpInstr::Compile(FlowGraphCompiler* compiler) {
+COMPILE(BinaryOpInstr) {
   ASSERT(compiler);
   switch (GetOp()) {
     case expr::kAdd:
@@ -87,7 +89,7 @@ void BinaryOpInstr::Compile(FlowGraphCompiler* compiler) {
   }
 }
 
-void UnaryOpInstr::Compile(FlowGraphCompiler* compiler) {
+COMPILE(UnaryOpInstr) {
   ASSERT(compiler);
   switch (GetOp()) {
     case expr::kNot:
@@ -110,43 +112,43 @@ void UnaryOpInstr::Compile(FlowGraphCompiler* compiler) {
   }
 }
 
-void InvokeInstr::Compile(FlowGraphCompiler* compiler) {
+COMPILE(InvokeInstr) {
   ASSERT(compiler);
   ASSERT(GetProcedure()->IsLambda());
   __ invoke(GetProcedure()->AsLambda(), GetNumberOfArgs());
 }
 
-void InvokeNativeInstr::Compile(FlowGraphCompiler* compiler) {
+COMPILE(InvokeNativeInstr) {
   ASSERT(compiler);
   __ invokenative(GetNativeProcedure(), GetNumberOfArgs());
 }
 
-void InvokeDynamicInstr::Compile(FlowGraphCompiler* compiler) {
+COMPILE(InvokeDynamicInstr) {
   ASSERT(compiler);
   __ invokedynamic(GetNumberOfArgs());
 }
 
-void LookupInstr::Compile(FlowGraphCompiler* compiler) {
+COMPILE(LookupInstr) {
   ASSERT(compiler);
   __ lookup();
 }
 
-void ReturnInstr::Compile(FlowGraphCompiler* compiler) {
+COMPILE(ReturnInstr) {
   ASSERT(compiler);
   __ ret();
 }
 
-void LoadFieldInstr::Compile(FlowGraphCompiler* compiler) {
+COMPILE(LoadFieldInstr) {
   ASSERT(compiler);
   __ ldfield(GetField());
 }
 
-void StoreFieldInstr::Compile(FlowGraphCompiler* compiler) {
+COMPILE(StoreFieldInstr) {
   ASSERT(compiler);
   __ stfield(GetField());
 }
 
-void BranchInstr::Compile(FlowGraphCompiler* compiler) {
+COMPILE(BranchInstr) {
   ASSERT(compiler);
   Label* tbranch = compiler->GetBlockLabel(GetTrueTarget());
   Label* fbranch = HasFalseTarget() ? compiler->GetBlockLabel(GetFalseTarget()) : nullptr;
@@ -193,28 +195,33 @@ void BranchInstr::Compile(FlowGraphCompiler* compiler) {
   }
 }
 
-void GotoInstr::Compile(FlowGraphCompiler* compiler) {
+COMPILE(GotoInstr) {
   ASSERT(compiler);
   auto& target_info = compiler->GetBlockInfo(GetTarget()->GetBlockId());
   __ jmp(&target_info.label);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
 }
 
-void ThrowInstr::Compile(FlowGraphCompiler* compiler) {
+COMPILE(ThrowInstr) {
   ASSERT(compiler);
   __ th();
 }
 
-void CastInstr::Compile(FlowGraphCompiler* compiler) {
+COMPILE(CastInstr) {
   ASSERT(compiler);
   __ CastTo(GetTarget());
 }
 
-void NewInstr::Compile(FlowGraphCompiler* compiler) {
+COMPILE(NewInstr) {
   ASSERT(compiler);
   __ New(GetTarget(), GetNumberOfArgs());
 }
 
-void InstanceOfInstr::Compile(FlowGraphCompiler* compiler) {
+COMPILE(NewListInstr) {
+  ASSERT(compiler);
+  __ list(GetLength());
+}
+
+COMPILE(InstanceOfInstr) {
   ASSERT(compiler);
   __ CheckInstance(GetType());
 }

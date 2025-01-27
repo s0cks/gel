@@ -764,6 +764,7 @@ auto EffectVisitor::VisitListExpr(expr::ListExpr* expr) -> bool {
     ReturnDefinition(ir::ConstantInstr::New(expr->EvalToConstant(GetOwner()->GetScope())));
     return true;
   }
+
   SeqExprIterator<expr::ListExpr> iter(this, expr);
   while (iter.HasNext()) {
     const auto [_, child] = iter.Next();
@@ -776,7 +777,9 @@ auto EffectVisitor::VisitListExpr(expr::ListExpr* expr) -> bool {
     const auto value = for_value.GetValue();
     ASSERT(value);
   }
-  return ReturnCallTo(gel::proc::list::Get()->GetNative(), expr->GetNumberOfChildren());
+
+  ReturnDefinition(ir::NewListInstr::New(expr->GetNumberOfChildren()));
+  return true;
 }
 
 auto EffectVisitor::VisitLiteralExpr(LiteralExpr* p) -> bool {

@@ -33,7 +33,8 @@
   V(Throw)                      \
   V(InstanceOf)                 \
   V(Cast)                       \
-  V(New)
+  V(New)                        \
+  V(NewList)
 
 namespace gel {
 class Assembler;
@@ -958,6 +959,30 @@ class NewInstr : public Definition {
   static inline auto New(Class* target, const uword num_args) -> NewInstr* {
     ASSERT(target);
     return new NewInstr(target, num_args);
+  }
+};
+
+class NewListInstr : public Definition {
+ private:
+  uword length_;
+
+ protected:
+  NewListInstr(const uword length) :
+    Definition(),
+    length_(length) {}
+
+ public:
+  ~NewListInstr() override = default;
+
+  auto GetLength() const -> uword {
+    return length_;
+  }
+
+  DECLARE_INSTRUCTION(NewListInstr);
+
+ public:
+  static inline auto New(const uword length) -> NewListInstr* {
+    return new NewListInstr(length);
   }
 };
 

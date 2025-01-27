@@ -82,6 +82,12 @@ auto TargetEntryInstr::ToString() const -> std::string {
   return helper;
 }
 
+auto NewListInstr::ToString() const -> std::string {
+  ToStringHelper<NewListInstr> helper;
+  helper.AddField("length", GetLength());
+  return helper;
+}
+
 auto JoinEntryInstr::ToString() const -> std::string {
   ToStringHelper<JoinEntryInstr> helper;
   helper.AddField("block_id", GetBlockId());

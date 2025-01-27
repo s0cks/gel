@@ -84,6 +84,7 @@ class Interpreter {
   void ExecUnaryOp(const Bytecode code);
   void ExecBinaryOp(const Bytecode code);
   void New(Class* cls, const uword num_args);
+  void NewList(const uword length);
   void Cast(Class* cls);
   void CheckInstance(Class* cls);
   void Jump(const Bytecode code, const uword address);

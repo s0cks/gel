@@ -101,6 +101,11 @@ class Assembler {
     return EmitOp(Bytecode::kRet);
   }
 
+  inline void list(const uword length) {
+    EmitOp(Bytecode::kList);
+    Emit(length);
+  }
+
   inline void ldfield(Field* field) {
     ASSERT(field);
     EmitOp(Bytecode::kLoadField);

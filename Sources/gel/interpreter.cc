@@ -360,6 +360,18 @@ void Interpreter::New(Class* cls, const uword num_args) {
   PUSH(value);
 }
 
+void Interpreter::NewList(const uword length) {
+  ASSERT(length >= 0);
+  auto result = Null();
+  for (auto idx = 0; idx < length; idx++) {
+    const auto next = POP;
+    LOG_IF(ERROR, !next) << "failed to pop " << length << "nth value for list.";
+    result = Cons(next.value_or(Null()), result);
+  }
+  ASSERT(result);
+  PUSH(result);
+}
+
 void Interpreter::Run(const uword start_address) {
   SetCurrentAddress(start_address);
   ASSERT(GetCurrentAddress() == start_address);
@@ -367,7 +379,6 @@ void Interpreter::Run(const uword start_address) {
     const auto current = GetCurrentAddress();
     const auto pos = (current - start_address);
     const auto op = NextBytecode();
-    VLOG(1000) << "executing: " << op;
     switch (op.op()) {
       case Bytecode::kPushN:
       case Bytecode::kPushT:
@@ -468,6 +479,11 @@ void Interpreter::Run(const uword start_address) {
         const auto cls = NextClass();
         ASSERT(cls);
         New(cls, NextUWord());
+        continue;
+      }
+      case Bytecode::kList: {
+        const auto length = NextUWord();
+        NewList(length);
         continue;
       }
       case Bytecode::kInvalid:

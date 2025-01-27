@@ -37,6 +37,7 @@
   V(Jne)                     \
   V(Cast)                    \
   V(New)                     \
+  V(List)                    \
   V(Throw)                   \
   V(LoadField)               \
   V(StoreField)              \
@@ -51,10 +52,12 @@ class Bytecode {
  public:
   enum Op : RawBytecode {
     kInvalid = 0x0,
+  // clang-format off
 #define DEFINE_OP(Name) k##Name,
     FOR_EACH_BYTECODE(DEFINE_OP)
 #undef DEFINE_OP
-        kTotalNumberOfOps,
+    kTotalNumberOfOps,
+    // clang-format on
   };
   static_assert(kTotalNumberOfOps <= UINT8_MAX, "Expected kTotalNumberOfOps to be less than the max value of uint8_t.");
 
@@ -215,6 +218,8 @@ class Bytecode {
         return "checkinstance";
       case kNew:
         return "new";
+      case kList:
+        return "list";
       case kCast:
         return "cast";
       case kInvalid:

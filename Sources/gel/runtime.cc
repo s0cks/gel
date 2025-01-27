@@ -279,7 +279,7 @@ auto Runtime::PushStackFrame(NativeProcedure* native, LocalScope* locals) -> con
   const auto frame_id = HasStackFrame() ? GetCurrentStackFrame()->GetId() + 1 : 1;
   const auto new_frame = new StackFrame(frame_id, native, locals);
   stack_.push(new_frame);
-  DVLOG(1000) << "pushed: " << stack_.top();
+  DVLOG(1000) << "pushed: " << stack_.top()->ToString();
   return stack_.top();
 }
 
@@ -288,7 +288,7 @@ auto Runtime::PushStackFrame(Script* target, LocalScope* locals) -> const StackF
   const auto frame_id = HasStackFrame() ? GetCurrentStackFrame()->GetId() + 1 : 1;
   const auto new_frame = new StackFrame(frame_id, target, locals);
   stack_.push(new_frame);
-  DVLOG(1000) << "pushed: " << stack_.top();
+  DVLOG(1000) << "pushed: " << stack_.top()->ToString();
   return stack_.top();
 }
 
@@ -297,19 +297,19 @@ auto Runtime::PushStackFrame(Lambda* target, LocalScope* locals) -> const StackF
   const auto frame_id = HasStackFrame() ? GetCurrentStackFrame()->GetId() + 1 : 1;
   const auto new_frame = new StackFrame(frame_id, target, locals);
   stack_.push(new_frame);
-  DVLOG(1000) << "pushed: " << stack_.top();
+  DVLOG(1000) << "pushed: " << stack_.top()->ToString();
   return stack_.top();
 }
 
 auto Runtime::PopStackFrame() -> StackFrame* {
   if (stack_.empty()) {
-    DLOG(WARNING) << "stack empty";
-    return {};
+    DLOG(ERROR) << "stack empty";
+    return nullptr;
   }
   ASSERT(!stack_.empty());
   const auto frame = stack_.top();
   stack_.pop();
-  DVLOG(1000) << "popped: " << frame;
+  DVLOG(1000) << "popped: " << frame->ToString();
   return frame;
 }
 }  // namespace gel
