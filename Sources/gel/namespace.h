@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "gel/common.h"
+#include "gel/expr/expression.h"
 #include "gel/object.h"
 #include "gel/pointer.h"
 #include "gel/type_traits.h"
@@ -12,7 +13,7 @@
 namespace gel {
 class Namespace;
 using NamespaceList = std::vector<Namespace*>;
-
+DECLARE_VISITOR(Namespace);
 class Namespace : public Object {
   friend class Script;
   friend class Parser;
@@ -33,6 +34,7 @@ class Namespace : public Object {
   Symbol* symbol_;
   LocalScope* scope_;
   String* docs_ = nullptr;
+  Procedure* init_ = nullptr;
 
  protected:
   explicit Namespace(Symbol* symbol, LocalScope* scope) :
@@ -53,11 +55,25 @@ class Namespace : public Object {
     owner_ = rhs;
   }
 
+  void SetInit(Procedure* rhs) {
+    ASSERT(rhs);
+    init_ = rhs;
+  }
+
+  auto CreateInit(const expr::ExpressionList& body = {}) -> Procedure*;
   auto IsKernelNamespace() const -> bool;
   auto VisitPointerPointers(PointerPointerVisitor* vis) -> bool override;
 
  public:
   ~Namespace() override = default;
+
+  auto GetInit() const -> Procedure* {
+    return init_;
+  }
+
+  inline auto HasInit() const -> bool {
+    return GetInit() != nullptr;
+  }
 
   auto GetSymbol() const -> Symbol* {
     return symbol_;
@@ -79,6 +95,7 @@ class Namespace : public Object {
     return GetOwner() != nullptr;
   }
 
+  auto InitNamespace() -> Namespace*;
   auto Get(Symbol* rhs) const -> Object*;
   auto Get(const std::string& rhs) const -> Object*;
   auto HasSymbol(Symbol* rhs) const -> bool;
@@ -89,6 +106,7 @@ class Namespace : public Object {
 
  private:
   static NamespaceList namespaces_;
+  static void Init();
 
  public:
   static inline auto New(Symbol* symbol, LocalScope* scope) -> Namespace* {
@@ -100,10 +118,21 @@ class Namespace : public Object {
     return ns;
   }
 
+  static auto VisitAllNamespaces(NamespaceVisitor* vis) -> bool;
   static auto FindNamespace(const std::string& name) -> Namespace*;
   static auto FindNamespace(Symbol* rhs) -> Namespace*;
 };
 
+namespace proc {
+_DECLARE_NATIVE_PROCEDURE(gel_get_namespace, "gel/get-namespace");
+_DECLARE_NATIVE_PROCEDURE(gel_get_namespaces, "gel/get-namespaces");
+
+#define _DECLARE_NAMESPACE_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(event_emitter_##Name, "Namespace:" Sym)
+#define DECLARE_NAMESPACE_PROCEDURE(Name)       _DECLARE_NAMESPACE_PROCEDURE(Name, #Name);
+
+#undef _DECLARE_NAMESPACE_PROCEDURE
+#undef DECLARE_NAMESPACE_PROCEDURE
+}  // namespace proc
 }  // namespace gel
 
 #endif  // GEL_NAMESPACE_H

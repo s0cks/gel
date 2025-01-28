@@ -144,7 +144,7 @@ void Object::Init() {
   String::InitClass();
   Symbol::Init();
   Argument::InitClass();
-  Namespace::InitClass();
+  Namespace::Init();
   Module::Init();
   Seq::InitClass();
   Map::InitClass();

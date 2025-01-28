@@ -59,6 +59,14 @@
   (defnative get-procedures [c]
     "Returns the Procedures for Class [c]."))
 
+(defnative gel/get-namespace [s]
+  "Returns the Namespace for Symbol [s].")
+(defnative gel/get-namespaces []
+  "Returns the list of Namespaces.")
+(deftype Namespace
+  (defnative get-symbol [ns]
+    "Returns the Symbol for Namespace [ns]."))
+
 ;; ---------------------------------------------------------------------------------
 ;; Maps
 ;; ---------------------------------------------------------------------------------
@@ -130,7 +138,7 @@
   ;; ---------------------------------------------------------------------------------
   ;; Event Loop
   ;; ---------------------------------------------------------------------------------
-  (defnative get-event-loop []
+  (defnative gel/get-event-loop []
     "Returns the EventLoop for the current thread.")
   ;; ---------------------------------------------------------------------------------
 
@@ -151,8 +159,6 @@
   (defnative gel/get-locals []
     "Returns the current LocalScope from gelrt.")
 
-  (defnative get-namespace [s]
-    "Returns the Namespace for Symbol [s].")
   (defnative ns:get [nsOrSym s]
     "Returns the value for Symbol [s] in Namespace [nsOrSym].")
   (defnative gel/get-target-triple []

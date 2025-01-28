@@ -1677,33 +1677,18 @@ auto Parser::ParseNamespace(Namespace** result) -> ParseResult {
   ASSERT(ns);
   PushOwner(ns);
   TryParseDocstring(ns);
+  expr::ExpressionList init_body{};
   while (!PeekEq(Token::kRParen)) {
-    ExpectNext(Token::kLParen);
-    switch (PeekKind()) {
-      case Token::kDefn: {
-        LocalVariable* local = nullptr;
-        CHECK_RESULT(ParseDefn(&local));
-        ASSERT(local && local->HasValue() && local->GetValue()->IsLambda());
-        break;
-      }
-      case Token::kDefMacro: {
-        LocalVariable* local = nullptr;
-        CHECK_RESULT(ParseDefMacro(&local));
-        ASSERT(local && local->HasValue() && local->GetValue()->IsMacro());
-        break;
-      }
-      case Token::kDefNative: {
-        LocalVariable* local = nullptr;
-        CHECK_RESULT(ParseDefNative(&local));
-        ASSERT(local && local->HasValue() && local->GetValue()->IsNativeProcedure());
-        break;
-      }
-      default: {
-        (*result) = nullptr;
-        return UnexpectedError(NextToken());
-      }
+    expr::Expression* expr = nullptr;
+    CHECK_RESULT(ParseExpression(&expr));
+    if (expr) {
+      init_body.push_back(expr);
     }
-    ExpectNext(Token::kRParen);
+  }
+  if (!init_body.empty()) {
+    const auto init = ns->CreateInit(init_body);
+    ASSERT(init);
+    DVLOG(1000) << "created init function for " << ns << ": " << init;
   }
   PopOwner();
   if (HasOwner())

@@ -57,9 +57,6 @@ void NativeProcedure::InitNatives() {
   InitNative<gel_load_bindings>();
   InitNative<get_event_loop>();
 
-  InitNative<get_namespace>();
-  InitNative<ns_get>();
-
 #define InitTimerNative(Name) InitNative<timer_##Name>()
   InitTimerNative(create);
   InitTimerNative(start);
@@ -316,25 +313,6 @@ NATIVE_PROCEDURE_F(set_cdr) {
     return Throw(value.GetError());
   SetCdr(seq, value);
   return DoNothing();
-}
-
-NATIVE_PROCEDURE_F(get_namespace) {
-  NativeArgument<0, Symbol> symbol(args);
-  if (!symbol)
-    return Throw(symbol.GetError());
-  return Return(Namespace::FindNamespace(symbol));
-}
-
-NATIVE_PROCEDURE_F(ns_get) {
-  NativeArgument<0> symOrNs(args);
-  if (!symOrNs)
-    return Throw(symOrNs.GetError());
-  const auto ns = symOrNs->IsSymbol() ? Namespace::FindNamespace(symOrNs->AsSymbol()) : symOrNs->AsNamespace();
-  ASSERT(ns);
-  NativeArgument<1, Symbol> symbol(args);
-  if (!symbol)
-    return Throw(symbol.GetError());
-  return Return(ns->Get(symbol));
 }
 
 NATIVE_PROCEDURE_F(get_event_loop) {

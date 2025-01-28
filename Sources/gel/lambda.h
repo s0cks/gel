@@ -27,6 +27,7 @@ class Lambda : public Procedure, public Executable {
   friend class Parser;
   friend class Module;
   friend class Runtime;
+  friend class Namespace;
   friend class MacroExpander;
   friend class FlowGraphCompiler;
 
@@ -196,7 +197,7 @@ class Lambda : public Procedure, public Executable {
   DECLARE_TYPE(Lambda);
 
  public:
-  static inline auto New(Symbol* name, Array<Argument*>* args, const expr::ExpressionList& body) -> Lambda* {
+  static inline auto New(Symbol* name, Array<Argument*>* args, const expr::ExpressionList& body = {}) -> Lambda* {
     return new Lambda(name, args, body);
   }
 

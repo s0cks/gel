@@ -3,8 +3,10 @@
 #include <algorithm>
 
 #include "gel/common.h"
+#include "gel/expr/expression.h"
 #include "gel/local.h"
 #include "gel/pointer.h"
+#include "gel/runtime.h"
 #include "gel/to_string_helper.h"
 
 namespace gel {
@@ -80,6 +82,17 @@ auto Namespace::GetName() const -> const std::string& {
   return GetSymbol()->GetSymbolName();
 }
 
+auto Namespace::VisitAllNamespaces(NamespaceVisitor* vis) -> bool {
+  ASSERT(vis);
+  for (auto idx = 0; idx < namespaces_.size(); idx++) {
+    const auto ns = namespaces_[idx];
+    ASSERT(ns);
+    if (!vis->Visit(ns))
+      return false;
+  }
+  return true;
+}
+
 auto Namespace::CreateSymbol(const std::string& rhs) -> Symbol* {
   ASSERT(!rhs.empty());
   if (IsKernelNamespace())
@@ -115,4 +128,65 @@ auto Namespace::ToString() const -> std::string {
   helper.AddField("scope", GetScope());
   return helper;
 }
+
+auto Namespace::InitNamespace() -> Namespace* {
+  const auto runtime = GetRuntime();
+  ASSERT(runtime);
+  runtime->Call(GetInit(), {this});
+  return this;
+}
+
+auto Namespace::CreateInit(const expr::ExpressionList& body) -> Procedure* {
+  const auto symbol = Symbol::New(GetSymbol()->GetNamespace(), "init");
+  ASSERT(symbol);
+  const auto args = Array<Argument*>::New();
+  ASSERT(args);
+  const auto init = Lambda::New(symbol, args, body);
+  ASSERT(init);
+  const auto scope = LocalScope::New();
+  ASSERT(scope);
+  const auto self = LocalVariable::New(scope, "this", this);
+  LOG_IF(FATAL, !scope->Add(self)) << "failed to add " << (*self) << " to scope.";
+  init->SetScope(scope);
+  init_ = init;
+  return init;
+}
+
+void Namespace::Init() {
+  InitClass();
+  InitNative<proc::gel_get_namespace>();
+  InitNative<proc::gel_get_namespaces>();
+}
+
+namespace proc {
+#define NAMESPACE_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(namespace_##Name)
+
+NATIVE_PROCEDURE_F(gel_get_namespace) {
+  NativeArgument<0, Symbol> symbol(args);
+  if (!symbol)
+    return Throw(symbol);
+  const auto ns = Namespace::FindNamespace(symbol);
+  if (!ns) {
+    std::stringstream ss;
+    ss << "failed to find Namespace for symbol: " << symbol->GetFullyQualifiedName();
+    return ThrowError(ss);
+  }
+  return Return(ns);
+}
+
+NATIVE_PROCEDURE_F(gel_get_namespaces) {
+  Object* result = Null();
+  NamespaceVisitorWrapper vis([&result](Namespace* ns) {
+    ASSERT(ns);
+    result = Cons(ns, result);
+    ASSERT(result);
+    return true;
+  });
+  if (!Namespace::VisitAllNamespaces(&vis))
+    return ThrowError("failed to visit Namespaces");
+  return Return(result);
+}
+
+#undef NAMESPACE_PROCEDURE_F
+}  // namespace proc
 }  // namespace gel
