@@ -9,32 +9,6 @@
 #include "gel/runtime.h"
 
 namespace gel::proc {
-NATIVE_PROCEDURE_F(gel_get_fields) {
-  NativeArgument<0, Class> cls(args);
-  if (!cls)
-    return Throw(cls);
-  Object* result = Null();
-  for (auto idx = 0; idx < cls->GetNumberOfFields(); idx++) {
-    const auto field = cls->GetFieldAt(idx);
-    ASSERT(field);
-    result = Cons(Cons(field->GetName(), Long::New(field->GetOffset())), result);
-  }
-  return Return(result);
-}
-
-NATIVE_PROCEDURE_F(gel_get_procedures) {
-  NativeArgument<0, Class> cls(args);
-  if (!cls)
-    return Throw(cls);
-  Object* result = Null();
-  for (auto idx = 0; idx < cls->GetNumberOfProcedures(); idx++) {
-    const auto proc = cls->GetProcedureAt(idx);
-    ASSERT(proc);
-    result = Cons(proc->GetSymbol(), result);
-  }
-  return Return(result);
-}
-
 NATIVE_PROCEDURE_F(gel_print_args) {
   NativeArgument<0, Procedure> func(args);
   if (!func)

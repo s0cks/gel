@@ -158,6 +158,10 @@ class NativeProcedureEntry {
     return Throw(Error::New(message));
   }
 
+  inline auto ThrowError(const std::stringstream& ss) const -> bool {
+    return ThrowError(ss.str());
+  }
+
   inline auto ThrowNotImplementedError() const -> bool {
     return ThrowError("not implemented");
   }

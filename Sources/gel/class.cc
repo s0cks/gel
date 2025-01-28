@@ -423,17 +423,30 @@ auto Field::New(const ObjectList& args) -> Field* {
   return nullptr;
 }
 
+#define INIT_CLASS_NATIVE(Name) InitNative<class_##Name>();
+
 void Class::Init() {
   classes_ = Array<Class*>::New(Class::kTotalNumberOfInternalClassIds);
   ASSERT(classes_);
   using namespace proc;
-  InitNative<get_classes>();
   InitNative<get_class>();
-  InitNative<get_class_id>();
-  InitNative<is_primitive_class>();
+  InitNative<get_classes>();
+  INIT_CLASS_NATIVE(get_id);
+  INIT_CLASS_NATIVE(get_fields);
+  INIT_CLASS_NATIVE(get_procedures);
+  INIT_CLASS_NATIVE(is_primitive);
 }
 
+#undef INIT_CLASS_NATIVE
+
 namespace proc {
+NATIVE_PROCEDURE_F(get_class) {
+  NativeArgument<0, Symbol> symbol(args);
+  if (!symbol)
+    return Throw(symbol);
+  return Return(Class::FindClass(symbol));
+}
+
 NATIVE_PROCEDURE_F(get_classes) {
   ASSERT(args.empty());
   Object* result = Null();
@@ -445,41 +458,112 @@ NATIVE_PROCEDURE_F(get_classes) {
   return Return(result);
 }
 
-NATIVE_PROCEDURE_F(get_class) {
-  NativeArgument<0, Symbol> symbol(args);
-  if (!symbol)
-    return Throw(symbol.GetError());
-  return Return(Class::FindClass(symbol));
+#define CLASS_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(class_##Name)
+
+CLASS_PROCEDURE_F(is_primitive) {
+  NativeArgument<0> value(args);
+  if (!value)
+    return Throw(value);
+  Class* cls = nullptr;
+  if (value->IsClass()) {
+    cls = value->AsClass();
+  } else if (value->IsSymbol()) {
+    cls = Class::FindClass(value->AsSymbol());
+    if (!cls) {
+      std::stringstream ss;
+      ss << "failed to find Class for symbol: " << value->AsSymbol();
+      return ThrowError(ss.str());
+    }
+  } else {
+    std::stringstream ss;
+    ss << "expected " << value.GetValue() << " to be an instance of a Class or Symbol resolving a Class.";
+    return ThrowError(ss);
+  }
+  ASSERT(cls);
+  return ReturnBool(cls->IsPrimitive());
 }
 
-NATIVE_PROCEDURE_F(get_class_id) {
-  NativeArgument<0> clsOrSym(args);
-  if (!clsOrSym)
-    return Throw(clsOrSym);
-  if (clsOrSym->IsClass()) {
-    return ReturnLong(clsOrSym->AsClass()->GetClassId());
-  } else if (clsOrSym->IsSymbol()) {
-    const auto cls = Class::FindClass(clsOrSym->AsSymbol());
-    if (!cls)
-      return ReturnNull();
-    return ReturnLong(cls->GetClassId());
+CLASS_PROCEDURE_F(get_id) {
+  NativeArgument<0> value(args);
+  if (!value)
+    return Throw(value);
+  Class* cls = nullptr;
+  if (value->IsClass()) {
+    cls = value->AsClass();
+  } else if (value->IsSymbol()) {
+    cls = Class::FindClass(value->AsSymbol());
+    if (!cls) {
+      std::stringstream ss;
+      ss << "failed to find Class for symbol: " << value->AsSymbol();
+      return ThrowError(ss.str());
+    }
+  } else {
+    std::stringstream ss;
+    ss << "expected " << value.GetValue() << " to be an instance of a Class or Symbol resolving a Class.";
+    return ThrowError(ss);
   }
-  return ReturnLong(clsOrSym->GetClass()->GetClassId());
+  ASSERT(cls);
+  return ReturnLong(cls->GetClassId());
 }
 
-NATIVE_PROCEDURE_F(is_primitive_class) {
-  NativeArgument<0> clsOrSym(args);
-  if (!clsOrSym)
-    return Throw(clsOrSym);
-  if (clsOrSym->IsClass()) {
-    return ReturnBool(clsOrSym->AsClass()->IsPrimitive());
-  } else if (clsOrSym->IsSymbol()) {
-    const auto cls = Class::FindClass(clsOrSym->AsSymbol());
-    if (!cls)
-      return ReturnFalse();
-    return ReturnBool(cls->IsPrimitive());
+CLASS_PROCEDURE_F(get_fields) {
+  NativeArgument<0> value(args);
+  if (!value)
+    return Throw(value);
+  Class* cls = nullptr;
+  if (value->IsClass()) {
+    cls = value->AsClass();
+  } else if (value->IsSymbol()) {
+    cls = Class::FindClass(value->AsSymbol());
+    if (!cls) {
+      std::stringstream ss;
+      ss << "failed to find Class for symbol: " << value->AsSymbol();
+      return ThrowError(ss.str());
+    }
+  } else {
+    std::stringstream ss;
+    ss << "expected " << value.GetValue() << " to be an instance of a Class or Symbol resolving a Class.";
+    return ThrowError(ss);
   }
-  return ReturnFalse();
+  ASSERT(cls);
+  Object* result = Null();
+  for (auto idx = 0; idx < cls->GetNumberOfFields(); idx++) {
+    const auto field = cls->GetFieldAt(idx);
+    ASSERT(field);
+    result = Cons(field->GetName(), result);
+  }
+  return Return(result);
 }
+
+CLASS_PROCEDURE_F(get_procedures) {
+  NativeArgument<0> value(args);
+  if (!value)
+    return Throw(value);
+  Class* cls = nullptr;
+  if (value->IsClass()) {
+    cls = value->AsClass();
+  } else if (value->IsSymbol()) {
+    cls = Class::FindClass(value->AsSymbol());
+    if (!cls) {
+      std::stringstream ss;
+      ss << "failed to find Class for symbol: " << value->AsSymbol();
+      return ThrowError(ss.str());
+    }
+  } else {
+    std::stringstream ss;
+    ss << "expected " << value.GetValue() << " to be an instance of a Class or Symbol resolving a Class.";
+    return ThrowError(ss);
+  }
+  ASSERT(cls);
+  Object* result = Null();
+  for (auto idx = 0; idx < cls->GetNumberOfProcedures(); idx++) {
+    const auto proc = cls->GetProcedureAt(idx);
+    ASSERT(proc);
+    result = Cons(proc->GetSymbol(), result);
+  }
+  return Return(result);
+}
+
+#undef CLASS_PROCEDURE_F
 }  // namespace proc
 }  // namespace gel

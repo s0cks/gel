@@ -141,9 +141,7 @@ void NativeProcedure::InitNatives() {
   InitNative<gel_get_natives>();
   InitNative<gel_get_compile_time>();
   InitNative<gel_print_st>();
-  InitNative<gel_get_fields>();
   InitNative<gel_get_modules>();
-  InitNative<gel_get_procedures>();
 #endif  // GEL_DEBUG
 }
 

@@ -36,8 +36,11 @@ DECLARE_OBJECT_PROCEDURE(hashcode);
 // ----------------------------------------------------------------------------------------------------
 _DECLARE_NATIVE_PROCEDURE(get_class, "gel/get-class");
 _DECLARE_NATIVE_PROCEDURE(get_classes, "gel/get-classes");
-_DECLARE_NATIVE_PROCEDURE(get_class_id, "gel/get-class-id");
-_DECLARE_NATIVE_PROCEDURE(is_primitive_class, "gel/is-primitive?");
+
+_DECLARE_NATIVE_PROCEDURE(class_is_primitive, "Class:is-primitive?");
+_DECLARE_NATIVE_PROCEDURE(class_get_id, "Class:get-id");
+_DECLARE_NATIVE_PROCEDURE(class_get_fields, "Class:get-fields");
+_DECLARE_NATIVE_PROCEDURE(class_get_procedures, "Class:get-procedures");
 // ----------------------------------------------------------------------------------------------------
 
 // ----------------------------------------------------------------------------------------------------
@@ -206,8 +209,6 @@ _DECLARE_NATIVE_PROCEDURE(gel_print_new_zone, "gel/print-new-zone");
 _DECLARE_NATIVE_PROCEDURE(gel_print_old_zone, "gel/print-old-zone");
 _DECLARE_NATIVE_PROCEDURE(gel_get_frame, "gel/get-frame");
 _DECLARE_NATIVE_PROCEDURE(gel_get_modules, "gel/get-modules");
-_DECLARE_NATIVE_PROCEDURE(gel_get_fields, "gel/get-fields");
-_DECLARE_NATIVE_PROCEDURE(gel_get_procedures, "gel/get-procedures");
 _DECLARE_NATIVE_PROCEDURE(gel_print_st, "gel/print-st");
 _DECLARE_NATIVE_PROCEDURE(gel_get_locals, "gel/get-locals");
 _DECLARE_NATIVE_PROCEDURE(gel_get_target_triple, "gel/get-target-triple");
