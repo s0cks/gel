@@ -58,27 +58,96 @@ Runtime::Runtime(LocalScope* scope) :
 
 namespace fs = std::filesystem;
 
-void Runtime::LoadKernelModule() {
+class ModuleImporter {
+  DEFINE_NON_COPYABLE_TYPE(ModuleImporter);
+
+ protected:
+  ModuleImporter() = default;
+
+ public:
+  virtual ~ModuleImporter() = default;
+  virtual void Import(Module* m) = 0;
+};
+
+class BaseModuleImporter : public ModuleImporter {
+  DEFINE_NON_COPYABLE_TYPE(BaseModuleImporter);
+
+ private:
+  Runtime* runtime_;
+
+ protected:
+  explicit BaseModuleImporter(Runtime* runtime) :
+    ModuleImporter(),
+    runtime_(runtime) {
+    ASSERT(runtime_);
+  }
+
+  virtual void ImportScope(LocalScope* scope) = 0;
+
+ public:
+  ~BaseModuleImporter() override = default;
+
+  auto GetRuntime() const -> Runtime* {
+    return runtime_;
+  }
+
+  void Import(Module* m) override {
+    ASSERT(m);
+    return ImportScope(m->GetScope());
+  }
+};
+
+class KernelModuleImporter : public BaseModuleImporter {
+  DEFINE_NON_COPYABLE_TYPE(KernelModuleImporter);
+
+ protected:
+  void ImportScope(LocalScope* scope) override {
+    ASSERT(scope);
+    if (VLOG_IS_ON(100)) {
+      DLOG(INFO) << "importing " << scope->ToString() << ":";
+      LocalScopePrinter::Print<google::INFO, false>(scope, __FILE__, __LINE__);
+    }
+    GetRuntime()->GetInitScope()->AddAll(scope);
+  }
+
+ public:
+  explicit KernelModuleImporter(Runtime* runtime) :
+    BaseModuleImporter(runtime) {}
+  ~KernelModuleImporter() override = default;
+
+  void Import(Module* m) override {
+    ASSERT(m && m->IsKernel());
+    BaseModuleImporter::Import(m);
+    // import default namespace
+    const auto default_ns = m->GetDefaultNamespace();
+    ASSERT(default_ns);
+    ImportScope(default_ns->GetScope());
+    if (default_ns->GetName() != "gel") {
+      const auto gel_ns = m->FindNamespace("gel");
+      if (gel_ns) {
+        ImportScope(gel_ns->GetScope());
+        return;
+      }
+      DLOG(WARNING) << "cannot find `gel namespace in: " << m->ToString();
+    }
+  }
+};
+
+void Runtime::LoadKernel() {
   const auto loader = GetThreadKernelModuleLoader();
   ASSERT(loader);
-  const auto result = loader->LoadModule("gel.cl");
-  if (!result) {
-    LOG(FATAL) << "failed to load kernel module: " << result;
-    return;
-  }
-  const auto kernel = result.GetModule();
+  KernelModuleImporter importer(this);
+  const auto kernel = loader->LoadModule("gel.cl");
+  LOG_IF(FATAL, !kernel) << "failed to load kernel module: " << kernel;
   ASSERT(kernel && kernel->IsKernel());
-  if (VLOG_IS_ON(100)) {
-    DLOG(INFO) << "gel Module scope: ";
-    PRINT_SCOPE(INFO, kernel->GetScope());
-  }
-  GetInitScope()->AddAll(kernel->GetScope());
-  const auto kernel_ns = kernel->GetDefaultNamespace();
-  if (VLOG_IS_ON(100)) {
-    DLOG(INFO) << "gel Namespace scope: ";
-    PRINT_SCOPE(INFO, kernel_ns->GetScope());
-  }
-  GetInitScope()->AddAll(kernel_ns->GetScope());
+  importer.Import(kernel);
+
+#ifdef GEL_DEBUG
+  const auto kernel_dbg = loader->LoadModule("geldbg.cl");
+  LOG_IF(FATAL, !kernel_dbg) << "failed to load kernel debug module: " << kernel_dbg;
+  ASSERT(kernel_dbg && kernel_dbg->IsKernel());
+  importer.Import(kernel_dbg);
+#endif  // GEL_DEBUG
 }
 
 auto GetGelPathEnvVar() -> const EnvironmentVariable& {
@@ -263,7 +332,7 @@ void Runtime::Init(const bool load_kernel) {
   Object::Init();
   if (load_kernel && FLAGS_kernel) {
     KernelModuleLoader::Init();
-    runtime->LoadKernelModule();
+    runtime->LoadKernel();
   }
   ThreadModuleLoader::Init();
 

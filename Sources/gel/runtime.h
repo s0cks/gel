@@ -130,7 +130,7 @@ class Runtime {
   auto PushStackFrame(NativeProcedure* native, LocalScope* locals) -> const StackFrame*;
 
  public:  // TODO: reduce visibility
-  void LoadKernelModule();
+  void LoadKernel();
   inline void Call(Procedure* procedure, const ObjectList& args = {}) {
     if (procedure->IsLambda()) {
       return Call(procedure->AsLambda(), args);

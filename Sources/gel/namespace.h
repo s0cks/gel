@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <vector>
 
+#include "gel/argument.h"
 #include "gel/common.h"
 #include "gel/expr/expression.h"
 #include "gel/object.h"
@@ -14,9 +15,15 @@ namespace gel {
 class Namespace;
 using NamespaceList = std::vector<Namespace*>;
 DECLARE_VISITOR(Namespace);
+
+class Macro;
+class MacroVisitor;
+class Procedure;
+class ProcedureVisitor;
 class Namespace : public Object {
   friend class Script;
   friend class Parser;
+  friend class Module;
 
  public:
   using Predicate = std::function<bool(Namespace*)>;
@@ -44,6 +51,8 @@ class Namespace : public Object {
   LocalScope* scope_;
   String* docs_ = nullptr;
   Procedure* init_ = nullptr;
+  Array<Procedure*>* procedures_;
+  Array<Macro*>* macros_;
 
  protected:
   explicit Namespace(Symbol* symbol, LocalScope* scope) :
@@ -52,6 +61,10 @@ class Namespace : public Object {
     scope_(scope) {
     ASSERT(symbol_);
     ASSERT(scope_);
+    macros_ = Array<Macro*>::New();
+    ASSERT(macros_);
+    procedures_ = Array<Procedure*>::New();
+    ASSERT(procedures_);
   }
 
   void SetDocs(String* rhs) {
@@ -73,8 +86,14 @@ class Namespace : public Object {
   auto IsKernelNamespace() const -> bool;
   auto VisitPointerPointers(PointerPointerVisitor* vis) -> bool override;
 
+  void AddChild(Object* rhs) override;
+
  public:
   ~Namespace() override = default;
+
+  auto GetSymbol() const -> Symbol* {
+    return symbol_;
+  }
 
   auto GetInit() const -> Procedure* {
     return init_;
@@ -82,10 +101,6 @@ class Namespace : public Object {
 
   inline auto HasInit() const -> bool {
     return GetInit() != nullptr;
-  }
-
-  auto GetSymbol() const -> Symbol* {
-    return symbol_;
   }
 
   auto GetScope() const -> LocalScope* {
@@ -104,6 +119,14 @@ class Namespace : public Object {
     return GetOwner() != nullptr;
   }
 
+  auto GetMacros() const -> Array<Macro*>* {
+    return macros_;
+  }
+
+  auto GetProcedures() const -> Array<Procedure*>* {
+    return procedures_;
+  }
+
   auto InitNamespace() -> Namespace*;
   auto Get(Symbol* rhs) const -> Object*;
   auto Get(const std::string& rhs) const -> Object*;
@@ -111,6 +134,16 @@ class Namespace : public Object {
   auto HasSymbol(const std::string& rhs) const -> bool;
   auto GetName() const -> const std::string&;
   auto CreateSymbol(const std::string& value) -> Symbol*;
+
+  auto FindMacro(const std::string& name) -> Macro*;
+  auto FindProcedure(const std::string& name) -> Procedure*;
+  auto FindLambda(const std::string& name) -> Lambda*;
+  auto FindNativeProcedure(const std::string& name) -> NativeProcedure*;
+
+  auto VisitAllMacros(MacroVisitor* vis) const -> bool;
+  auto VisitAllProcedures(ProcedureVisitor* vis) const -> bool;
+  auto VisitAllNativeProcedures(ProcedureVisitor* vis) const -> bool;
+  auto VisitAllLambdaProcedures(ProcedureVisitor* vis) const -> bool;
   DECLARE_TYPE(Namespace);
 
  private:
@@ -135,8 +168,15 @@ namespace proc {
 _DECLARE_NATIVE_PROCEDURE(gel_get_namespace, "gel/get-namespace");
 _DECLARE_NATIVE_PROCEDURE(gel_get_namespaces, "gel/get-namespaces");
 
-#define _DECLARE_NAMESPACE_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(event_emitter_##Name, "Namespace:" Sym)
+#define _DECLARE_NAMESPACE_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(namespace_##Name, "Namespace:" Sym)
 #define DECLARE_NAMESPACE_PROCEDURE(Name)       _DECLARE_NAMESPACE_PROCEDURE(Name, #Name);
+
+_DECLARE_NAMESPACE_PROCEDURE(get_owner, "get-owner");
+_DECLARE_NAMESPACE_PROCEDURE(get_symbol, "get-symbol");
+_DECLARE_NAMESPACE_PROCEDURE(get_macros, "get-macros");
+_DECLARE_NAMESPACE_PROCEDURE(get_procedures, "get-procedures");
+_DECLARE_NAMESPACE_PROCEDURE(get_lambdas, "get-lambdas");
+_DECLARE_NAMESPACE_PROCEDURE(get_native_procedures, "get-native-procedures");
 
 #undef _DECLARE_NAMESPACE_PROCEDURE
 #undef DECLARE_NAMESPACE_PROCEDURE

@@ -69,6 +69,7 @@ DECLARE_TRAIT(is_string_like);
 #define DECLARE_IS_STRING_LIKE(Name) DECLARE_HAS_TRAIT(is_string_like, Name);
 DECLARE_IS_STRING_LIKE(String);
 DECLARE_IS_STRING_LIKE(Symbol);
+DECLARE_IS_STRING_LIKE(std::string);
 #undef DECLARE_IS_STRING_LIKE
 
 DECLARE_TRAIT(has_to_string);

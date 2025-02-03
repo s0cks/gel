@@ -5,7 +5,9 @@
 #include "gel/common.h"
 #include "gel/expr/expression.h"
 #include "gel/local.h"
+#include "gel/native_procedure.h"
 #include "gel/pointer.h"
+#include "gel/procedure.h"
 #include "gel/runtime.h"
 #include "gel/to_string_helper.h"
 
@@ -14,6 +16,24 @@ static Array<Namespace*>* namespaces_ = nullptr;
 
 auto Namespace::IsKernelNamespace() const -> bool {
   return GetName() == "_kernel";
+}
+
+void Namespace::AddChild(Object* rhs) {
+  ASSERT(rhs);
+  if (rhs->IsProcedure()) {
+    const auto procedure = rhs->AsProcedure();
+    ASSERT(procedure);
+    procedures_->Push(procedure);
+    procedure->SetOwner(this);
+    return;
+  } else if (rhs->IsMacro()) {
+    const auto macro = rhs->AsMacro();
+    ASSERT(macro);
+    macros_->Push(macro);
+    macro->SetOwner(this);
+    return;
+  }
+  DLOG(ERROR) << "cannot add " << rhs->ToString() << " to " << ToString();
 }
 
 auto Namespace::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
@@ -162,17 +182,91 @@ auto Namespace::CreateInit(const expr::ExpressionList& body) -> Procedure* {
   return init;
 }
 
+auto Namespace::FindMacro(const std::string& name) -> Macro* {
+  ASSERT(!name.empty());
+  return macros_->FindIf(Macro::IsNamed(name));
+}
+
+auto Namespace::FindProcedure(const std::string& name) -> Procedure* {
+  ASSERT(!name.empty());
+  return procedures_->FindIf(Procedure::IsNamed(name));
+}
+
+auto Namespace::FindNativeProcedure(const std::string& name) -> NativeProcedure* {
+  const auto proc = FindProcedure(name);
+  return proc && proc->IsNativeProcedure() ? proc->AsNativeProcedure() : nullptr;
+}
+
+auto Namespace::FindLambda(const std::string& name) -> Lambda* {
+  const auto proc = FindProcedure(name);
+  return proc && proc->IsLambda() ? proc->AsLambda() : nullptr;
+}
+
+auto Namespace::VisitAllMacros(MacroVisitor* vis) const -> bool {
+  ASSERT(vis);
+  for (auto idx = 0; idx < macros_->GetLength(); idx++) {
+    const auto macro = macros_->Get(idx);
+    ASSERT(macro);
+    if (!vis->Visit(macro))
+      return false;
+  }
+  return true;
+}
+
+auto Namespace::VisitAllProcedures(ProcedureVisitor* vis) const -> bool {
+  ASSERT(vis);
+  for (auto idx = 0; idx < procedures_->GetLength(); idx++) {
+    const auto proc = procedures_->Get(idx);
+    ASSERT(proc);
+    if (!vis->Visit(proc))
+      return false;
+  }
+  return true;
+}
+
+auto Namespace::VisitAllLambdaProcedures(ProcedureVisitor* vis) const -> bool {
+  ASSERT(vis);
+  for (auto idx = 0; idx < procedures_->GetLength(); idx++) {
+    const auto proc = procedures_->Get(idx);
+    ASSERT(proc);
+    if (!proc->IsLambda())
+      continue;
+    if (!vis->Visit(proc))
+      return false;
+  }
+  return true;
+}
+
+auto Namespace::VisitAllNativeProcedures(ProcedureVisitor* vis) const -> bool {
+  ASSERT(vis);
+  for (auto idx = 0; idx < procedures_->GetLength(); idx++) {
+    const auto proc = procedures_->Get(idx);
+    ASSERT(proc);
+    if (!proc->IsNative())
+      continue;
+    if (!vis->Visit(proc))
+      return false;
+  }
+  return true;
+}
+
 void Namespace::Init() {
   namespaces_ = Array<Namespace*>::New();
   ASSERT(namespaces_);
   InitClass();
-  InitNative<proc::gel_get_namespace>();
-  InitNative<proc::gel_get_namespaces>();
+  using namespace proc;
+  InitNative<gel_get_namespace>();
+  InitNative<gel_get_namespaces>();
+
+  InitNative<namespace_get_symbol>();
+  InitNative<namespace_get_owner>();
+  InitNative<namespace_get_macros>();
+  InitNative<namespace_get_lambdas>();
+  InitNative<namespace_get_native_procedures>();
+  InitNative<namespace_get_procedures>();
 }
 
 namespace proc {
-#define NAMESPACE_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(namespace_##Name)
-
 NATIVE_PROCEDURE_F(gel_get_namespace) {
   NativeArgument<0, Symbol> symbol(args);
   if (!symbol)
@@ -196,6 +290,166 @@ NATIVE_PROCEDURE_F(gel_get_namespaces) {
   });
   if (!Namespace::VisitAllNamespaces(&vis))
     return ThrowError("failed to visit Namespaces");
+  return Return(result);
+}
+
+#define NAMESPACE_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(namespace_##Name)
+
+NAMESPACE_PROCEDURE_F(get_owner) {
+  NativeArgument<0> value(args);
+  if (!value)
+    return Throw(value);
+  Namespace* target = nullptr;
+  if (value->IsNamespace()) {
+    target = value->AsNamespace();
+  } else if (value->IsSymbol()) {
+    target = Namespace::FindNamespace(value->AsSymbol());
+  }
+  if (!target) {
+    std::stringstream ss;
+    ss << "failed to find Namespace: " << target;
+    return ThrowError(ss);
+  }
+  ASSERT(target);
+  return Return(target->GetOwner());
+}
+
+NAMESPACE_PROCEDURE_F(get_symbol) {
+  NativeArgument<0> value(args);
+  if (!value)
+    return Throw(value);
+  Namespace* target = nullptr;
+  if (value->IsNamespace()) {
+    target = value->AsNamespace();
+  } else if (value->IsSymbol()) {
+    target = Namespace::FindNamespace(value->AsSymbol());
+  }
+  if (!target) {
+    std::stringstream ss;
+    ss << "failed to find Namespace: " << target;
+    return ThrowError(ss);
+  }
+  ASSERT(target);
+  return Return(target->GetSymbol());
+}
+
+NAMESPACE_PROCEDURE_F(get_macros) {
+  NativeArgument<0> value(args);
+  if (!value)
+    return Throw(value);
+  Namespace* target = nullptr;
+  if (value->IsNamespace()) {
+    target = value->AsNamespace();
+  } else if (value->IsSymbol()) {
+    target = Namespace::FindNamespace(value->AsSymbol());
+  }
+  if (!target) {
+    std::stringstream ss;
+    ss << "failed to find Namespace: " << target;
+    return ThrowError(ss);
+  }
+  ASSERT(target);
+  Object* result = Null();
+  MacroVisitorWrapper visitor([&result](Macro* macro) {
+    ASSERT(macro);
+    result = Cons(macro, result);
+    return true;
+  });
+  if (!target->VisitAllMacros(&visitor)) {
+    std::stringstream ss;
+    ss << "failed to get Macros for: " << target->ToString();
+    return ThrowError(ss);
+  }
+  return Return(result);
+}
+
+NAMESPACE_PROCEDURE_F(get_procedures) {
+  NativeArgument<0> value(args);
+  if (!value)
+    return Throw(value);
+  Namespace* target = nullptr;
+  if (value->IsNamespace()) {
+    target = value->AsNamespace();
+  } else if (value->IsSymbol()) {
+    target = Namespace::FindNamespace(value->AsSymbol());
+  }
+  if (!target) {
+    std::stringstream ss;
+    ss << "failed to find Namespace: " << target;
+    return ThrowError(ss);
+  }
+  ASSERT(target);
+  Object* result = Null();
+  ProcedureVisitorWrapper visitor([&result](Procedure* macro) {
+    ASSERT(macro);
+    result = Cons(macro, result);
+    return true;
+  });
+  if (!target->VisitAllProcedures(&visitor)) {
+    std::stringstream ss;
+    ss << "failed to get Procedures for: " << target->ToString();
+    return ThrowError(ss);
+  }
+  return Return(result);
+}
+
+NAMESPACE_PROCEDURE_F(get_lambdas) {
+  NativeArgument<0> value(args);
+  if (!value)
+    return Throw(value);
+  Namespace* target = nullptr;
+  if (value->IsNamespace()) {
+    target = value->AsNamespace();
+  } else if (value->IsSymbol()) {
+    target = Namespace::FindNamespace(value->AsSymbol());
+  }
+  if (!target) {
+    std::stringstream ss;
+    ss << "failed to find Namespace: " << target;
+    return ThrowError(ss);
+  }
+  ASSERT(target);
+  Object* result = Null();
+  ProcedureVisitorWrapper visitor([&result](Procedure* macro) {
+    ASSERT(macro);
+    result = Cons(macro, result);
+    return true;
+  });
+  if (!target->VisitAllLambdaProcedures(&visitor)) {
+    std::stringstream ss;
+    ss << "failed to get all Lambdas for: " << target->ToString();
+    return ThrowError(ss);
+  }
+  return Return(result);
+}
+
+NAMESPACE_PROCEDURE_F(get_native_procedures) {
+  NativeArgument<0> value(args);
+  if (!value)
+    return Throw(value);
+  Namespace* target = nullptr;
+  if (value->IsNamespace()) {
+    target = value->AsNamespace();
+  } else if (value->IsSymbol()) {
+    target = Namespace::FindNamespace(value->AsSymbol());
+  }
+  if (!target) {
+    std::stringstream ss;
+    ss << "failed to find Namespace: " << target;
+    return ThrowError(ss);
+  }
+  ASSERT(target);
+  Object* result = Null();
+  ProcedureVisitorWrapper visitor([&result](Procedure* macro) {
+    ASSERT(macro);
+    result = Cons(macro, result);
+    return true;
+  });
+  if (!target->VisitAllNativeProcedures(&visitor)) {
+    std::stringstream ss;
+    ss << "failed to get NativeProcedures for: " << target->ToString();
+    return ThrowError(ss);
+  }
   return Return(result);
 }
 

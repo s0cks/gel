@@ -181,8 +181,8 @@ NATIVE_PROCEDURE_F(gel_docs) {
     ss << "])";
     ss << std::endl;
     ss << "  ";
-    if (lambda->HasDocstring())
-      ss << lambda->GetDocstring()->Get();
+    if (lambda->HasDocs())
+      ss << lambda->GetDocs()->Get();
     return ReturnNew<String>(ss.str());
   } else if (func->IsNativeProcedure()) {
     const auto native = func->AsNativeProcedure();

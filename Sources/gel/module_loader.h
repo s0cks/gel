@@ -57,6 +57,14 @@ class ModuleLoader {
       return IsSuccess();
     }
 
+    auto operator->() const -> Module* {
+      return GetModule();
+    }
+
+    operator Module*() const {
+      return GetModule();
+    }
+
     friend auto operator<<(std::ostream& stream, const Result& rhs) -> std::ostream& {
       if (!rhs.IsSuccess())
         return stream << "error: " << rhs.GetError()->ToString();

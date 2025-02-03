@@ -5,13 +5,28 @@
 #include "gel/common.h"
 #include "gel/expr/expression.h"
 #include "gel/object.h"
+#include "gel/type_traits.h"
 
 namespace gel {
 class Parser;
+class Macro;
+DECLARE_VISITOR(Macro);
 class Macro : public Object {
   friend class Script;
   friend class Parser;
   friend class Module;
+  friend class Namespace;
+
+ public:
+  using Predicate = std::function<bool(Macro*)>;
+
+  template <typename T>
+  static inline auto IsNamed(T value, std::enable_if_t<gel::is_string_like<T>::value>* = nullptr) -> Predicate {
+    return [value](Macro* macro) {
+      ASSERT(macro);
+      return macro->GetSymbol()->Equals(value);
+    };
+  }
 
  private:
   Object* owner_ = nullptr;
@@ -127,6 +142,7 @@ class Macro : public Object {
   DECLARE_TYPE(Macro);
 
  private:
+  static void Init();
   static inline auto New() -> Macro* {
     return new Macro();
   }
@@ -136,6 +152,17 @@ class Macro : public Object {
     return new Macro(symbol, args, body);
   }
 };
+
+namespace proc {
+#define _DECLARE_MACRO_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(macro_##Name, "Macro:" Sym)
+#define DECLARE_MACRO_PROCEDURE(Name)       _DECLARE_MACRO_PROCEDURE(Name, #Name);
+
+_DECLARE_MACRO_PROCEDURE(get_owner, "get-owner");
+_DECLARE_MACRO_PROCEDURE(get_symbol, "get-symbol");
+
+#undef _DECLARE_NAMESPACE_PROCEDURE
+#undef DECLARE_NAMESPACE_PROCEDURE
+}  // namespace proc
 }  // namespace gel
 
 #endif  // GEL_MACRO_H

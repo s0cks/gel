@@ -1336,8 +1336,8 @@ auto Parser::ParseLambda(const Token::Kind kind, Lambda** result) -> ParseResult
   // body
   expr::ExpressionList body{};
   CHECK_RESULT(ParseExpressionList(body, false));
-  if (body.empty() && lambda->HasDocstring())
-    body.push_back(expr::LiteralExpr::New(lambda->GetDocstring()));  // TODO: should we remove the docstring
+  if (body.empty() && lambda->HasDocs())
+    body.push_back(expr::LiteralExpr::New(lambda->GetDocs()));  // TODO: should we remove the docstring
   lambda->SetBody(body);
   PopOwner();
   if (HasOwner()) {

@@ -20,9 +20,20 @@ class NativeArgument {
  private:
   gel::Object* value_ = nullptr;
 
+ protected:
   void SetValue(T* rhs) {
     ASSERT(rhs);
     value_ = rhs;
+  }
+
+  inline void SetError(Error* error) {
+    ASSERT(error);
+    value_ = error;
+  }
+
+  inline void SetError(const std::string& message) {
+    ASSERT(!message.empty());
+    return SetError(Error::New(message));
   }
 
  public:
@@ -30,16 +41,14 @@ class NativeArgument {
     ASSERT(Index >= 0 && (Index <= args.size() || !Required));
     const auto value = args[Index];
     if (!value) {
-      if (Required) {
-        value_ = Error::New(fmt::format("arg #{} to not be '()", Index));
-      }
+      if (Required)
+        SetError(fmt::format("arg #{} to not be '()", Index));
       return;
     }
-
+    ASSERT(value);
     if (!value->GetType()->IsInstanceOf(T::GetClass())) {
-      value_ = Error::New(
+      SetError(
           fmt::format("arg #{} `{}` is expected to be an instance of: `{}`", Index, (*value), T::GetClass()->GetName()->Get()));
-      return;
     }
     SetValue((T*)value);
   }
@@ -203,8 +212,6 @@ class NativeProcedure : public Procedure {
   friend class NativeProcedureEntry;
 
  private:
-  Array<Argument*>* args_ = nullptr;
-  String* docs_ = nullptr;
   NativeProcedureEntry* entry_ = nullptr;
 
   inline void SetEntry(NativeProcedureEntry* entry) {
@@ -222,16 +229,6 @@ class NativeProcedure : public Procedure {
   explicit NativeProcedure(Symbol* symbol) :
     Procedure(symbol) {}
 
-  void SetArgs(Array<Argument*>* args) {
-    ASSERT(args);
-    args_ = args;
-  }
-
-  void SetDocs(String* rhs) {
-    ASSERT(rhs);
-    docs_ = rhs;
-  }
-
   auto VisitPointers(PointerVisitor* vis) -> bool override;
   auto VisitPointerPointers(PointerPointerVisitor* vis) -> bool override;
 
@@ -242,38 +239,12 @@ class NativeProcedure : public Procedure {
     return true;
   }
 
-  auto GetArgs() const -> Array<Argument*>* {
-    return args_;
-  }
-
   auto GetEntry() const -> NativeProcedureEntry* {
     return entry_;
   }
 
   auto HasEntry() const -> bool {
     return GetEntry() != nullptr;
-  }
-
-  auto HasArgs() const -> bool {
-    return GetArgs() && GetNumberOfArgs() > 0;
-  }
-
-  inline auto GetNumberOfArgs() const -> uword {
-    ASSERT(args_);
-    return args_->GetLength();
-  }
-
-  auto GetDocs() const -> String* {
-    return docs_;
-  }
-
-  inline auto HasDocs() const -> bool {
-    return GetDocs() != nullptr;
-  }
-
-  auto GetArgAt(const uint64_t idx) const -> Argument* {
-    ASSERT(idx >= 0 && idx <= GetNumberOfArgs());
-    return args_->Get(idx);
   }
 
   DECLARE_TYPE(NativeProcedure);

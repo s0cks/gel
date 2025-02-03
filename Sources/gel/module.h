@@ -39,15 +39,20 @@ class Module : public Object {
   Lambda* init_ = nullptr;
   Array<Namespace*>* namespaces_ = nullptr;
 
-  static inline auto CreateDefaultNamespace(String* name) -> Namespace* {
+  static inline auto CreateDefaultNamespace(Module* m) -> Namespace* {
+    ASSERT(m);
+    const auto name = m->GetName();
     ASSERT(name);
-    return Namespace::New(Symbol::New(name), LocalScope::New());
+    const auto ns = Namespace::New(Symbol::New(name), LocalScope::New());
+    ASSERT(ns);
+    ns->SetOwner(m);
+    return ns;
   }
 
-  static inline auto CreateDefaultNamespaces(String* name) -> Array<Namespace*>* {
+  static inline auto CreateDefaultNamespaces(Module* m) -> Array<Namespace*>* {
     const auto namespaces = Array<Namespace*>::New();
     ASSERT(namespaces);
-    namespaces->Push(CreateDefaultNamespace(name));
+    namespaces->Push(CreateDefaultNamespace(m));
     return namespaces;
   }
 
@@ -59,7 +64,7 @@ class Module : public Object {
     SetName(name);
     SetInitialized(false);
     SetKernel(false);
-    SetNamespaces(CreateDefaultNamespaces(name));
+    SetNamespaces(CreateDefaultNamespaces(this));
   }
 
   void SetInit(Lambda* rhs) {

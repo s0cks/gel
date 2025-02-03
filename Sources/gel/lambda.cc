@@ -38,8 +38,8 @@ auto Lambda::VisitPointers(PointerVisitor* vis) -> bool {
     if (!vis->Visit(GetOwner()))
       return false;
   }
-  if (HasDocstring()) {
-    if (!vis->Visit(GetDocstring()))
+  if (HasDocs()) {
+    if (!vis->Visit(GetDocs()))
       return false;
   }
   return true;
@@ -48,12 +48,6 @@ auto Lambda::VisitPointers(PointerVisitor* vis) -> bool {
 auto Lambda::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
   ASSERT(vis);
   if (!Procedure::VisitPointerPointers(vis))
-    return false;
-  if (!VisitPointerPointer(vis, &owner_))
-    return false;
-  if (!VisitPointerPointer(vis, &docstring_))
-    return false;
-  if (!VisitPointerPointer(vis, &args_))
     return false;
   // TODO: visit body_
   return true;
@@ -66,13 +60,13 @@ auto Lambda::New(const ObjectList& args) -> Lambda* {
 auto Lambda::ToString() const -> std::string {
   ToStringHelper<Lambda> helper;
   if (HasSymbol())
-    helper.AddField("name", GetSymbol()->GetFullyQualifiedName());
+    helper.AddField("symbol", GetSymbol()->GetFullyQualifiedName());
   if (HasOwner())
     helper.AddField("owner", GetOwner());
   helper.AddField("args", GetArgs());
   helper.AddField("empty", IsEmpty());
-  if (HasDocstring())
-    helper.AddField("docs", GetDocstring());
+  if (HasDocs())
+    helper.AddField("docs", GetDocs());
   return helper;
 }
 }  // namespace gel

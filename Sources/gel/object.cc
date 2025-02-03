@@ -162,7 +162,7 @@ void Object::Init() {
   Pair::InitClass();
   Bool::Init();
   ArrayBase::InitClass();
-  Macro::InitClass();
+  Macro::Init();
   Error::InitClass();
   Set::InitClass();
   Expression::Init();

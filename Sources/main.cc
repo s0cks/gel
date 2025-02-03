@@ -139,6 +139,12 @@ auto main(int argc, char** argv) -> int {
   Parser::Init();
   Heap::Init();
   Runtime::Init();
+
+#ifdef GEL_DEBUG
+  DLOG(INFO) << "sizeof(Namespace): " << sizeof(Namespace);
+  DLOG(INFO) << "Namespace Class Allocation Size: " << Namespace::GetClass()->GetAllocationSize();
+#endif  // GEL_DEBUG
+
   const auto expr = GetExpressionFlag();
   if (expr)
     return Execute((*expr));

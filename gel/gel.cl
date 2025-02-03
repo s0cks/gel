@@ -3,10 +3,25 @@
     exprs))
 (defmacro printf [fmt args...]
   (print (format fmt args)))
+(defnative gel/get-version []
+  "Returns the current version of the gelrt.")
+(defnative gel/debug? []
+  "Returns whether or not this is a debug instance of gelrt.")
+(defnative gel/load-bindings [filename]
+  "Opens the bindings from shared library at path [filename].")
+(defnative format [pattern args...] ;; TODO: move to gel/ namespace
+    "Returns a formatted String using the supplied [pattern] and [args...].")
+(defnative print [value] ;; TODO: move to gel/ namespace
+  "Prints the supplied [value] to the console.")
+(defnative gel/docs? [o]
+  "Returns the docstring attached to the supplied Object [o].")
+(defnative type? [o]
+  "Returns the type of Object [o].")
+(defnative sizeof [o]
+  "Returns the size of Object [o] in bytes.")
 
 (printf "gel v{}" (gel/get-version))
 (debug-only
-  (printf "{} initialized" (Module:name this))
   (print "debug mode enabled."))
 
 (deftype Object
@@ -65,7 +80,23 @@
   "Returns the list of Namespaces.")
 (deftype Namespace
   (defnative get-symbol [ns]
-    "Returns the Symbol for Namespace [ns]."))
+    "Returns the Symbol for Namespace [ns].")
+  (defnative get-owner [ns]
+    "Returns the owner of Namespace [ns].")
+  (defnative get-macros [ns]
+    "Returns the list of Macros for Namespace [ns].")
+  (defnative get-procedures [ns]
+    "Returns the list of Procedures for Namespace [ns].")
+  (defnative get-lambdas [ns]
+    "Returns the list of Lambdas for Namespace [ns].")
+  (defnative get-native-procedures [ns]
+    "Returns the list of NativeProcedures for Namespace [ns]."))
+
+(deftype Macro
+  (defnative get-owner [m]
+    "Returns the owner if available for Macro [m].")
+  (defnative get-symbol [m]
+    "Returns the Symbol for Macro [m]."))
 
 (defnative gel/get-module [s]
   "Returns the Module for Symbol [s].")
@@ -75,77 +106,22 @@
   (defnative is-kernel? [m]
     "Returns whether or not Module [m] is a kernel Module."))
 
-(defnative gel/get-version []
-  "Returns the current version of the gelrt.")
-(defnative gel/debug? []
-  "Returns whether or not this is a debug instance of gelrt.")
-(defnative gel/load-bindings [filename]
-  "Opens the bindings from shared library at path [filename].")
-(defnative format [pattern args...] ;; TODO: move to gel/ namespace
-    "Returns a formatted String using the supplied [pattern] and [args...].")
-(defnative print [value] ;; TODO: move to gel/ namespace
-  "Prints the supplied [value] to the console.")
-(defnative gel/docs? [o]
-  "Returns the docstring attached to the supplied Object [o].")
-(defnative type? [o]
-  "Returns the type of Object [o].")
+(defnative set-car! [p v] ;; TODO: create instruction
+  "Sets the first value of Pair [p] to [v].")
+(defnative set-cdr! [p v] ;; TODO: create instruction
+  "Sets the second value of Pair [p] to [v].")
 
-(defnative sizeof [o]
-  "Returns the size of Object [o] in bytes.")
-;; TODO: remove (list ...)
-(defnative list [values...]
-  "Returns a new list using the supplied [values...]")
 ;; Random
 (defnative random []
   "Returns a random Long.")
 (defnative random:range [min max]
   "Returns a random Long in the range of [min] to [max].")
-(defnative set-car! [p v]
-  "Sets the first value of Pair [p] to [v].")
-(defnative set-cdr! [p v]
-  "Sets the second value of Pair [p] to [v].")
 
 ;; ---------------------------------------------------------------------------------
 ;; Event Loop
 ;; ---------------------------------------------------------------------------------
 (defnative gel/get-event-loop []
   "Returns the EventLoop for the current thread.")
-;; ---------------------------------------------------------------------------------
-
-
-;; ---------------------------------------------------------------------------------
-;; Debug Only - TODO: Reduce visibility
-;; ---------------------------------------------------------------------------------
-(defnative gel/print-args [func]
-  "Pretty prints the arguments of function [func].")
-(defnative gel/minor-gc! []
-  "Performs a minor garbage collection cycle.")
-(defnative gel/major-gc! []
-  "Performs a major garbage collection cycle.")
-(defnative gel/get-frame []
-  "Returns the current StackFrame from gelrt.")
-(defnative gel/print-st []
-  "Prints the current StackTrace for the gelrt.")
-(defnative gel/get-locals []
-  "Returns the current LocalScope from gelrt.")
-
-(defnative gel/get-target-triple []
-  "Returns the current target triple for gelrt.")
-(defnative gel/get-natives []
-  "Returns a list of native functions register in gelrt.")
-(defnative gel/compile-time? [f]
-  "Returns the compilation time of a function [f] in nanoseconds.")
-(defnative gel/print-roots []
-  "Prints the roots for the GC.")
-(defn gel/inspect [o]
-  (when (#Procedure? o)
-    (print (format "compiled in {}ns." (gel:compile-time? o)))))
-(defnative gel/print-heap []
-  "Prints the heap information to the terminal.")
-(defnative gel/print-new-zone []
-  "Prints the heap's new zone information to the terminal.")
-(defnative gel/print-old-zone []
-  "Prints the heap's old zone information to the terminal.")
 ;; ---------------------------------------------------------------------------------
 
 ;; ---------------------------------------------------------------------------------
