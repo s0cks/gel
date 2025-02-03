@@ -4,47 +4,69 @@
 
 #include "gel/common.h"
 #include "gel/local_scope.h"
+#include "gel/module.h"
 #include "gel/runtime.h"
+#include "gel/thread_local.h"
 
 namespace gel {
-namespace fs = std::filesystem;
+using Result = ModuleLoader::Result;
 
-auto ModuleLoader::LoadModule(const fs::path& p) -> Module* {
-  ASSERT(fs::is_regular_file(p));
-  const auto module_name = GetFilename(p);
-  ASSERT(!module_name.empty());
-  if (Module::IsLoaded(module_name)) {
-    DVLOG(10) << "skipping loading duplicate Module named `" << module_name << "`";
-    return nullptr;
-  }
-  DVLOG(10) << "loading the `" << module_name << "` Module....";
-  const auto m = Module::LoadFrom(p);
-  LOG_IF(ERROR, !m) << "failed to load the `" << module_name << "` Module from: " << p;
-  if (m && m->HasInit())
-    LOG_IF(ERROR, !m->Init(GetRuntime())) << "failed to initialize " << m << ".";
-  return m;
+auto KernelModuleLoader::LoadModule(std::string path) -> Result {
+  ASSERT(!path.empty());
+  ModulePath module_path = GetModulePath(path);
+  if (!module_path)
+    return CannotLoadFrom(module_path);
+  DVLOG(1) << "loading kernel Module from: " << module_path << "....";
+  return LoadAndInitialize(module_path);
 }
 
-auto DirModuleLoader::LoadAllModules() -> bool {
-  for (const auto& entry : fs::directory_iterator(GetDir())) {
-    if (!fs::is_regular_file(entry)) {
-      DVLOG(1000) << "skipping: " << entry.path();
-      continue;
-    }
-    const auto& path = entry.path();
-    if (!HasGelExtension(path)) {
-      DVLOG(1000) << "skipping: " << path;
-      continue;
-    }
-    const auto m = LoadModule(path);
-    if (!m)
-      continue;
-    DVLOG(10) << m << " loaded!";
-    if (VLOG_IS_ON(100)) {
-      DLOG(INFO) << m->GetName() << " Scope:";
-      PRINT_SCOPE(INFO, m->GetScope());
-    }
+static ThreadLocal<KernelModuleLoader> kKernelModuleLoader;
+static ThreadLocal<ModuleLoader> kModuleLoader;
+
+void KernelModuleLoader::Init() {
+  const auto& home = GetHomeEnvVar();
+  LOG_IF(FATAL, !home) << "cannot initialize thread KernelModuleLoader, cannot find " << home.name() << " environment variable.";
+  kKernelModuleLoader.Set(new KernelModuleLoader(home.path().value()));
+}
+
+auto BaseModuleLoader::LoadAndInitialize(const ModulePath& module_path) -> Result {
+  ASSERT(module_path);
+  const auto name = module_path.GetModuleName();
+  const auto new_module = Module::LoadFrom(module_path.path);
+  if (!new_module)
+    return FailedToLoadFrom(name, module_path, IsKernel());
+  ASSERT(new_module);
+  new_module->SetKernel(IsKernel());
+  if (new_module->HasInit()) {
+    if (!new_module->Init(GetRuntime()))
+      return FailedToInitialize(new_module, module_path, IsKernel());
+    DVLOG(10) << new_module->ToString() << " is initialized!";
   }
-  return true;
+  return Result(true, new_module);
+}
+
+auto ThreadModuleLoader::LoadModule(std::string path) -> Result {
+  ASSERT(!path.empty());
+  ModulePath module_path = GetModulePath(path);
+  if (!module_path)
+    return CannotLoadFrom(module_path);
+  DVLOG(1) << "loading kernel Module from: " << module_path << "....";
+  return LoadAndInitialize(module_path);
+}
+
+auto GetThreadKernelModuleLoader() -> KernelModuleLoader* {
+  ASSERT(kKernelModuleLoader);
+  return kKernelModuleLoader.Get();
+}
+
+void ThreadModuleLoader::Init() {
+  const auto& home = GetHomeEnvVar();
+  LOG_IF(FATAL, !home) << "cannot initialize thread KernelModuleLoader, cannot find " << home.name() << " environment variable.";
+  kModuleLoader.Set(new ThreadModuleLoader(home.path().value()));
+}
+
+auto GetThreadModuleLoader() -> ModuleLoader* {
+  ASSERT(kModuleLoader);
+  return kModuleLoader.Get();
 }
 }  // namespace gel

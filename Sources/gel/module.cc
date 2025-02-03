@@ -3,6 +3,7 @@
 #include "gel/array.h"
 #include "gel/common.h"
 #include "gel/macro.h"
+#include "gel/native_procedure.h"
 #include "gel/parser.h"
 #include "gel/platform.h"
 #include "gel/pointer.h"
@@ -89,8 +90,6 @@ auto Module::New(String* name, LocalScope* scope) -> Module* {
   ASSERT(name);
   ASSERT(scope);
   const auto m = new Module(name, scope);
-  ASSERT(m && kFieldInitialized->GetOffset() > 0);
-  m->SetField(kFieldInitialized, Bool::False());
   return Register(m);
 }
 
@@ -145,6 +144,12 @@ auto Module::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
   if (!GetName()->raw_ptr()->Equals(name))
     SetName(name->As<String>());
 
+  auto kernel = GetKernelField()->raw_ptr();
+  if (!vis->Visit(&kernel))
+    return false;
+  if (!GetKernelField()->raw_ptr()->Equals(kernel))
+    SetKernelField(kernel->As<Bool>());
+
   auto initialized = GetInitialized()->raw_ptr();
   if (!vis->Visit(&initialized))
     return false;
@@ -153,6 +158,7 @@ auto Module::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
   return true;
 }
 
+Field* Module::kKernelField = nullptr;
 Field* Module::kFieldInitialized = nullptr;
 Field* Module::kNameField = nullptr;
 auto Module::CreateClass() -> Class* {
@@ -161,6 +167,8 @@ auto Module::CreateClass() -> Class* {
   ASSERT(cls);
   kNameField = cls->AddField("name");
   ASSERT(kNameField);
+  kKernelField = cls->AddField("kernel");
+  ASSERT(kKernelField);
   kFieldInitialized = cls->AddField("initialized");
   ASSERT(kFieldInitialized);
   return cls;
@@ -194,6 +202,8 @@ auto Module::VisitAllModulePointerPointers(PointerPointerVisitor* vis) -> bool {
     return false;
   if (!VisitPointerPointer(vis, &kNameField))
     return false;
+  if (!VisitPointerPointer(vis, &kKernelField))
+    return false;
   if (!VisitPointerPointer(vis, &kFieldInitialized))
     return false;
   return true;
@@ -204,5 +214,44 @@ void Module::Init() {
   ASSERT(modules_ == nullptr);
   modules_ = Array<Module*>::New();
   ASSERT(modules_);
+
+  using namespace proc;
+  InitNative<gel_get_modules>();
+  InitNative<gel_get_module>();
+  InitNative<module_is_kernel>();
 }
+
+namespace proc {
+NATIVE_PROCEDURE_F(gel_get_module) {
+  NativeArgument<0, Symbol> symbol(args);
+  if (!symbol)
+    return Throw(symbol);
+  return Return(Module::Find(symbol->GetFullyQualifiedName()));
+}
+
+NATIVE_PROCEDURE_F(gel_get_modules) {
+  std::vector<Module*> modules{};
+  Module::GetAllLoadedModules(modules);
+  return Return(ToList((const ObjectList&)modules));  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+}
+
+NATIVE_PROCEDURE_F(module_is_kernel) {
+  NativeArgument<0> value(args);
+  if (!value)
+    return Throw(value);
+  Module* m = nullptr;
+  if (value->IsSymbol()) {
+    m = Module::Find(value->AsSymbol()->GetFullyQualifiedName());
+  } else if (value->IsModule()) {
+    m = value->AsModule();
+  }
+  if (!m) {
+    std::stringstream ss;
+    ss << "failed to find Module for: " << value->ToString();
+    return ThrowError(ss);
+  }
+  return ReturnBool(m->IsKernel());
+}
+
+}  // namespace proc
 }  // namespace gel

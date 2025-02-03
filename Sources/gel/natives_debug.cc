@@ -42,12 +42,6 @@ NATIVE_PROCEDURE_F(gel_print_heap) {
   return Return();
 }
 
-NATIVE_PROCEDURE_F(gel_get_modules) {
-  std::vector<Module*> modules{};
-  Module::GetAllLoadedModules(modules);
-  return Return(ToList((const ObjectList&)modules));  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-}
-
 NATIVE_PROCEDURE_F(gel_print_new_zone) {
   const auto heap = GetCurrentThreadHeap();
   if (!heap)

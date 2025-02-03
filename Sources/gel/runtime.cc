@@ -59,16 +59,15 @@ Runtime::Runtime(LocalScope* scope) :
 namespace fs = std::filesystem;
 
 void Runtime::LoadKernelModule() {
-  const auto home = kHomeVar.value();
-  if (!home) {
-    LOG(WARNING) << "${GEL_HOME} environment variable not set, skipping loading kernel.";
+  const auto loader = GetThreadKernelModuleLoader();
+  ASSERT(loader);
+  const auto result = loader->LoadModule("gel.cl");
+  if (!result) {
+    LOG(FATAL) << "failed to load kernel module: " << result;
     return;
   }
-  const auto kernel = Module::LoadFrom(fmt::format("{}/gel.cl", (*home)));
-  LOG_IF(FATAL, !(kernel && kernel->IsKernel())) << "failed to load the kernel Module.";
-  if (kernel->HasInit())
-    LOG_IF(FATAL, !kernel->Init(this)) << "failed to initialize the kernel Module: " << kernel;
-
+  const auto kernel = result.GetModule();
+  ASSERT(kernel && kernel->IsKernel());
   if (VLOG_IS_ON(100)) {
     DLOG(INFO) << "gel Module scope: ";
     PRINT_SCOPE(INFO, kernel->GetScope());
@@ -262,8 +261,11 @@ void Runtime::Init(const bool load_kernel) {
   const auto runtime = new Runtime();
   runtime_.Set(runtime);
   Object::Init();
-  if (load_kernel && FLAGS_kernel)
+  if (load_kernel && FLAGS_kernel) {
+    KernelModuleLoader::Init();
     runtime->LoadKernelModule();
+  }
+  ThreadModuleLoader::Init();
 
 #ifdef GEL_DEBUG
   const auto stop_ts = Clock::now();

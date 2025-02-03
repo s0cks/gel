@@ -44,7 +44,6 @@ class Runtime {
   friend class Interpreter;
   friend class RuntimeTest;
   friend class ModuleLoader;
-  friend class DirModuleLoader;
   friend class NativeProcedure;
   friend class RuntimeScopeScope;
   friend class StackFrameIterator;

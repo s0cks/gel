@@ -252,6 +252,11 @@ class EnvironmentVariable {
     return value ? std::optional<std::string>{{value}} : std::nullopt;
   }
 
+  auto path() const -> std::optional<std::filesystem::path> {
+    const auto value = getenv(name_.data());
+    return value ? std::optional<std::filesystem::path>{value} : std::nullopt;
+  }
+
   operator bool() const {
     return exists();
   }

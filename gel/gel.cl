@@ -67,6 +67,14 @@
   (defnative get-symbol [ns]
     "Returns the Symbol for Namespace [ns]."))
 
+(defnative gel/get-module [s]
+  "Returns the Module for Symbol [s].")
+(defnative gel/get-modules []
+  "Returns the list of Modules.")
+(deftype Module
+  (defnative is-kernel? [m]
+    "Returns whether or not Module [m] is a kernel Module."))
+
 (defnative gel/get-version []
   "Returns the current version of the gelrt.")
 (defnative gel/debug? []
@@ -77,10 +85,13 @@
     "Returns a formatted String using the supplied [pattern] and [args...].")
 (defnative print [value] ;; TODO: move to gel/ namespace
   "Prints the supplied [value] to the console.")
-(defnative sizeof [o]
-  "Returns the size of Object [o] in bytes.")
 (defnative gel/docs? [o]
   "Returns the docstring attached to the supplied Object [o].")
+(defnative type? [o]
+  "Returns the type of Object [o].")
+
+(defnative sizeof [o]
+  "Returns the size of Object [o] in bytes.")
 ;; TODO: remove (list ...)
 (defnative list [values...]
   "Returns a new list using the supplied [values...]")
@@ -89,8 +100,6 @@
   "Returns a random Long.")
 (defnative random:range [min max]
   "Returns a random Long in the range of [min] to [max].")
-(defnative type? [o]
-  "Returns the type of Object [o].")
 (defnative set-car! [p v]
   "Sets the first value of Pair [p] to [v].")
 (defnative set-cdr! [p v]
@@ -120,8 +129,6 @@
 (defnative gel/get-locals []
   "Returns the current LocalScope from gelrt.")
 
-(defnative ns:get [nsOrSym s]
-  "Returns the value for Symbol [s] in Namespace [nsOrSym].")
 (defnative gel/get-target-triple []
   "Returns the current target triple for gelrt.")
 (defnative gel/get-natives []
@@ -139,12 +146,6 @@
   "Prints the heap's new zone information to the terminal.")
 (defnative gel/print-old-zone []
   "Prints the heap's old zone information to the terminal.")
-(defnative gel/get-fields [cls]
-  "Returns a list of Fields for Class [cls].")
-(defmacro assert [test m]
-  "Assert that Bool [test] is true, if not throw an Error w/ message [m]."
-  (when (and (gel/debug?) (not test))
-    (throw (Error m))))
 ;; ---------------------------------------------------------------------------------
 
 ;; ---------------------------------------------------------------------------------

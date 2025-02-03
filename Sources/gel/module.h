@@ -31,7 +31,8 @@ DECLARE_VISITOR_WRAPPER(Module, Module*);
 class Module : public Object {
   friend class Parser;
   friend class Runtime;  // TODO: revoke
-  friend class ModuleLoader;
+  friend class BaseModuleLoader;
+  friend class KernelModuleLoader;
 
  private:
   LocalScope* scope_;
@@ -56,6 +57,8 @@ class Module : public Object {
     scope_(scope) {
     ASSERT(scope_);
     SetName(name);
+    SetInitialized(false);
+    SetKernel(false);
     SetNamespaces(CreateDefaultNamespaces(name));
   }
 
@@ -96,6 +99,21 @@ class Module : public Object {
   auto CreateInitFunc(const expr::ExpressionList& body) -> Lambda*;
 
   void AddChild(Object* rhs) override;
+
+  auto GetKernelField() const -> Bool* {
+    ASSERT(kKernelField);
+    return GetField(kKernelField)->AsBool();
+  }
+
+  void SetKernelField(Bool* rhs) {
+    ASSERT(kKernelField);
+    ASSERT(rhs);
+    return SetField(kKernelField, rhs);
+  }
+
+  void SetKernel(const bool rhs) {
+    return SetKernelField(Bool::Box(rhs));
+  }
 
  public:
   ~Module() override = default;
@@ -154,12 +172,13 @@ class Module : public Object {
   }
 
   auto IsKernel() const -> bool {
-    return HasName() && GetName()->Equals("gel");
+    return GetKernelField()->Get();
   }
 
   DECLARE_TYPE(Module);
 
  private:
+  static Field* kKernelField;
   static Field* kFieldInitialized;
   static Field* kNameField;
   static inline auto IsNamed(std::string name) -> std::function<bool(Module*)> {
@@ -184,6 +203,13 @@ class Module : public Object {
     return Find(name) != nullptr;
   }
 };
+
+namespace proc {
+_DECLARE_NATIVE_PROCEDURE(gel_get_modules, "gel/get-modules");
+_DECLARE_NATIVE_PROCEDURE(gel_get_module, "gel/get-module");
+
+_DECLARE_NATIVE_PROCEDURE(module_is_kernel, "Module:is-kernel?");
+}  // namespace proc
 }  // namespace gel
 
 #endif  // GEL_MODULE_H
