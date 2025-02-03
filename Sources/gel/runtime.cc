@@ -64,20 +64,19 @@ void Runtime::LoadKernelModule() {
     LOG(WARNING) << "${GEL_HOME} environment variable not set, skipping loading kernel.";
     return;
   }
-  const auto kernel = Module::LoadFrom(fmt::format("{}/_kernel.cl", (*home)));
-  LOG_IF(FATAL, !(kernel && kernel->IsKernel())) << "failed to load the _kernel Module.";
+  const auto kernel = Module::LoadFrom(fmt::format("{}/gel.cl", (*home)));
+  LOG_IF(FATAL, !(kernel && kernel->IsKernel())) << "failed to load the kernel Module.";
   if (kernel->HasInit())
-    LOG_IF(FATAL, !kernel->Init(this)) << "failed to initialize the _kernel Module: " << kernel;
+    LOG_IF(FATAL, !kernel->Init(this)) << "failed to initialize the kernel Module: " << kernel;
 
   if (VLOG_IS_ON(100)) {
-    DLOG(INFO) << "_kernel Module scope: ";
+    DLOG(INFO) << "gel Module scope: ";
     PRINT_SCOPE(INFO, kernel->GetScope());
   }
   GetInitScope()->AddAll(kernel->GetScope());
-  const auto kernel_ns = kernel->FindNamespace("_kernel");
-  ASSERT(kernel_ns);
+  const auto kernel_ns = kernel->GetDefaultNamespace();
   if (VLOG_IS_ON(100)) {
-    DLOG(INFO) << "_kernel Namespace scope: ";
+    DLOG(INFO) << "gel Namespace scope: ";
     PRINT_SCOPE(INFO, kernel_ns->GetScope());
   }
   GetInitScope()->AddAll(kernel_ns->GetScope());
@@ -260,7 +259,6 @@ void Runtime::Init(const bool load_kernel) {
   const auto start_ts = Clock::now();
 #endif  // GEL_DEBUG
 
-  DLOG(INFO) << "initializing runtime....";
   const auto runtime = new Runtime();
   runtime_.Set(runtime);
   Object::Init();

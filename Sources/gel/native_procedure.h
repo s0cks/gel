@@ -150,7 +150,6 @@ class NativeProcedureEntry {
 
   inline auto Throw(Error* error) const -> bool {
     ASSERT(error);
-    LOG(ERROR) << "error: " << error->ToString();
     return Return(error);
   }
 

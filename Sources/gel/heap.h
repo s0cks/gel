@@ -10,6 +10,7 @@
 namespace gel {
 static constexpr const auto kLargeObjectSize = 4 * 1024;
 class Heap {
+  friend class Class;
   friend class Collector;
   DEFINE_NON_COPYABLE_TYPE(Heap);
 

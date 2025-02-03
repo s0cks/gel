@@ -158,6 +158,22 @@ class Tag {
     return stream;
   }
 
+  auto operator==(const Tag& rhs) const -> bool {
+    return raw() == rhs.raw();
+  }
+
+  auto operator==(const RawTag& rhs) const -> bool {
+    return raw() == rhs;
+  }
+
+  auto operator!=(const Tag& rhs) const -> bool {
+    return raw() != rhs.raw();
+  }
+
+  auto operator!=(const RawTag& rhs) const -> bool {
+    return raw() != rhs;
+  }
+
   auto operator&(const Tag& rhs) const -> Tag {
     return raw() & rhs.raw();
   }
@@ -181,6 +197,10 @@ class Tag {
 
   static inline constexpr auto Old(const uword size) -> Tag {
     return kInvalidTag | OldBit::Encode(true) | SizeField::Encode(size);
+  }
+
+  static inline constexpr auto OldFree(const uword size) -> Tag {
+    return kInvalidTag | OldBit::Encode(true) | SizeField::Encode(size) | FreeBit::Encode(true);
   }
 };
 }  // namespace gel

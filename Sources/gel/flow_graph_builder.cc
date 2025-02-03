@@ -209,7 +209,7 @@ auto EffectVisitor::VisitCaseExpr(expr::CaseExpr* expr) -> bool {
 
     ASSERT(for_clause.GetEntryInstr() != nullptr && for_clause.GetEntryInstr()->IsEntryInstr());
     const auto target = for_clause.GetEntryInstr()->AsEntryInstr();
-    const auto cmp = ir::BinaryOpInstr::NewEquals(for_test.GetValue(), for_test.GetValue());  // TODO: fix this
+    const auto cmp = ir::BinaryOpInstr::NewEq(for_test.GetValue(), for_test.GetValue());  // TODO: fix this
     for_test.Add(cmp);
     const auto branch = ir::BranchInstr::BranchTrue(target, join);
     for_test.Add(branch);
@@ -698,7 +698,7 @@ auto EffectVisitor::VisitCondExpr(CondExpr* expr) -> bool {
     if (clause->GetKey()->IsBinaryOpExpr()) {
       const auto cond = clause->GetKey()->AsBinaryOpExpr();
       ASSERT(cond);
-      if (cond->IsEqualsOp()) {
+      if (cond->IsEqOp()) {
         // lhs
         ValueVisitor for_left(GetOwner());
         LOG_IF(FATAL, !cond->GetLeft()->Accept(&for_left)) << "failed to visit: " << cond->GetLeft();

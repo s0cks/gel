@@ -179,6 +179,7 @@ class OldZone : public Zone {
     return free_list_;
   }
 
+  auto VisitAllPointers(PointerVisitor* vis, const Pointer::Predicate& filter = Pointer::AnyTag()) const -> bool;
   auto TryAllocatePointer(const uword size) -> Pointer*;
   auto TryAllocate(const uword size) -> uword override;
 

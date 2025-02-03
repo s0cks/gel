@@ -17,12 +17,14 @@
 #include <utility>
 
 #include "gel/allocator.h"
+#include "gel/binary_op.h"
 #include "gel/common.h"
 #include "gel/platform.h"
 #include "gel/region.h"
 #include "gel/rx.h"
 #include "gel/type.h"
 #include "gel/type_traits.h"
+#include "gel/unary_op.h"
 
 namespace gel {
 namespace proc {
@@ -64,13 +66,10 @@ class Object : public HeapObject {
   virtual auto GetType() const -> Class* = 0;
   virtual auto HashCode() const -> uword = 0;
   virtual auto Equals(Object* rhs) const -> bool = 0;
-  virtual auto Add(Object* rhs) const -> Object*;
-  virtual auto Sub(Object* rhs) const -> Object*;
-  virtual auto Mul(Object* rhs) const -> Object*;
-  virtual auto Div(Object* rhs) const -> Object*;
-  virtual auto Mod(Object* rhs) const -> Object*;
-  virtual auto And(Object* rhs) const -> Object*;
-  virtual auto Or(Object* rhs) const -> Object*;
+
+#define DECLARE_BINARY_OP(Name) virtual auto Name(Object* rhs) const -> Object*;
+  FOR_EACH_BINARY_OP(DECLARE_BINARY_OP)
+
   virtual auto Compare(Object* rhs) const -> int;
 
   auto GetField(Field* field) const -> Object* {
@@ -297,8 +296,8 @@ class Bool : public Object {
     return Get() ? False() : True();
   }
 
-  auto And(Object* rhs) const -> Object* override;
-  auto Or(Object* rhs) const -> Object* override;
+  auto BinaryOr(Object* rhs) const -> Object* override;
+  auto BinaryAnd(Object* rhs) const -> Object* override;
 
   DECLARE_TYPE(Bool);
 
@@ -379,10 +378,10 @@ class Long : public Number {
   }
 
   auto Add(Object* rhs) const -> Object* override;
-  auto Sub(Object* rhs) const -> Object* override;
-  auto Mul(Object* rhs) const -> Object* override;
-  auto Div(Object* rhs) const -> Object* override;
-  auto Mod(Object* rhs) const -> Object* override;
+  auto Subtract(Object* rhs) const -> Object* override;
+  auto Multiply(Object* rhs) const -> Object* override;
+  auto Divide(Object* rhs) const -> Object* override;
+  auto Modulus(Object* rhs) const -> Object* override;
   auto Compare(Object* rhs) const -> int override;
   DECLARE_TYPE(Long);
 
@@ -407,9 +406,9 @@ class Double : public Number {
   }
 
   auto Add(Object* rhs) const -> Object* override;
-  auto Sub(Object* rhs) const -> Object* override;
-  auto Mul(Object* rhs) const -> Object* override;
-  auto Div(Object* rhs) const -> Object* override;
+  auto Subtract(Object* rhs) const -> Object* override;
+  auto Multiply(Object* rhs) const -> Object* override;
+  auto Divide(Object* rhs) const -> Object* override;
   DECLARE_TYPE(Double);
 
  public:
@@ -665,7 +664,7 @@ static inline auto IsNull(Object* rhs) -> bool {
 static inline auto BinaryAnd(Object* lhs, Object* rhs) -> Object* {
   ASSERT(lhs);
   ASSERT(rhs);
-  return lhs->And(rhs);
+  return lhs->BinaryAnd(rhs);
 }
 
 static inline auto Cons(Object* lhs, Object* rhs) -> Object* {

@@ -14,29 +14,6 @@
 #include "gel/symbol.h"
 #include "gel/variable.h"
 
-#define FOR_EACH_UNARY_OP(V) \
-  V(Not)                     \
-  V(Car)                     \
-  V(Cdr)                     \
-  V(Nonnull)                 \
-  V(Null)
-
-#define FOR_EACH_BINARY_OP(V) \
-  V(Add)                      \
-  V(Subtract)                 \
-  V(Multiply)                 \
-  V(Divide)                   \
-  V(Modulus)                  \
-  V(Equals)                   \
-  V(BinaryAnd)                \
-  V(BinaryOr)                 \
-  V(GreaterThan)              \
-  V(GreaterThanEqual)         \
-  V(LessThan)                 \
-  V(LessThanEqual)            \
-  V(Cons)                     \
-  V(InstanceOf)
-
 #define FOR_EACH_EXPRESSION_NODE(V) \
   V(LiteralExpr)                    \
   V(UnaryOpExpr)                    \
@@ -314,7 +291,7 @@ class LiteralExpr : public Expression {
   }
 
   auto IsConstantExpr() const -> bool override {
-    return true;
+    return !IsLiteralSymbol();
   }
 
   auto EvalToConstant(LocalScope* scope) const -> Object* override {

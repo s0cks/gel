@@ -1,6 +1,4 @@
 (gel/load-bindings "math")
-
-(def PI 3.141592654)
 (ns math
   (defnative acos [a])
   (defnative asin [a])
@@ -12,13 +10,16 @@
   (defnative log [a])
   (defnative log10 [a])
   (defnative pow [a b])
-  ; (def PI 3.141592654)
   (defnative round [a])
   (defnative sin [a])
   (defnative sinh [a])
   (defnative sqrt [a])
   (defnative tan [a])
   (defnative tanh [a])
+
+  (def PI 3.141592654)
+  (def TAU (* PI 2.0))
+  (def TWENTY (* 10 2))
 
   (defn to-radians [degs]
     "Converts radians to degrees."

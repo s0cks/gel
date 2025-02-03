@@ -1038,7 +1038,7 @@ auto Parser::NextToken() -> const Token& {
       return NextToken(Token::kModulus);
     case '=':
       Advance();
-      return NextToken(Token::kEquals);
+      return NextToken(Token::kEq);
     case '&':
       Advance();
       return NextToken(Token::kBinaryAnd);
@@ -1307,8 +1307,15 @@ auto Parser::ParseLambda(const Token::Kind kind, Lambda** result) -> ParseResult
     ClearDispatched();
     lambda->SetScope(scope);
     PopOwner();
-    if (HasOwner())
-      GetOwner()->AddChild(lambda);
+    if (HasOwner()) {
+      if (GetOwner()->IsModule()) {
+        const auto default_namespace = GetOwner()->AsModule()->GetDefaultNamespace();
+        ASSERT(default_namespace);
+        default_namespace->AddChild(lambda);
+      } else {
+        GetOwner()->AddChild(lambda);
+      }
+    }
     (*result) = lambda;
     return true;
   }
@@ -1333,8 +1340,15 @@ auto Parser::ParseLambda(const Token::Kind kind, Lambda** result) -> ParseResult
     body.push_back(expr::LiteralExpr::New(lambda->GetDocstring()));  // TODO: should we remove the docstring
   lambda->SetBody(body);
   PopOwner();
-  if (HasOwner())
-    GetOwner()->AddChild(lambda);
+  if (HasOwner()) {
+    if (GetOwner()->IsModule()) {
+      const auto default_namespace = GetOwner()->AsModule()->GetDefaultNamespace();
+      ASSERT(default_namespace);
+      default_namespace->AddChild(lambda);
+    } else {
+      GetOwner()->AddChild(lambda);
+    }
+  }
   (*result) = lambda;
   return true;
 }
@@ -1562,9 +1576,12 @@ auto Parser::ParseDef(expr::Expression** result) -> ParseResult {
   CHECK_RESULT(ParseExpression(&value));
   ASSERT(value);
   if (value->IsConstantExpr()) {
-    local->SetValue(value->EvalToConstant(scope));
+    const auto const_value = value->EvalToConstant(scope);
+    ASSERT(const_value);
+    local->SetValue(const_value);
     return true;
   }
+  DLOG(INFO) << "creating store local for: " << local->ToString();
   (*result) = expr::StoreLocalExpr::New(local, value);
   return true;
 }
@@ -1645,8 +1662,6 @@ auto Parser::ParseMacro(Macro** result) -> ParseResult {
     body.push_back(expr::LiteralExpr::New(macro->GetDocstring()));
   macro->SetBody(body);
   PopOwner();
-  if (HasOwner())
-    GetOwner()->AddChild(macro);
   (*result) = macro;
   return true;
 }
@@ -1664,6 +1679,15 @@ auto Parser::ParseDefMacro(LocalVariable** result) -> ParseResult {
     return false;
   }
   (*result) = local;
+  if (HasOwner()) {
+    if (GetOwner()->IsModule()) {
+      const auto default_namespace = GetOwner()->AsModule()->GetDefaultNamespace();
+      ASSERT(default_namespace);
+      default_namespace->AddChild(macro);
+    } else {
+      GetOwner()->AddChild(macro);
+    }
+  }
   return true;
 }
 
@@ -1688,7 +1712,6 @@ auto Parser::ParseNamespace(Namespace** result) -> ParseResult {
   if (!init_body.empty()) {
     const auto init = ns->CreateInit(init_body);
     ASSERT(init);
-    DVLOG(1000) << "created init function for " << ns << ": " << init;
   }
   PopOwner();
   if (HasOwner())
@@ -1752,8 +1775,15 @@ auto Parser::ParseDefNative(LocalVariable** local) -> ParseResult {
     (*local) = nullptr;
     return ReturnError(ss, start_pos);
   }
-  if (HasOwner() && !GetOwner()->IsClass())
-    GetOwner()->AddChild(native);
+  if (HasOwner()) {
+    if (GetOwner()->IsClass()) {
+      GetOwner()->AddChild(native);
+    } else if (GetOwner()->IsModule()) {
+      const auto default_namespace = GetOwner()->AsModule()->GetDefaultNamespace();
+      ASSERT(default_namespace);
+      default_namespace->AddChild(native);
+    }
+  }
   DVLOG(1000) << "created local " << *(*local) << " for native: " << native;
   return true;
 }
@@ -1779,7 +1809,7 @@ void Parser::Init() {
   DEF_TOKEN("and", Token::kBinaryAnd);
   DEF_TOKEN("or", Token::kBinaryOr);
   DEF_TOKEN("throw", Token::kThrowExpr);
-  DEF_TOKEN("eq?", Token::kEquals);
+  DEF_TOKEN("eq?", Token::kEq);
   DEF_TOKEN("instanceof?", Token::kInstanceOf);
   DEF_TOKEN("nonnull?", Token::kNonnull);
   DEF_TOKEN("null?", Token::kNull);

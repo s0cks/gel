@@ -95,20 +95,15 @@ auto BinaryOpExpr::EvalToConstant(LocalScope* scope) const -> Object* {
   ASSERT(scope);
   ASSERT(IsConstantExpr());
   const auto left = GetLeft()->EvalToConstant(scope);
-  ASSERT(left && left->IsAtom());
+  ASSERT(left);
   const auto right = GetRight()->EvalToConstant(scope);
-  ASSERT(right && right->IsAtom());
+  ASSERT(right);
   switch (GetOp()) {
-    case BinaryOp::kAdd:
-      return dynamic_cast<Object*>(left)->Add(dynamic_cast<Object*>(right));
-    case BinaryOp::kSubtract:
-      return dynamic_cast<Object*>(left)->Sub(dynamic_cast<Object*>(right));
-    case BinaryOp::kMultiply:
-      return dynamic_cast<Object*>(left)->Mul(dynamic_cast<Object*>(right));
-    case BinaryOp::kDivide:
-      return dynamic_cast<Object*>(left)->Div(dynamic_cast<Object*>(right));
-    case BinaryOp::kModulus:
-      return dynamic_cast<Object*>(left)->Mod(dynamic_cast<Object*>(right));
+#define DEFINE_BINARY_OP_CASE(Name) \
+  case BinaryOp::k##Name:           \
+    return left->Name(right);
+    FOR_EACH_BINARY_OP(DEFINE_BINARY_OP_CASE)
+#undef DEFINE_BINARY_OP_CASE
     default:
       LOG(FATAL) << "invalid binary op: " << GetOp();
       return nullptr;

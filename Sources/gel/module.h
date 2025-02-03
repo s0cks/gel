@@ -35,10 +35,20 @@ class Module : public Object {
 
  private:
   LocalScope* scope_;
-  Array<Namespace*>* namespaces_ = nullptr;
-  Array<Macro*>* macros_ = nullptr;
-  Array<Lambda*>* lambdas_ = nullptr;
   Lambda* init_ = nullptr;
+  Array<Namespace*>* namespaces_ = nullptr;
+
+  static inline auto CreateDefaultNamespace(String* name) -> Namespace* {
+    ASSERT(name);
+    return Namespace::New(Symbol::New(name), LocalScope::New());
+  }
+
+  static inline auto CreateDefaultNamespaces(String* name) -> Array<Namespace*>* {
+    const auto namespaces = Array<Namespace*>::New();
+    ASSERT(namespaces);
+    namespaces->Push(CreateDefaultNamespace(name));
+    return namespaces;
+  }
 
  protected:
   explicit Module(String* name, LocalScope* scope) :
@@ -46,9 +56,7 @@ class Module : public Object {
     scope_(scope) {
     ASSERT(scope_);
     SetName(name);
-    SetNamespaces(Array<Namespace*>::New());
-    SetMacros(Array<Macro*>::New());
-    SetLambdas(Array<Lambda*>::New());
+    SetNamespaces(CreateDefaultNamespaces(name));
   }
 
   void SetInit(Lambda* rhs) {
@@ -73,16 +81,6 @@ class Module : public Object {
     SetField(kNameField, rhs);
   }
 
-  void SetMacros(Array<Macro*>* rhs) {
-    ASSERT(rhs);
-    macros_ = rhs;
-  }
-
-  void SetLambdas(Array<Lambda*>* rhs) {
-    ASSERT(rhs);
-    lambdas_ = rhs;
-  }
-
   void SetNamespaces(Array<Namespace*>* rhs) {
     ASSERT(rhs);
     namespaces_ = rhs;
@@ -101,6 +99,11 @@ class Module : public Object {
 
  public:
   ~Module() override = default;
+
+  auto GetDefaultNamespace() const -> Namespace* {
+    ASSERT(!namespaces_->IsEmpty());
+    return namespaces_->Get(0);
+  }
 
   auto GetInitialized() const -> Bool* {
     ASSERT(kFieldInitialized);
@@ -137,22 +140,6 @@ class Module : public Object {
     return namespaces_->Get(idx);
   }
 
-  auto GetMacros() const -> Array<Macro*>* {
-    return macros_;
-  }
-
-  auto GetNumberOfMacros() const -> uint64_t {
-    return macros_->GetLength();
-  }
-
-  auto GetLambdas() const -> Array<Lambda*>* {
-    return lambdas_;
-  }
-
-  auto GetNumberOfLambdas() const -> uint64_t {
-    return lambdas_->GetLength();
-  }
-
   auto GetInit() const -> Lambda* {
     return init_;
   }
@@ -167,7 +154,7 @@ class Module : public Object {
   }
 
   auto IsKernel() const -> bool {
-    return HasName() && GetName()->Equals("_kernel");
+    return HasName() && GetName()->Equals("gel");
   }
 
   DECLARE_TYPE(Module);

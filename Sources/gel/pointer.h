@@ -55,6 +55,23 @@ class Pointer {
   friend class PointerNotifier;
   DEFINE_NON_COPYABLE_TYPE(Pointer);
 
+ public:
+  using Predicate = std::function<bool(Pointer*)>;
+
+  static inline auto TagEq(const Tag tag) -> Predicate {
+    return [tag](Pointer* ptr) {
+      return ptr && ((ptr->GetTag() & tag) == tag);
+    };
+  }
+
+  static inline auto AnyTag() -> Predicate {
+    return TagEq(Tag::Invalid());
+  }
+
+  static inline auto TagIsMarked() -> Predicate {
+    return TagEq(Tag::Marked());
+  }
+
  private:
   Tag tag_;
   uword forwarding_ = UNALLOCATED;
@@ -144,6 +161,18 @@ class Pointer {
 
   inline auto IsMarked() const -> bool {
     return GetTag().IsMarked();
+  }
+
+  inline auto IsFree() const -> bool {
+    return GetTag().IsFree();
+  }
+
+  inline auto IsNew() const -> bool {
+    return GetTag().IsNew();
+  }
+
+  inline auto IsOld() const -> bool {
+    return GetTag().IsOld();
   }
 
   void SetMarked() {

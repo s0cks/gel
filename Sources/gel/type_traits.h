@@ -3,6 +3,7 @@
 
 #include <type_traits>
 
+#include "gel/common.h"
 #include "gel/type.h"
 
 namespace gel {

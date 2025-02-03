@@ -3,6 +3,7 @@
 #include "gel/common.h"
 #include "gel/event_emitter.h"
 #include "gel/event_loop.h"
+#include "gel/heap.h"
 #include "gel/macro.h"
 #include "gel/module.h"
 #include "gel/namespace.h"
@@ -270,6 +271,26 @@ auto Class::FindFunction(const std::string& name, const bool recursive) const ->
   }
   return nullptr;
 }
+
+#ifdef GEL_DISABLE_HEAP
+
+auto Class::operator new(const size_t sz) -> void* {
+  return malloc(sz);
+}
+
+#else
+
+auto Class::operator new(const size_t sz) -> void* {
+  const auto alloc_size = kClass ? kClass->GetAllocationSize() : sz;
+  const auto heap = GetCurrentThreadHeap();
+  ASSERT(heap);
+  auto& old_zone = heap->old_zone();
+  const auto address = old_zone.TryAllocate(alloc_size);
+  ASSERT(address != UNALLOCATED);
+  return (void*)address;  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+}
+
+#endif  // GEL_DISABLE_HEAP
 
 void Class::Add(Field* field) {
   ASSERT(field);

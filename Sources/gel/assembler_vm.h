@@ -240,7 +240,7 @@ class Assembler {
   }
 
   inline void eq() {
-    return EmitOp(Bytecode::kEquals);
+    return EmitOp(Bytecode::kEq);
   }
 
   inline void band() {

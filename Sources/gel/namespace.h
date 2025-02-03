@@ -19,9 +19,18 @@ class Namespace : public Object {
   friend class Parser;
 
  public:
+  using Predicate = std::function<bool(Namespace*)>;
   static constexpr const auto kPrefixChar = '/';
 
-  static inline auto IsNamed(const std::string& name) -> std::function<bool(Namespace*)> {
+  static inline auto IsNamed(Symbol* rhs) -> Predicate {
+    ASSERT(rhs);
+    return [rhs](Namespace* ns) {
+      ASSERT(ns);
+      return ns->GetName() == rhs->GetFullyQualifiedName();
+    };
+  }
+
+  static inline auto IsNamed(const std::string& name) -> Predicate {
     ASSERT(!name.empty());
     return [&name](Namespace* ns) {
       ASSERT(ns);
@@ -105,22 +114,21 @@ class Namespace : public Object {
   DECLARE_TYPE(Namespace);
 
  private:
-  static NamespaceList namespaces_;
   static void Init();
 
  public:
-  static inline auto New(Symbol* symbol, LocalScope* scope) -> Namespace* {
-    ASSERT(symbol);
-    ASSERT(scope);
-    const auto ns = new Namespace(symbol, scope);
-    ASSERT(ns);
-    namespaces_.push_back(ns);
-    return ns;
+  static auto New(Symbol* symbol, LocalScope* scope) -> Namespace*;
+  static auto VisitAllNamespaces(NamespaceVisitor* vis) -> bool;
+  static auto FindNamespace(const Predicate& filter) -> Namespace*;
+
+  static inline auto FindNamespace(const std::string& name) -> Namespace* {
+    return FindNamespace(IsNamed(name));
   }
 
-  static auto VisitAllNamespaces(NamespaceVisitor* vis) -> bool;
-  static auto FindNamespace(const std::string& name) -> Namespace*;
-  static auto FindNamespace(Symbol* rhs) -> Namespace*;
+  static inline auto FindNamespace(Symbol* rhs) -> Namespace* {
+    ASSERT(rhs);
+    return FindNamespace(IsNamed(rhs));
+  }
 };
 
 namespace proc {

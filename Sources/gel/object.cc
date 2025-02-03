@@ -12,6 +12,7 @@
 #include <utility>
 
 #include "gel/array.h"
+#include "gel/binary_op.h"
 #include "gel/buffer.h"
 #include "gel/common.h"
 #include "gel/event_emitter.h"
@@ -54,7 +55,35 @@ namespace gel {
 
 #endif  // GEL_DISABLE_HEAP
 
-FOR_EACH_TYPE(DEFINE_NEW_OPERATOR)  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Seq);              // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Field);            // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Bool);             // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Number);           // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Double);           // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Long);             // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(String);           // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Symbol);           // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Macro);            // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Procedure);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Lambda);           // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(NativeProcedure);  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Pair);             // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Script);           // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Error);            // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Namespace);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Set);              // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Map);              // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Module);           // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(EventLoop);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Timer);            // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Buffer);           // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(EventEmitter);     // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Observer);         // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Observable);       // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Subject);          // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(PublishSubject);   // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(ReplaySubject);    // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+
 #undef DEFINE_NEW_OPERATOR
 
 #define DEFINE_INIT_CLASS(Name)  \
@@ -77,40 +106,14 @@ auto Object::CreateClass() -> Class* {
   return cls;
 }
 
-auto Object::Add(Object* rhs) const -> Object* {
-  NOT_IMPLEMENTED(ERROR);
-  return Null();
-}
+#define DECLARE_OBJECT_BINARY_OP(Name)              \
+  auto Object::Name(Object* rhs) const -> Object* { \
+    NOT_IMPLEMENTED(ERROR);                         \
+    return Null();                                  \
+  }
 
-auto Object::Sub(Object* rhs) const -> Object* {
-  NOT_IMPLEMENTED(ERROR);
-  return Null();
-}
-
-auto Object::Mul(Object* rhs) const -> Object* {
-  NOT_IMPLEMENTED(ERROR);
-  return Null();
-}
-
-auto Object::Div(Object* rhs) const -> Object* {
-  NOT_IMPLEMENTED(ERROR);
-  return Null();
-}
-
-auto Object::Mod(Object* rhs) const -> Object* {
-  NOT_IMPLEMENTED(ERROR);
-  return Null();
-}
-
-auto Object::And(Object* rhs) const -> Object* {
-  NOT_IMPLEMENTED(ERROR);
-  return Null();
-}
-
-auto Object::Or(Object* rhs) const -> Object* {
-  NOT_IMPLEMENTED(ERROR);
-  return Null();
-}
+FOR_EACH_BINARY_OP(DECLARE_OBJECT_BINARY_OP);
+#undef DECLARE_OBJECT_BINARY_OP
 
 auto Object::Compare(Object* rhs) const -> int {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
@@ -229,11 +232,11 @@ auto Bool::ToString() const -> std::string {
   return Get() ? "#T" : "#F";
 }
 
-auto Bool::And(Object* rhs) const -> Object* {
+auto Bool::BinaryAnd(Object* rhs) const -> Object* {
   return Box(Get() && Truth(rhs));
 }
 
-auto Bool::Or(Object* rhs) const -> Object* {
+auto Bool::BinaryOr(Object* rhs) const -> Object* {
   return Box(Get() || Truth(rhs));
 }
 
@@ -306,9 +309,9 @@ auto Number::ToString() const -> std::string {
 
 #define FOR_EACH_NUMBER_BINARY_OP(V) \
   V(Add, +)                          \
-  V(Sub, -)                          \
-  V(Mul, *)                          \
-  V(Div, /)
+  V(Subtract, -)                     \
+  V(Multiply, *)                     \
+  V(Divide, /)
 
 #define DEFINE_BINARY_OP(Name, Op)                                                                                 \
   auto Long::Name(Object* rhs) const -> Object* {                                                                  \
@@ -322,7 +325,7 @@ auto Number::ToString() const -> std::string {
     return Long::New(Get() Op left_val);                                                                           \
   }
 FOR_EACH_NUMBER_BINARY_OP(DEFINE_BINARY_OP);
-DEFINE_BINARY_OP(Mod, %);
+DEFINE_BINARY_OP(Modulus, %);
 #undef DEFINE_BINARY_OP
 
 auto Long::Compare(Object* rhs) const -> int {
@@ -348,18 +351,18 @@ auto Long::ToString() const -> std::string {
   return helper;
 }
 
-#define DEFINE_BINARY_OP(Name, Op)                                                          \
-  auto Double::Name(Object* rhs) const -> Object* {                                         \
-    if (!rhs || !rhs->IsNumber()) {                                                         \
-      LOG(ERROR) << rhs << " is not a Number.";                                             \
-      return Pair::Empty();                                                                 \
-    }                                                                                       \
-    const auto left_num = rhs->AsNumber();                                                  \
-    ASSERT(left_num);                                                                       \
-    const auto left_val = left_num->IsLong() ? left_num->GetLong() : left_num->GetDouble(); \
-    return Double::New(Get() Op left_val);                                                  \
+#define DEFINE_BINARY_OP(Name, Op)                                                              \
+  auto Double::Name(Object* rhs) const -> Object* {                                             \
+    if (!rhs || !rhs->IsNumber()) {                                                             \
+      LOG(ERROR) << rhs << " is not a Number.";                                                 \
+      return Pair::Empty();                                                                     \
+    }                                                                                           \
+    const auto left_num = rhs->AsNumber();                                                      \
+    ASSERT(left_num);                                                                           \
+    const auto left_val = left_num->IsDouble() ? left_num->GetDouble() : left_num->GetDouble(); \
+    return Double::New(Get() Op left_val);                                                      \
   }
-FOR_EACH_NUMBER_BINARY_OP(DEFINE_BINARY_OP);
+FOR_EACH_NUMBER_BINARY_OP(DEFINE_BINARY_OP)
 #undef DEFINE_BINARY_OP
 
 auto Double::Equals(Object* rhs) const -> bool {

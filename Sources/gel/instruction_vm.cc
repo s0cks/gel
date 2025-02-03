@@ -57,7 +57,7 @@ COMPILE(BinaryOpInstr) {
     case expr::kModulus:
       __ mod();
       break;
-    case expr::kEquals:
+    case expr::kEq:
       __ eq();
       break;
     case expr::kBinaryAnd:

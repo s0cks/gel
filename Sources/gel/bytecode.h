@@ -186,7 +186,7 @@ class Bytecode {
         return "div";
       case kModulus:
         return "mod";
-      case kEquals:
+      case kEq:
         return "eq";
       case kBinaryAnd:
         return "band";

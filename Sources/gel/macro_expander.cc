@@ -300,6 +300,7 @@ auto MacroEffectVisitor::VisitLetRxExpr(expr::LetRxExpr* expr) -> bool {
   if (for_source || body_changed) {
     const auto source = for_source ? for_source.GetResult() : expr->GetSource();
     const auto body = body_changed ? new_body : expr->GetBody();
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
     SetResult(expr::LetRxExpr::New(expr->GetScope(), source, (const expr::RxOpList&)body));
   }
   return true;

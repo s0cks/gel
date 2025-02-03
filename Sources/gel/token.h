@@ -115,7 +115,7 @@ struct Token {
         return '&';
       case kBinaryOr:
         return '|';
-      case kEquals:
+      case kEq:
         return '=';
       case kModulus:
         return '%';

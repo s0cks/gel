@@ -100,7 +100,7 @@ class FreePointer {
 
   static inline auto New(const uword address, const uword size) -> FreePointer* {
     ASSERT(address > UNALLOCATED);
-    return New(address, Tag::Old(size));
+    return New(address, Tag::OldFree(size));
   }
 
   static inline auto New(void* ptr, const uword size) -> FreePointer* {

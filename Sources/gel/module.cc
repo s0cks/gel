@@ -44,6 +44,16 @@ auto Module::Init(Runtime* runtime) -> bool {
   ASSERT(runtime);
   ASSERT(!IsInitialized() && HasInit());
   runtime->Call(GetInit(), {this});
+
+  for (auto idx = 0; idx < namespaces_->GetLength(); idx++) {
+    const auto ns = namespaces_->Get(idx);
+    ASSERT(ns);
+    if (ns->HasInit()) {
+      runtime->Call(ns->GetInit(), {ns});
+      DLOG(INFO) << ns->InitNamespace()->ToString() << " initialized!";
+    }
+  }
+
   SetInitialized(true);
   return IsInitialized();
 }
@@ -54,11 +64,7 @@ auto Module::Find(const std::string& name) -> Module* {
 
 void Module::AddChild(Object* rhs) {
   ASSERT(rhs);
-  if (rhs->IsMacro()) {
-    macros_->Push(rhs->AsMacro());
-  } else if (rhs->IsLambda()) {
-    lambdas_->Push(rhs->AsLambda());
-  } else if (rhs->IsNamespace()) {
+  if (rhs->IsNamespace()) {
     namespaces_->Push(rhs->AsNamespace());
   }
 }
@@ -127,10 +133,6 @@ auto Module::VisitPointers(PointerVisitor* vis) -> bool {
 auto Module::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
   ASSERT(vis);
   if (!VisitPointerPointer(vis, &namespaces_))
-    return false;
-  if (!VisitPointerPointer(vis, &macros_))
-    return false;
-  if (!VisitPointerPointer(vis, &lambdas_))
     return false;
   if (!VisitPointerPointer(vis, &init_))
     return false;

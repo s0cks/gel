@@ -4,6 +4,7 @@
 
 #include "gel/common.h"
 #include "gel/free_list.h"
+#include "gel/object.h"
 #include "gel/platform.h"
 #include "gel/pointer.h"
 
@@ -90,6 +91,31 @@ OldZone::OldZone(const uword size) :
   Zone(size, MemoryRegion::kReadWrite),
   free_list_(GetStartingAddress(), size) {}
 
+auto OldZone::VisitAllPointers(PointerVisitor* vis, const Pointer::Predicate& filter) const -> bool {
+  ASSERT(vis);
+  const auto end_address = GetEndingAddress();
+  uword current_address = GetStartingAddress();
+  while (current_address < end_address) {
+    const auto ptr = Pointer::At(current_address);
+    ASSERT(ptr);
+    if (ptr->IsFree()) {
+      const auto free_ptr = FreePointer::At(current_address);
+      ASSERT(free_ptr);
+      current_address += free_ptr->GetTotalSize();
+      continue;
+    }
+
+    if (!filter(ptr))
+      continue;
+    if (!vis->Visit(ptr))
+      return false;
+    current_address += ptr->GetTotalSize();
+  }
+  // TODO: fix this assertion to be (current_address <= end_address)
+  ASSERT(current_address <= (end_address + sizeof(FreePointer)));
+  return true;
+}
+
 auto OldZone::TryAllocatePointer(const uword size) -> Pointer* {
   ASSERT(size > 0);
   const auto new_address = free_list_.TryAllocate(size);
@@ -128,6 +154,14 @@ void PrintOldZone(const OldZone& zone) {
   DLOG(INFO) << "  Total Allocated: " << PrettyPrintBytes(zone.GetNumberOfBytesAllocated()) << " / "
              << zone.GetAllocationPercent();
   PrintFreeList(zone.GetFreeList());
+  DLOG(INFO) << "  Allocated:";
+
+  PointerVisitorWrapper vis([](Pointer* ptr) {
+    ASSERT(ptr && ptr->IsOld() && !ptr->IsFree());
+    DLOG(INFO) << "   - " << (*ptr) << "  ;;  " << ptr->GetObjectPointer()->ToString();
+    return true;
+  });
+  LOG_IF(FATAL, !zone.VisitAllPointers(&vis)) << "failed to visit old zone pointers.";
 }
 
 #endif  // GEL_DEBUG

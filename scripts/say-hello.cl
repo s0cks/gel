@@ -3,5 +3,5 @@
 (say-hello "Tazz")
 
 (import "math.cl")
-(printf "asin(0.10): {}" (math/asin 0.10))
-(printf "to-radians(45.0): {}" (math/to-radians 45.0))
+(printf "twenty: " (math/TWENTY))
+(printf "tau: {}" (math/TAU))

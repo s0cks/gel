@@ -6,6 +6,7 @@
 #include <stdexcept>
 
 #include "gel/array.h"
+#include "gel/binary_op.h"
 #include "gel/bytecode.h"
 #include "gel/common.h"
 #include "gel/disassembler.h"
@@ -47,6 +48,7 @@ void Interpreter::LoadLocal(const uword idx) {
 }
 
 void Interpreter::StoreLocal(const uword idx) {
+  LocalScopePrinter::Print<google::INFO, false>(GetScope(), __FILE__, __LINE__);
   ASSERT(idx >= 0 && idx <= GetScope()->GetNumberOfLocals());
   const auto local = GetScope()->GetLocalAt(idx);
   ASSERT(local);
@@ -167,81 +169,14 @@ void Interpreter::ExecBinaryOp(const Bytecode code) {
   const auto lhs = (*POP);
   ASSERT(lhs);
   switch (code.op()) {
-    case Bytecode::kAdd: {
-      const auto value = lhs->Add(rhs);
-      ASSERT(value);
-      return PUSH(value);
-    }
-    case Bytecode::kSubtract: {
-      const auto value = lhs->Sub(rhs);
-      ASSERT(value);
-      return PUSH(value);
-    }
-    case Bytecode::kDivide: {
-      const auto value = lhs->Div(rhs);
-      ASSERT(value);
-      return PUSH(value);
-    }
-    case Bytecode::kMultiply: {
-      const auto value = lhs->Mul(rhs);
-      ASSERT(value);
-      return PUSH(value);
-    }
-    case Bytecode::kModulus: {
-      const auto value = lhs->Mod(rhs);
-      ASSERT(value);
-      return PUSH(value);
-    }
-    case Bytecode::kEquals: {
-      const auto value = Bool::Box(lhs->Equals(rhs));
-      ASSERT(value);
-      return PUSH(value);
-    }
-    case Bytecode::kBinaryAnd: {
-      const auto value = lhs->And(rhs);
-      ASSERT(value);
-      return PUSH(value);
-    }
-    case Bytecode::kBinaryOr: {
-      const auto value = lhs->Or(rhs);
-      ASSERT(value);
-      return PUSH(value);
-    }
-    case Bytecode::kLessThan: {
-      const auto comparison = lhs->Compare(rhs);
-      const auto value = Bool::Box(comparison < 0);
-      ASSERT(value);
-      return PUSH(value);
-    }
-    case Bytecode::kLessThanEqual: {
-      const auto comparison = lhs->Compare(rhs);
-      const auto value = Bool::Box(comparison <= 0);
-      ASSERT(value);
-      return PUSH(value);
-    }
-    case Bytecode::kGreaterThan: {
-      const auto comparison = lhs->Compare(rhs);
-      const auto value = Bool::Box(comparison > 0);
-      ASSERT(value);
-      return PUSH(value);
-    }
-    case Bytecode::kGreaterThanEqual: {
-      const auto comparison = lhs->Compare(rhs);
-      const auto value = Bool::Box(comparison >= 0);
-      ASSERT(value);
-      return PUSH(value);
-    }
-    case Bytecode::kCons: {
-      const auto value = gel::Cons(lhs, rhs);
-      ASSERT(value);
-      return PUSH(value);
-    }
-    case Bytecode::kInstanceOf: {
-      ASSERT(rhs->IsClass());
-      const auto value = Bool::Box(lhs->GetType()->IsInstanceOf(rhs->AsClass()));
-      ASSERT(value);
-      return PUSH(value);
-    }
+#define DEFINE_BINARY_OP(Name)         \
+  case Bytecode::k##Name: {            \
+    const auto value = lhs->Name(rhs); \
+    ASSERT(value);                     \
+    return PUSH(value);                \
+  }
+    FOR_EACH_BINARY_OP(DEFINE_BINARY_OP)
+#undef DEFINE_BINARY_OP
     default:
       LOG(FATAL) << "invalid BinaryOp: " << code;
   }

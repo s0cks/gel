@@ -10,7 +10,7 @@
 #include "gel/to_string_helper.h"
 
 namespace gel {
-NamespaceList Namespace::namespaces_{};
+static Array<Namespace*>* namespaces_ = nullptr;
 
 auto Namespace::IsKernelNamespace() const -> bool {
   return GetName() == "_kernel";
@@ -33,19 +33,6 @@ auto Namespace::HashCode() const -> uword {
   uword hash = 0;
   CombineHash(hash, GetSymbol()->HashCode());
   return hash;
-}
-
-auto Namespace::FindNamespace(const std::string& name) -> Namespace* {
-  const auto pos = std::ranges::find_if(namespaces_, [&name](Namespace* ns) {
-    ASSERT(ns);
-    return ns->GetSymbol()->Equals(name);
-  });
-  return pos != std::end(namespaces_) ? (*pos) : nullptr;
-}
-
-auto Namespace::FindNamespace(Symbol* rhs) -> Namespace* {
-  ASSERT(rhs);
-  return FindNamespace(rhs->GetSymbolName());
 }
 
 auto Namespace::HasSymbol(const std::string& rhs) const -> bool {
@@ -84,13 +71,25 @@ auto Namespace::GetName() const -> const std::string& {
 
 auto Namespace::VisitAllNamespaces(NamespaceVisitor* vis) -> bool {
   ASSERT(vis);
-  for (auto idx = 0; idx < namespaces_.size(); idx++) {
-    const auto ns = namespaces_[idx];
+  ASSERT(namespaces_);
+  for (auto idx = 0; idx < namespaces_->GetLength(); idx++) {
+    const auto ns = namespaces_->Get(idx);
     ASSERT(ns);
     if (!vis->Visit(ns))
       return false;
   }
   return true;
+}
+
+auto Namespace::FindNamespace(const Namespace::Predicate& filter) -> Namespace* {
+  ASSERT(namespaces_);
+  for (auto idx = 0; idx < namespaces_->GetLength(); idx++) {
+    const auto ns = namespaces_->Get(idx);
+    ASSERT(ns);
+    if (filter(ns))
+      return ns;
+  }
+  return nullptr;
 }
 
 auto Namespace::CreateSymbol(const std::string& rhs) -> Symbol* {
@@ -108,6 +107,15 @@ auto Namespace::CreateSymbol(const std::string& rhs) -> Symbol* {
 auto Namespace::CreateClass() -> Class* {
   ASSERT(kClass == nullptr);
   return Class::New(Object::GetClass(), "Namespace");
+}
+
+auto Namespace::New(Symbol* symbol, LocalScope* scope) -> Namespace* {
+  ASSERT(symbol);
+  ASSERT(scope);
+  const auto ns = new Namespace(symbol, scope);
+  ASSERT(ns);
+  namespaces_->Push(ns);
+  return ns;
 }
 
 auto Namespace::New(const ObjectList& args) -> Namespace* {
@@ -130,9 +138,11 @@ auto Namespace::ToString() const -> std::string {
 }
 
 auto Namespace::InitNamespace() -> Namespace* {
-  const auto runtime = GetRuntime();
-  ASSERT(runtime);
-  runtime->Call(GetInit(), {this});
+  if (HasInit()) {
+    const auto runtime = GetRuntime();
+    ASSERT(runtime);
+    runtime->Call(GetInit(), {this});
+  }
   return this;
 }
 
@@ -153,6 +163,8 @@ auto Namespace::CreateInit(const expr::ExpressionList& body) -> Procedure* {
 }
 
 void Namespace::Init() {
+  namespaces_ = Array<Namespace*>::New();
+  ASSERT(namespaces_);
   InitClass();
   InitNative<proc::gel_get_namespace>();
   InitNative<proc::gel_get_namespaces>();
