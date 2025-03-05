@@ -209,6 +209,8 @@ auto Module::VisitAllModulePointerPointers(PointerPointerVisitor* vis) -> bool {
   return true;
 }
 
+#define INIT_MODULE_NATIVE(Name) InitNative<module_##Name>()
+
 void Module::Init() {
   InitClass();
   ASSERT(modules_ == nullptr);
@@ -218,8 +220,11 @@ void Module::Init() {
   using namespace proc;
   InitNative<gel_get_modules>();
   InitNative<gel_get_module>();
-  InitNative<module_is_kernel>();
+  INIT_MODULE_NATIVE(is_kernel);
+  INIT_MODULE_NATIVE(get_namespaces);
 }
+
+#undef INIT_MODULE_NATIVE
 
 namespace proc {
 NATIVE_PROCEDURE_F(gel_get_module) {
@@ -235,7 +240,9 @@ NATIVE_PROCEDURE_F(gel_get_modules) {
   return Return(ToList((const ObjectList&)modules));  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
 }
 
-NATIVE_PROCEDURE_F(module_is_kernel) {
+#define MODULE_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(module_##Name)
+
+MODULE_PROCEDURE_F(is_kernel) {
   NativeArgument<0> value(args);
   if (!value)
     return Throw(value);
@@ -252,6 +259,37 @@ NATIVE_PROCEDURE_F(module_is_kernel) {
   }
   return ReturnBool(m->IsKernel());
 }
+
+MODULE_PROCEDURE_F(get_namespaces) {
+  NativeArgument<0> value(args);
+  if (!value)
+    return Throw(value);
+  Module* m = nullptr;
+  if (value->IsSymbol()) {
+    m = Module::Find(value->AsSymbol()->GetFullyQualifiedName());
+  } else if (value->IsModule()) {
+    m = value->AsModule();
+  }
+  if (!m) {
+    std::stringstream ss;
+    ss << "failed to find Module for: " << value->ToString();
+    return ThrowError(ss);
+  }
+  const auto namespaces = m->GetNamespaces();
+  ASSERT(namespaces);
+
+  Object* result = Null();
+  ASSERT(result);
+  for (auto idx = 0; idx < namespaces->GetLength(); idx++) {
+    const auto ns = namespaces->Get(idx);
+    ASSERT(ns);
+    result = Cons(ns, result);
+    ASSERT(result);
+  }
+  return Return(result);
+}
+
+#undef MODULE_PROCEDURE_F
 
 }  // namespace proc
 }  // namespace gel

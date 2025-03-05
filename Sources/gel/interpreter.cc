@@ -135,8 +135,45 @@ void Interpreter::PopLookup() {
 }
 
 void Interpreter::Invoke(const Bytecode::Op op) {
-  const auto func = op != Bytecode::kInvokeDynamic ? NextObjectPointer() : (*POP);
-  ASSERT(func && func->IsProcedure());
+  Procedure* func = nullptr;
+  if (op == Bytecode::kInvokeDynamic) {
+    const auto next = (*POP);
+    ASSERT(next);
+    if (next->IsProcedure()) {
+      func = next->AsProcedure();
+    } else if (next->IsSymbol()) {
+      const auto scope = GetScope();
+      ASSERT(scope);
+      const auto symbol = next->AsSymbol();
+      ASSERT(symbol);
+      LocalVariable* local = nullptr;
+      if (!scope->Lookup(symbol, &local)) {
+        if (!symbol->HasNamespace() || symbol->GetNamespace() != "gel") {
+          const auto gel_symbol = Symbol::New("gel", symbol->GetSymbolName());
+          if (!scope->Lookup(gel_symbol, &local)) {  // TODO: remove this double lookup?
+            std::stringstream ss;
+            ss << "failed to resolve symbol `" << symbol->GetFullyQualifiedName() << "`";
+            return Throw(ss);
+          }
+        }
+      }
+      if (!local || !local->HasValue() || !local->GetValue()->IsProcedure()) {
+        std::stringstream ss;
+        ss << "failed to resolve symbol `" << symbol->GetFullyQualifiedName() << "` to Procedure";
+        return Throw(ss);
+      }
+      func = local->GetValue()->AsProcedure();
+    } else {
+      std::stringstream ss;
+      ss << "expected " << next->ToString() << " to be a Symbol or Procedure.";
+      return Throw(ss);
+    }
+  } else {
+    const auto next = NextObjectPointer();
+    ASSERT(next && next->IsProcedure());
+    func = next->AsProcedure();
+  }
+  ASSERT(func);
   const auto num_args = NextUWord();
   if (func->IsNativeProcedure()) {
     ASSERT(op == Bytecode::kInvokeNative || op == Bytecode::kInvokeDynamic);
@@ -247,6 +284,15 @@ void Interpreter::Lookup(Symbol* rhs) {
   ASSERT(scope);
   LocalVariable* local = nullptr;
   if (!scope->Lookup(rhs, &local)) {
+    if (!rhs->HasNamespace() || rhs->GetNamespace() != "gel") {
+      const auto gel_symbol = Symbol::New("gel", rhs->GetSymbolName());
+      if (scope->Lookup(gel_symbol, &local)) {  // TODO: remove this double lookup?
+        ASSERT(local);
+        const auto value = local->HasValue() ? local->GetValue() : Null();
+        PUSH(value);
+        return;
+      }
+    }
     std::stringstream ss;
     ss << "failed to resolve symbol `" << rhs->GetFullyQualifiedName() << "`";
     return Throw(ss);
@@ -390,9 +436,6 @@ void Interpreter::Run(const uword start_address) {
         const auto frame = GetRuntime()->GetCurrentStackFrame();
         ASSERT(frame);
         frame->SetReturnAddress(TOP.value_or(Null())->GetStartingAddress());
-        const auto event_loop = GetThreadEventLoop();
-        ASSERT(event_loop);
-        while (event_loop->Run(UV_RUN_NOWAIT) != 0);  // do nothing
         return;
       }
       case Bytecode::kJump:

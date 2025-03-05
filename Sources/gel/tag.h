@@ -21,7 +21,7 @@ class Tag {
     kReferencesOffset = 0,
     kBitsForReferences = 16,
     // bits
-    kFreeBitOffset = kReferencesOffset + kBitsForReferences,
+    kFreeBitOffset = kReferencesOffset + kBitsForReferences + 1,
     kNewBitOffset = kFreeBitOffset + 1,
     kOldBitOffset = kNewBitOffset + 1,
     kMarkedBitOffset = kOldBitOffset + 1,

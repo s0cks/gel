@@ -170,6 +170,7 @@ class OldZone : public Zone {
 
  private:
   FreeList free_list_;
+  uword num_allocated_ = 0;
 
  public:
   explicit OldZone(const uword size = GetOldZoneSize());
@@ -177,6 +178,10 @@ class OldZone : public Zone {
 
   auto GetFreeList() const -> const FreeList& {
     return free_list_;
+  }
+
+  auto GetNumberOfBytesAllocated() const -> uword override {
+    return num_allocated_;
   }
 
   auto VisitAllPointers(PointerVisitor* vis, const Pointer::Predicate& filter = Pointer::AnyTag()) const -> bool;

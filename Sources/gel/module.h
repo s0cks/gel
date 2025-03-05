@@ -213,7 +213,14 @@ namespace proc {
 _DECLARE_NATIVE_PROCEDURE(gel_get_modules, "gel/get-modules");
 _DECLARE_NATIVE_PROCEDURE(gel_get_module, "gel/get-module");
 
-_DECLARE_NATIVE_PROCEDURE(module_is_kernel, "Module:is-kernel?");
+#define _DECLARE_MODULE_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(module_##Name, "Module:" Sym);
+#define DECLARE_MODULE_PROCEDURE(Name)       _DECLARE_MODULE_PROCEDURE(Name, #Name);
+
+_DECLARE_MODULE_PROCEDURE(is_kernel, "is-kernel?");
+_DECLARE_MODULE_PROCEDURE(get_namespaces, "get-namespaces");
+
+#undef DECLARE_MODULE_PROCEDURE
+#undef _DECLARE_MODULE_PROCEDURE
 }  // namespace proc
 }  // namespace gel
 

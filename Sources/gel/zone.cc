@@ -123,6 +123,7 @@ auto OldZone::TryAllocatePointer(const uword size) -> Pointer* {
     return nullptr;
   const auto new_ptr = Pointer::Old(new_address, size);
   ASSERT(new_ptr);
+  num_allocated_ += new_ptr->GetTotalSize();
 #ifdef GEL_DEBUG
   memset(new_ptr->GetObjectAddressPointer(), 0, new_ptr->GetObjectSize());
 #endif  // GEL_DEBUG

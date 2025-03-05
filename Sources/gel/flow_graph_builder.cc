@@ -107,11 +107,14 @@ auto EffectVisitor::CreateCallFor(ir::Definition* defn, const uword num_args) ->
     return ir::InvokeInstr::New(defn, num_args);
   }
   Do(defn);
-  if (gel::IsPedantic())
-    AddInstanceOf(defn, Symbol::GetClass());
-  const auto lookup = Bind(ir::LookupInstr::New(defn));
-  ASSERT(lookup);
-  return ir::InvokeDynamicInstr::New(lookup, num_args);
+  if (defn->IsConstantInstr() && defn->AsConstantInstr()->IsConstantSymbol()) {
+    if (gel::IsPedantic())
+      AddInstanceOf(defn, Symbol::GetClass());
+    const auto lookup = Bind(ir::LookupInstr::New(defn));
+    ASSERT(lookup);
+    return ir::InvokeDynamicInstr::New(lookup, num_args);
+  }
+  return ir::InvokeDynamicInstr::New(defn, num_args);
 }
 
 auto EffectVisitor::ReturnCall(ir::InvokeInstr* instr) -> bool {
@@ -123,8 +126,7 @@ auto EffectVisitor::ReturnCall(ir::InvokeInstr* instr) -> bool {
 
 auto EffectVisitor::ReturnCallTo(ir::Definition* defn, const uword num_args) -> bool {
   const auto invoke = CreateCallFor(defn, num_args);
-  if (gel::IsPedantic() && !(invoke->IsInvokeNativeInstr() || invoke->IsInvokeInstr()))
-    AddInstanceOf(defn, Procedure::GetClass());
+  ASSERT(invoke);
   ReturnDefinition(invoke);
   return true;
 }
@@ -132,6 +134,7 @@ auto EffectVisitor::ReturnCallTo(ir::Definition* defn, const uword num_args) -> 
 auto EffectVisitor::ReturnCallTo(Procedure* target, const uword num_args) -> bool {
   ASSERT(target);
   const auto defn = ir::ConstantInstr::New(target);
+  ASSERT(defn);
   return ReturnCallTo(defn, num_args);
 }
 
@@ -450,8 +453,6 @@ auto RxEffectVisitor::VisitRxOpExpr(expr::RxOpExpr* expr) -> bool {
   } else if (IsLambdaCall(target)) {
     Add(ir::InvokeInstr::New(target, expr->GetNumberOfChildren() + 1));
   } else {
-    if (gel::IsPedantic())
-      AddInstanceOf(target, Procedure::GetClass());
     Add(ir::InvokeDynamicInstr::New(target, expr->GetNumberOfChildren() + 1));
   }
   return true;

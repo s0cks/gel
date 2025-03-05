@@ -11,6 +11,7 @@
 
 #include "gel/common.h"
 #include "gel/error.h"
+#include "gel/event_loop.h"
 #include "gel/expr/expression.h"
 #include "gel/flow_graph_compiler.h"
 #include "gel/instruction.h"
@@ -55,8 +56,6 @@ Runtime::Runtime(LocalScope* scope) :
   ASSERT(init_scope_);
   ASSERT(curr_scope_);
 }
-
-namespace fs = std::filesystem;
 
 class ModuleImporter {
   DEFINE_NON_COPYABLE_TYPE(ModuleImporter);
@@ -220,6 +219,7 @@ void Runtime::Call(Lambda* lambda, const ObjectList& args) {
       } else {
         result_ = result;
       }
+      RunCurrentThreadEventLoop(UV_RUN_NOWAIT);
     }
   }
   PopScope();
@@ -291,6 +291,8 @@ void Runtime::Call(Script* script, const ObjectList& args) {
     }
   }
   PopScope();
+
+  RunCurrentThreadEventLoop(UV_RUN_NOWAIT);
 }
 
 auto Runtime::Eval(const std::string& expr) -> Object* {

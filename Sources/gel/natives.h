@@ -4,20 +4,28 @@
 #include "gel/native_procedure.h"
 
 namespace gel::proc {
-_DECLARE_NATIVE_PROCEDURE(gel_get_version, "gel/get-version");
-_DECLARE_NATIVE_PROCEDURE(gel_docs, "gel/docs?");
-DECLARE_NATIVE_PROCEDURE(print);
+#define _DECLARE_GEL_NATIVE_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(gel_##Name, "gel/" Sym)
+#define DECLARE_GEL_NATIVE_PROCEDURE(Name)       _DECLARE_GEL_NATIVE_PROCEDURE(Name, #Name)
+
+DECLARE_GEL_NATIVE_PROCEDURE(print);
+DECLARE_GEL_NATIVE_PROCEDURE(format);
+_DECLARE_GEL_NATIVE_PROCEDURE(get_version, "get-version");
+_DECLARE_GEL_NATIVE_PROCEDURE(docs, "docs?");
+
 DECLARE_NATIVE_PROCEDURE(import);
 DECLARE_NATIVE_PROCEDURE(exit);
-DECLARE_NATIVE_PROCEDURE(format);
 DECLARE_NATIVE_PROCEDURE(random);
 _DECLARE_NATIVE_PROCEDURE(type, "type?");
 _DECLARE_NATIVE_PROCEDURE(rand_range, "random:range");
 _DECLARE_NATIVE_PROCEDURE(set_car, "set-car!");
 _DECLARE_NATIVE_PROCEDURE(set_cdr, "set-cdr!");
 _DECLARE_NATIVE_PROCEDURE(gel_sizeof, "sizeof");
-_DECLARE_NATIVE_PROCEDURE(gel_load_bindings, "gel/load-bindings");
-_DECLARE_NATIVE_PROCEDURE(get_event_loop, "get-event-loop");
+
+_DECLARE_GEL_NATIVE_PROCEDURE(load_bindings, "load-bindings");
+_DECLARE_GEL_NATIVE_PROCEDURE(get_event_loop, "get-event-loop");
+
+#undef DECLARE_GEL_NATIVE_PROCEDURE
+#undef _DECLARE_GEL_NATIVE_PROCEDURE
 
 // ----------------------------------------------------------------------------------------------------
 // Object

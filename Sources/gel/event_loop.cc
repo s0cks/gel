@@ -204,6 +204,12 @@ auto GetThreadEventLoop() -> EventLoop* {
   return loop;
 }
 
+void RunCurrentThreadEventLoop(const uv_run_mode mode) {
+  const auto event_loop = GetThreadEventLoop();
+  ASSERT(event_loop);
+  while (event_loop->Run(UV_RUN_NOWAIT) != 0);  // do nothing
+}
+
 auto Timer::ToString() const -> std::string {
   ToStringHelper<Timer> helper;
   helper.AddField("handle", (const void*)&handle());

@@ -138,8 +138,12 @@ auto Parser::ParseLiteralSymbol(Symbol** result) -> ParseResult {
     (*result) = GetOwner()->AsNamespace()->CreateSymbol(next.text);
   } else if (HasOwner() && GetOwner()->IsClass()) {
     (*result) = GetOwner()->AsClass()->CreateSymbol(next.text);
+  } else if (HasOwner() && GetOwner()->IsModule()) {
+    (*result) = GetOwner()->AsModule()->GetDefaultNamespace()->CreateSymbol(next.text);
   } else {
-    (*result) = Symbol::New(next.text);
+    const auto symbol = Symbol::New(next.text);
+    ASSERT(symbol);
+    (*result) = symbol;
   }
   ASSERT((*result));
   return true;
@@ -497,7 +501,9 @@ auto Parser::ParseCondExpr(expr::Expression** result) -> ParseResult {
     }
     CHECK_RESULT(ParseExpression(&b));
     ASSERT(b);
-    clauses.push_back(expr::ClauseExpr::New(a, b));
+    const auto clause = expr::ClauseExpr::New(a, b);
+    ASSERT(clause);
+    clauses.push_back(clause);
   } while (!PeekEq(Token::kRParen));
   (*result) = CondExpr::New(clauses, alt);
   return true;
@@ -1272,7 +1278,6 @@ auto Parser::ParseInstanceOfExpr(expr::Expression** result) -> ParseResult {
 auto Parser::ParseLambda(const Token::Kind kind, Lambda** result) -> ParseResult {
   const auto lambda = Lambda::New();
   ASSERT(lambda);
-  PushOwner(lambda);
   ParseScope scope(this);
   if (kind == Token::kDispatch) {
     ExpectNext(Token::kDispatch);
@@ -1282,6 +1287,7 @@ auto Parser::ParseLambda(const Token::Kind kind, Lambda** result) -> ParseResult
     ASSERT(local);
     LOG_IF(FATAL, !GetScope()->Add(local)) << "cannot add " << local << " to scope.";
 
+    PushOwner(lambda);
     expr::ExpressionList body;
     LOG_IF(FATAL, !ParseExpressionList(body)) << "failed to parse expression list.";
     lambda->SetBody(body);
@@ -1321,8 +1327,9 @@ auto Parser::ParseLambda(const Token::Kind kind, Lambda** result) -> ParseResult
   }
 
   ExpectNext(kind);
-  lambda->SetScope(scope);
   CHECK_RESULT(TryParseSymbol(lambda));
+  PushOwner(lambda);
+  lambda->SetScope(scope);
   const auto local = LocalVariable::New(scope, lambda->HasSymbol() ? lambda->GetSymbol() : Symbol::New("$"), lambda);
   ASSERT(local);
   LOG_IF(FATAL, !GetScope()->Add(local)) << "cannot add " << local << " to scope.";
@@ -1641,8 +1648,8 @@ auto Parser::ParseMacro(Macro** result) -> ParseResult {
   EXPECT_NEXT(Token::kDefMacro);
   const auto macro = Macro::New();
   ASSERT(macro);
-  PushOwner(macro);
   CHECK_RESULT(TryParseSymbol(macro));
+  PushOwner(macro);
   ParseScope scope(this);
   const auto local = LocalVariable::New(scope, macro->GetSymbol() ? macro->GetSymbol() : Symbol::New("$"), macro);
   ASSERT(local);

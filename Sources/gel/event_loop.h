@@ -100,6 +100,7 @@ auto VisitThreadEventLoopPointer(PointerVisitor* vis) -> bool;
 auto VisitThreadEventLoopPointerPointer(PointerPointerVisitor* vis) -> bool;
 auto VisitThreadEventLoopPointerPointer(const std::function<bool(Pointer**)>& vis) -> bool;
 auto GetThreadEventLoop() -> EventLoop*;
+void RunCurrentThreadEventLoop(const uv_run_mode mode);
 
 namespace fs {
 class RequestBase {

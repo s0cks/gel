@@ -31,7 +31,7 @@ class Runtime {
   friend class Collector;
   friend class proc::import;
   friend class proc::exit;
-  friend class proc::format;  // TODO: remove
+  friend class proc::gel_format;  // TODO: remove
   friend class proc::rx_take_while;
 #ifdef GEL_DEBUG
   friend class proc::gel_get_frame;

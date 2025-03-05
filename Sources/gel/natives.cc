@@ -40,22 +40,24 @@
 #include "gel/zone.h"
 
 namespace gel {
+#define INIT_GEL_NATIVE(Name) InitNative<gel_##Name>();
+
 void NativeProcedure::InitNatives() {
   using namespace proc;
-  InitNative<gel_get_version>();
-  InitNative<gel_sizeof>();
-  InitNative<print>();
+  INIT_GEL_NATIVE(get_version);
+  INIT_GEL_NATIVE(sizeof);
+  INIT_GEL_NATIVE(print);
+  INIT_GEL_NATIVE(format);
   InitNative<type>();
   InitNative<import>();
   InitNative<exit>();
-  InitNative<format>();
   InitNative<set_car>();
   InitNative<set_cdr>();
   InitNative<random>();
   InitNative<rand_range>();
-  InitNative<gel_docs>();
-  InitNative<gel_load_bindings>();
-  InitNative<get_event_loop>();
+  INIT_GEL_NATIVE(docs);
+  INIT_GEL_NATIVE(load_bindings);
+  INIT_GEL_NATIVE(get_event_loop);
 
 #define InitTimerNative(Name) InitNative<timer_##Name>()
   InitTimerNative(create);
@@ -142,11 +144,13 @@ void NativeProcedure::InitNatives() {
 }
 
 namespace proc {
-NATIVE_PROCEDURE_F(gel_get_version) {
+#define GEL_NATIVE_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(gel_##Name)
+
+GEL_NATIVE_PROCEDURE_F(get_version) {
   return ReturnNew<String>(gel::GetVersion());
 }
 
-NATIVE_PROCEDURE_F(gel_sizeof) {
+GEL_NATIVE_PROCEDURE_F(sizeof) {
   ASSERT(args.size() == 1);
   NativeArgument<0> value(args);
   if (!value)
@@ -156,7 +160,7 @@ NATIVE_PROCEDURE_F(gel_sizeof) {
   return ReturnLong(value->GetType()->GetAllocationSize());
 }
 
-NATIVE_PROCEDURE_F(gel_docs) {
+GEL_NATIVE_PROCEDURE_F(docs) {
   if (args.empty())
     return DoNothing();
   OptionalNativeArgument<0, Procedure> func(args);
@@ -226,7 +230,7 @@ NATIVE_PROCEDURE_F(import) {
   return true;
 }
 
-NATIVE_PROCEDURE_F(print) {
+GEL_NATIVE_PROCEDURE_F(print) {
   ASSERT(!args.empty());
 #ifdef GEL_DEBUG
   if (VLOG_IS_ON(100))
@@ -236,7 +240,7 @@ NATIVE_PROCEDURE_F(print) {
   return ReturnNull();
 }
 
-NATIVE_PROCEDURE_F(gel_load_bindings) {
+GEL_NATIVE_PROCEDURE_F(load_bindings) {
   NativeArgument<0, String> filename(args);
   if (!filename)
     return Throw(filename.GetError());
@@ -276,7 +280,7 @@ NATIVE_PROCEDURE_F(exit) {
   return true;
 }
 
-NATIVE_PROCEDURE_F(format) {
+GEL_NATIVE_PROCEDURE_F(format) {
   ASSERT(GetRuntime());
   ASSERT(args.size() >= 1);
   NativeArgument<0, String> format(args);
@@ -314,7 +318,7 @@ NATIVE_PROCEDURE_F(set_cdr) {
   return DoNothing();
 }
 
-NATIVE_PROCEDURE_F(get_event_loop) {
+GEL_NATIVE_PROCEDURE_F(get_event_loop) {
   return Return(GetThreadEventLoop());
 }
 

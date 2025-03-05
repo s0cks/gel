@@ -51,12 +51,12 @@ class FreeList : public Region {
     head_(nullptr) {}
   FreeList(const uword start_address, const uword size) :
     Region(start_address, size),
-    head_(FreePointer::New(start_address, Tag::Old(size))) {
+    head_(FreePointer::New(start_address, Tag::OldFree(size))) {
     ASSERT(head_);
   }
   FreeList(const MemoryRegion& region) :
     Region(region),
-    head_(FreePointer::New(region.GetStartingAddress(), Tag::Old(region.GetSize()))) {
+    head_(FreePointer::New(region.GetStartingAddress(), Tag::OldFree(region.GetSize()))) {
     ASSERT(head_);
   }
 
@@ -74,7 +74,7 @@ class FreeList : public Region {
 
   void Clear() override {
     Region::Clear();
-    head_ = FreePointer::New(GetStartingAddress(), Tag::Old(GetSize()));
+    head_ = FreePointer::New(GetStartingAddress(), Tag::OldFree(GetSize()));
     ASSERT(head_);
   }
 

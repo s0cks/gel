@@ -1,26 +1,26 @@
 (defmacro debug-only [exprs...]
-  (when (gel/debug?)
+  (when (debug?)
     exprs))
 (defmacro printf [fmt args...]
   (print (format fmt args)))
-(defnative gel/get-version []
+(defnative get-version []
   "Returns the current version of the gelrt.")
-(defnative gel/debug? []
+(defnative debug? []
   "Returns whether or not this is a debug instance of gelrt.")
-(defnative gel/load-bindings [filename]
+(defnative load-bindings [filename]
   "Opens the bindings from shared library at path [filename].")
 (defnative format [pattern args...] ;; TODO: move to gel/ namespace
-    "Returns a formatted String using the supplied [pattern] and [args...].")
+  "Returns a formatted String using the supplied [pattern] and [args...].")
 (defnative print [value] ;; TODO: move to gel/ namespace
   "Prints the supplied [value] to the console.")
-(defnative gel/docs? [o]
+(defnative docs? [o]
   "Returns the docstring attached to the supplied Object [o].")
 (defnative type? [o]
   "Returns the type of Object [o].")
 (defnative sizeof [o]
   "Returns the size of Object [o] in bytes.")
 
-(printf "gel v{}" (gel/get-version))
+(printf "gel v{}" (get-version))
 (debug-only
   (print "debug mode enabled."))
 
@@ -60,9 +60,9 @@
 (defmacro timeout [on_tick timeout]
   (Timer:create on_tick timeout 0))
 
-(defnative gel/get-class [s]
+(defnative get-class [s]
   "Returns the Class for Symbol [s].")
-(defnative gel/get-classes []
+(defnative get-classes []
   "Returns the list of Classes registered.")
 (deftype Class
   (defnative get-id [c]
@@ -74,9 +74,9 @@
   (defnative get-procedures [c]
     "Returns the Procedures for Class [c]."))
 
-(defnative gel/get-namespace [s]
+(defnative get-namespace [s]
   "Returns the Namespace for Symbol [s].")
-(defnative gel/get-namespaces []
+(defnative get-namespaces []
   "Returns the list of Namespaces.")
 (deftype Namespace
   (defnative get-symbol [ns]
@@ -98,13 +98,15 @@
   (defnative get-symbol [m]
     "Returns the Symbol for Macro [m]."))
 
-(defnative gel/get-module [s]
+(defnative get-module [s]
   "Returns the Module for Symbol [s].")
-(defnative gel/get-modules []
+(defnative get-modules []
   "Returns the list of Modules.")
 (deftype Module
   (defnative is-kernel? [m]
-    "Returns whether or not Module [m] is a kernel Module."))
+    "Returns whether or not Module [m] is a kernel Module.")
+  (defnative get-namespaces [m]
+    "Returns the list of Namespaces for Module [m]."))
 
 (defnative set-car! [p v] ;; TODO: create instruction
   "Sets the first value of Pair [p] to [v].")
@@ -120,7 +122,7 @@
 ;; ---------------------------------------------------------------------------------
 ;; Event Loop
 ;; ---------------------------------------------------------------------------------
-(defnative gel/get-event-loop []
+(defnative get-event-loop []
   "Returns the EventLoop for the current thread.")
 ;; ---------------------------------------------------------------------------------
 
@@ -247,10 +249,10 @@
 (defn map [f seq]
   (cond (null? seq) seq
     (cons (f (car seq)) (map f (cdr seq)))))
-(defn filter [p seq]
+(defn filter [f seq]
   (cond (null? seq) seq
-    (p (car seq)) (cons (car seq) (filter p (cdr seq)))
-    (filter p (cdr seq))))
+    (f (car seq)) (cons (car seq) (filter f (cdr seq)))
+    (filter f (cdr seq))))
 (defn length [seq]
   "Returns the length of a sequence."
   (cond (null? seq) 0

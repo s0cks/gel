@@ -343,6 +343,10 @@ class ConstantInstr : public Definition {
     return value_;
   }
 
+  inline auto IsConstantSymbol() const -> bool {
+    return GetValue()->IsSymbol();
+  }
+
   DECLARE_INSTRUCTION(ConstantInstr);
 
  public:

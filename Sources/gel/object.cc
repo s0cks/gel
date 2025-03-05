@@ -112,7 +112,24 @@ auto Object::CreateClass() -> Class* {
     return Null();                                  \
   }
 
-FOR_EACH_BINARY_OP(DECLARE_OBJECT_BINARY_OP);
+DECLARE_OBJECT_BINARY_OP(Add);
+DECLARE_OBJECT_BINARY_OP(Subtract);
+DECLARE_OBJECT_BINARY_OP(Multiply);
+DECLARE_OBJECT_BINARY_OP(Divide);
+DECLARE_OBJECT_BINARY_OP(Modulus);
+DECLARE_OBJECT_BINARY_OP(Eq);
+DECLARE_OBJECT_BINARY_OP(BinaryAnd);
+DECLARE_OBJECT_BINARY_OP(BinaryOr);
+DECLARE_OBJECT_BINARY_OP(GreaterThan);
+DECLARE_OBJECT_BINARY_OP(GreaterThanEqual);
+DECLARE_OBJECT_BINARY_OP(LessThan);
+DECLARE_OBJECT_BINARY_OP(LessThanEqual);
+DECLARE_OBJECT_BINARY_OP(InstanceOf);
+
+auto Object::Cons(Object* rhs) const -> Object* {
+  return gel::Cons(const_cast<Object*>(this), rhs);  // NOLINT(cppcoreguidelines-pro-type-const-cast)
+}
+
 #undef DECLARE_OBJECT_BINARY_OP
 
 auto Object::Compare(Object* rhs) const -> int {
