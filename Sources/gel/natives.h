@@ -158,31 +158,6 @@ _DECLARE_NATIVE_RX_PROCEDURE(get_operators, "get-operators");
 
 #endif  // GEL_ENABLE_RX
 
-// TODO: switch based on sandbox flags
-#define _DECLARE_FS_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(fs_##Name, "fs/" Sym);
-#define DECLARE_FS_PROCEDURE(Name)       _DECLARE_FS_PROCEDURE(Name, #Name)
-
-_DECLARE_FS_PROCEDURE(get_cwd, "get-cwd");
-DECLARE_FS_PROCEDURE(stat);
-DECLARE_FS_PROCEDURE(rename);
-DECLARE_FS_PROCEDURE(mkdir);
-DECLARE_FS_PROCEDURE(rmdir);
-DECLARE_FS_PROCEDURE(open);
-DECLARE_FS_PROCEDURE(close);
-DECLARE_FS_PROCEDURE(unlink);
-DECLARE_FS_PROCEDURE(fsync);
-DECLARE_FS_PROCEDURE(ftruncate);
-DECLARE_FS_PROCEDURE(access);
-DECLARE_FS_PROCEDURE(chmod);
-DECLARE_FS_PROCEDURE(link);
-DECLARE_FS_PROCEDURE(symlink);
-DECLARE_FS_PROCEDURE(readlink);
-DECLARE_FS_PROCEDURE(chown);
-_DECLARE_FS_PROCEDURE(copy_file, "copy-file");
-
-#undef DECLARE_FS_PROCEDURE
-#undef _DECLARE_FS_PROCEDURE
-
 _DECLARE_NATIVE_PROCEDURE(gel_get_debug, "gel/debug?");
 
 #ifdef GEL_DEBUG

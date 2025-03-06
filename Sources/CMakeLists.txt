@@ -34,7 +34,7 @@ target_include_directories(gelle
 target_link_libraries(gelle
   PUBLIC ${GEL_LIBRARIES} gelle-api gflags::gflags OpenSSL::SSL OpenSSL::Crypto)
 
-list(APPEND GEL_BINDINGS env math os process rx test)
+list(APPEND GEL_BINDINGS env math os process fs rx test)
 
 function(add_gel_binding target_name target_sources)
   add_library(${target_name} SHARED ${target_sources})

@@ -110,10 +110,19 @@ auto LocalScope::Lookup(Symbol* symbol, LocalVariable** result, const bool recur
   LocalScope const* current = this;
   do {
     ASSERT(current);
-    const auto local = current->FindIf(LocalVariable::HasSymbol(symbol));
-    if (local) {
-      (*result) = local;
-      return true;
+    {
+      const auto local = current->FindIf(LocalVariable::HasSymbol(symbol));
+      if (local) {
+        (*result) = local;
+        return true;
+      }
+    }
+    {
+      const auto local = current->FindIf(LocalVariable::HasSymbol(Symbol::CopyWithNewNamespace(symbol, "gel")));
+      if (local) {
+        (*result) = local;
+        return true;
+      }
     }
     if (!recursive)
       break;

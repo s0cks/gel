@@ -1591,7 +1591,6 @@ auto Parser::ParseDef(expr::Expression** result) -> ParseResult {
   expr::Expression* value = nullptr;
   CHECK_RESULT(ParseExpression(&value));
   ASSERT(value);
-  DLOG(INFO) << local->ToString() << " => " << value->ToString() << " constexpr?: " << (value->IsConstantExpr() ? 'y' : 'n');
   if (value->IsConstantExpr()) {
     const auto const_value = value->EvalToConstant(scope);
     ASSERT(const_value);

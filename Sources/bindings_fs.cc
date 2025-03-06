@@ -1,9 +1,38 @@
-#include "gel/natives.h"
-#ifndef GEL_SANDBOX
+#include <gel/plugin.h>
+#include <glog/logging.h>
+
+#include <cstdlib>
 
 #include "gel/event_loop.h"
+#include "gel/native_procedure.h"
 
-namespace gel::proc {
+using namespace gel;
+
+// TODO: switch based on sandbox flags
+#define _DECLARE_FS_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(fs_##Name, "fs/" Sym);
+#define DECLARE_FS_PROCEDURE(Name)       _DECLARE_FS_PROCEDURE(Name, #Name)
+
+_DECLARE_FS_PROCEDURE(get_cwd, "get-cwd");
+DECLARE_FS_PROCEDURE(stat);
+DECLARE_FS_PROCEDURE(rename);
+DECLARE_FS_PROCEDURE(mkdir);
+DECLARE_FS_PROCEDURE(rmdir);
+DECLARE_FS_PROCEDURE(open);
+DECLARE_FS_PROCEDURE(close);
+DECLARE_FS_PROCEDURE(unlink);
+DECLARE_FS_PROCEDURE(fsync);
+DECLARE_FS_PROCEDURE(ftruncate);
+DECLARE_FS_PROCEDURE(access);
+DECLARE_FS_PROCEDURE(chmod);
+DECLARE_FS_PROCEDURE(link);
+DECLARE_FS_PROCEDURE(symlink);
+DECLARE_FS_PROCEDURE(readlink);
+DECLARE_FS_PROCEDURE(chown);
+_DECLARE_FS_PROCEDURE(copy_file, "copy-file");
+
+#undef DECLARE_FS_PROCEDURE
+#undef _DECLARE_FS_PROCEDURE
+
 #define NATIVE_FS_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(fs_##Name)
 
 NATIVE_FS_PROCEDURE_F(get_cwd) {
@@ -13,17 +42,13 @@ NATIVE_FS_PROCEDURE_F(get_cwd) {
 
 NATIVE_FS_PROCEDURE_F(stat) {
   NativeArgument<0, String> path(args);
-  if (!path)
-    return Throw(path.GetError());
+  CHECK_NATIVE_ARG(path);
   NativeArgument<1, Procedure> on_next(args);
-  if (!on_next)
-    return Throw(on_next.GetError());
+  CHECK_NATIVE_ARG(on_next);
   OptionalNativeArgument<2, Procedure> on_error(args);
-  if (!on_error)
-    return Throw(on_error.GetError());
+  CHECK_NATIVE_ARG(on_error);
   OptionalNativeArgument<3, Procedure> on_finished(args);
-  if (!on_finished)
-    return Throw(on_finished.GetError());
+  CHECK_NATIVE_ARG(on_finished);
   const auto loop = GetThreadEventLoop();
   ASSERT(loop);
   return ReturnBool(loop->Stat(path->Get(), on_next, on_error, on_finished));
@@ -31,20 +56,15 @@ NATIVE_FS_PROCEDURE_F(stat) {
 
 NATIVE_FS_PROCEDURE_F(rename) {
   NativeArgument<0, String> old_path(args);
-  if (!old_path)
-    return Throw(old_path.GetError());
+  CHECK_NATIVE_ARG(old_path);
   NativeArgument<1, String> new_path(args);
-  if (!new_path)
-    return Throw(new_path.GetError());
+  CHECK_NATIVE_ARG(new_path);
   OptionalNativeArgument<2, Procedure> on_success(args);
-  if (!on_success)
-    return Throw(on_success);
+  CHECK_NATIVE_ARG(on_success);
   OptionalNativeArgument<3, Procedure> on_error(args);
-  if (!on_error)
-    return Throw(on_error.GetError());
+  CHECK_NATIVE_ARG(on_error);
   OptionalNativeArgument<4, Procedure> on_finished(args);
-  if (!on_finished)
-    return Throw(on_finished.GetError());
+  CHECK_NATIVE_ARG(on_finished);
   const auto loop = GetThreadEventLoop();
   ASSERT(loop);
   return ReturnBool(loop->Rename(old_path->Get(), new_path->Get(), on_success, on_error, on_finished));
@@ -52,20 +72,15 @@ NATIVE_FS_PROCEDURE_F(rename) {
 
 NATIVE_FS_PROCEDURE_F(mkdir) {
   NativeArgument<0, String> path(args);
-  if (!path)
-    return Throw(path);
+  CHECK_NATIVE_ARG(path);
   NativeArgument<1, Long> mode(args);
-  if (!mode)
-    return Throw(mode);
+  CHECK_NATIVE_ARG(mode);
   OptionalNativeArgument<2, Procedure> on_success(args);
-  if (!on_success)
-    return Throw(on_success);
+  CHECK_NATIVE_ARG(on_success);
   OptionalNativeArgument<3, Procedure> on_error(args);
-  if (!on_error)
-    return Throw(on_error);
+  CHECK_NATIVE_ARG(on_error);
   OptionalNativeArgument<4, Procedure> on_finished(args);
-  if (!on_finished)
-    return Throw(on_finished);
+  CHECK_NATIVE_ARG(on_finished);
   const auto loop = GetThreadEventLoop();
   ASSERT(loop);
   return ReturnBool(loop->Mkdir(path->Get(), static_cast<int>(mode->Get()), on_success, on_error, on_finished));
@@ -73,17 +88,13 @@ NATIVE_FS_PROCEDURE_F(mkdir) {
 
 NATIVE_FS_PROCEDURE_F(rmdir) {
   NativeArgument<0, String> path(args);
-  if (!path)
-    return Throw(path.GetError());
+  CHECK_NATIVE_ARG(path);
   OptionalNativeArgument<1, Procedure> on_success(args);
-  if (!on_success)
-    return Throw(on_success.GetError());
+  CHECK_NATIVE_ARG(on_success);
   OptionalNativeArgument<2, Procedure> on_error(args);
-  if (!on_error)
-    return Throw(on_error.GetError());
+  CHECK_NATIVE_ARG(on_error);
   OptionalNativeArgument<3, Procedure> on_finished(args);
-  if (!on_finished)
-    return Throw(on_finished.GetError());
+  CHECK_NATIVE_ARG(on_finished);
   const auto loop = GetThreadEventLoop();
   ASSERT(loop);
   return ReturnBool(loop->Rmdir(path->Get(), on_success, on_error, on_finished));
@@ -170,6 +181,28 @@ NATIVE_FS_PROCEDURE_F(copy_file) {
 }
 
 #undef NATIVE_FS_PROCEDURE_F
-}  // namespace gel::proc
 
-#endif  // GEL_SANDBOX
+#define INIT_FS_NATIVE(Name) InitNative<fs_##Name>();
+
+DEFINE_PLUGIN(fs) {
+  INIT_FS_NATIVE(get_cwd);
+  INIT_FS_NATIVE(stat);
+  INIT_FS_NATIVE(rename);
+  INIT_FS_NATIVE(mkdir);
+  INIT_FS_NATIVE(rmdir);
+  INIT_FS_NATIVE(open);
+  INIT_FS_NATIVE(close);
+  INIT_FS_NATIVE(unlink);
+  INIT_FS_NATIVE(fsync);
+  INIT_FS_NATIVE(ftruncate);
+  INIT_FS_NATIVE(access);
+  INIT_FS_NATIVE(chmod);
+  INIT_FS_NATIVE(link);
+  INIT_FS_NATIVE(symlink);
+  INIT_FS_NATIVE(readlink);
+  INIT_FS_NATIVE(chown);
+  INIT_FS_NATIVE(copy_file);
+  return EXIT_SUCCESS;
+}
+
+#undef INIT_FS_NATIVE

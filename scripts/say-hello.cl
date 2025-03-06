@@ -1,3 +1,3 @@
 (defn say-hello [name]
-  (print (format "Hello {}" name)))
+  (printf "Hello {}" name))
 (say-hello "Tazz")

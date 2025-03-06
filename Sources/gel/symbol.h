@@ -108,6 +108,12 @@ class Symbol : public Object {
     const auto name = rhs.substr((ns.empty() ? 0 : ns.length() + 1) + (type.empty() ? 0 : type.length() + 1));
     return New(ns, type, name);
   }
+
+  static inline auto CopyWithNewNamespace(Symbol* rhs, const std::string& ns) -> Symbol* {
+    ASSERT(rhs);
+    ASSERT(!ns.empty());
+    return new Symbol(ns, rhs->GetSymbolType(), rhs->GetSymbolName());
+  }
 };
 
 using SymbolList = std::vector<Symbol*>;

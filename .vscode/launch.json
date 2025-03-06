@@ -56,6 +56,7 @@
         "test-dispatch.cl",
         "test-optional.cl",
         "test-mkdir.cl",
+        "test-rmdir.cl",
         "test-dlopen.cl",
         "test-event-emitter.cl"
       ],

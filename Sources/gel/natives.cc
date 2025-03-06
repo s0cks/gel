@@ -75,27 +75,6 @@ void NativeProcedure::InitNatives() {
   InitSetNative(count);
 #undef InitSetNative
 
-// TODO: add sandbox switch
-#define InitFsNative(Name) InitNative<fs_##Name>();
-  InitFsNative(get_cwd);
-  InitFsNative(stat);
-  InitFsNative(rename);
-  InitFsNative(mkdir);
-  InitFsNative(rmdir);
-  InitFsNative(fsync);
-  InitFsNative(ftruncate);
-  InitFsNative(access);
-  InitFsNative(chmod);
-  InitFsNative(link);
-  InitFsNative(symlink);
-  InitFsNative(readlink);
-  InitFsNative(chown);
-  InitFsNative(copy_file);
-  InitFsNative(open);
-  InitFsNative(close);
-  InitFsNative(unlink);
-#undef InitFsNative
-
 #ifdef GEL_ENABLE_RX
 #define REGISTER_RX(Name) InitNative<rx_##Name>();
   REGISTER_RX(observer);

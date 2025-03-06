@@ -1,6 +1,7 @@
 (import "fs.cl")
-(def filename "./test")
-(fs/mkdir filename 0755
-  $((print (format "{} created!" filename)))
-  $((print (format "error creating directory {}: {}" filename $)))
+(def dirname "./test")
+(printf "creating {}..." dirname)
+(fs/mkdir dirname 0755
+  $((print (format "{} created!" dirname)))
+  $((print (format "error creating directory {}: {}" dirname $)))
   $((print "finished creating directory")))
