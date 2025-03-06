@@ -49,6 +49,7 @@
         "test-namespaces.cl",
         "test-array.cl",
         "test-macro.cl",
+        "test-map.cl",
         "test-timeout.cl",
         "test-interval.cl",
         "test-stat.cl",

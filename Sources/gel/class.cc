@@ -5,6 +5,7 @@
 #include "gel/event_loop.h"
 #include "gel/heap.h"
 #include "gel/macro.h"
+#include "gel/map.h"
 #include "gel/module.h"
 #include "gel/namespace.h"
 #include "gel/native_procedure.h"

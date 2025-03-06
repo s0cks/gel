@@ -144,6 +144,7 @@ class Runtime {
   explicit Runtime(LocalScope* init_scope = CreateInitScope());
   auto Import(Module* module) -> bool;
   auto Import(Symbol* symbol, LocalScope* scope) -> bool;
+  auto ImportModule(const std::string& name) -> bool;
 
   inline auto Import(const std::string& name, LocalScope* scope) -> bool {
     return Import(Symbol::New(name), scope);

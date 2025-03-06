@@ -58,6 +58,7 @@ struct Position {
   V(RBracket)                 \
   V(Question)                 \
   V(Comma)                    \
+  V(Colon)                    \
   V(Dollar)                   \
   V(Dispatch)                 \
   V(LiteralNumber)            \

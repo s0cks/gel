@@ -75,13 +75,6 @@ void NativeProcedure::InitNatives() {
   InitSetNative(count);
 #undef InitSetNative
 
-#define InitMapNative(Name) InitNative<map_##Name>()
-  InitMapNative(contains);
-  InitMapNative(empty);
-  InitMapNative(size);
-  InitMapNative(get);
-#undef InitMapNative
-
 // TODO: add sandbox switch
 #define InitFsNative(Name) InitNative<fs_##Name>();
   InitFsNative(get_cwd);

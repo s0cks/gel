@@ -590,51 +590,6 @@ class Set : public Object {
   }
 };
 
-class Map : public Object {
- public:
-  using StorageType = std::unordered_map<Object*, Object*, ObjectHasher, ObjectComparator>;
-  using Iter = StorageType::iterator;
-  using ConstIter = StorageType::const_iterator;
-
- private:
-  StorageType data_;
-
-  explicit Map(const StorageType& data) :
-    Object(),
-    data_(data) {}
-
-  inline auto Find(Object* rhs) const -> ConstIter {
-    return data().find(rhs);
-  }
-
- public:
-  ~Map() override = default;
-
-  auto data() const -> const StorageType& {
-    return data_;
-  }
-
-  auto GetSize() const -> uword {
-    return data_.size();
-  }
-
-  auto IsEmpty() const -> bool {
-    return data_.empty();
-  }
-
-  auto Contains(Object* rhs) const -> bool {
-    return Find(rhs) != std::end(data());
-  }
-
-  auto Get(Object* key) const -> Object*;
-  DECLARE_TYPE(Map);
-
- public:
-  static inline auto New(const StorageType& data = {}) -> Map* {
-    return new Map(data);
-  }
-};
-
 auto PrintValue(std::ostream& stream, Object* value) -> std::ostream&;
 
 #define DEFINE_TYPE_PRED(Name)                     \

@@ -83,21 +83,6 @@ _DECLARE_SET_PROCEDURE(empty, "empty?");
 #undef DECLARE_SET_PROCEDURE
 // ----------------------------------------------------------------------------------------------------
 
-// ----------------------------------------------------------------------------------------------------
-// Map
-// ----------------------------------------------------------------------------------------------------
-#define _DECLARE_MAP_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(map_##Name, "Map/" Sym)
-#define DECLARE_MAP_PROCEDURE(Name)       _DECLARE_MAP_PROCEDURE(Name, #Name);
-
-DECLARE_MAP_PROCEDURE(contains);
-DECLARE_MAP_PROCEDURE(size);
-DECLARE_MAP_PROCEDURE(get);
-_DECLARE_MAP_PROCEDURE(empty, "empty?");
-
-#undef _DECLARE_SET_PROCEDURE
-#undef DECLARE_SET_PROCEDURE
-// ----------------------------------------------------------------------------------------------------
-
 #ifdef GEL_ENABLE_RX
 #define _DECLARE_NATIVE_RX_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(rx_##Name, "rx/" Sym)
 #define DECLARE_NATIVE_RX_PROCEDURE(Name)       _DECLARE_NATIVE_RX_PROCEDURE(Name, #Name)

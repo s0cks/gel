@@ -18,6 +18,15 @@ auto NativeProcedureEntry::Return(Object* rhs) const -> bool {
   return DoNothing();
 }
 
+auto NativeProcedureEntry::ThrowNotImplementedError() const -> bool {
+  std::stringstream ss;
+  if (HasNative()) {
+    ss << "NativeProcedure `" << GetNative()->GetSymbol()->GetFullyQualifiedName() << "` is ";
+  }
+  ss << "not implemented!";
+  return ThrowError(ss);
+}
+
 NativeProcedureList NativeProcedure::all_{};
 
 void NativeProcedure::Init() {

@@ -9,22 +9,11 @@ project(
   LANGUAGES C CXX)
 
 include(Options)
-# add_compile_options(
-#     -Wall
-#     -fms-extensions
-#     -Wno-deprecated
-#     -Wno-exceptions
-#     -Wno-overloaded-virtual
-#     -Wno-sign-compare
-#     -Wno-writable-strings # TODO: remove no-writable-strings
-#     -Wno-sizeof-pointer-memaccess
-#     -fPIC
-#     -frtti)
-
 find_package(Threads REQUIRED)
 find_package(glog CONFIG REQUIRED)
 set(GFLAGS_USE_TARGET_NAMESPACE ON)
 set(GFLAGS_BUILD_SHARED_LIBS ON)
+find_package(OpenSSL REQUIRED)
 find_package(gflags CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(units CONFIG REQUIRED)

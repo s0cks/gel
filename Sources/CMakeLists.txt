@@ -32,21 +32,21 @@ target_include_directories(gelle
          ${CMAKE_CURRENT_BINARY_DIR}
   PRIVATE ${TERMCOLOR_INCLUDE_DIRS})
 target_link_libraries(gelle
-  PUBLIC ${GEL_LIBRARIES} gelle-api gflags::gflags)
+  PUBLIC ${GEL_LIBRARIES} gelle-api gflags::gflags OpenSSL::SSL OpenSSL::Crypto)
 
-add_library(test-bindings SHARED
-  bindings_test.cc)
-target_link_libraries(test-bindings PUBLIC gelle)
+list(APPEND GEL_BINDINGS env math os process rx test)
 
-add_library(env-bindings SHARED
-  bindings_env.cc)
-target_link_libraries(env-bindings PUBLIC gelle)
+function(add_gel_binding target_name target_sources)
+  add_library(${target_name} SHARED ${target_sources})
+  target_link_libraries(${target_name} PUBLIC gelle)
+endfunction()
 
-add_library(math-bindings SHARED
-  bindings_math.cc)
-target_link_libraries(math-bindings PUBLIC gelle)
+foreach(binding IN LISTS GEL_BINDINGS)
+  add_gel_binding(${binding}-bindings
+    bindings_${binding}.cc)
+endforeach()
 
 add_executable(gelrt
   main.cc)
 target_link_libraries(gelrt
-  PUBLIC gelle gflags::gflags)
+  PUBLIC gelle)

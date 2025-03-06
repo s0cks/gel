@@ -3,18 +3,7 @@
 
 #include <gtest/gtest.h>
 
-#include "gel/buffer.h"
-#include "gel/error.h"
-#include "gel/event_emitter.h"
-#include "gel/event_loop.h"
-#include "gel/lambda.h"
-#include "gel/macro.h"
-#include "gel/module.h"
-#include "gel/native_procedure.h"
-#include "gel/object.h"
-#include "gel/rx.h"
-#include "gel/script.h"
-#include "gel/symbol.h"
+#include "gel/types.h"
 
 namespace gel::testing {
 using namespace ::testing;

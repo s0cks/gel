@@ -9,6 +9,7 @@
 #include "gel/common.h"
 #include "gel/heap.h"
 #include "gel/local.h"
+#include "gel/map.h"
 #include "gel/module.h"
 #include "gel/natives.h"
 #include "gel/object.h"
@@ -556,14 +557,28 @@ auto LoadInstanceMethodExpr::ToString() const -> std::string {
   return helper;
 }
 
+static inline auto IsConstantExpr(const NewMapExpr::Entry& entry) -> bool {
+  return entry.first && entry.second->IsConstantExpr();
+}
+
 auto NewMapExpr::IsConstantExpr() const -> bool {
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return false;
+  for (const auto& entry : data_) {
+    if (!expr::IsConstantExpr(entry))
+      return false;
+  }
+  return true;
 }
 
 auto NewMapExpr::EvalToConstant(LocalScope* scope) const -> Object* {
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return nullptr;
+  ASSERT(scope);
+  Map::StorageType data{};
+  for (const auto& entry : data_) {
+    ASSERT(entry.first && entry.second);
+    const auto value = entry.second->EvalToConstant(scope);
+    ASSERT(value);
+    data.insert({entry.first, value});  // TODO: prolly should check this insertion
+  }
+  return Map::New(data);
 }
 
 auto NewMapExpr::ToString() const -> std::string {

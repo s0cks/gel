@@ -9,16 +9,9 @@
 #include "gel/flags.h"
 #include "gel/gel.h"
 #include "gel/instruction.h"
-#include "gel/lambda.h"
-#include "gel/local.h"
 #include "gel/local_scope.h"
-#include "gel/module.h"
-#include "gel/native_procedure.h"
-#include "gel/natives.h"
-#include "gel/object.h"
-#include "gel/procedure.h"
 #include "gel/rx.h"
-#include "gel/script.h"
+#include "gel/types.h"
 
 namespace gel {
 

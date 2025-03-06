@@ -161,6 +161,7 @@ auto Parser::ParseLiteralLambda(const Token::Kind kind, expr::LiteralExpr** resu
 
 auto Parser::ParseMap(expr::Expression** result) -> ParseResult {
   EXPECT_NEXT(Token::kLBrace);
+  SetParsingLiteralMap();
 
   Symbol* key = nullptr;
   expr::Expression* value = nullptr;
@@ -169,6 +170,10 @@ auto Parser::ParseMap(expr::Expression** result) -> ParseResult {
   while (!PeekEq(Token::kRBrace)) {
     CHECK_RESULT(ParseLiteralSymbol(&key));
     ASSERT(key);
+
+    if (PeekEq(Token::kColon))
+      NextToken();
+
     CHECK_RESULT(ParseExpression(&value));
     ASSERT(value);
     if (PeekEq(Token::kComma))
@@ -176,7 +181,9 @@ auto Parser::ParseMap(expr::Expression** result) -> ParseResult {
     data.emplace_back(key, value);
   }
   EXPECT_NEXT(Token::kRBrace);
+  ClearParsingLiteralMap();
   (*result) = expr::NewMapExpr::New(data);
+  ASSERT((*result));
   return true;
 }
 
@@ -367,6 +374,7 @@ auto Parser::ParseCallExpr(expr::Expression** result) -> ParseResult {
 
       LocalVariable* local = nullptr;
       if (GetScope()->Lookup(symbol->GetSymbolType(), &local) && local && local->HasValue()) {
+        ASSERT(local);
         const auto type = local->GetValue()->GetType();
         const auto func = type->FindFunction(symbol->GetSymbolName());
         if (func) {
@@ -1157,7 +1165,8 @@ auto Parser::NextToken() -> const Token& {
         }
         return NextToken(Token::kCastExpr, GetBufferedText());
       }
-      break;
+      Advance();
+      return NextToken(Token::kColon);
     case 'n': {
       if (PeekChar(1) == 'e' && PeekChar(2) == 'w' && PeekChar(3) == ':') {
         Advance(4);
@@ -1208,7 +1217,7 @@ auto Parser::NextToken() -> const Token& {
         } else if (IsParsingArgs()) {
           break;
         }
-      } else if (PeekChar() == '.' && PeekChar(1) == '.') {
+      } else if ((PeekChar() == '.' && PeekChar(1) == '.') || (PeekChar() == ':' && IsParsingLiteralMap())) {
         break;
       }
       const auto c = NextChar();
@@ -1582,6 +1591,7 @@ auto Parser::ParseDef(expr::Expression** result) -> ParseResult {
   expr::Expression* value = nullptr;
   CHECK_RESULT(ParseExpression(&value));
   ASSERT(value);
+  DLOG(INFO) << local->ToString() << " => " << value->ToString() << " constexpr?: " << (value->IsConstantExpr() ? 'y' : 'n');
   if (value->IsConstantExpr()) {
     const auto const_value = value->EvalToConstant(scope);
     ASSERT(const_value);

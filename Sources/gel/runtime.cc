@@ -132,6 +132,42 @@ class KernelModuleImporter : public BaseModuleImporter {
   }
 };
 
+class DefaultModuleImporter : public BaseModuleImporter {
+  DEFINE_NON_COPYABLE_TYPE(DefaultModuleImporter);
+
+ protected:
+  void ImportScope(LocalScope* scope) override {
+    ASSERT(scope);
+    if (VLOG_IS_ON(100)) {
+      DLOG(INFO) << "importing " << scope->ToString() << ":";
+      LocalScopePrinter::Print<google::INFO, false>(scope, __FILE__, __LINE__);
+    }
+    GetRuntime()->GetScope()->AddAll(scope);
+  }
+
+ public:
+  explicit DefaultModuleImporter(Runtime* runtime) :
+    BaseModuleImporter(runtime) {}
+  ~DefaultModuleImporter() override = default;
+
+  void Import(Module* m) override {
+    ASSERT(m);
+    BaseModuleImporter::Import(m);
+    // import default namespace
+    const auto default_ns = m->GetDefaultNamespace();
+    ASSERT(default_ns);
+    ImportScope(default_ns->GetScope());
+    if (default_ns->GetName() != "gel") {
+      const auto gel_ns = m->FindNamespace("gel");
+      if (gel_ns) {
+        ImportScope(gel_ns->GetScope());
+        return;
+      }
+      DLOG(WARNING) << "cannot find `gel namespace in: " << m->ToString();
+    }
+  }
+};
+
 void Runtime::LoadKernel() {
   const auto loader = GetThreadKernelModuleLoader();
   ASSERT(loader);
@@ -171,6 +207,17 @@ auto Runtime::Import(Symbol* symbol, LocalScope* scope) -> bool {
   LOG_IF(FATAL, !home) << "no $" << kHomeVar.name() << " variable set in environment.";
   auto module = nullptr;
   return Import(module);
+}
+
+auto Runtime::ImportModule(const std::string& name) -> bool {
+  const auto loader = GetThreadModuleLoader();
+  ASSERT(loader);
+  ASSERT(!name.empty());
+  DefaultModuleImporter importer(this);
+  const auto m = loader->LoadModule(name);
+  LOG_IF(FATAL, !m) << "failed to import module: " << m;
+  importer.Import(m);
+  return true;
 }
 
 auto Runtime::CreateInitScope() -> LocalScope* {
@@ -243,7 +290,13 @@ auto Runtime::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
 }
 
 void Runtime::Call(NativeProcedure* native, const ObjectList& args) {
-  ASSERT(native && native->HasEntry());
+  ASSERT(native);
+  if (!native->HasEntry()) {
+    std::stringstream ss;
+    ss << "NativeProcedure `" << native->GetSymbol()->GetFullyQualifiedName() << "` is not linked.";
+    throw Exception(ss.str());
+    return;
+  }
   const auto locals = PushScope();
   ASSERT(locals);
   {

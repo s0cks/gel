@@ -66,6 +66,10 @@ class NativeArgument {
     return (T*)value_;
   }
 
+  auto GetValueOr(T* rhs) const -> T* {
+    return HasValue() ? GetValue() : rhs;
+  }
+
   auto GetIndex() const -> uword {
     return Index;
   }
@@ -170,9 +174,7 @@ class NativeProcedureEntry {
     return ThrowError(ss.str());
   }
 
-  inline auto ThrowNotImplementedError() const -> bool {
-    return ThrowError("not implemented");
-  }
+  auto ThrowNotImplementedError() const -> bool;
 
   inline auto DoNothing() const -> bool {
     return true;
@@ -451,6 +453,13 @@ using RequiredVariantNativeArgument = VariantNativeArgument<Index, true, Types..
 
 template <const uword Index, class... Types>
 using OptionalVariadicNativeArgument = VariantNativeArgument<Index, false, Types...>;
+
+#define CHECK_NATIVE_ARG(Name) \
+  ({                           \
+    if (!Name)                 \
+      return Throw(Name);      \
+  })
+
 }  // namespace gel
 
 #endif  // GEL_NATIVE_PROCEDURE_H

@@ -6,25 +6,65 @@
 #include "gel/object.h"
 
 namespace gel {
+#define FOR_EACH_BUFFER_ELEMENT_SIZE(V) \
+  V(8)                                  \
+  V(16)                                 \
+  V(32)                                 \
+  V(64)
+
 class Buffer : public Object {
   static constexpr const auto kDefaultBufferSize = 4096;
   static constexpr const auto kMaxBufferSize = 4 * 1024 * 1024;
 
  private:
-  uword length_;
+  uword wpos_ = 0;
+  uword rpos_ = 0;
   uword capacity_;
 
-  Buffer(const uword length, const uword capacity) :
-    length_(length),
+  Buffer(const uword capacity) :
     capacity_(capacity) {
     ASSERT(IsPow2(capacity_));
   }
 
   void CopyFrom(const uint8_t* src, const uword num_bytes) {
     ASSERT(src);
-    ASSERT((GetLength() + num_bytes) <= GetCapacity());  // TODO: resize
-    memcpy(&data()[GetLength()], &src[0], num_bytes);
-    length_ += num_bytes;
+    ASSERT((wpos() + num_bytes) <= GetCapacity());  // TODO: resize
+    memcpy(&data()[wpos()], &src[0], num_bytes);
+    wpos_ += num_bytes;
+  }
+
+  template <typename T>
+  inline auto ReadAt(const uint64_t pos, T* result) -> bool {
+    static constexpr const auto kValueSize = sizeof(T);
+    if ((pos + kValueSize) > GetCapacity()) {
+      LOG(ERROR) << "cannot read " << units::data::byte_t(kValueSize) << " from " << ToString();
+      return false;
+    }
+    rpos_ = pos + kValueSize;
+    (*result) = *((T*)(data() + pos));
+    return true;
+  }
+
+  template <typename T>
+  inline auto Read(T* result) -> bool {
+    return ReadAt<T>(rpos_, result);
+  }
+
+  template <typename T>
+  inline auto PutAt(const uint64_t pos, const T value) -> bool {
+    static constexpr const auto kValueSize = sizeof(T);
+    if ((pos + kValueSize) > GetCapacity()) {
+      LOG(ERROR) << "cannot read " << units::data::byte_t(kValueSize) << " from " << ToString();
+      return false;
+    }
+    *((T*)(data() + pos)) = value;
+    wpos_ = pos + kValueSize;
+    return true;
+  }
+
+  template <typename T>
+  inline auto Put(const T value) -> bool {
+    return PutAt<T>(wpos(), value);
   }
 
  public:
@@ -38,14 +78,35 @@ class Buffer : public Object {
     return (uint8_t*)GetDataAddress();  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   }
 
-  auto GetLength() const -> uword {
-    return length_;
+  auto wpos() const -> uword {
+    return wpos_;
+  }
+
+  auto rpos() const -> uword {
+    return rpos_;
   }
 
   auto GetCapacity() const -> uword {
     return capacity_;
   }
 
+#define DEFINE_READ_SIZE(Sz)                                                                                       \
+  auto ReadUInt##Sz##At(const uint64_t pos)->uint##Sz##_t {                                                        \
+    uint##Sz##_t result = 0;                                                                                       \
+    LOG_IF(ERROR, !ReadAt<uint##Sz##_t>(pos, &result)) << "failed to read uint" << Sz << "_t from " << ToString(); \
+    return result;                                                                                                 \
+  }
+
+#define DEFINE_WRITE_SIZE(Sz)                                              \
+  auto PutUInt##Sz##At(const uint64_t pos, const uint##Sz##_t val)->bool { \
+    return PutAt<uint##Sz##_t>(pos, val);                                  \
+  }
+
+  FOR_EACH_BUFFER_ELEMENT_SIZE(DEFINE_READ_SIZE);
+  FOR_EACH_BUFFER_ELEMENT_SIZE(DEFINE_WRITE_SIZE);
+#undef DEFINE_READ_SIZE
+
+  auto ToString(String* encoding) const -> String*;
   DECLARE_TYPE(Buffer);
 
  public:
@@ -55,7 +116,7 @@ class Buffer : public Object {
     ASSERT(init_cap >= 1 && init_cap <= kMaxBufferSize);
     const auto capacity = RoundUpPow2(static_cast<word>(init_cap));
     ASSERT(capacity <= kMaxBufferSize);
-    return new (capacity) Buffer(0, capacity);
+    return new (capacity) Buffer(capacity);
   }
 
   static inline auto Copy(const uint8_t* data, const uword num_bytes) -> Buffer* {
@@ -80,8 +141,15 @@ namespace proc {
 #define _DECLARE_BUFFER_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(buffer_##Name, "Buffer:" Sym)
 #define DECLARE_BUFFER_PROCEDURE(Name)       _DECLARE_BUFFER_PROCEDURE(Name, #Name);
 
-_DECLARE_BUFFER_PROCEDURE(get_length, "get-length");
 _DECLARE_BUFFER_PROCEDURE(get_capacity, "get-capacity");
+_DECLARE_BUFFER_PROCEDURE(to_string, "to-string");
+
+#define DECLARE_BUFFER_PROCEDURES(Sz)                        \
+  _DECLARE_BUFFER_PROCEDURE(read_uint##Sz, "read-uint" #Sz); \
+  _DECLARE_BUFFER_PROCEDURE(write_uint##Sz, "write-uint" #Sz);
+
+FOR_EACH_BUFFER_ELEMENT_SIZE(DECLARE_BUFFER_PROCEDURES);
+#undef DECLARE_BUFFER_PROCEDURES
 
 #undef _DECLARE_BUFFER_PROCEDURE
 #undef DECLARE_BUFFER_PROCEDURE

@@ -111,6 +111,12 @@ class Parser {
   static constexpr const auto kDefaultBufferSize = 1024;
   using Chunk = std::array<char, kDefaultChunkSize>;
 
+  enum State {
+    kParsing,
+    kParsingArguments,
+    kParsingLiteralMap,
+  };
+
  private:
   static inline auto NewParseError(const std::string& message, const Position& start, const Position& stop) -> ParseResult {
     ASSERT(!message.empty());
@@ -221,23 +227,43 @@ class Parser {
   }
 
   word dispatched_ = -1;
-  bool args_ = false;
+  State state_ = State::kParsing;
 
  protected:
   auto GetPos() const -> const Position& {
     return pos_;
   }
 
-  inline void SetParsingArgs(const bool rhs = true) {
-    args_ = rhs;
+  inline void SetState(const State rhs) {
+    state_ = rhs;
   }
 
-  inline void ClearParsingArgs() {
-    return SetParsingArgs(false);
+  inline auto GetState() const -> State {
+    return state_;
+  }
+
+  inline void SetParsingArgs() {
+    return SetState(kParsingArguments);
+  }
+
+  inline void ClearParsingArgs() {  // TODO: refactor
+    return SetState(kParsing);
   }
 
   inline auto IsParsingArgs() const -> bool {
-    return args_;
+    return GetState() == kParsingArguments;
+  }
+
+  inline void SetParsingLiteralMap() {
+    return SetState(kParsingLiteralMap);
+  }
+
+  inline void ClearParsingLiteralMap() {  // TODO: refactor
+    return SetState(kParsing);
+  }
+
+  inline auto IsParsingLiteralMap() const -> bool {
+    return GetState() == kParsingLiteralMap;
   }
 
   inline void SetScope(LocalScope* scope) {

@@ -62,7 +62,7 @@ auto GetThreadKernelModuleLoader() -> KernelModuleLoader* {
 void ThreadModuleLoader::Init() {
   const auto& home = GetHomeEnvVar();
   LOG_IF(FATAL, !home) << "cannot initialize thread KernelModuleLoader, cannot find " << home.name() << " environment variable.";
-  kModuleLoader.Set(new ThreadModuleLoader(home.path().value()));
+  kModuleLoader.Set(new ThreadModuleLoader(home.path().value() / "lib"));
 }
 
 auto GetThreadModuleLoader() -> ModuleLoader* {

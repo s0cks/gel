@@ -1,19 +1,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "gel/array.h"
-#include "gel/buffer.h"
-#include "gel/event_emitter.h"
-#include "gel/event_loop.h"
-#include "gel/lambda.h"
-#include "gel/macro.h"
 #include "gel/mock_pointer_visitor.h"
-#include "gel/module.h"
-#include "gel/native_procedure.h"
-#include "gel/object.h"
-#include "gel/script.h"
-#include "gel/symbol.h"
-#include "gel/type.h"
+#include "gel/types.h"
 #include "gmock/gmock.h"
 
 namespace gel {
