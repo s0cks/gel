@@ -13,12 +13,17 @@
 namespace gel {
 // TODO: move to async namespace
 using OnSuccessCallback = std::function<void()>;
+auto WrapOnSuccess(Procedure* func) -> OnSuccessCallback;
+
 using OnErrorCallback = std::function<void(Error*)>;
+auto WrapOnError(Procedure* func) -> OnErrorCallback;
+
 using OnFinishedCallback = std::function<void()>;
+auto WrapOnFinished(Procedure* func) -> OnFinishedCallback;
 
 namespace fs {
-class Request;
-using RequestCallback = std::function<void(Request*)>;
+class RequestBase;
+using RequestCallback = std::function<void(RequestBase*)>;
 }  // namespace fs
 
 class Timer;
@@ -73,14 +78,10 @@ class EventLoop : public Object {
              const OnFinishedCallback& on_finished = {}) -> bool;
   auto Rmdir(const std::string& path, Procedure* on_success, Procedure* on_error, Procedure* on_finished) -> bool;
 
-  auto Open(const std::string& path, const int flags, const int mode, const OnSuccessCallback& on_success = {},
-            const OnErrorCallback& on_error = {}, const OnFinishedCallback& on_finished = {}) -> bool;
-  auto Open(const std::string& path, const int flags, const int mode, Procedure* on_success, Procedure* on_error,
-            Procedure* on_finished) -> bool;
-
   auto GetTimer(const uword idx) const -> Timer*;
   auto Run(const uv_run_mode mode) -> int;
   auto CreateTimer(Procedure* on_tick) -> Timer*;
+  auto Submit(fs::RequestBase* request) -> int;
 
   friend auto operator<<(std::ostream& stream, const EventLoop& rhs) -> std::ostream& {
     return stream << rhs.ToString();
@@ -102,9 +103,12 @@ auto VisitThreadEventLoopPointerPointer(const std::function<bool(Pointer**)>& vi
 auto GetThreadEventLoop() -> EventLoop*;
 void RunCurrentThreadEventLoop(const uv_run_mode mode);
 
+auto OpenFileAsync(std::string path, const int flags, const int mode, const std::function<void(uword)>& on_success,
+                   const OnErrorCallback& on_error, const OnFinishedCallback& on_finished) -> bool;
+
 namespace fs {
 class RequestBase {
-  friend class EventLoop;
+  friend class gel::EventLoop;
   DEFINE_NON_COPYABLE_TYPE(RequestBase);
 
  private:
@@ -295,19 +299,18 @@ class StatRequest : public TemplateRequest<uword> {
   DECLARE_FS_REQUEST_TYPE(StatRequest);
 };
 
-class OpenRequest : public SimpleRequest {
+class OpenFileRequest : public TemplateRequest<uword> {
  private:
   int flags_;
   int mode_;
 
-  OpenRequest(const std::string& path, const int flags, const int mode, const OnSuccessCallback& on_success,
-              const OnErrorCallback& on_error, const OnSuccessCallback& on_finished) :
-    SimpleRequest(path, on_success, on_error, on_finished),
+ public:
+  OpenFileRequest(const std::string& path, const int flags, const int mode, const std::function<void(uword)>& on_success,
+                  const OnErrorCallback& on_error, const OnSuccessCallback& on_finished) :
+    TemplateRequest(path, on_success, on_error, on_finished),
     flags_(flags),
     mode_(mode) {}
-
- public:
-  ~OpenRequest() override = default;
+  ~OpenFileRequest() override = default;
 
   auto GetFlags() const -> int {
     return flags_;
@@ -317,7 +320,7 @@ class OpenRequest : public SimpleRequest {
     return mode_;
   }
 
-  DECLARE_FS_REQUEST_TYPE(OpenRequest);
+  DECLARE_FS_REQUEST_TYPE(OpenFileRequest);
 };
 }  // namespace fs
 

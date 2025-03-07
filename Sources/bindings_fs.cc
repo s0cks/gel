@@ -1,10 +1,14 @@
 #include <gel/plugin.h>
 #include <glog/logging.h>
+#include <uv.h>
 
 #include <cstdlib>
 
+#include "gel/common.h"
 #include "gel/event_loop.h"
 #include "gel/native_procedure.h"
+#include "gel/procedure.h"
+#include "gel/runtime.h"
 
 using namespace gel;
 
@@ -29,6 +33,8 @@ DECLARE_FS_PROCEDURE(symlink);
 DECLARE_FS_PROCEDURE(readlink);
 DECLARE_FS_PROCEDURE(chown);
 _DECLARE_FS_PROCEDURE(copy_file, "copy-file");
+
+DECLARE_FS_PROCEDURE(readdir);
 
 #undef DECLARE_FS_PROCEDURE
 #undef _DECLARE_FS_PROCEDURE
@@ -100,29 +106,28 @@ NATIVE_FS_PROCEDURE_F(rmdir) {
   return ReturnBool(loop->Rmdir(path->Get(), on_success, on_error, on_finished));
 }
 
+static inline auto WrapOpenFileOnNext(Procedure* on_next) -> std::function<void(uword)> {
+  return [on_next](uword next) {
+    if (on_next)
+      GetRuntime()->Call(on_next, {Long::New(next)});
+  };
+}
+
 NATIVE_FS_PROCEDURE_F(open) {
   NativeArgument<0, String> path(args);
-  if (!path)
-    return Throw(path);
+  CHECK_NATIVE_ARG(path);
   NativeArgument<1, Long> flags(args);
-  if (!flags)
-    return Throw(flags);
+  CHECK_NATIVE_ARG(flags);
   NativeArgument<2, Long> mode(args);
-  if (!mode)
-    return Throw(mode);
-  OptionalNativeArgument<3, Procedure> on_success(args);
-  if (!on_success)
-    return Throw(on_success.GetError());
+  CHECK_NATIVE_ARG(mode);
+  OptionalNativeArgument<3, Procedure> on_next(args);
+  CHECK_NATIVE_ARG(on_next);
   OptionalNativeArgument<4, Procedure> on_error(args);
-  if (!on_error)
-    return Throw(on_error.GetError());
-  OptionalNativeArgument<5, Procedure> on_finished(args);  // NOLINT(cppcoreguidelines-avoid-magic-numbers)
-  if (!on_finished)
-    return Throw(on_finished.GetError());
-  const auto loop = GetThreadEventLoop();
-  ASSERT(loop);
-  return loop->Open(path->Get(), static_cast<int>(flags->Get()), static_cast<int>(mode->Get()), on_success, on_error,
-                    on_finished);
+  CHECK_NATIVE_ARG(on_error);
+  OptionalNativeArgument<5, Procedure> on_finished(args);
+  CHECK_NATIVE_ARG(on_finished);
+  return ReturnBool(OpenFileAsync(path->Get(), static_cast<int>(flags->Get()), static_cast<int>(mode->Get()),
+                                  WrapOpenFileOnNext(on_next), WrapOnError(on_error), WrapOnFinished(on_finished)));
 }
 
 NATIVE_FS_PROCEDURE_F(close) {
@@ -180,6 +185,14 @@ NATIVE_FS_PROCEDURE_F(copy_file) {
   return ThrowNotImplementedError();
 }
 
+NATIVE_FS_PROCEDURE_F(readdir) {
+  NativeArgument<0, String> path(args);
+  CHECK_NATIVE_ARG(path);
+  const auto loop = GetThreadEventLoop();
+  ASSERT(loop);
+  return ThrowNotImplementedError();
+}
+
 #undef NATIVE_FS_PROCEDURE_F
 
 #define INIT_FS_NATIVE(Name) InitNative<fs_##Name>();
@@ -202,6 +215,7 @@ DEFINE_PLUGIN(fs) {
   INIT_FS_NATIVE(readlink);
   INIT_FS_NATIVE(chown);
   INIT_FS_NATIVE(copy_file);
+  INIT_FS_NATIVE(readdir);
   return EXIT_SUCCESS;
 }
 

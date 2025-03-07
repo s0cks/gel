@@ -571,6 +571,8 @@ auto String::ValueOf(Object* rhs) -> String* {
         next = next->AsPair()->GetCdr();
       } while (true);
     }
+  } else if (rhs->IsError()) {
+    ss << rhs->AsError()->GetMessage()->Get();
   } else {
     ss << rhs->ToString();
   }

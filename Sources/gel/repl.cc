@@ -1,11 +1,19 @@
 #include "gel/repl.h"
 
+#include <algorithm>
 #include <iostream>
 
 #include "gel/common.h"
 #include "gel/module.h"
-#include "gel/parser.h"
 #include "gel/runtime.h"
+
+#if defined(OS_IS_OSX) || defined(OS_IS_LINUX)
+
+#include <ncurses.h>
+
+#else
+#error "Unsupported Operating System"
+#endif
 
 namespace gel {
 Repl::Repl(std::istream& is, std::ostream& os, LocalScope* scope) :

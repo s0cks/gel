@@ -11,8 +11,7 @@ _DECLARE_NATIVE_PROCEDURE(env_get, "env/get");
 
 NATIVE_PROCEDURE_F(env_get) {
   NativeArgument<0, String> key(args);
-  if (!key)
-    return Throw(key);
+  CHECK_NATIVE_ARG(key);
   const auto value = getenv(key->Get().c_str());
   if (value)
     return ReturnNew<String>(std::string(value));

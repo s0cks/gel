@@ -17,6 +17,10 @@
       "name": "pdcurses",
       "platform": "windows & !uwp & !mingw"
     },
-    "termcolor"
+    "termcolor",
+    "rapidjson",
+    "backward-cpp",
+    "openssl",
+    "bzip2"
   ]
 }

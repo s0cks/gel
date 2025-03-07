@@ -11,15 +11,26 @@ project(
 include(Options)
 find_package(Threads REQUIRED)
 find_package(glog CONFIG REQUIRED)
+
 set(GFLAGS_USE_TARGET_NAMESPACE ON)
 set(GFLAGS_BUILD_SHARED_LIBS ON)
-find_package(OpenSSL REQUIRED)
 find_package(gflags CONFIG REQUIRED)
+
+set(OPENSSL_USE_STATIC_LIBS FALSE)
+find_package(OpenSSL REQUIRED)
+if(WIN32)
+  # TODO: Implement
+else()
+  set(CURSES_NEED_NCURSES TRUE)
+  find_package(Curses REQUIRED)
+endif()
+
 find_package(fmt CONFIG REQUIRED)
 find_package(units CONFIG REQUIRED)
 find_package(libuv CONFIG REQUIRED)
-
-list(APPEND GEL_LIBRARIES)
+find_package(RapidJSON CONFIG REQUIRED)
+find_package(Backward CONFIG REQUIRED)
+find_package(Bzip2 REQUIRED)
 
 if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
   add_compile_definitions(GEL_DEBUG)

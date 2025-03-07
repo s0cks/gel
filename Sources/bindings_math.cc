@@ -37,19 +37,16 @@ _DECLARE_MATH_PROCEDURE(to_degrees, "to-degrees");
 #define MATH_PROCEDURE_F1(Name)              \
   MATH_PROCEDURE_F(Name) {                   \
     NativeArgument<0, Double> value(args);   \
-    if (!value)                              \
-      return Throw(value);                   \
+    CHECK_NATIVE_ARG(value);                 \
     return ReturnDouble(Name(value->Get())); \
   }
 
 #define MATH_PROCEDURE_F2(Name)                    \
   MATH_PROCEDURE_F(Name) {                         \
     NativeArgument<0, Double> a(args);             \
-    if (!a)                                        \
-      return Throw(a);                             \
+    CHECK_NATIVE_ARG(a);                           \
     NativeArgument<0, Double> b(args);             \
-    if (!b)                                        \
-      return Throw(b);                             \
+    CHECK_NATIVE_ARG(b);                           \
     return ReturnDouble(Name(a->Get(), b->Get())); \
   }
 

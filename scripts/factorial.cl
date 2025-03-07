@@ -1,2 +1,2 @@
 (def x 7)
-(print (format "{}! equals {}" x (factorial x)))
+(printf "{}! equals {}" x (factorial x))

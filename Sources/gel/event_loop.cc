@@ -11,8 +11,31 @@
 #include "gel/to_string_helper.h"
 
 namespace gel {
+auto WrapOnError(Procedure* on_error) -> OnErrorCallback {
+  return gel::IsNull(on_error) ? OnErrorCallback{} : [on_error](Error* error) {
+    return GetRuntime()->Call(on_error, ObjectList{error});
+  };
+}
+
+auto WrapOnSuccess(Procedure* on_success) -> OnSuccessCallback {
+  return gel::IsNull(on_success) ? OnSuccessCallback{} : [on_success]() {
+    return GetRuntime()->Call(on_success);
+  };
+}
+
+auto WrapOnFinished(Procedure* on_finished) -> OnFinishedCallback {
+  return gel::IsNull(on_finished) ? OnFinishedCallback{} : [on_finished]() {
+    return GetRuntime()->Call(on_finished);
+  };
+}
+
 auto EventLoop::Run(const uv_run_mode mode) -> int {
   return uv_run(Get(), mode);
+}
+
+auto EventLoop::Submit(fs::RequestBase* request) -> int {
+  ASSERT(request);
+  return request->Execute(this);
 }
 
 auto EventLoop::CreateTimer(Procedure* on_tick) -> Timer* {
@@ -28,30 +51,6 @@ auto EventLoop::GetTimer(const uword idx) const -> Timer* {
   });
   return pos != std::end(timers()) ? (*pos) : nullptr;
 }
-
-static inline auto WrapOnError(Procedure* on_error) -> OnErrorCallback {
-  return [on_error](Error* error) {
-    ASSERT(error);
-    if (on_error)
-      return GetRuntime()->Call(on_error, {error});
-  };
-}
-
-static inline auto WrapOnSuccess(Procedure* on_success) -> OnSuccessCallback {
-  return [on_success]() {
-    if (on_success)
-      return GetRuntime()->Call(on_success);
-  };
-}
-
-static inline auto WrapOnFinished(Procedure* on_finished) -> OnFinishedCallback {
-  return [on_finished]() {
-    ASSERT(on_finished);
-    if (on_finished)
-      return GetRuntime()->Call(on_finished);
-  };
-}
-
 auto EventLoop::Stat(const std::string& path, Procedure* on_next, Procedure* on_error, Procedure* on_finished) -> bool {
   ASSERT(!path.empty());
   ASSERT(on_next);
@@ -112,19 +111,6 @@ auto EventLoop::Rmdir(const std::string& path, const OnSuccessCallback& on_succe
 auto EventLoop::Rmdir(const std::string& path, Procedure* on_success, Procedure* on_error, Procedure* on_finished) -> bool {
   ASSERT(!path.empty());
   return Rmdir(path, WrapOnSuccess(on_success), WrapOnError(on_error), WrapOnFinished(on_finished));
-}
-
-auto EventLoop::Open(const std::string& path, const int flags, const int mode, const OnSuccessCallback& on_success,
-                     const OnErrorCallback& on_error, const OnFinishedCallback& on_finished) -> bool {
-  ASSERT(!path.empty());
-  const auto request = new fs::OpenRequest(path, flags, mode, on_success, on_error, on_finished);
-  ASSERT(request);
-  return request->Execute(this) == 0;
-}
-
-auto EventLoop::Open(const std::string& path, const int flags, const int mode, Procedure* on_success, Procedure* on_error,
-                     Procedure* on_finished) -> bool {
-  return Open(path, flags, mode, WrapOnSuccess(on_success), WrapOnError(on_error), WrapOnSuccess(on_finished));
 }
 
 auto EventLoop::ToString() const -> std::string {
@@ -208,6 +194,14 @@ void RunCurrentThreadEventLoop(const uv_run_mode mode) {
   const auto event_loop = GetThreadEventLoop();
   ASSERT(event_loop);
   while (event_loop->Run(UV_RUN_NOWAIT) != 0);  // do nothing
+}
+
+auto OpenFileAsync(std::string path, const int flags, const int mode, const std::function<void(uword)>& on_success,
+                   const OnErrorCallback& on_error, const OnFinishedCallback& on_finished) -> bool {
+  ASSERT(!path.empty());
+  auto request = new fs::OpenFileRequest(std::move(path), flags, mode, on_success, on_error, on_finished);
+  ASSERT(request);
+  return GetThreadEventLoop()->Submit(request) == 0;
 }
 
 auto Timer::ToString() const -> std::string {
@@ -303,7 +297,20 @@ FS_REQUEST_CALLBACK_F(StatRequest) {
   request->OnFinished();
 }
 
-FS_REQUEST_CALL_F(OpenRequest, uv_fs_open, GetFlags(), GetMode());
-FS_REQUEST_SIMPLE_CALLBACK_F(OpenRequest);
+FS_REQUEST_CALL_F(OpenFileRequest, uv_fs_open, GetFlags(), GetMode());
+FS_REQUEST_CALLBACK_F(OpenFileRequest) {
+  ASSERT(handle);
+  const auto request = From<OpenFileRequest>(handle);  // TODO: *urgent* *memory leak* request is allocated but never freed
+  ASSERT(request);
+  const auto result = request->handle()->result;
+  if (result < 0) {
+    const auto message =
+        fmt::format("error reading stats of file {}: {}", request->GetPath(), uv_strerror(static_cast<int>(result)));
+    return request->OnError(Error::New(message));
+  }
+  request->OnNext(result);
+  uv_fs_req_cleanup(handle);
+  request->OnFinished();
+}
 }  // namespace fs
 }  // namespace gel

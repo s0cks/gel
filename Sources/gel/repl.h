@@ -5,6 +5,7 @@
 
 #include "gel/error.h"
 #include "gel/local_scope.h"
+#include "gel/parser.h"
 
 namespace gel {
 class Repl {

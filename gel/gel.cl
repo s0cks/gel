@@ -223,9 +223,6 @@
 (defn dec [x]
   "Returns one less than [x]."
   (- x 1))
-;;TODO:
-;; - (def PI 3.14159)
-;; - (def TAU (* 2 PI))
 (defmacro sq [x]
   "[x] squared."
   (* x x))
