@@ -11,6 +11,36 @@ class Macro;
 class MacroExpander {
   friend class ExpanderScope;
   friend class MacroEffectVisitor;
+
+  class ExpanderScope {
+    DEFINE_NON_COPYABLE_TYPE(ExpanderScope);
+
+   private:
+    MacroExpander* owner_;
+
+   public:
+    ExpanderScope(MacroExpander* owner) :
+      owner_(owner) {
+      ASSERT(owner_);
+      GetOwner()->PushScope();
+    }
+    ~ExpanderScope() {
+      GetOwner()->PopScope();
+    }
+
+    auto GetOwner() const -> MacroExpander* {
+      return owner_;
+    }
+
+    auto operator->() const -> LocalScope* {
+      return GetOwner()->GetScope();
+    }
+
+    operator LocalScope*() const {
+      return GetOwner()->GetScope();
+    }
+  };
+
   DEFINE_NON_COPYABLE_TYPE(MacroExpander);
 
  private:
@@ -39,31 +69,16 @@ class MacroExpander {
     return scope_;
   }
 
-  auto ExpandAllInLambda(Lambda* lambda) -> bool;
-  auto ExpandAllInConstructor(Constructor* lambda) -> bool;
-  auto ExpandAllInScript(Script* script) -> bool;
+  template <class T>
+  auto ExpandAll(T* target, std::enable_if_t<gel::has_code<T>::value>* = nullptr) -> bool;
 
  public:
-  static inline void ExpandAll(Script* script, LocalScope* scope) {
-    ASSERT(script);
-    ASSERT(scope);
-    MacroExpander expander(scope);
-    LOG_IF(FATAL, !expander.ExpandAllInScript(script)) << "failed to expand macros in " << script;
-  }
-
-  static inline void ExpandAll(Lambda* lambda, LocalScope* scope) {
-    ASSERT(lambda);
-    ASSERT(scope);
-    MacroExpander expander(scope);
-    LOG_IF(FATAL, !expander.ExpandAllInLambda(lambda)) << "failed to expand macros in " << lambda;
-  }
-
-  static inline void ExpandAll(Constructor* init, LocalScope* scope) {
-    ASSERT(init);
-    ASSERT(scope);
-    NOT_IMPLEMENTED(ERROR);  // TODO: implement
-    MacroExpander expander(scope);
-    LOG_IF(FATAL, !expander.ExpandAllInConstructor(init)) << "failed to expand macros in " << init;
+  template <class T>
+  static inline void ExpandAll(T* target, LocalScope* locals, std::enable_if_t<gel::has_code<T>::value>* = nullptr) {
+    ASSERT(target);
+    ASSERT(locals);
+    MacroExpander expander(locals);
+    LOG_IF(FATAL, !expander.ExpandAll(target)) << "failed to expand macros in " << target->ToString();
   }
 };
 
@@ -169,6 +184,20 @@ class MacroExpansionSiteEffectVisitor : public MacroEffectVisitor {
   auto VisitWhenExpr(expr::WhenExpr* expr) -> bool override;
   auto VisitLiteralExpr(expr::LiteralExpr* expr) -> bool override;
 };
+
+template <class T>
+auto MacroExpander::ExpandAll(T* target, std::enable_if_t<gel::has_code<T>::value>*) -> bool {
+  ASSERT(target);
+  ExpanderScope scope(this);
+  if (target->HasScope())
+    scope->AddAll(target->GetScope());
+  MacroEffectVisitor for_effect(this);
+  if (!target->GetBody()->Accept(&for_effect)) {
+    LOG(ERROR) << "failed to visit " << target->ToString() << " body.";
+    return false;
+  }
+  return true;
+}
 }  // namespace gel
 
 #endif  // GEL_MACRO_EXPANDER_H

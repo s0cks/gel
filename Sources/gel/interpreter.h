@@ -117,8 +117,13 @@ class Interpreter {
 
   template <class T>
   inline void Run(T* target, std::enable_if_t<gel::has_code<T>::value>* = nullptr) {
-    ASSERT(target && target->IsCompiled());
-    return Run(target->GetCode().GetStartingAddress());
+    ASSERT(target);
+    const auto& code = target->GetCode();
+    if (!code.IsCompiled()) {
+      DLOG(ERROR) << "cannot run " << target << ", target is not compiled.";
+      return;
+    }
+    return Run(code.GetStartingAddress());
   }
 };
 }  // namespace gel

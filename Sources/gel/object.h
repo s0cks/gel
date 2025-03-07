@@ -153,45 +153,6 @@ namespace ir {
 class GraphEntryInstr;
 }
 
-class Executable {
-  friend class FlowGraphCompiler;
-  DEFINE_NON_COPYABLE_TYPE(Executable);
-
- private:
-  Region code_{};
-#ifdef GEL_DEBUG
-  uword compile_time_ns_ = 0;
-
-  void SetCompileTime(const uword ns) {
-    compile_time_ns_ = ns;
-  }
-#endif  // GEL_DEBUG
-
- protected:
-  Executable() = default;
-
-  void SetCodeRegion(const Region& rhs) {
-    code_ = rhs;
-  }
-
- public:
-  virtual ~Executable() = default;
-
-  auto GetCode() const -> const Region& {
-    return code_;
-  }
-
-  inline auto IsCompiled() const -> bool {
-    return GetCode().IsAllocated();
-  }
-
-#ifdef GEL_DEBUG
-  auto GetCompileTime() const -> uword {
-    return compile_time_ns_;
-  }
-#endif  // GEL_DEBUG
-};
-
 static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream& {
   return stream << rhs->ToString();
 }

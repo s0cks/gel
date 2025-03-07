@@ -2,13 +2,14 @@
 #define GEL_SCRIPT_H
 
 #include "gel/common.h"
+#include "gel/compiled_code.h"
 #include "gel/expr/expression.h"
 #include "gel/lambda.h"
 #include "gel/local_scope.h"
 #include "gel/namespace.h"
 
 namespace gel {
-class Script : public Object, public Executable {
+class Script : public Object {
   friend class Parser;
   friend class MacroExpander;
   friend class ScriptCompiler;
@@ -22,7 +23,8 @@ class Script : public Object, public Executable {
   MacroList macros_{};
   LambdaList lambdas_{};
   NamespaceList namespaces_{};
-  expr::ExpressionList body_{};
+  expr::SeqExpr* body_ = nullptr;
+  CompiledCode code_;
 
  protected:
   explicit Script(LocalScope* scope) :
@@ -35,10 +37,6 @@ class Script : public Object, public Executable {
     name_ = name;
   }
 
-  inline auto at(const uint64_t idx) const -> expr::ExpressionList::const_iterator {
-    return std::begin(body_) + static_cast<expr::ExpressionList::difference_type>(idx);
-  }
-
   inline void Append(const MacroList& macros) {
     macros_.insert(std::end(macros_), std::begin(macros), std::end(macros));
   }
@@ -47,53 +45,11 @@ class Script : public Object, public Executable {
     namespaces_.insert(std::end(namespaces_), std::begin(namespaces), std::end(namespaces));
   }
 
-  inline void Append(expr::Expression* expr) {
-    ASSERT(expr);
-    body_.push_back(expr);
-  }
-
-  inline void InsertAt(const uint64_t idx, expr::Expression* expr) {
-    ASSERT(idx >= 0 && idx <= GetNumberOfExpressions());
-    ASSERT(expr);
-    body_.insert(at(idx), expr);
-  }
-
-  inline void InsertAt(const uint64_t idx, const expr::ExpressionList& exprs) {
-    ASSERT(idx >= 0 && idx <= GetNumberOfExpressions());
-    ASSERT(!exprs.empty());
-    body_.insert(at(idx), std::begin(exprs), std::end(exprs));
-  }
-
   void Append(Macro* macro);
   void Append(Lambda* lambda);
   void Append(Namespace* ns);
 
   auto VisitPointers(PointerVisitor* vis) -> bool override;
-
-  void SetExpressionAt(const uint64_t idx, expr::Expression* expr) {
-    ASSERT(idx >= 0 && idx <= GetNumberOfExpressions());
-    ASSERT(expr);
-    body_[idx] = expr;
-  }
-
-  void RemoveExpressionAt(const uint64_t idx) {
-    ASSERT(idx >= 0 && idx <= GetNumberOfExpressions());
-    body_.erase(at(idx));
-  }
-
-  void ReplaceExpressionAt(const uint64_t idx, expr::Expression* expr) {
-    ASSERT(idx >= 0 && idx <= GetNumberOfExpressions());
-    ASSERT(expr);
-    RemoveExpressionAt(idx);
-    InsertAt(idx, expr);
-  }
-
-  void ReplaceExpressionAt(const uint64_t idx, const expr::ExpressionList& body) {
-    ASSERT(idx >= 0 && idx <= GetNumberOfExpressions());
-    ASSERT(!body.empty());
-    RemoveExpressionAt(idx);
-    InsertAt(idx, body);
-  }
 
   void AddChild(Object* rhs) override {
     ASSERT(rhs);
@@ -104,6 +60,15 @@ class Script : public Object, public Executable {
     } else if (rhs->IsNamespace()) {
       namespaces_.push_back(rhs->AsNamespace());
     }
+  }
+
+  void SetBody(expr::SeqExpr* rhs) {
+    ASSERT(rhs);
+    body_ = rhs;
+  }
+
+  void SetCode(const CompiledCode& rhs) {
+    code_ = rhs;
   }
 
  public:
@@ -125,29 +90,24 @@ class Script : public Object, public Executable {
     return GetScope() != nullptr;
   }
 
-  auto GetBody() const -> const expr::ExpressionList& {
-    return body_;
-  }
-
-  inline auto IsEmpty() const -> bool {
-    return body_.empty();
-  }
-
-  auto GetNumberOfExpressions() const -> uint64_t {
-    return body_.size();
-  }
-
-  auto GetExpressionAt(const uint64_t idx) const -> expr::Expression* {
-    ASSERT(idx >= 0 && idx <= GetNumberOfExpressions());
-    return body_[idx];
-  }
-
   auto GetFullyQualifiedName() const -> std::string {
     return HasName() ? GetName()->Get() : "Script";
   }
 
-  inline auto HasExpressionAt(const uint64_t idx) const -> bool {
-    return GetExpressionAt(idx) != nullptr;
+  auto GetBody() const -> expr::SeqExpr* {
+    return body_;
+  }
+
+  inline auto HasBody() const -> bool {
+    return GetBody() != nullptr;
+  }
+
+  inline auto IsEmpty() const -> bool {
+    return !HasBody() || GetBody()->IsEmpty();
+  }
+
+  auto GetCode() const -> const CompiledCode& {
+    return code_;
   }
 
   DECLARE_TYPE(Script);

@@ -53,6 +53,10 @@ template <typename T>
 class Array;
 
 using ObjectList = std::vector<Object*>;
+
+#ifdef GEL_DEBUG
+void PrintAllTypeSizes();
+#endif  // GEL_DEBUG
 }  // namespace gel
 
 #endif  // GEL_TYPE_H

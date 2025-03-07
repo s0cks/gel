@@ -67,16 +67,20 @@ auto FlowGraphCompiler::CompileTarget(E* exec, std::enable_if_t<gel::is_executab
   ASSERT(flow_graph && flow_graph->HasEntry());
   AssembleFlowGraph(flow_graph);
   TIMER_STOP(total_ns);
-  const auto code = assembler_.Assemble();
-  exec->SetCodeRegion(code);
+  CompiledCode code(assembler_.Assemble());
+  if (!code.IsCompiled()) {
+    LOG(ERROR) << "failed to compile: " << exec;
+    return false;
+  }
 #ifdef GEL_DEBUG
   DVLOG(10) << exec << " compiled in " << units::time::nanosecond_t(static_cast<double>(total_ns));
-  exec->SetCompileTime(total_ns);
+  code.SetCompileTime(total_ns);
   if (VLOG_IS_ON(10))
     Disassembler::Disassemble(std::cout, exec, GetScope());
 #endif  // GEL_DEBUG
   TRACE_TAG_STR(exec->GetFullyQualifiedName());
   TRACE_MARK;
-  return exec->IsCompiled();
+  exec->SetCode(code);
+  return true;
 }
 }  // namespace gel

@@ -7,6 +7,7 @@
 
 #include "gel/argument.h"
 #include "gel/common.h"
+#include "gel/compiled_code.h"
 #include "gel/expr/expression.h"
 #include "gel/object.h"
 #include "gel/pointer.h"
@@ -23,7 +24,7 @@ namespace ir {
 class GraphEntryInstr;
 }  // namespace ir
 
-class Lambda : public Procedure, public Executable {
+class Lambda : public Procedure {
   friend class Parser;
   friend class Module;
   friend class Runtime;
@@ -33,36 +34,11 @@ class Lambda : public Procedure, public Executable {
 
  private:
   LocalScope* scope_ = nullptr;
-  expr::ExpressionList body_;  // TODO: fails to copy during GC
+  expr::SeqExpr* body_ = nullptr;
+  CompiledCode code_{};
 
-  inline auto at(const uint64_t idx) const -> expr::ExpressionList::const_iterator {
-    return std::begin(body_) + static_cast<expr::ExpressionList::difference_type>(idx);
-  }
-
-  inline void Append(expr::Expression* expr) {
-    ASSERT(expr);
-    body_.push_back(expr);
-  }
-
-  inline void InsertAt(const uint64_t idx, expr::Expression* expr) {
-    ASSERT(idx >= 0 && idx <= GetNumberOfExpressions());
-    ASSERT(expr);
-    body_.insert(at(idx), expr);
-  }
-
-  inline void InsertAt(const uint64_t idx, const expr::ExpressionList& exprs) {
-    ASSERT(idx >= 0 && idx <= GetNumberOfExpressions());
-    ASSERT(!exprs.empty());
-    body_.insert(at(idx), std::begin(exprs), std::end(exprs));
-  }
-
-  void SetBody(const expr::ExpressionList& body) {
+  void SetBody(expr::SeqExpr* body) {
     body_ = body;
-  }
-
-  inline void SetBody(expr::Expression* expr) {
-    ASSERT(expr);
-    return SetBody(expr::ExpressionList{expr});
   }
 
   void SetScope(LocalScope* scope) {
@@ -70,34 +46,13 @@ class Lambda : public Procedure, public Executable {
     scope_ = scope;
   }
 
-  void SetExpressionAt(const uint64_t idx, expr::Expression* expr) {
-    ASSERT(idx >= 0 && idx <= GetNumberOfExpressions());
-    ASSERT(expr);
-    body_[idx] = expr;
-  }
-
-  void RemoveExpressionAt(const uint64_t idx) {
-    ASSERT(idx >= 0 && idx <= GetNumberOfExpressions());
-    body_.erase(at(idx));
-  }
-
-  void ReplaceExpressionAt(const uint64_t idx, expr::Expression* expr) {
-    ASSERT(idx >= 0 && idx <= GetNumberOfExpressions());
-    ASSERT(expr);
-    RemoveExpressionAt(idx);
-    InsertAt(idx, expr);
-  }
-
-  void ReplaceExpressionAt(const uint64_t idx, const expr::ExpressionList& body) {
-    ASSERT(idx >= 0 && idx <= GetNumberOfExpressions());
-    ASSERT(!body.empty());
-    RemoveExpressionAt(idx);
-    InsertAt(idx, body);
+  void SetCode(const CompiledCode& rhs) {
+    code_ = rhs;
   }
 
  protected:
   // TODO: remove args from constructor
-  Lambda(Symbol* symbol, Array<Argument*>* args, const expr::ExpressionList& body) :  // NOLINT(modernize-pass-by-value)
+  Lambda(Symbol* symbol, Array<Argument*>* args, expr::SeqExpr* body = nullptr) :
     Procedure(symbol),
     body_(body) {
     if (args)
@@ -109,23 +64,6 @@ class Lambda : public Procedure, public Executable {
 
  public:
   ~Lambda() override = default;
-
-  auto GetBody() const -> const expr::ExpressionList& {
-    return body_;
-  }
-
-  auto GetNumberOfExpressions() const -> uint64_t {
-    return body_.size();
-  }
-
-  inline auto IsEmpty() const -> bool {
-    return body_.empty();
-  }
-
-  auto GetExpressionAt(const uint64_t idx) const -> expr::Expression* {
-    ASSERT(idx >= 0 && idx <= GetNumberOfExpressions());
-    return body_[idx];
-  }
 
   auto GetScope() const -> LocalScope* {  // TODO: this should never return nullptr
     return scope_;
@@ -139,14 +77,30 @@ class Lambda : public Procedure, public Executable {
     return HasSymbol() ? GetSymbol()->GetFullyQualifiedName() : "Lambda";
   }
 
+  auto GetBody() const -> expr::SeqExpr* {
+    return body_;
+  }
+
+  inline auto HasBody() const -> bool {
+    return GetBody() != nullptr;
+  }
+
+  inline auto IsEmpty() const -> bool {
+    return !HasBody() || GetBody()->IsEmpty();
+  }
+
+  auto GetCode() const -> const CompiledCode& {
+    return code_;
+  }
+
   DECLARE_TYPE(Lambda);
 
  public:
-  static inline auto New(Symbol* name, Array<Argument*>* args, const expr::ExpressionList& body = {}) -> Lambda* {
+  static inline auto New(Symbol* name, Array<Argument*>* args, expr::SeqExpr* body = nullptr) -> Lambda* {
     return new Lambda(name, args, body);
   }
 
-  static inline auto New(Array<Argument*>* args = nullptr, const expr::ExpressionList& body = {}) -> Lambda* {
+  static inline auto New(Array<Argument*>* args = nullptr, expr::SeqExpr* body = nullptr) -> Lambda* {
     return new Lambda(nullptr, args, body);
   }
 };

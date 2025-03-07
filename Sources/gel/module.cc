@@ -29,7 +29,7 @@ void Module::GetAllLoadedModules(std::vector<Module*>& results) {
   }
 }
 
-auto Module::CreateConstructor(Module* rhs, const expr::ExpressionList& body) -> Constructor* {
+auto Module::CreateConstructor(Module* rhs, expr::SeqExpr* body) -> Constructor* {
   ASSERT(rhs);
   const auto init = Constructor::New(Symbol::New(rhs->GetName()), body);
   init->SetArgs(Array<Argument*>::New(1));

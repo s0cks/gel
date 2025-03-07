@@ -15,6 +15,7 @@
 #include "gel/variable.h"
 
 #define FOR_EACH_EXPRESSION_NODE(V) \
+  V(SeqExpr)                        \
   V(LiteralExpr)                    \
   V(UnaryOpExpr)                    \
   V(BinaryOpExpr)                   \
@@ -564,20 +565,23 @@ class QuotedExpr : public Expression {
   }
 };
 
-class SequenceExpr : public Expression {
+class SeqExpr : public Expression {
   friend class gel::Parser;
-  DEFINE_NON_COPYABLE_TYPE(SequenceExpr);
 
  private:
   ExpressionList children_{};
 
+  inline auto at(const uint64_t idx) const -> expr::ExpressionList::const_iterator {
+    return std::begin(children_) + static_cast<expr::ExpressionList::difference_type>(idx);
+  }
+
  protected:
-  SequenceExpr(const ExpressionList& children) {
+  SeqExpr(const ExpressionList& children) {
     children_.insert(std::end(children_), std::begin(children), std::end(children));
   }
 
  public:
-  ~SequenceExpr() override = default;
+  ~SeqExpr() override = default;
 
   auto GetBody() const -> const ExpressionList& {
     return children_;
@@ -591,6 +595,18 @@ class SequenceExpr : public Expression {
     return GetNumberOfChildren() == 0;
   }
 
+  void InsertAt(const uint64_t idx, Expression* child) {
+    ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
+    ASSERT(child);
+    children_.insert(at(idx), child);
+  }
+
+  void InsertAt(const uint64_t idx, const ExpressionList& children) {
+    ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
+    ASSERT(!children.empty());
+    children_.insert(at(idx), std::begin(children), std::end(children));
+  }
+
   auto GetChildAt(const uint64_t idx) const -> Expression* override {
     ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
     return children_[idx];
@@ -602,9 +618,23 @@ class SequenceExpr : public Expression {
     children_[idx] = value;
   }
 
-  inline void Append(Expression* expr) {
+  void Append(Expression* expr) {
     ASSERT(expr);
     children_.push_back(expr);
+  }
+
+  void ReplaceChildAt(const uint64_t idx, expr::Expression* child) {
+    ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
+    ASSERT(child);
+    RemoveChildAt(idx);
+    InsertAt(idx, child);
+  }
+
+  void ReplaceChildAt(const uint64_t idx, const ExpressionList& children) {
+    ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
+    ASSERT(!children.empty());
+    RemoveChildAt(idx);
+    InsertAt(idx, children);
   }
 
   void RemoveChildAt(const uint64_t idx) override {
@@ -619,12 +649,23 @@ class SequenceExpr : public Expression {
   auto IsConstantExpr() const -> bool override;
   auto VisitChildren(ExpressionVisitor* vis) -> bool override;
   auto VisitAllDefinitions(ExpressionVisitor* vis) -> bool override;
+  DECLARE_EXPRESSION(SeqExpr);
+
+ public:
+  static inline auto New(const expr::ExpressionList& children = {}) -> SeqExpr* {
+    return new SeqExpr(children);
+  }
+
+  static inline auto New(expr::Expression* expr) -> SeqExpr* {
+    ASSERT(expr);
+    return New(expr::ExpressionList{expr});
+  }
 };
 
-class BeginExpr : public SequenceExpr {
+class BeginExpr : public SeqExpr {
  protected:
   explicit BeginExpr(const ExpressionList& expressions) :
-    SequenceExpr(expressions) {}
+    SeqExpr(expressions) {}
 
  public:
   ~BeginExpr() override = default;
@@ -1207,13 +1248,13 @@ class CaseExpr : public Expression {
   }
 };
 
-class WhileExpr : public SequenceExpr {
+class WhileExpr : public SeqExpr {
  private:
   Expression* test_;
 
  protected:
   explicit WhileExpr(Expression* test, const ExpressionList& body) :
-    SequenceExpr(body),
+    SeqExpr(body),
     test_(test) {}
 
  public:
@@ -1459,7 +1500,7 @@ static inline auto operator<<(std::ostream& stream, const BindingList& rhs) -> s
   return stream;
 }
 
-class TemplateLetExpr : public SequenceExpr {
+class TemplateLetExpr : public SeqExpr {
   DEFINE_NON_COPYABLE_TYPE(TemplateLetExpr);
 
  private:
@@ -1467,7 +1508,7 @@ class TemplateLetExpr : public SequenceExpr {
 
  protected:
   explicit TemplateLetExpr(LocalScope* scope, const ExpressionList& body) :
-    SequenceExpr(body),
+    SeqExpr(body),
     scope_(scope) {
     ASSERT(scope_);
   }
@@ -1480,10 +1521,10 @@ class TemplateLetExpr : public SequenceExpr {
   }
 };
 
-class RxOpExpr : public SequenceExpr, public proto::HasSymbol {
+class RxOpExpr : public SeqExpr, public proto::HasSymbol {
  protected:
   RxOpExpr(Symbol* symbol, const ExpressionList& body) :
-    SequenceExpr(body),
+    SeqExpr(body),
     proto::HasSymbol(symbol) {}
 
  public:
@@ -1575,7 +1616,7 @@ class LetExpr : public TemplateLetExpr {
   auto GetChildAt(const uint64_t idx) const -> Expression* override {
     ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
     if (idx >= GetNumberOfBindings())
-      return SequenceExpr::GetChildAt(idx - GetNumberOfBindings());
+      return SeqExpr::GetChildAt(idx - GetNumberOfBindings());
     ASSERT(idx >= 0 && idx <= GetNumberOfBindings());
     return GetBindingAt(idx);
   }
@@ -1585,7 +1626,7 @@ class LetExpr : public TemplateLetExpr {
   }
 
   auto GetNumberOfChildren() const -> uint64_t override {
-    return SequenceExpr::GetNumberOfChildren() + GetNumberOfBindings();
+    return SeqExpr::GetNumberOfChildren() + GetNumberOfBindings();
   }
 
   auto IsConstantExpr() const -> bool override {
@@ -1603,11 +1644,11 @@ class LetExpr : public TemplateLetExpr {
   }
 };
 
-class ListExpr : public SequenceExpr {
+class ListExpr : public SeqExpr {
  private:
  protected:
   explicit ListExpr(const ExpressionList& values) :
-    SequenceExpr(values) {}
+    SeqExpr(values) {}
 
  public:
   ~ListExpr() override = default;

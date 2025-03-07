@@ -953,9 +953,18 @@ auto FlowGraphBuilder::Build(Lambda* lambda, LocalScope* scope) -> FlowGraph* {
 }
 
 auto EffectVisitor::VisitScript(Script* script) -> bool {
+  if (!VisitSeqExpr(script->GetBody())) {
+    LOG(ERROR) << "failed to visit constructor body";
+    return false;
+  }
+  return true;
+}
+
+auto EffectVisitor::VisitSeqExpr(expr::SeqExpr* expr) -> bool {
+  ASSERT(expr);
   auto index = 0;
   ir::Definition* return_value = nullptr;
-  const auto& body = script->GetBody();
+  const auto& body = expr->GetBody();
   while (IsOpen() && (index < body.size())) {
     const auto expr = body[index++];
     ASSERT(expr);
@@ -975,24 +984,11 @@ auto EffectVisitor::VisitScript(Script* script) -> bool {
 }
 
 auto EffectVisitor::VisitConstructor(Constructor* init) -> bool {
-  auto index = 0;
-  ir::Definition* return_value = nullptr;
-  const auto& body = init->GetBody();
-  while (IsOpen() && (index < body.size())) {
-    const auto expr = body[index++];
-    ASSERT(expr);
-    ValueVisitor for_value(GetOwner());
-    LOG_IF(FATAL, !expr->Accept(&for_value)) << "failed to visit: " << expr->ToString();
-    Append(for_value);
-    return_value = for_value.GetValue();
-    if (!IsOpen()) {
-      LOG(WARNING) << "breaking";
-      break;
-    }
+  // TODO: push/pop scope
+  if (!VisitSeqExpr(init->GetBody())) {
+    LOG(ERROR) << "failed to visit constructor body";
+    return false;
   }
-  if (!return_value)
-    return_value = Bind(ir::ConstantInstr::New(Null()));
-  Add(ir::ReturnInstr::New(return_value));
   return true;
 }
 
@@ -1001,25 +997,9 @@ auto EffectVisitor::VisitLambda(Lambda* lambda) -> bool {
   ASSERT(scope);
   if (lambda->HasScope())
     scope->AddAll(lambda->GetScope());
-  auto index = 0;
-  const auto& body = lambda->GetBody();
-  while (IsOpen() && (index < body.size())) {
-    const auto expr = body[index++];
-    ASSERT(expr);
-    ValueVisitor for_value(GetOwner());
-    if (!expr->Accept(&for_value)) {
-      LOG(ERROR) << "failed to visit: " << expr->ToString();
-      return false;
-    }
-    Append(for_value);
-    if (index == body.size()) {
-      auto return_value = for_value.GetValue();
-      if (!return_value && !for_value.GetExitInstr()->IsJoinEntryInstr())
-        return_value = Bind(ir::ConstantInstr::New(Null()));
-      Add(ir::ReturnInstr::New(return_value));
-    }
-    if (!IsOpen())
-      break;
+  if (!VisitSeqExpr(lambda->GetBody())) {
+    LOG(ERROR) << "failed to visit constructor body";
+    return false;
   }
   GetOwner()->PopScope();
   return true;

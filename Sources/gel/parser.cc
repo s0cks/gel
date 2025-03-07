@@ -1299,7 +1299,8 @@ auto Parser::ParseLambda(const Token::Kind kind, Lambda** result) -> ParseResult
     PushOwner(lambda);
     expr::ExpressionList body;
     LOG_IF(FATAL, !ParseExpressionList(body)) << "failed to parse expression list.";
-    lambda->SetBody(body);
+    if (!body.empty())
+      lambda->SetBody(expr::SeqExpr::New(body));
 
     std::vector<Argument*> parsed_args{};
     if (dispatched_ > 0) {
@@ -1354,7 +1355,8 @@ auto Parser::ParseLambda(const Token::Kind kind, Lambda** result) -> ParseResult
   CHECK_RESULT(ParseExpressionList(body, false));
   if (body.empty() && lambda->HasDocs())
     body.push_back(expr::LiteralExpr::New(lambda->GetDocs()));  // TODO: should we remove the docstring
-  lambda->SetBody(body);
+  if (!body.empty())
+    lambda->SetBody(expr::SeqExpr::New(body));
   PopOwner();
   if (HasOwner()) {
     if (GetOwner()->IsModule()) {
@@ -1418,15 +1420,15 @@ auto Parser::ParseModule(const std::string& name, Module** result) -> ParseResul
   const auto new_module = Module::New(String::New(name), scope);
   ASSERT(new_module);
   PushOwner(new_module);
-  expr::ExpressionList init_body{};
+  expr::SeqExpr* init_body = expr::SeqExpr::New();
   while (!PeekEq(Token::kEndOfStream)) {
     expr::Expression* expr = nullptr;
     CHECK_RESULT(ParseExpression(&expr));
     if (expr) {
-      init_body.push_back(expr);
+      init_body->Append(expr);
     }
   }
-  if (!init_body.empty()) {
+  if (!init_body->IsEmpty()) {
     const auto init = Module::CreateConstructor(new_module, init_body);
     ASSERT(init);
     new_module->SetInit(init);
@@ -1441,6 +1443,7 @@ auto Parser::ParseScript(Script** result) -> ParseResult {
   ParseScope scope(this);
   const auto script = Script::New(scope);
   ASSERT(script);
+  const auto body = expr::SeqExpr::New();
   PushOwner(script);
   while (!PeekEq(Token::kEndOfStream)) {
     const auto& peek = PeekToken();
@@ -1448,12 +1451,12 @@ auto Parser::ParseScript(Script** result) -> ParseResult {
       expr::Expression* literal = nullptr;
       CHECK_RESULT(ParseLiteralExpr(&literal));
       ASSERT(literal);
-      script->Append(literal);
+      body->Append(literal);
     } else if (peek.IsQuote()) {
       expr::Expression* quote = nullptr;
       CHECK_RESULT(ParseQuotedExpr(&quote));
       ASSERT(quote);
-      script->Append(quote);
+      body->Append(quote);
     }
 
     Expression* expr = nullptr;
@@ -1566,11 +1569,13 @@ auto Parser::ParseScript(Script** result) -> ParseResult {
     }
     EXPECT_NEXT(Token::kRParen);
     if (expr) {
-      script->Append(expr);
+      body->Append(expr);
       DVLOG(100) << "parsed: " << expr->ToString();
     }
   }
   PopOwner();
+  if (!body->IsEmpty())
+    script->SetBody(body);
   (*result) = script;
   return true;
 }
@@ -1718,15 +1723,15 @@ auto Parser::ParseNamespace(Namespace** result) -> ParseResult {
   ASSERT(ns);
   PushOwner(ns);
   TryParseDocstring(ns);
-  expr::ExpressionList init_body{};
+  expr::SeqExpr* init_body = expr::SeqExpr::New();
   while (!PeekEq(Token::kRParen)) {
     expr::Expression* expr = nullptr;
     CHECK_RESULT(ParseExpression(&expr));
     if (expr) {
-      init_body.push_back(expr);
+      init_body->Append(expr);
     }
   }
-  if (!init_body.empty()) {
+  if (!init_body->IsEmpty()) {
     const auto init = Namespace::CreateConstructor(ns, init_body);
     ASSERT(init);
     ns->SetInit(init);

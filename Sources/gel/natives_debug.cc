@@ -38,7 +38,10 @@ NATIVE_PROCEDURE_F(gel_print_args) {
 }
 
 NATIVE_PROCEDURE_F(gel_print_heap) {
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  const auto heap = GetCurrentThreadHeap();
+  if (!heap)
+    return Return();
+  PrintHeap(*heap);
   return Return();
 }
 
@@ -132,10 +135,10 @@ NATIVE_PROCEDURE_F(gel_get_natives) {
 }
 
 NATIVE_PROCEDURE_F(gel_get_compile_time) {
-  NativeArgument<0, Lambda> lambda(args);
-  if (!lambda)
-    return Throw(lambda.GetError());
-  return ReturnNew<Long>(lambda->GetCompileTime());
+  NativeArgument<0, Lambda> target(args);
+  CHECK_NATIVE_ARG(target);
+  const auto& code = target->GetCode();
+  return ReturnLong(code.GetCompileTime());
 }
 }  // namespace gel::proc
 

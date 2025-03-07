@@ -145,14 +145,14 @@ class Disassembler {
   template <class E>
   static inline void Disassemble(std::ostream& stream, const E* exec, LocalScope* parent_scope = nullptr,
                                  std::enable_if_t<gel::has_code<E>::value>* = nullptr) {
-    ASSERT(exec && exec->IsCompiled());
+    ASSERT(exec);
     const auto scope = LocalScope::New(parent_scope);
     ASSERT(scope);
     if (exec->HasScope())
       scope->AddAll(exec->GetScope());
     const auto label = exec->GetFullyQualifiedName();
     Disassembler disassembler(scope);
-    disassembler.Disassemble(exec->GetCode(), label);
+    disassembler.Disassemble((const Region&)exec->GetCode(), label);
     stream << disassembler;
   }
 };

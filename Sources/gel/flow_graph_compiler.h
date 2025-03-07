@@ -79,12 +79,10 @@ class FlowGraphCompiler {
  public:
   template <class E>
   static inline auto Compile(E* exec, LocalScope* scope, std::enable_if_t<gel::is_executable<E>::value>* = nullptr) -> bool {
-    if (!exec) {
-      DLOG(ERROR) << "cannot compile null target.";
-      return false;
-    }
-    if (exec->IsCompiled()) {
-      DLOG(WARNING) << "trying to compile already compiled target: " << exec;
+    ASSERT(exec);
+    const auto& code = exec->GetCode();
+    if (code.IsCompiled()) {
+      DLOG(WARNING) << "cannot re-compile " << exec << " skipping...";
       return true;
     }
     ASSERT(scope);

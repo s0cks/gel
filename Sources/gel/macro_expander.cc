@@ -9,95 +9,11 @@
 #include "gel/script.h"
 
 namespace gel {
-class ExpanderScope {
-  DEFINE_NON_COPYABLE_TYPE(ExpanderScope);
-
- private:
-  MacroExpander* owner_;
-
- public:
-  ExpanderScope(MacroExpander* owner) :
-    owner_(owner) {
-    ASSERT(owner_);
-    GetOwner()->PushScope();
-  }
-  ~ExpanderScope() {
-    GetOwner()->PopScope();
-  }
-
-  auto GetOwner() const -> MacroExpander* {
-    return owner_;
-  }
-
-  auto operator->() const -> LocalScope* {
-    return GetOwner()->GetScope();
-  }
-
-  operator LocalScope*() const {
-    return GetOwner()->GetScope();
-  }
-};
-
 #define VISIT(Visitor, Expr)                                  \
   if (!Visitor((Expr))) {                                     \
     DLOG(ERROR) << "failed to visit: " << (Expr)->ToString(); \
     return false;                                             \
   }
-
-auto MacroExpander::ExpandAllInLambda(Lambda* lambda) -> bool {
-  ASSERT(lambda);
-  ExpanderScope scope(this);
-  if (lambda->HasScope())
-    scope->AddAll(lambda->GetScope());
-  for (auto idx = 0; idx < lambda->GetNumberOfExpressions(); idx++) {
-    do {
-      const auto expr = lambda->GetExpressionAt(idx);
-      ASSERT(expr);
-      MacroEffectVisitor for_effect(this);
-      if (!expr->Accept(&for_effect) || !for_effect)
-        break;
-      lambda->ReplaceExpressionAt(idx, for_effect.GetResults());
-    } while (true);
-  }
-  return true;
-}
-
-auto MacroExpander::ExpandAllInConstructor(Constructor* init) -> bool {
-  ASSERT(init);
-  ExpanderScope scope(this);
-  if (init->HasScope())
-    scope->AddAll(init->GetScope());
-  for (auto idx = 0; idx < init->GetNumberOfExpressions(); idx++) {
-    do {
-      const auto expr = init->GetExpressionAt(idx);
-      ASSERT(expr);
-      MacroEffectVisitor for_effect(this);
-      if (!expr->Accept(&for_effect) || !for_effect)
-        break;
-      init->ReplaceExpressionAt(idx, for_effect.GetResults());
-    } while (true);
-  }
-  return true;
-}
-
-auto MacroExpander::ExpandAllInScript(Script* script) -> bool {
-  ASSERT(script);
-  ExpanderScope scope(this);
-  if (script->HasScope())
-    scope->AddAll(script->GetScope());
-  for (auto idx = 0; idx < script->GetNumberOfExpressions(); idx++) {
-    do {
-      const auto expr = script->GetExpressionAt(idx);
-      ASSERT(expr);
-      MacroEffectVisitor for_effect(this);
-      LOG_IF(ERROR, !expr->Accept(&for_effect)) << "failed to visit " << expr->ToString();
-      if (!for_effect)
-        break;
-      script->ReplaceExpressionAt(idx, for_effect.GetResults());
-    } while (true);
-  }
-  return true;
-}
 
 auto MacroEffectVisitor::VisitExpressionList(const expr::ExpressionList& source, expr::ExpressionList& dest, bool* changed)
     -> bool {
@@ -114,6 +30,21 @@ auto MacroEffectVisitor::VisitExpressionList(const expr::ExpressionList& source,
     }
     (*changed) = true;
     dest.insert(std::end(dest), std::begin(for_effect), std::end(for_effect));
+  }
+  return true;
+}
+
+auto MacroEffectVisitor::VisitSeqExpr(expr::SeqExpr* expr) -> bool {
+  ASSERT(expr);
+  for (auto idx = 0; idx < expr->GetNumberOfChildren(); idx++) {
+    do {
+      const auto child = expr->GetChildAt(idx);
+      ASSERT(child);
+      MacroEffectVisitor for_effect(GetOwner());
+      if (!child->Accept(&for_effect) || !for_effect)
+        break;
+      expr->ReplaceChildAt(idx, for_effect.GetResults());
+    } while (true);
   }
   return true;
 }

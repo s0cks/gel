@@ -302,8 +302,7 @@ void Runtime::Call(Constructor* init, const ObjectList& args) {
         LOG_IF(FATAL, !locals->Add(local)) << "failed to add parameter: " << (*local);
       }
     }
-    if (!init->IsCompiled())
-      LOG_IF(FATAL, !FlowGraphCompiler::Compile(init, locals)) << "failed to compile: " << init;
+    LOG_IF(FATAL, !FlowGraphCompiler::Compile(init, locals)) << "failed to compile: " << init;
     StackFrameGuard<Constructor> stack_guard(init);
     {
       CallStackFrame call_frame(init, locals);
@@ -334,8 +333,7 @@ void Runtime::Call(Lambda* lambda, const ObjectList& args) {
         LOG_IF(FATAL, !locals->Add(local)) << "failed to add parameter: " << (*local);
       }
     }
-    if (!lambda->IsCompiled())
-      LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, locals)) << "failed to compile: " << lambda;
+    LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, locals)) << "failed to compile: " << lambda;
     StackFrameGuard<Lambda> stack_guard(lambda);
     {
       CallStackFrame call_frame(lambda, locals);
@@ -387,7 +385,7 @@ void Runtime::Call(NativeProcedure* native, const ObjectList& args) {
 }
 
 void Runtime::Call(Script* script, const ObjectList& args) {
-  ASSERT(script && script->IsCompiled());
+  ASSERT(script);
   {
     CallScope locals(this, script);
     locals->AddAll(script->GetScope());
@@ -416,7 +414,7 @@ auto Runtime::Eval(const std::string& expr) -> Object* {
   LOG_IF(FATAL, !scope->Add(this_local)) << "failed to add " << (*this_local) << " to scope.";
   const auto parsed = Parser::ParseExpr(expr, scope);
   if (parsed)
-    lambda->SetBody(parsed);
+    lambda->SetBody(expr::SeqExpr::New(parsed));
   LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, scope)) << "failed to compile: " << expr;
   const auto result = runtime->CallPop(lambda);
   runtime->PopScope();

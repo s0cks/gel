@@ -152,7 +152,7 @@ class Namespace : public Object {
  public:
   static auto New(Symbol* symbol, LocalScope* scope) -> Namespace*;
   static auto VisitAllNamespaces(NamespaceVisitor* vis) -> bool;
-  static auto CreateConstructor(Namespace* ns, const expr::ExpressionList& body = {}) -> Constructor*;
+  static auto CreateConstructor(Namespace* ns, expr::SeqExpr* body = nullptr) -> Constructor*;
   static auto FindNamespace(const Predicate& filter) -> Namespace*;
 
   static inline auto FindNamespace(const std::string& name) -> Namespace* {

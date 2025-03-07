@@ -29,6 +29,7 @@
 #include "gel/repl.h"
 #include "gel/runtime.h"
 #include "gel/rx.h"
+#include "gel/type.h"
 #include "gel/type_traits.h"
 #include "gel/zone.h"
 
@@ -83,10 +84,7 @@ static inline auto Execute(const std::string& expr) -> int {
     try {
       const auto args = Array<Argument*>::New(0);
       ASSERT(args);
-      expr::ExpressionList body = {
-          Parser::ParseExpr(expr),
-      };
-      const auto lambda = Lambda::New(args, body);
+      const auto lambda = Lambda::New(args, expr::SeqExpr::New(Parser::ParseExpr(expr)));
       LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, GetRuntime()->GetScope())) << "failed to compile: " << expr;
     } catch (const gel::Exception& exc) {
       LOG(ERROR) << "failed to execute expression.";
@@ -139,6 +137,9 @@ auto main(int argc, char** argv) -> int {
   Parser::Init();
   Heap::Init();
   Runtime::Init();
+#ifdef GEL_DEBUG
+  gel::PrintAllTypeSizes();
+#endif  // GEL_DEBUG
   const auto expr = GetExpressionFlag();
   if (expr)
     return Execute((*expr));

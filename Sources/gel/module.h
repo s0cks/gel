@@ -197,7 +197,7 @@ class Module : public Object {
   static void GetAllLoadedModules(std::vector<Module*>& modules);
   static auto Find(const std::string& name) -> Module*;
   static auto New(String* name, LocalScope* scope) -> Module*;
-  static auto CreateConstructor(Module* rhs, const expr::ExpressionList& body = {}) -> Constructor*;
+  static auto CreateConstructor(Module* rhs, expr::SeqExpr* body = nullptr) -> Constructor*;
   static auto FindOrLoad(const std::string& name) -> Module*;
   static auto LoadFrom(const std::filesystem::path& abs_path) -> Module*;
   static auto VisitAllModules(ModuleVisitor* vis) -> bool;

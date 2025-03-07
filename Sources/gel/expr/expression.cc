@@ -55,14 +55,20 @@ FOR_EACH_EXPRESSION_NODE(DEFINE_NEW_OPERATOR)  // NOLINT(cppcoreguidelines-pro-t
 FOR_EACH_EXPRESSION_NODE(DEFINE_ACCEPT)
 #undef DEFINE_ACCEPT
 
-auto SequenceExpr::IsConstantExpr() const -> bool {
+auto SeqExpr::ToString() const -> std::string {
+  ToStringHelper<SeqExpr> helper{};
+  helper.AddField("num_children", GetNumberOfChildren());
+  return helper;
+}
+
+auto SeqExpr::IsConstantExpr() const -> bool {
   const auto found = std::ranges::find_if(std::begin(children_), std::end(children_), [](Expression* expr) {
     return !expr->IsConstantExpr();
   });
   return found != std::end(children_);
 }
 
-auto SequenceExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
+auto SeqExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
   ASSERT(vis);
   for (const auto& expr : children_) {
     if (!expr->Accept(vis))
@@ -71,7 +77,7 @@ auto SequenceExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
   return true;
 }
 
-auto SequenceExpr::VisitAllDefinitions(ExpressionVisitor* vis) -> bool {
+auto SeqExpr::VisitAllDefinitions(ExpressionVisitor* vis) -> bool {
   ASSERT(vis);
   for (const auto& expr : children_) {
     if (expr->IsDefinition()) {
@@ -442,7 +448,7 @@ auto LetExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
   ASSERT(vis);
   if (!VisitAllBindings(vis))
     return false;
-  return SequenceExpr::VisitChildren(vis);
+  return SeqExpr::VisitChildren(vis);
 }
 
 auto ListExpr::ToString() const -> std::string {
