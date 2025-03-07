@@ -19,21 +19,17 @@
 #include "gel/event_loop.h"
 #include "gel/expr/expression.h"
 #include "gel/heap.h"
-#include "gel/macro.h"
-#include "gel/map.h"
-#include "gel/module.h"
 #include "gel/namespace.h"
-#include "gel/native_procedure.h"
 #include "gel/natives.h"
 #include "gel/platform.h"
 #include "gel/pointer.h"
-#include "gel/procedure.h"
 #include "gel/runtime.h"
 #include "gel/rx.h"
-#include "gel/script.h"
 #include "gel/symbol.h"
 #include "gel/to_string_helper.h"
 #include "gel/type.h"
+#include "gel/types.h"
+
 namespace gel {
 #ifdef GEL_DISABLE_HEAP
 
@@ -67,6 +63,7 @@ DEFINE_NEW_OPERATOR(Symbol);           // NOLINT(cppcoreguidelines-pro-type-rein
 DEFINE_NEW_OPERATOR(Macro);            // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Procedure);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Lambda);           // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Constructor);      // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(NativeProcedure);  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Pair);             // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Script);           // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
@@ -170,6 +167,7 @@ void Object::Init() {
   Seq::InitClass();
   Map::Init();
   Procedure::InitClass();
+  Constructor::InitClass();
   Lambda::InitClass();
   NativeProcedure::Init();
   Buffer::Init();

@@ -26,6 +26,7 @@ class Definition;
   V(Macro)                         \
   V(Procedure)                     \
   V(Lambda)                        \
+  V(Constructor)                   \
   V(NativeProcedure)               \
   V(Pair)                          \
   V(Script)                        \

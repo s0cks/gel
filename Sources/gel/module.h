@@ -36,7 +36,7 @@ class Module : public Object {
 
  private:
   LocalScope* scope_;
-  Lambda* init_ = nullptr;
+  Constructor* init_ = nullptr;
   Array<Namespace*>* namespaces_ = nullptr;
 
   static inline auto CreateDefaultNamespace(Module* m) -> Namespace* {
@@ -67,7 +67,7 @@ class Module : public Object {
     SetNamespaces(CreateDefaultNamespaces(this));
   }
 
-  void SetInit(Lambda* rhs) {
+  void SetInit(Constructor* rhs) {
     ASSERT(rhs);
     init_ = rhs;
   }
@@ -101,7 +101,6 @@ class Module : public Object {
   auto Init(Runtime* runtime) -> bool;
   auto VisitPointers(PointerVisitor* vis) -> bool override;
   auto VisitPointerPointers(PointerPointerVisitor* vis) -> bool override;
-  auto CreateInitFunc(const expr::ExpressionList& body) -> Lambda*;
 
   void AddChild(Object* rhs) override;
 
@@ -163,7 +162,7 @@ class Module : public Object {
     return namespaces_->Get(idx);
   }
 
-  auto GetInit() const -> Lambda* {
+  auto GetInit() const -> Constructor* {
     return init_;
   }
 
@@ -198,6 +197,7 @@ class Module : public Object {
   static void GetAllLoadedModules(std::vector<Module*>& modules);
   static auto Find(const std::string& name) -> Module*;
   static auto New(String* name, LocalScope* scope) -> Module*;
+  static auto CreateConstructor(Module* rhs, const expr::ExpressionList& body = {}) -> Constructor*;
   static auto FindOrLoad(const std::string& name) -> Module*;
   static auto LoadFrom(const std::filesystem::path& abs_path) -> Module*;
   static auto VisitAllModules(ModuleVisitor* vis) -> bool;

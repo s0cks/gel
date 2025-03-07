@@ -4,16 +4,11 @@
 #include "gel/event_emitter.h"
 #include "gel/event_loop.h"
 #include "gel/heap.h"
-#include "gel/macro.h"
-#include "gel/map.h"
-#include "gel/module.h"
-#include "gel/namespace.h"
 #include "gel/native_procedure.h"
 #include "gel/natives.h"
-#include "gel/object.h"
 #include "gel/pointer.h"
-#include "gel/script.h"
 #include "gel/to_string_helper.h"
+#include "gel/types.h"
 
 namespace gel {
 static Array<Class*>* classes_ = nullptr;

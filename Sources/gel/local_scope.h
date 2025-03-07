@@ -162,6 +162,11 @@ class LocalScope : public HeapObject {
   auto Add(Symbol* symbol, Object* value = nullptr) -> LocalVariable*;
   auto Add(const std::string& symbol, Object* value = nullptr) -> LocalVariable*;
 
+  inline auto AddThisValue(Object* rhs) -> LocalVariable* {
+    ASSERT(rhs);
+    return Add("this", rhs);
+  }
+
   auto FindIf(const LocalVariable::Predicate& predicate) const -> LocalVariable* {
     return locals_->FindIf(predicate);
   }
@@ -186,6 +191,15 @@ class LocalScope : public HeapObject {
   static inline auto New(LocalScope* parent = nullptr, Array<LocalVariable*>* locals = Array<LocalVariable*>::New())
       -> LocalScope* {
     return new LocalScope(parent, locals);
+  }
+
+  static inline auto NewWithThis(Object* this_value, LocalScope* parent = nullptr) -> LocalScope* {
+    ASSERT(this_value);
+    const auto scope = LocalScope::New();
+    ASSERT(scope);
+    const auto self = LocalVariable::New(scope, "this", this_value);
+    LOG_IF(FATAL, !scope->Add(self)) << "failed to add " << (*self) << " to scope.";
+    return scope;
   }
 
   static auto Union(const std::vector<LocalScope*>& scopes, LocalScope* parent = nullptr) -> LocalScope*;

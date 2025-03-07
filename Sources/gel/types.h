@@ -1,6 +1,7 @@
 #include "gel/array.h"
 #include "gel/buffer.h"
 #include "gel/class.h"
+#include "gel/constructor.h"
 #include "gel/error.h"
 #include "gel/event_emitter.h"
 #include "gel/event_loop.h"

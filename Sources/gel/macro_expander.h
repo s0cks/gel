@@ -40,6 +40,7 @@ class MacroExpander {
   }
 
   auto ExpandAllInLambda(Lambda* lambda) -> bool;
+  auto ExpandAllInConstructor(Constructor* lambda) -> bool;
   auto ExpandAllInScript(Script* script) -> bool;
 
  public:
@@ -55,6 +56,14 @@ class MacroExpander {
     ASSERT(scope);
     MacroExpander expander(scope);
     LOG_IF(FATAL, !expander.ExpandAllInLambda(lambda)) << "failed to expand macros in " << lambda;
+  }
+
+  static inline void ExpandAll(Constructor* init, LocalScope* scope) {
+    ASSERT(init);
+    ASSERT(scope);
+    NOT_IMPLEMENTED(ERROR);  // TODO: implement
+    MacroExpander expander(scope);
+    LOG_IF(FATAL, !expander.ExpandAllInConstructor(init)) << "failed to expand macros in " << init;
   }
 };
 

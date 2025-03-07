@@ -62,6 +62,24 @@ auto MacroExpander::ExpandAllInLambda(Lambda* lambda) -> bool {
   return true;
 }
 
+auto MacroExpander::ExpandAllInConstructor(Constructor* init) -> bool {
+  ASSERT(init);
+  ExpanderScope scope(this);
+  if (init->HasScope())
+    scope->AddAll(init->GetScope());
+  for (auto idx = 0; idx < init->GetNumberOfExpressions(); idx++) {
+    do {
+      const auto expr = init->GetExpressionAt(idx);
+      ASSERT(expr);
+      MacroEffectVisitor for_effect(this);
+      if (!expr->Accept(&for_effect) || !for_effect)
+        break;
+      init->ReplaceExpressionAt(idx, for_effect.GetResults());
+    } while (true);
+  }
+  return true;
+}
+
 auto MacroExpander::ExpandAllInScript(Script* script) -> bool {
   ASSERT(script);
   ExpanderScope scope(this);

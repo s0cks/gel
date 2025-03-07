@@ -5,6 +5,7 @@
 #include <algorithm>
 
 #include "gel/common.h"
+#include "gel/constructor.h"
 #include "gel/expr/expression.h"
 #include "gel/flags.h"
 #include "gel/gel.h"
@@ -973,6 +974,28 @@ auto EffectVisitor::VisitScript(Script* script) -> bool {
   return true;
 }
 
+auto EffectVisitor::VisitConstructor(Constructor* init) -> bool {
+  auto index = 0;
+  ir::Definition* return_value = nullptr;
+  const auto& body = init->GetBody();
+  while (IsOpen() && (index < body.size())) {
+    const auto expr = body[index++];
+    ASSERT(expr);
+    ValueVisitor for_value(GetOwner());
+    LOG_IF(FATAL, !expr->Accept(&for_value)) << "failed to visit: " << expr->ToString();
+    Append(for_value);
+    return_value = for_value.GetValue();
+    if (!IsOpen()) {
+      LOG(WARNING) << "breaking";
+      break;
+    }
+  }
+  if (!return_value)
+    return_value = Bind(ir::ConstantInstr::New(Null()));
+  Add(ir::ReturnInstr::New(return_value));
+  return true;
+}
+
 auto EffectVisitor::VisitLambda(Lambda* lambda) -> bool {
   const auto scope = GetOwner()->PushScope();
   ASSERT(scope);
@@ -1015,6 +1038,27 @@ auto FlowGraphBuilder::Build(Script* script, LocalScope* scope) -> FlowGraph* {
   ValueVisitor for_effect(&builder);
   if (!for_effect.VisitScript(script)) {
     LOG(ERROR) << "failed to visit: " << script;
+    return nullptr;
+  }
+  AppendFragment(target, for_effect);
+  graph_entry->Append(target);
+  graph_entry->AddDominated(target);
+  return new FlowGraph(graph_entry);
+}
+
+auto FlowGraphBuilder::Build(Constructor* init, LocalScope* scope) -> FlowGraph* {
+  ASSERT(init);
+  ASSERT(scope);
+  FlowGraphBuilder builder(scope);
+  const auto graph_entry = ir::GraphEntryInstr::New(builder.GetNextBlockId());
+  ASSERT(graph_entry);
+  builder.SetCurrentBlock(graph_entry);
+  const auto target = ir::TargetEntryInstr::New(builder.GetNextBlockId());
+  ASSERT(target);
+  builder.SetCurrentBlock(target);
+  ValueVisitor for_effect(&builder);
+  if (!for_effect.VisitConstructor(init)) {
+    LOG(ERROR) << "failed to visit: " << init;
     return nullptr;
   }
   AppendFragment(target, for_effect);

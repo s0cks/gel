@@ -18,6 +18,22 @@
 #include "gel/util.h"
 
 namespace gel {
+template <typename T>
+struct is_stack_frame_target {
+  static constexpr const auto value = false;
+};
+
+#define DECLARE_IS_STACK_FRAME_TARGET(Name)   \
+  template <>                                 \
+  struct is_stack_frame_target<gel::Name> {   \
+    static constexpr const auto value = true; \
+  };
+DECLARE_IS_STACK_FRAME_TARGET(Script);
+DECLARE_IS_STACK_FRAME_TARGET(Lambda);
+DECLARE_IS_STACK_FRAME_TARGET(Constructor);
+DECLARE_IS_STACK_FRAME_TARGET(NativeProcedure);
+#undef DECLARE_IS_STACK_FRAME_TARGET
+
 class StackFrame {  // TODO: extend Object
   friend class Runtime;
   friend class Collector;
@@ -32,7 +48,9 @@ class StackFrame {  // TODO: extend Object
   uword return_address_;
   OperationStack stack_{};
 
-  StackFrame(const uword id, Object* target, LocalScope* locals, const uword return_address = UNALLOCATED) :
+  template <typename T>
+  StackFrame(const uword id, T* target, LocalScope* locals, const uword return_address = UNALLOCATED,
+             std::enable_if_t<gel::is_stack_frame_target<T>::value>* = nullptr) :
     id_(id),
     target_(target),
     locals_(locals),
@@ -84,6 +102,10 @@ class StackFrame {  // TODO: extend Object
 
   auto IsNativeFrame() const -> bool {
     return GetTarget()->IsNativeProcedure();
+  }
+
+  auto IsInitFrame() const -> bool {
+    return GetTarget()->IsConstructor();
   }
 
   auto GetLocals() const -> LocalScope* {
@@ -187,7 +209,8 @@ class StackFrameGuardBase {
   virtual ~StackFrameGuardBase();
 };
 
-template <typename T, typename = typename std::enable_if_t<gel::is_executable<T>::value && gel::has_to_string<T>::value>>
+template <typename T, typename = typename std::enable_if_t<gel::is_executable<T>::value && gel::has_to_string<T>::value &&
+                                                           gel::is_stack_frame_target<T>::value>>
 class StackFrameGuard : public StackFrameGuardBase {
   DEFINE_NON_COPYABLE_TYPE(StackFrameGuard);
 

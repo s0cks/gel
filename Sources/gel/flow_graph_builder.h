@@ -4,6 +4,7 @@
 #include <type_traits>
 
 #include "gel/common.h"
+#include "gel/constructor.h"
 #include "gel/expr/expression.h"
 #include "gel/flow_graph.h"
 #include "gel/instruction.h"
@@ -91,6 +92,7 @@ class FlowGraphBuilder {
  public:
   static auto Build(Script* script, LocalScope* scope) -> FlowGraph*;
   static auto Build(Lambda* lambda, LocalScope* scope) -> FlowGraph*;
+  static auto Build(Constructor* init, LocalScope* scope) -> FlowGraph*;
 };
 
 class ValueVisitor;
@@ -243,6 +245,7 @@ class EffectVisitor : public ExpressionVisitor {
 
   auto VisitScript(Script* script) -> bool;
   auto VisitLambda(Lambda* lambda) -> bool;
+  auto VisitConstructor(Constructor* init) -> bool;
 #define DECLARE_VISIT(Name) virtual auto Visit##Name(Name* name)->bool override;
   FOR_EACH_EXPRESSION_NODE(DECLARE_VISIT)
 #undef DECLARE_VISIT

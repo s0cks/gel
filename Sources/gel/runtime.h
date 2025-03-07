@@ -28,6 +28,8 @@ DECLARE_bool(log_script_instrs);
 
 class Module;
 class Runtime {
+  friend class CallScope;
+  friend class CallStackFrame;
   friend class Collector;
   friend class proc::import;
   friend class proc::exit;
@@ -111,6 +113,7 @@ class Runtime {
   void Call(NativeProcedure* native, const ObjectList& args = {});
   void Call(Lambda* lambda, const ObjectList& args = {});
   void Call(Script* script, const ObjectList& args = {});
+  void Call(Constructor* constructor, const ObjectList& args);
 
   inline auto PushScope() -> LocalScope* {
     const auto new_scope = LocalScope::New(curr_scope_);
@@ -125,9 +128,18 @@ class Runtime {
   }
 
   auto PopStackFrame() -> StackFrame*;
-  auto PushStackFrame(Script* script, LocalScope* locals) -> const StackFrame*;
-  auto PushStackFrame(Lambda* lambda, LocalScope* locals) -> const StackFrame*;
-  auto PushStackFrame(NativeProcedure* native, LocalScope* locals) -> const StackFrame*;
+
+  template <class T>
+  auto PushStackFrame(T* target, LocalScope* locals, std::enable_if_t<gel::is_stack_frame_target<T>::value>* = nullptr)
+      -> const StackFrame* {
+    ASSERT(target);
+    ASSERT(locals);
+    const auto frame_id = HasStackFrame() ? GetCurrentStackFrame()->GetId() + 1 : 1;
+    const auto new_frame = new StackFrame(frame_id, target, locals);
+    stack_.push(new_frame);
+    DVLOG(1000) << "pushed: " << stack_.top()->ToString();
+    return stack_.top();
+  }
 
  public:  // TODO: reduce visibility
   void LoadKernel();
@@ -138,6 +150,18 @@ class Runtime {
       return Call(procedure->AsNativeProcedure(), args);
     }
     LOG(FATAL) << "invalid Call to " << procedure << " w/ args: " << args.size();  // TODO: fix printing args
+  }
+
+  template <class T>
+  inline void InvokeConstructor(T* this_value, const ObjectList& args = {}) {
+    ASSERT(this_value);
+    if (!this_value->HasInit())
+      return;
+    ObjectList invoke_args = {
+        this_value,
+    };
+    invoke_args.insert(std::end(invoke_args), std::begin(args), std::end(args));
+    return Call(this_value->GetInit(), args);
   }
 
  protected:

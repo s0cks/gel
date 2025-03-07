@@ -1427,8 +1427,9 @@ auto Parser::ParseModule(const std::string& name, Module** result) -> ParseResul
     }
   }
   if (!init_body.empty()) {
-    const auto init = new_module->CreateInitFunc(init_body);
+    const auto init = Module::CreateConstructor(new_module, init_body);
     ASSERT(init);
+    new_module->SetInit(init);
     DVLOG(1000) << "created init function for " << new_module << ": " << init;
   }
   PopOwner();
@@ -1726,8 +1727,9 @@ auto Parser::ParseNamespace(Namespace** result) -> ParseResult {
     }
   }
   if (!init_body.empty()) {
-    const auto init = ns->CreateInit(init_body);
+    const auto init = Namespace::CreateConstructor(ns, init_body);
     ASSERT(init);
+    ns->SetInit(init);
   }
   PopOwner();
   if (HasOwner())

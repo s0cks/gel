@@ -51,6 +51,7 @@ auto FlowGraphCompiler::GetBlockLabel(ir::EntryInstr* blk) -> Label* {
 
 template auto FlowGraphCompiler::CompileTarget(Lambda* lambda, void*) -> bool;
 template auto FlowGraphCompiler::CompileTarget(Script* script, void*) -> bool;
+template auto FlowGraphCompiler::CompileTarget(Constructor* script, void*) -> bool;
 
 template <class E>
 auto FlowGraphCompiler::CompileTarget(E* exec, std::enable_if_t<gel::is_executable<E>::value>*) -> bool {

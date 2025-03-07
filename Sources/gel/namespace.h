@@ -6,6 +6,7 @@
 
 #include "gel/argument.h"
 #include "gel/common.h"
+#include "gel/constructor.h"
 #include "gel/expr/expression.h"
 #include "gel/object.h"
 #include "gel/pointer.h"
@@ -50,7 +51,7 @@ class Namespace : public Object {
   Symbol* symbol_;
   LocalScope* scope_;
   String* docs_ = nullptr;
-  Procedure* init_ = nullptr;
+  Constructor* init_ = nullptr;
   Array<Procedure*>* procedures_;
   Array<Macro*>* macros_;
 
@@ -77,12 +78,11 @@ class Namespace : public Object {
     owner_ = rhs;
   }
 
-  void SetInit(Procedure* rhs) {
+  void SetInit(Constructor* rhs) {
     ASSERT(rhs);
     init_ = rhs;
   }
 
-  auto CreateInit(const expr::ExpressionList& body = {}) -> Procedure*;
   auto IsKernelNamespace() const -> bool;
   auto VisitPointerPointers(PointerPointerVisitor* vis) -> bool override;
 
@@ -95,7 +95,7 @@ class Namespace : public Object {
     return symbol_;
   }
 
-  auto GetInit() const -> Procedure* {
+  auto GetInit() const -> Constructor* {
     return init_;
   }
 
@@ -152,6 +152,7 @@ class Namespace : public Object {
  public:
   static auto New(Symbol* symbol, LocalScope* scope) -> Namespace*;
   static auto VisitAllNamespaces(NamespaceVisitor* vis) -> bool;
+  static auto CreateConstructor(Namespace* ns, const expr::ExpressionList& body = {}) -> Constructor*;
   static auto FindNamespace(const Predicate& filter) -> Namespace*;
 
   static inline auto FindNamespace(const std::string& name) -> Namespace* {

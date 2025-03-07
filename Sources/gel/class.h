@@ -43,37 +43,11 @@ class Class : public Object {
   enum ClassIds : ClassId {
     kInvalidClassId = 0,
     kObjectClassId,
-    kClassClassId,
-    kFieldClassId,
-    kStringClassId,
-    kSymbolClassId,
-    kNamespaceClassId,
-    kModuleClassId,
-    kSeqClassId,
-    kMapClassId,
-    kProcedureClassId,
-    kLambdaClassId,
-    kNativeProcedureClassId,
-    kBufferClassId,
-    kScriptClassId,
-    kBoolClassId,
-    kNumberClassId,
-    kLongClassId,
-    kDoubleClassId,
-    kPairClassId,
-    kArrayClassId,
-    kMacroClassId,
-    kErrorClassId,
-    kSetClassId,
-    kExpressionClassId,
-    kEventLoopClassId,
-    kTimerClassId,
-    kObservableClassId,
-    kObserverClassId,
-    kSubjectClassId,
-    kReplaySubjectClassId,
-    kPublishSubjectClassId,
-    kEventEmitterClassId,
+  // clang-format off
+#define DEFINE_CLASS_ID(Name) k##Name##ClassId,
+    FOR_EACH_TYPE(DEFINE_CLASS_ID)
+#undef DEFINE_CLASS_ID
+    // clang-format on
     kTotalNumberOfInternalClassIds,
   };
 

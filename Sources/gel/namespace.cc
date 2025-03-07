@@ -158,28 +158,10 @@ auto Namespace::ToString() const -> std::string {
 }
 
 auto Namespace::InitNamespace() -> Namespace* {
-  if (HasInit()) {
-    const auto runtime = GetRuntime();
-    ASSERT(runtime);
-    runtime->Call(GetInit(), {this});
-  }
+  const auto runtime = GetRuntime();
+  ASSERT(runtime);
+  runtime->InvokeConstructor(this);
   return this;
-}
-
-auto Namespace::CreateInit(const expr::ExpressionList& body) -> Procedure* {
-  const auto symbol = Symbol::New(GetSymbol()->GetNamespace(), "init");
-  ASSERT(symbol);
-  const auto args = Array<Argument*>::New();
-  ASSERT(args);
-  const auto init = Lambda::New(symbol, args, body);
-  ASSERT(init);
-  const auto scope = LocalScope::New();
-  ASSERT(scope);
-  const auto self = LocalVariable::New(scope, "this", this);
-  LOG_IF(FATAL, !scope->Add(self)) << "failed to add " << (*self) << " to scope.";
-  init->SetScope(scope);
-  init_ = init;
-  return init;
 }
 
 auto Namespace::FindMacro(const std::string& name) -> Macro* {
@@ -264,6 +246,13 @@ void Namespace::Init() {
   InitNative<namespace_get_lambdas>();
   InitNative<namespace_get_native_procedures>();
   InitNative<namespace_get_procedures>();
+}
+
+auto Namespace::CreateConstructor(Namespace* ns, const expr::ExpressionList& body) -> Constructor* {
+  const auto init = Constructor::New(Symbol::New(ns->GetName()), body);
+  init->SetArgs(Array<Argument*>::New(1));
+  init->SetScope(LocalScope::NewWithThis(ns));
+  return init;
 }
 
 namespace proc {

@@ -114,6 +114,12 @@ class Interpreter {
  public:
   virtual ~Interpreter() = default;
   void Run(const uword address);
+
+  template <class T>
+  inline void Run(T* target, std::enable_if_t<gel::has_code<T>::value>* = nullptr) {
+    ASSERT(target && target->IsCompiled());
+    return Run(target->GetCode().GetStartingAddress());
+  }
 };
 }  // namespace gel
 

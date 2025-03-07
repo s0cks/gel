@@ -2,6 +2,8 @@
 
 #include "gel/array.h"
 #include "gel/common.h"
+#include "gel/constructor.h"
+#include "gel/expr/expression.h"
 #include "gel/macro.h"
 #include "gel/native_procedure.h"
 #include "gel/parser.h"
@@ -27,34 +29,23 @@ void Module::GetAllLoadedModules(std::vector<Module*>& results) {
   }
 }
 
-auto Module::CreateInitFunc(const expr::ExpressionList& body) -> Lambda* {
-  ASSERT(!body.empty());
-  const auto args = Array<Argument*>::New(1);
-  ASSERT(args);
-  const auto init = Lambda::New(args, body);
-  const auto scope = LocalScope::New();
-  ASSERT(scope);
-  const auto self = LocalVariable::New(scope, "this", this);
-  LOG_IF(FATAL, !scope->Add(self)) << "failed to add " << (*self) << " to scope.";
-  init->SetScope(scope);
-  SetInit(init);
+auto Module::CreateConstructor(Module* rhs, const expr::ExpressionList& body) -> Constructor* {
+  ASSERT(rhs);
+  const auto init = Constructor::New(Symbol::New(rhs->GetName()), body);
+  init->SetArgs(Array<Argument*>::New(1));
+  init->SetScope(LocalScope::NewWithThis(rhs));
   return init;
 }
 
 auto Module::Init(Runtime* runtime) -> bool {
   ASSERT(runtime);
   ASSERT(!IsInitialized() && HasInit());
-  runtime->Call(GetInit(), {this});
-
+  runtime->InvokeConstructor(this);
   for (auto idx = 0; idx < namespaces_->GetLength(); idx++) {
     const auto ns = namespaces_->Get(idx);
     ASSERT(ns);
-    if (ns->HasInit()) {
-      runtime->Call(ns->GetInit(), {ns});
-      DLOG(INFO) << ns->InitNamespace()->ToString() << " initialized!";
-    }
+    runtime->InvokeConstructor(ns);
   }
-
   SetInitialized(true);
   return IsInitialized();
 }
