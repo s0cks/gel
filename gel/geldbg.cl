@@ -28,4 +28,3 @@
     "Prints the heap's new zone information to the terminal.")
   (defnative print-old-zone []
     "Prints the heap's old zone information to the terminal."))
-(print-heap)

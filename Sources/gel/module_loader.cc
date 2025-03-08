@@ -5,6 +5,7 @@
 #include "gel/common.h"
 #include "gel/local_scope.h"
 #include "gel/module.h"
+#include "gel/parser.h"
 #include "gel/runtime.h"
 #include "gel/thread_local.h"
 
@@ -32,7 +33,7 @@ void KernelModuleLoader::Init() {
 auto BaseModuleLoader::LoadAndInitialize(const ModulePath& module_path) -> Result {
   ASSERT(module_path);
   const auto name = module_path.GetModuleName();
-  const auto new_module = Module::LoadFrom(module_path.path);
+  const auto new_module = Parser::ParseModuleFrom(module_path.path, LocalScope::New(GetRuntime()->GetInitScope()), this);
   if (!new_module)
     return FailedToLoadFrom(name, module_path, IsKernel());
   ASSERT(new_module);
@@ -42,6 +43,8 @@ auto BaseModuleLoader::LoadAndInitialize(const ModulePath& module_path) -> Resul
       return FailedToInitialize(new_module, module_path, IsKernel());
     DVLOG(10) << new_module->ToString() << " is initialized!";
   }
+  new_module->SetLoader(this);
+  DVLOG(10) << new_module->ToString() << " is loaded!";
   return Result(true, new_module);
 }
 

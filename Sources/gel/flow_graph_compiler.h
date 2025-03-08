@@ -81,10 +81,8 @@ class FlowGraphCompiler {
   static inline auto Compile(E* exec, LocalScope* scope, std::enable_if_t<gel::is_executable<E>::value>* = nullptr) -> bool {
     ASSERT(exec);
     const auto& code = exec->GetCode();
-    if (code.IsCompiled()) {
-      DLOG(WARNING) << "cannot re-compile " << exec << " skipping...";
+    if (code.IsCompiled())
       return true;
-    }
     ASSERT(scope);
     FlowGraphCompiler compiler(scope);
     return compiler.CompileTarget<E>(exec);

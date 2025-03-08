@@ -137,9 +137,6 @@ auto main(int argc, char** argv) -> int {
   Parser::Init();
   Heap::Init();
   Runtime::Init();
-#ifdef GEL_DEBUG
-  gel::PrintAllTypeSizes();
-#endif  // GEL_DEBUG
   const auto expr = GetExpressionFlag();
   if (expr)
     return Execute((*expr));

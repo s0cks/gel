@@ -17,6 +17,7 @@
 #include "gel/lambda.h"
 #include "gel/local.h"
 #include "gel/local_scope.h"
+#include "gel/module_loader.h"
 #include "gel/namespace.h"
 #include "gel/runtime.h"
 #include "gel/script.h"
@@ -101,8 +102,10 @@ class ParseResult {
   }
 };
 
+class ModuleLoader;
 class Parser {
   friend class ParseScope;
+  friend class TopLevelScope;
   using Severity = google::LogSeverity;
   DEFINE_NON_COPYABLE_TYPE(Parser);
 
@@ -196,8 +199,10 @@ class Parser {
  private:
   std::istream& stream_;
   LocalScope* scope_;
+  ModuleLoader* loader_;
   std::vector<char> chunk_;
   std::string buffer_{};
+  Object* toplevel_ = nullptr;
   Position pos_{.row = 1, .column = 1};
   uint64_t wpos_ = 0;
   uint64_t rpos_ = 0;
@@ -205,29 +210,28 @@ class Parser {
   uint64_t depth_ = 0;
   Token next_{};
   Token peek_{};
-  std::stack<Object*> owner_stack_{};
-
-  inline void PushOwner(Object* rhs) {
-    ASSERT(rhs);
-    return owner_stack_.push(rhs);
-  }
-
-  inline void PopOwner() {
-    ASSERT(HasOwner());
-    return owner_stack_.pop();
-  }
-
-  inline auto HasOwner() const -> bool {
-    return !owner_stack_.empty();
-  }
-
-  inline auto GetOwner() const -> Object* {
-    ASSERT(HasOwner());
-    return owner_stack_.top();
-  }
-
   word dispatched_ = -1;
   State state_ = State::kParsing;
+
+  auto GetModuleLoader() const -> ModuleLoader* {
+    return loader_;
+  }
+
+  auto GetTopLevel() const -> Object* {
+    return toplevel_;
+  }
+
+  inline auto HasTopLevel() const -> bool {
+    return GetTopLevel() != nullptr;
+  }
+
+  void PushTopLevel(Script* rhs);
+  void PushTopLevel(Module* rhs);
+  void PushTopLevel(Class* rhs);
+  void PushTopLevel(Namespace* rhs);
+  void PushTopLevel(Macro* rhs);
+  void PushTopLevel(Lambda* rhs);
+  void PopTopLevel();
 
  protected:
   auto GetPos() const -> const Position& {
@@ -479,6 +483,7 @@ class Parser {
   auto ParseLiteralLambda(const Token::Kind kind, expr::LiteralExpr** result) -> ParseResult;
   auto ParseLambdaExpr() -> expr::LambdaExpr*;
 
+  auto ParseSeqExpr(expr::SeqExpr** result, const Token::Kind end = Token::kRParen) -> ParseResult;
   auto ParseDefNamespace(LocalVariable** local) -> ParseResult;
   auto ParseMap(expr::Expression**) -> ParseResult;
   auto ParseSetExpr(expr::Expression**) -> ParseResult;
@@ -510,11 +515,13 @@ class Parser {
   auto ParseExpression(Expression** result, const int depth = 0) -> ParseResult;
 
  public:
-  explicit Parser(std::istream& stream, LocalScope* scope) :
+  explicit Parser(std::istream& stream, LocalScope* scope, ModuleLoader* loader) :
     stream_(stream),
-    scope_(scope) {
+    scope_(scope),
+    loader_(loader) {
     ASSERT(stream.good());
     ASSERT(scope_);
+    ASSERT(loader_);
     const auto total_size = GetStreamSize();
     chunk_.reserve(total_size);
     buffer_.reserve(kDefaultBufferSize);
@@ -529,7 +536,7 @@ class Parser {
   static inline auto ParseExpr(std::istream& stream, LocalScope* scope = LocalScope::New()) -> expr::Expression* {
     ASSERT(stream.good());
     ASSERT(scope);
-    Parser parser(stream, scope);
+    Parser parser(stream, scope, GetThreadModuleLoader());
     expr::Expression* result = nullptr;
     if (!parser.ParseExpression(&result))
       return nullptr;
@@ -547,7 +554,7 @@ class Parser {
       -> Script* {
     ASSERT(stream.good());
     ASSERT(scope);
-    Parser parser(stream, scope);
+    Parser parser(stream, scope, GetThreadModuleLoader());
     Script* script = nullptr;
     const auto result = parser.ParseScript(&script);
     if (!result) {
@@ -559,7 +566,8 @@ class Parser {
   }
 
   static inline auto ParseModuleFrom(const std::string& filename,
-                                     LocalScope* scope = LocalScope::New(GetRuntime()->GetInitScope())) -> Module* {
+                                     LocalScope* scope = LocalScope::New(GetRuntime()->GetInitScope()),
+                                     ModuleLoader* loader = GetThreadModuleLoader()) -> Module* {
     std::stringstream code;
     {
       std::ifstream file(filename, std::ios::binary | std::ios::in);
@@ -569,7 +577,7 @@ class Parser {
     }
     ASSERT(code.good());
     ASSERT(scope);
-    Parser parser(code, scope);
+    Parser parser(code, scope, loader);
     const auto slashpos = filename.find_last_of('/') + 1;
     const auto dotpos = filename.find_first_of('.', slashpos);
     const auto total_length = (dotpos - slashpos);

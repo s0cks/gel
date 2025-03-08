@@ -152,7 +152,7 @@ class Disassembler {
       scope->AddAll(exec->GetScope());
     const auto label = exec->GetFullyQualifiedName();
     Disassembler disassembler(scope);
-    disassembler.Disassemble((const Region&)exec->GetCode(), label);
+    disassembler.Disassemble(exec->GetCode(), label);
     stream << disassembler;
   }
 };

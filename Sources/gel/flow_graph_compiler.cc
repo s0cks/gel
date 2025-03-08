@@ -75,12 +75,12 @@ auto FlowGraphCompiler::CompileTarget(E* exec, std::enable_if_t<gel::is_executab
 #ifdef GEL_DEBUG
   DVLOG(10) << exec << " compiled in " << units::time::nanosecond_t(static_cast<double>(total_ns));
   code.SetCompileTime(total_ns);
+  exec->SetCode(code);
   if (VLOG_IS_ON(10))
     Disassembler::Disassemble(std::cout, exec, GetScope());
 #endif  // GEL_DEBUG
   TRACE_TAG_STR(exec->GetFullyQualifiedName());
   TRACE_MARK;
-  exec->SetCode(code);
   return true;
 }
 }  // namespace gel

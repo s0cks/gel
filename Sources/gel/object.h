@@ -37,8 +37,12 @@ class Pointer;
 class Object;
 class PointerVisitor;
 class Object : public HeapObject {
+  friend class Macro;
   friend class Parser;
+  friend class Module;
   friend class Pointer;
+  friend class Procedure;
+  friend class Namespace;
   DEFINE_NON_COPYABLE_TYPE(Object)
  protected:
   Object() = default;

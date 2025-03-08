@@ -28,6 +28,7 @@ class ModuleVisitor {
 };
 DECLARE_VISITOR_WRAPPER(Module, Module*);
 
+class ModuleLoader;
 class Module : public Object {
   friend class Parser;
   friend class Runtime;  // TODO: revoke
@@ -38,6 +39,7 @@ class Module : public Object {
   LocalScope* scope_;
   Constructor* init_ = nullptr;
   Array<Namespace*>* namespaces_ = nullptr;
+  ModuleLoader* loader_ = nullptr;
 
   static inline auto CreateDefaultNamespace(Module* m) -> Namespace* {
     ASSERT(m);
@@ -65,6 +67,11 @@ class Module : public Object {
     SetInitialized(false);
     SetKernel(false);
     SetNamespaces(CreateDefaultNamespaces(this));
+  }
+
+  void SetLoader(ModuleLoader* rhs) {
+    ASSERT(rhs);
+    loader_ = rhs;
   }
 
   void SetInit(Constructor* rhs) {
@@ -121,6 +128,10 @@ class Module : public Object {
 
  public:
   ~Module() override = default;
+
+  auto GetLoader() const -> ModuleLoader* {
+    return loader_;
+  }
 
   auto GetDefaultNamespace() const -> Namespace* {
     ASSERT(!namespaces_->IsEmpty());

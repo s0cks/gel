@@ -14,8 +14,10 @@
 #include "gel/local_scope.h"
 #include "gel/macro.h"
 #include "gel/module.h"
+#include "gel/module_loader.h"
 #include "gel/native_procedure.h"
 #include "gel/object.h"
+#include "gel/script.h"
 #include "gel/token.h"
 #include "gel/tracing.h"
 #include "gel/type_traits.h"
@@ -73,6 +75,108 @@ class ParseScope {
     return scope_;
   }
 };
+
+class TopLevelScope {
+  DEFINE_NON_COPYABLE_TYPE(TopLevelScope);
+
+ private:
+  Parser* parser_;
+
+ public:
+  TopLevelScope(Parser* parser, Module* value) :
+    parser_(parser) {
+    ASSERT(parser_);
+    parser_->PushTopLevel(value);
+  }
+  TopLevelScope(Parser* parser, Script* value) :
+    parser_(parser) {
+    ASSERT(parser_);
+    parser_->PushTopLevel(value);
+  }
+  TopLevelScope(Parser* parser, Namespace* value) :
+    parser_(parser) {
+    ASSERT(parser_);
+    parser_->PushTopLevel(value);
+  }
+  TopLevelScope(Parser* parser, Lambda* value) :
+    parser_(parser) {
+    ASSERT(parser_);
+    parser_->PushTopLevel(value);
+  }
+  TopLevelScope(Parser* parser, Class* value) :
+    parser_(parser) {
+    ASSERT(parser_);
+    parser_->PushTopLevel(value);
+  }
+  TopLevelScope(Parser* parser, Macro* value) :
+    parser_(parser) {
+    ASSERT(parser_);
+    parser_->PushTopLevel(value);
+  }
+  ~TopLevelScope() {
+    ASSERT(parser_);
+    parser_->PopTopLevel();
+  }
+};
+
+void Parser::PushTopLevel(Script* rhs) {
+  ASSERT(rhs);
+  toplevel_ = rhs;
+}
+
+void Parser::PushTopLevel(Module* rhs) {
+  ASSERT(rhs);
+  toplevel_ = rhs;
+}
+
+void Parser::PushTopLevel(Class* rhs) {
+  ASSERT(rhs);
+  toplevel_ = rhs;
+}
+
+void Parser::PushTopLevel(Namespace* rhs) {
+  ASSERT(rhs);
+  if (HasTopLevel()) {
+    ASSERT(GetTopLevel()->IsModule() || GetTopLevel()->IsScript());
+    rhs->SetOwner(GetTopLevel());
+    GetTopLevel()->AddChild(rhs);
+  }
+  toplevel_ = rhs;
+}
+
+void Parser::PushTopLevel(Macro* rhs) {
+  ASSERT(rhs);
+  if (HasTopLevel()) {
+    const auto parent = GetTopLevel()->IsModule() ? GetTopLevel()->AsModule()->GetDefaultNamespace() : GetTopLevel();
+    rhs->SetOwner(parent);
+    parent->AddChild(rhs);
+  }
+  toplevel_ = rhs;
+}
+
+void Parser::PushTopLevel(Lambda* rhs) {
+  ASSERT(rhs);
+  if (HasTopLevel()) {
+    const auto parent = GetTopLevel()->IsModule() ? GetTopLevel()->AsModule()->GetDefaultNamespace() : GetTopLevel();
+    rhs->SetOwner(parent);
+    parent->AddChild(rhs);
+  }
+  toplevel_ = rhs;
+}
+
+void Parser::PopTopLevel() {
+  if (!HasTopLevel())
+    return;
+  if (GetTopLevel()->IsModule() || GetTopLevel()->IsScript() || GetTopLevel()->IsClass()) {
+    toplevel_ = nullptr;
+  } else if (GetTopLevel()->IsNamespace()) {
+    toplevel_ = GetTopLevel()->AsNamespace()->GetOwner();
+  } else if (GetTopLevel()->IsMacro()) {
+    toplevel_ = GetTopLevel()->AsMacro()->GetOwner();
+  } else if (GetTopLevel()->IsLambda()) {
+    toplevel_ = GetTopLevel()->AsLambda()->GetOwner();
+  }
+}
 
 template <class T>
 auto Parser::TryParseDocstring(T* owner, std::enable_if_t<gel::has_docs<T>::value>*) -> ParseResult {
@@ -134,12 +238,12 @@ auto Parser::ParseLiteralSymbol(Symbol** result) -> ParseResult {
   }
   ASSERT(next.kind == Token::kIdentifier || next.kind == Token::kNewExpr);
   ASSERT(!next.text.empty());
-  if (HasOwner() && GetOwner()->IsNamespace()) {
-    (*result) = GetOwner()->AsNamespace()->CreateSymbol(next.text);
-  } else if (HasOwner() && GetOwner()->IsClass()) {
-    (*result) = GetOwner()->AsClass()->CreateSymbol(next.text);
-  } else if (HasOwner() && GetOwner()->IsModule()) {
-    (*result) = GetOwner()->AsModule()->GetDefaultNamespace()->CreateSymbol(next.text);
+  if (HasTopLevel() && GetTopLevel()->IsNamespace()) {
+    (*result) = GetTopLevel()->AsNamespace()->CreateSymbol(next.text);
+  } else if (HasTopLevel() && GetTopLevel()->IsClass()) {
+    (*result) = GetTopLevel()->AsClass()->CreateSymbol(next.text);
+  } else if (HasTopLevel() && GetTopLevel()->IsModule()) {
+    (*result) = GetTopLevel()->AsModule()->GetDefaultNamespace()->CreateSymbol(next.text);
   } else {
     const auto symbol = Symbol::New(next.text);
     ASSERT(symbol);
@@ -845,6 +949,10 @@ auto Parser::ParseExpression(expr::Expression** result, const int depth) -> Pars
         NextToken();
         return expr::ListExpr::New();
       }
+      case Token::kImportExpr: {
+        CHECK_RESULT(ParseImportExpr(result));
+        break;
+      }
       default:
         return UnexpectedError(next);
     }
@@ -884,7 +992,8 @@ auto Parser::ParseImportExpr(expr::Expression** result) -> ParseResult {
   EXPECT_NEXT(Token::kImportExpr);
   const auto& next = NextToken();
   EXPECT(next, Token::kLiteralString);
-  const auto target_module = Module::FindOrLoad(next.text);
+  const auto module_path = next.text;
+  const auto target_module = GetModuleLoader()->LoadModule(module_path);
   if (!target_module) {
     const auto& ident = next.text;
     std::stringstream ss;
@@ -1288,6 +1397,7 @@ auto Parser::ParseLambda(const Token::Kind kind, Lambda** result) -> ParseResult
   const auto lambda = Lambda::New();
   ASSERT(lambda);
   ParseScope scope(this);
+  TopLevelScope toplevel(this, lambda);
   if (kind == Token::kDispatch) {
     ExpectNext(Token::kDispatch);
     SetDispatching();
@@ -1296,7 +1406,6 @@ auto Parser::ParseLambda(const Token::Kind kind, Lambda** result) -> ParseResult
     ASSERT(local);
     LOG_IF(FATAL, !GetScope()->Add(local)) << "cannot add " << local << " to scope.";
 
-    PushOwner(lambda);
     expr::ExpressionList body;
     LOG_IF(FATAL, !ParseExpressionList(body)) << "failed to parse expression list.";
     if (!body.empty())
@@ -1322,23 +1431,13 @@ auto Parser::ParseLambda(const Token::Kind kind, Lambda** result) -> ParseResult
     ExpectNext(Token::kRParen);
     ClearDispatched();
     lambda->SetScope(scope);
-    PopOwner();
-    if (HasOwner()) {
-      if (GetOwner()->IsModule()) {
-        const auto default_namespace = GetOwner()->AsModule()->GetDefaultNamespace();
-        ASSERT(default_namespace);
-        default_namespace->AddChild(lambda);
-      } else {
-        GetOwner()->AddChild(lambda);
-      }
-    }
     (*result) = lambda;
     return true;
   }
 
   ExpectNext(kind);
   CHECK_RESULT(TryParseSymbol(lambda));
-  PushOwner(lambda);
+  PushTopLevel(lambda);
   lambda->SetScope(scope);
   const auto local = LocalVariable::New(scope, lambda->HasSymbol() ? lambda->GetSymbol() : Symbol::New("$"), lambda);
   ASSERT(local);
@@ -1351,22 +1450,11 @@ auto Parser::ParseLambda(const Token::Kind kind, Lambda** result) -> ParseResult
   // docstring
   CHECK_RESULT(TryParseDocstring(lambda));
   // body
-  expr::ExpressionList body{};
-  CHECK_RESULT(ParseExpressionList(body, false));
-  if (body.empty() && lambda->HasDocs())
-    body.push_back(expr::LiteralExpr::New(lambda->GetDocs()));  // TODO: should we remove the docstring
-  if (!body.empty())
-    lambda->SetBody(expr::SeqExpr::New(body));
-  PopOwner();
-  if (HasOwner()) {
-    if (GetOwner()->IsModule()) {
-      const auto default_namespace = GetOwner()->AsModule()->GetDefaultNamespace();
-      ASSERT(default_namespace);
-      default_namespace->AddChild(lambda);
-    } else {
-      GetOwner()->AddChild(lambda);
-    }
-  }
+  expr::SeqExpr* body = nullptr;
+  CHECK_RESULT(ParseSeqExpr(&body));
+  if (body)
+    lambda->SetBody(body);
+
   (*result) = lambda;
   return true;
 }
@@ -1419,7 +1507,8 @@ auto Parser::ParseModule(const std::string& name, Module** result) -> ParseResul
   ParseScope scope(this);
   const auto new_module = Module::New(String::New(name), scope);
   ASSERT(new_module);
-  PushOwner(new_module);
+  TopLevelScope toplevel(this, new_module);
+  scope->AddThisValue(new_module);
   expr::SeqExpr* init_body = expr::SeqExpr::New();
   while (!PeekEq(Token::kEndOfStream)) {
     expr::Expression* expr = nullptr;
@@ -1434,7 +1523,6 @@ auto Parser::ParseModule(const std::string& name, Module** result) -> ParseResul
     new_module->SetInit(init);
     DVLOG(1000) << "created init function for " << new_module << ": " << init;
   }
-  PopOwner();
   (*result) = new_module;
   return true;
 }
@@ -1443,138 +1531,10 @@ auto Parser::ParseScript(Script** result) -> ParseResult {
   ParseScope scope(this);
   const auto script = Script::New(scope);
   ASSERT(script);
-  const auto body = expr::SeqExpr::New();
-  PushOwner(script);
-  while (!PeekEq(Token::kEndOfStream)) {
-    const auto& peek = PeekToken();
-    if (peek.IsLiteral() || peek.IsIdentifier() || peek.kind == Token::kFn || peek.kind == Token::kDispatch) {
-      expr::Expression* literal = nullptr;
-      CHECK_RESULT(ParseLiteralExpr(&literal));
-      ASSERT(literal);
-      body->Append(literal);
-    } else if (peek.IsQuote()) {
-      expr::Expression* quote = nullptr;
-      CHECK_RESULT(ParseQuotedExpr(&quote));
-      ASSERT(quote);
-      body->Append(quote);
-    }
-
-    Expression* expr = nullptr;
-    EXPECT_NEXT(Token::kLParen);
-    const auto next = PeekToken();
-    if (next.IsUnaryOp()) {
-      CHECK_RESULT(ParseUnaryOpExpr(&expr));
-    } else if (next.IsBinaryOp()) {
-      CHECK_RESULT(ParseBinaryExpr(&expr));
-    } else if (next.IsLiteral() && !next.IsIdentifier()) {
-      CHECK_RESULT(ParseLiteralExpr(&expr));
-    } else {
-      switch (next.kind) {
-        case Token::kDefNamespace: {
-          LocalVariable* local = nullptr;
-          CHECK_RESULT(ParseDefNamespace(&local));
-          ASSERT(local && local->HasValue() && local->GetValue()->IsNamespace());
-          break;
-        }
-        case Token::kDef: {
-          CHECK_RESULT(ParseDef(&expr));
-          break;
-        }
-        case Token::kDefType: {
-          LocalVariable* local = nullptr;
-          CHECK_RESULT(ParseDefType(&local));
-          ASSERT(local && local->HasValue() && local->GetValue()->IsClass());
-          break;
-        }
-        case Token::kDefn: {
-          LocalVariable* local = nullptr;
-          CHECK_RESULT(ParseDefn(&local));
-          ASSERT(local && local->HasValue() && local->GetValue()->IsLambda());
-          break;
-        }
-        case Token::kDefMacro: {
-          LocalVariable* local = nullptr;
-          CHECK_RESULT(ParseDefMacro(&local));
-          ASSERT(local && local->HasValue() && local->GetValue()->IsMacro());
-          break;
-        }
-        // Expressions
-        case Token::kBeginExpr: {
-          CHECK_RESULT(ParseBeginExpr(&expr));
-          break;
-        }
-        case Token::kSet: {
-          CHECK_RESULT(ParseSetExpr(&expr));
-          break;
-        }
-        case Token::kCond: {
-          CHECK_RESULT(ParseCondExpr(&expr));
-          break;
-        }
-        case Token::kThrowExpr: {
-          CHECK_RESULT(ParseThrowExpr(&expr));
-          break;
-        }
-        case Token::kFn:
-          // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
-          CHECK_RESULT(ParseLiteralLambda(next.kind, (expr::LiteralExpr**)&expr));
-          break;
-        case Token::kLParen:
-        case Token::kDispatch:
-        case Token::kIdentifier: {
-          CHECK_RESULT(ParseCallExpr(&expr));
-          break;
-        }
-        case Token::kQuote: {
-          CHECK_RESULT(ParseQuotedExpr(&expr));
-          break;
-        }
-        case Token::kWhenExpr: {
-          CHECK_RESULT(ParseWhenExpr(&expr));
-          break;
-        }
-        case Token::kCaseExpr: {
-          CHECK_RESULT(ParseCaseExpr(&expr));
-          break;
-        }
-        case Token::kWhileExpr: {
-          CHECK_RESULT(ParseWhileExpr(&expr));
-          break;
-        }
-        case Token::kLetExpr: {
-          CHECK_RESULT(ParseLetExpr(&expr));
-          break;
-        }
-        case Token::kLetRxExpr: {
-          CHECK_RESULT(ParseLetRxExpr(&expr));
-          break;
-        }
-        case Token::kCastExpr: {
-          CHECK_RESULT(ParseCastExpr(&expr));
-          break;
-        }
-        case Token::kInstanceOfExpr: {
-          CHECK_RESULT(ParseInstanceOfExpr(&expr));
-          break;
-        }
-        case Token::kImportExpr: {
-          CHECK_RESULT(ParseImportExpr(&expr));
-          break;
-        }
-        default: {
-          (*result) = nullptr;
-          return UnexpectedError(NextToken());
-        }
-      }
-    }
-    EXPECT_NEXT(Token::kRParen);
-    if (expr) {
-      body->Append(expr);
-      DVLOG(100) << "parsed: " << expr->ToString();
-    }
-  }
-  PopOwner();
-  if (!body->IsEmpty())
+  TopLevelScope toplevel(this, script);
+  expr::SeqExpr* body = nullptr;
+  CHECK_RESULT(ParseSeqExpr(&body, Token::kEndOfStream));
+  if (body)
     script->SetBody(body);
   (*result) = script;
   return true;
@@ -1624,21 +1584,11 @@ auto Parser::ParseDefType(LocalVariable** result) -> ParseResult {
     ss << "cannot find type: " << symbol;
     return NewParseError(ss.str(), start_pos);
   }
-  PushOwner(cls);
+  TopLevelScope toplevel(this, cls);
 
-  expr::ExpressionList init_body{};
-  while (!PeekEq(Token::kRParen)) {
-    expr::Expression* expr = nullptr;
-    CHECK_RESULT(ParseExpression(&expr));
-    if (expr) {
-      init_body.push_back(expr);
-    }
-  }
-  if (!init_body.empty()) {
-    DLOG(INFO) << "init function: " << init_body;
-  }
+  expr::SeqExpr* init = nullptr;
+  CHECK_RESULT(ParseSeqExpr(&init));
 
-  PopOwner();
   if (!PeekEq(Token::kRParen))
     return Unexpected(Token::kRParen, NextToken());
   const auto local = LocalVariable::New(scope, symbol, cls);
@@ -1664,8 +1614,8 @@ auto Parser::ParseMacro(Macro** result) -> ParseResult {
   const auto macro = Macro::New();
   ASSERT(macro);
   CHECK_RESULT(TryParseSymbol(macro));
-  PushOwner(macro);
   ParseScope scope(this);
+  TopLevelScope toplevel(this, macro);
   const auto local = LocalVariable::New(scope, macro->GetSymbol() ? macro->GetSymbol() : Symbol::New("$"), macro);
   ASSERT(local);
   LOG_IF(FATAL, !GetScope()->Add(local)) << "cannot add " << local << " to scope.";
@@ -1683,7 +1633,6 @@ auto Parser::ParseMacro(Macro** result) -> ParseResult {
   if (body.empty() && macro->HasDocstring())
     body.push_back(expr::LiteralExpr::New(macro->GetDocstring()));
   macro->SetBody(body);
-  PopOwner();
   (*result) = macro;
   return true;
 }
@@ -1701,15 +1650,18 @@ auto Parser::ParseDefMacro(LocalVariable** result) -> ParseResult {
     return false;
   }
   (*result) = local;
-  if (HasOwner()) {
-    if (GetOwner()->IsModule()) {
-      const auto default_namespace = GetOwner()->AsModule()->GetDefaultNamespace();
-      ASSERT(default_namespace);
-      default_namespace->AddChild(macro);
-    } else {
-      GetOwner()->AddChild(macro);
-    }
+  return true;
+}
+
+auto Parser::ParseSeqExpr(expr::SeqExpr** result, const Token::Kind end) -> ParseResult {
+  expr::SeqExpr* seq = expr::SeqExpr::New();
+  while (!PeekEq(end)) {
+    expr::Expression* expr = nullptr;
+    CHECK_RESULT(ParseExpression(&expr));
+    if (expr)
+      seq->Append(expr);
   }
+  (*result) = seq;
   return true;
 }
 
@@ -1721,24 +1673,16 @@ auto Parser::ParseNamespace(Namespace** result) -> ParseResult {
   ASSERT(name);
   const auto ns = Namespace::New(name, scope);
   ASSERT(ns);
-  PushOwner(ns);
+  TopLevelScope toplevel(this, ns);
+  scope->AddThisValue(ns);
   TryParseDocstring(ns);
-  expr::SeqExpr* init_body = expr::SeqExpr::New();
-  while (!PeekEq(Token::kRParen)) {
-    expr::Expression* expr = nullptr;
-    CHECK_RESULT(ParseExpression(&expr));
-    if (expr) {
-      init_body->Append(expr);
-    }
-  }
-  if (!init_body->IsEmpty()) {
-    const auto init = Namespace::CreateConstructor(ns, init_body);
+  expr::SeqExpr* body = nullptr;
+  CHECK_RESULT(ParseSeqExpr(&body));
+  if (body && !body->IsEmpty()) {
+    const auto init = Namespace::CreateConstructor(ns, body);
     ASSERT(init);
     ns->SetInit(init);
   }
-  PopOwner();
-  if (HasOwner())
-    GetOwner()->AddChild(ns);
   (*result) = ns;
   return true;
 }
@@ -1770,8 +1714,8 @@ auto Parser::ParseDefNative(LocalVariable** local) -> ParseResult {
   CHECK_RESULT(ParseLiteralSymbol(&symbol));
   ASSERT(symbol);
 
-  const auto native = HasOwner() && GetOwner()->IsClass() ? GetOwner()->AsClass()->FindOrCreateNativeProcedure(symbol)
-                                                          : NativeProcedure::FindOrCreate(symbol);
+  const auto native = HasTopLevel() && GetTopLevel()->IsClass() ? GetTopLevel()->AsClass()->FindOrCreateNativeProcedure(symbol)
+                                                                : NativeProcedure::FindOrCreate(symbol);
   if (!native) {
     (*local) = nullptr;
     std::stringstream ss;
@@ -1797,15 +1741,6 @@ auto Parser::ParseDefNative(LocalVariable** local) -> ParseResult {
     ss << "failed to add " << *(*local) << " to current scope.";
     (*local) = nullptr;
     return ReturnError(ss, start_pos);
-  }
-  if (HasOwner()) {
-    if (GetOwner()->IsClass()) {
-      GetOwner()->AddChild(native);
-    } else if (GetOwner()->IsModule()) {
-      const auto default_namespace = GetOwner()->AsModule()->GetDefaultNamespace();
-      ASSERT(default_namespace);
-      default_namespace->AddChild(native);
-    }
   }
   DVLOG(1000) << "created local " << *(*local) << " for native: " << native;
   return true;
