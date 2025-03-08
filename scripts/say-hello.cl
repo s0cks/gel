@@ -1,4 +1,28 @@
+(import "fs.cl")
+
 (def message "Hello")
 (defn say-hello [name]
   (printf "{} {}" message name))
-(say-hello "Tazz")
+
+(def events (EventEmitter))
+(events:on "hello"
+  $((say-hello "Lacey")))
+
+(queue-utask $((events:emit "hello")))
+
+(def filename "scripts/say-hello.cl")
+(printf "opening {}...." filename)
+(fs/open
+  filename
+  0
+  512
+  (fn [fd]
+    (printf "{} opened!" filename)
+    (queue-utask
+      $((print "Hello World Again"))))
+  (fn [error]
+    (printf "error opening {}: {}" filename error))
+  $((print "file open finished")))
+(queue-utask
+  $((print "next tick 2")))
+(print "finished")

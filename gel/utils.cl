@@ -102,11 +102,6 @@
     "Returns x!."
     (cond (eq? x 1) 1
       (* x (factorial (- x 1)))))
-  (defn apply [f seq]
-    (cond (null? seq) seq
-      (begin
-        (f (car seq))
-        (apply f (cdr seq)))))
   (defn map [f seq]
     (cond (null? seq) seq
       (cons (f (car seq)) (map f (cdr seq)))))

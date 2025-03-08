@@ -61,6 +61,8 @@ static inline auto Search(Node<K, V, AlphabetSize>* root, const K& key, V* resul
       return false;
     }
     current = current->children.at(c);
+    if (!current)
+      break;
   }
   if (!current || !current->epsilon) {
     (*result) = (V) nullptr;

@@ -219,9 +219,7 @@ void Module::Init() {
 
 namespace proc {
 NATIVE_PROCEDURE_F(gel_get_module) {
-  NativeArgument<0, Symbol> symbol(args);
-  if (!symbol)
-    return Throw(symbol);
+  REQUIRED_NATIVE_ARG(0, Symbol, symbol);
   return Return(Module::Find(symbol->GetFullyQualifiedName()));
 }
 
@@ -234,9 +232,7 @@ NATIVE_PROCEDURE_F(gel_get_modules) {
 #define MODULE_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(module_##Name)
 
 MODULE_PROCEDURE_F(is_kernel) {
-  NativeArgument<0> value(args);
-  if (!value)
-    return Throw(value);
+  REQUIRED_NATIVE_ARG(0, Object, value);
   Module* m = nullptr;
   if (value->IsSymbol()) {
     m = Module::Find(value->AsSymbol()->GetFullyQualifiedName());
@@ -252,9 +248,7 @@ MODULE_PROCEDURE_F(is_kernel) {
 }
 
 MODULE_PROCEDURE_F(get_namespaces) {
-  NativeArgument<0> value(args);
-  if (!value)
-    return Throw(value);
+  REQUIRED_NATIVE_ARG(0, Object, value);
   Module* m = nullptr;
   if (value->IsSymbol()) {
     m = Module::Find(value->AsSymbol()->GetFullyQualifiedName());

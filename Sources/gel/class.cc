@@ -458,9 +458,7 @@ void Class::Init() {
 
 namespace proc {
 NATIVE_PROCEDURE_F(get_class) {
-  NativeArgument<0, Symbol> symbol(args);
-  if (!symbol)
-    return Throw(symbol);
+  REQUIRED_NATIVE_ARG(0, Symbol, symbol);
   return Return(Class::FindClass(symbol));
 }
 
@@ -478,9 +476,7 @@ NATIVE_PROCEDURE_F(get_classes) {
 #define CLASS_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(class_##Name)
 
 CLASS_PROCEDURE_F(is_primitive) {
-  NativeArgument<0> value(args);
-  if (!value)
-    return Throw(value);
+  REQUIRED_NATIVE_ARG(0, Object, value);
   Class* cls = nullptr;
   if (value->IsClass()) {
     cls = value->AsClass();
@@ -501,9 +497,7 @@ CLASS_PROCEDURE_F(is_primitive) {
 }
 
 CLASS_PROCEDURE_F(get_id) {
-  NativeArgument<0> value(args);
-  if (!value)
-    return Throw(value);
+  REQUIRED_NATIVE_ARG(0, Object, value);
   Class* cls = nullptr;
   if (value->IsClass()) {
     cls = value->AsClass();
@@ -524,9 +518,7 @@ CLASS_PROCEDURE_F(get_id) {
 }
 
 CLASS_PROCEDURE_F(get_fields) {
-  NativeArgument<0> value(args);
-  if (!value)
-    return Throw(value);
+  REQUIRED_NATIVE_ARG(0, Object, value);
   Class* cls = nullptr;
   if (value->IsClass()) {
     cls = value->AsClass();
@@ -553,9 +545,7 @@ CLASS_PROCEDURE_F(get_fields) {
 }
 
 CLASS_PROCEDURE_F(get_procedures) {
-  NativeArgument<0> value(args);
-  if (!value)
-    return Throw(value);
+  REQUIRED_NATIVE_ARG(0, Object, value);
   Class* cls = nullptr;
   if (value->IsClass()) {
     cls = value->AsClass();

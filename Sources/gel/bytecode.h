@@ -9,7 +9,12 @@
   V(Nop)                     \
   V(Pop)                     \
   V(Dup)                     \
+  V(StoreFirst)              \
+  V(StoreSecond)             \
+  V(LoadFirst)               \
+  V(LoadSecond)              \
   V(Lookup)                  \
+  V(GetInstanceProc)         \
   V(StoreLocal)              \
   V(StoreLocal0)             \
   V(StoreLocal1)             \
@@ -146,6 +151,16 @@ class Bytecode {
         return "invokedynamic";
       case kInvokeNative:
         return "invokenative";
+      case kLoadFirst:
+        return "ldfirst";
+      case kLoadSecond:
+        return "ldsecond";
+      case kStoreFirst:
+        return "stfirst";
+      case kStoreSecond:
+        return "stsecond";
+      case kGetInstanceProc:
+        return "ldinstanceproc";
       case kRet:
         return "ret";
       case kThrow:

@@ -57,10 +57,6 @@ template <class E>
 auto FlowGraphCompiler::CompileTarget(E* exec, std::enable_if_t<gel::is_executable<E>::value>*) -> bool {
   TRACE_ZONE_NAMED("FlowGraphCompiler::CompileTarget");
   ASSERT(exec);
-  if (exec->IsEmpty()) {
-    DLOG(ERROR) << "cannot compile: " << exec;
-    return false;
-  }
   TIMER_START;
   MacroExpander::ExpandAll(exec, GetScope());
   const auto flow_graph = BuildFlowGraph(exec);

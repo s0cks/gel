@@ -182,16 +182,12 @@ namespace proc {
 #define BUFFER_PROCEEDURE_F(Name) NATIVE_PROCEDURE_F(buffer_##Name)
 
 BUFFER_PROCEEDURE_F(get_capacity) {
-  NativeArgument<0, Buffer> buffer(args);
-  if (!buffer)
-    return Throw(buffer.GetError());
+  REQUIRED_NATIVE_ARG(0, Buffer, buffer);
   return ReturnNew<Long>(buffer->GetCapacity());
 }
 
 BUFFER_PROCEEDURE_F(to_string) {
-  NativeArgument<0, Buffer> buffer(args);
-  if (!buffer)
-    return Throw(buffer.GetError());
+  REQUIRED_NATIVE_ARG(0, Buffer, buffer);
   OptionalNativeArgument<1, String> encoding(args);
   if (!encoding)
     return Throw(encoding);
@@ -214,9 +210,7 @@ BUFFER_PROCEEDURE_F(to_string) {
 
 #define DEFINE_BUFFER_WRITE_PROCEDURE(Sz)                                 \
   BUFFER_PROCEEDURE_F(write_uint##Sz) {                                   \
-    NativeArgument<0, Buffer> buffer(args);                               \
-    if (!buffer)                                                          \
-      return Throw(buffer);                                               \
+    REQUIRED_NATIVE_ARG(0, Buffer, buffer);                               \
     NativeArgument<1, Long> value(args);                                  \
     if (!value)                                                           \
       return Throw(value);                                                \

@@ -19,6 +19,12 @@
   "Returns the type of Object [o].")
 (defnative sizeof [o]
   "Returns the size of Object [o] in bytes.")
+(defnative on-shutdown [func])
+(defnative queue-utask [func])
+
+(deftype EventEmitter
+  (defnative on [emitter event func])
+  (defnative emit [emitter event data?]))
 
 (printf "gel v{}" (get-version))
 (printf "this := {}" this)
@@ -39,6 +45,11 @@
   "Sets the first value of Pair [p] to [v].")
 (defnative set-cdr! [p v] ;; TODO: create instruction
   "Sets the second value of Pair [p] to [v].")
+(defn apply [f seq]
+  (cond (null? seq) seq
+    (begin
+      (f (car seq))
+      (apply f (cdr seq)))))
 
 ;; Random
 (defnative random []

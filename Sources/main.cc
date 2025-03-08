@@ -70,7 +70,7 @@ struct TimedResult {
     if (gel::IsNull(result))
       return stream;
     if (gel::IsError(result))
-      return stream << "error: " << ToError(result)->GetMessage();
+      return stream << "error: " << ToError(result)->GetMessage()->Get();
     ASSERT(!gel::IsNull(result));
     stream << "result: ";
     PrintValue(stream, result) << std::endl;
@@ -137,11 +137,16 @@ auto main(int argc, char** argv) -> int {
   Parser::Init();
   Heap::Init();
   Runtime::Init();
+  int result = EXIT_FAILURE;
   const auto expr = GetExpressionFlag();
-  if (expr)
-    return Execute((*expr));
-  if (argc >= 2)
-    return ExecuteScript(std::string(argv[1]));
-  ASSERT(argc <= 1);
-  return Repl::Run();
+  if (expr) {
+    result = Execute((*expr));
+  } else if (argc >= 2) {
+    result = ExecuteScript(std::string(argv[1]));
+  } else {
+    ASSERT(argc <= 1);
+    result = Repl::Run();
+  }
+  GetRuntime()->Shutdown();
+  return result;
 }

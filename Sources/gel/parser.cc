@@ -1397,6 +1397,7 @@ auto Parser::ParseLambda(const Token::Kind kind, Lambda** result) -> ParseResult
   const auto lambda = Lambda::New();
   ASSERT(lambda);
   ParseScope scope(this);
+  lambda->SetScope(scope);
   TopLevelScope toplevel(this, lambda);
   if (kind == Token::kDispatch) {
     ExpectNext(Token::kDispatch);
@@ -1430,15 +1431,12 @@ auto Parser::ParseLambda(const Token::Kind kind, Lambda** result) -> ParseResult
     }
     ExpectNext(Token::kRParen);
     ClearDispatched();
-    lambda->SetScope(scope);
     (*result) = lambda;
     return true;
   }
 
   ExpectNext(kind);
   CHECK_RESULT(TryParseSymbol(lambda));
-  PushTopLevel(lambda);
-  lambda->SetScope(scope);
   const auto local = LocalVariable::New(scope, lambda->HasSymbol() ? lambda->GetSymbol() : Symbol::New("$"), lambda);
   ASSERT(local);
   LOG_IF(FATAL, !GetScope()->Add(local)) << "cannot add " << local << " to scope.";
@@ -1557,6 +1555,7 @@ auto Parser::ParseDef(expr::Expression** result) -> ParseResult {
   expr::Expression* value = nullptr;
   CHECK_RESULT(ParseExpression(&value));
   ASSERT(value);
+  // TODO: constant propagation
   if (value->IsConstantExpr()) {
     const auto const_value = value->EvalToConstant(scope);
     ASSERT(const_value);

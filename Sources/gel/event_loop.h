@@ -26,11 +26,28 @@ class RequestBase;
 using RequestCallback = std::function<void(RequestBase*)>;
 }  // namespace fs
 
+class Task {
+  DEFINE_DEFAULT_COPYABLE_TYPE(Task);
+
+ private:
+  Procedure* callback_;
+
+ public:
+  explicit Task(Procedure* callback = nullptr) :
+    callback_(callback) {}
+  ~Task() = default;
+
+  void Execute();
+};
+
 class Timer;
 class EventLoop : public Object {
+  friend class Runtime;
+
  private:
   uv_loop_t* loop_;
   std::vector<Timer*> timers_{};
+  std::deque<Task> tasks_{};
 
   explicit EventLoop(uv_loop_t* loop) :
     Object(),
@@ -45,8 +62,17 @@ class EventLoop : public Object {
     uv_loop_set_data(Get(), data);
   }
 
+  auto GetTaskQueue() -> std::deque<Task>& {
+    return tasks_;
+  }
+
  public:
   ~EventLoop() override = default;
+
+  inline void AddTask(Procedure* rhs) {
+    ASSERT(rhs);
+    tasks_.emplace_back(rhs);
+  }
 
   auto Get() const -> uv_loop_t* {
     return loop_;

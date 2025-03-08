@@ -59,7 +59,8 @@
         "test-rmdir.cl",
         "test-dlopen.cl",
         "test-event-emitter.cl",
-        "test-fs-open.cl"
+        "test-fs-open.cl",
+        "test-on-shutdown.cl"
       ],
       "default": "while.cl",
       "description": "A value that is even."

@@ -160,6 +160,28 @@ class EffectVisitor : public ExpressionVisitor {
     exit_ = nullptr;
   }
 
+  inline void AddReturnExit(Object* rhs) {
+    ASSERT(rhs);
+    return AddReturnExit(Bind(ir::ConstantInstr::New(rhs)));
+  }
+
+  inline void AddThrow(ir::Definition* defn) {
+    ASSERT(defn);
+    if (gel::IsPedantic())
+      AddInstanceOf(defn, Error::GetClass());
+    return Add(ir::ThrowInstr::New(defn));
+  }
+
+  inline void AddThrow(Error* rhs) {
+    ASSERT(rhs);
+    return AddThrow(Bind(ir::ConstantInstr::New(rhs)));
+  }
+
+  inline void AddThrow(const std::string& message) {
+    ASSERT(!message.empty());
+    return AddThrow(Error::New(message));
+  }
+
   auto ReturnCall(ir::InvokeInstr* defn) -> bool;
   auto ReturnCallTo(ir::Definition* defn, const uword num_args) -> bool;
   auto ReturnCallTo(Procedure* procedure, const uword num_args) -> bool;
@@ -216,6 +238,7 @@ class EffectVisitor : public ExpressionVisitor {
   }
 
   virtual void ReturnValue(ir::Definition* defn) {}
+  void GenerateDefaultImplementation(Lambda* lambda);
 
  public:
   explicit EffectVisitor(FlowGraphBuilder* owner) :
@@ -243,8 +266,8 @@ class EffectVisitor : public ExpressionVisitor {
     return IsEmpty() || GetExitInstr() != nullptr;
   }
 
-  auto VisitScript(Script* script) -> bool;
-  auto VisitLambda(Lambda* lambda) -> bool;
+  auto Build(Script* script) -> bool;
+  auto Build(Lambda* lambda) -> bool;
   auto VisitConstructor(Constructor* init) -> bool;
 #define DECLARE_VISIT(Name) virtual auto Visit##Name(Name* name)->bool override;
   FOR_EACH_EXPRESSION_NODE(DECLARE_VISIT)

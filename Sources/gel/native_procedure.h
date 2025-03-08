@@ -460,6 +460,10 @@ using OptionalVariadicNativeArgument = VariantNativeArgument<Index, false, Types
       return Throw(Name);      \
   })
 
+#define REQUIRED_NATIVE_ARG(Index, Type, Name) \
+  NativeArgument<Index, Type> Name(args);      \
+  CHECK_NATIVE_ARG(Name);
+
 }  // namespace gel
 
 #endif  // GEL_NATIVE_PROCEDURE_H

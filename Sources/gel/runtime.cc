@@ -42,6 +42,13 @@ static const ThreadLocal<Runtime> runtime_;
 static const EnvironmentVariable kHomeVar("GEL_HOME");
 static const EnvironmentVariable kPathVar("GEL_PATH");
 
+auto ShutdownListener::New(Procedure* rhs) -> ShutdownListener* {
+  ASSERT(rhs);
+  return New([rhs]() {
+    GetRuntime()->Call(rhs);
+  });
+}
+
 auto GetHomeEnvVar() -> const EnvironmentVariable& {
   return kHomeVar;
 }
@@ -286,6 +293,8 @@ void Runtime::Call(Constructor* init, const ObjectList& args) {
   ASSERT(init);
   {
     CallScope locals(this, init);
+    if (init->HasScope())
+      locals->AddAll(init->GetScope());
     if (init->HasArgs()) {
       const auto& lambda_args = init->GetArgs();
       ASSERT(lambda_args);
@@ -310,13 +319,28 @@ void Runtime::Call(Constructor* init, const ObjectList& args) {
       interpreter.Run<Constructor>(init);
     }
   }
-  RunCurrentThreadEventLoop(UV_RUN_NOWAIT);
+
+  if (!HasStackFrame() && !emptying_task_queue_) {
+    const auto loop = GetThreadEventLoop();
+    ASSERT(loop);
+    auto& tasks = loop->GetTaskQueue();
+    emptying_task_queue_ = true;
+    while (!tasks.empty()) {
+      auto next = tasks.front();
+      tasks.pop_front();
+      next.Execute();
+    }
+    emptying_task_queue_ = false;
+    loop->Run(UV_RUN_NOWAIT);
+  }
 }
 
 void Runtime::Call(Lambda* lambda, const ObjectList& args) {
   ASSERT(lambda);
   {
     CallScope locals(this, lambda);
+    if (lambda->HasScope())
+      locals->AddAll(lambda->GetScope());
     if (lambda->HasArgs()) {
       const auto& lambda_args = lambda->GetArgs();
       ASSERT(lambda_args);
@@ -341,24 +365,20 @@ void Runtime::Call(Lambda* lambda, const ObjectList& args) {
       interpreter.Run(lambda);
     }
   }
-  RunCurrentThreadEventLoop(UV_RUN_NOWAIT);
-}
 
-auto Runtime::VisitPointers(PointerVisitor* vis) -> bool {
-  ASSERT(vis);
-  return vis->Visit(curr_scope_->raw_ptr());
-}
-
-auto Runtime::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
-  ASSERT(vis);
-  auto current_scope = curr_scope_->raw_ptr();
-  if (!vis->Visit(&current_scope))
-    return false;
-  if (!curr_scope_->raw_ptr()->Equals(current_scope)) {
-    curr_scope_ = current_scope->As<LocalScope>();
-    ASSERT(curr_scope_);
+  if (!HasStackFrame() && !emptying_task_queue_) {
+    const auto loop = GetThreadEventLoop();
+    ASSERT(loop);
+    auto& tasks = loop->GetTaskQueue();
+    emptying_task_queue_ = true;
+    while (!tasks.empty()) {
+      auto next = tasks.front();
+      tasks.pop_front();
+      next.Execute();
+    }
+    emptying_task_queue_ = false;
+    loop->Run(UV_RUN_NOWAIT);
   }
-  return true;
 }
 
 void Runtime::Call(NativeProcedure* native, const ObjectList& args) {
@@ -381,14 +401,28 @@ void Runtime::Call(NativeProcedure* native, const ObjectList& args) {
       LOG_IF(FATAL, !native->GetEntry()->Apply(args)) << "failed to apply: " << native->ToString() << " with args: " << args;
     }
   }
-  RunCurrentThreadEventLoop(UV_RUN_NOWAIT);
+
+  if (!HasStackFrame() && !emptying_task_queue_) {
+    const auto loop = GetThreadEventLoop();
+    ASSERT(loop);
+    auto& tasks = loop->GetTaskQueue();
+    emptying_task_queue_ = true;
+    while (!tasks.empty()) {
+      auto next = tasks.front();
+      tasks.pop_front();
+      next.Execute();
+    }
+    emptying_task_queue_ = false;
+    loop->Run(UV_RUN_NOWAIT);
+  }
 }
 
 void Runtime::Call(Script* script, const ObjectList& args) {
   ASSERT(script);
   {
     CallScope locals(this, script);
-    locals->AddAll(script->GetScope());
+    if (script->HasScope())
+      locals->AddAll(script->GetScope());
     {
       StackFrameGuard<Script> stack_guard(script);
       CallStackFrame stack_frame(script, locals);
@@ -396,7 +430,37 @@ void Runtime::Call(Script* script, const ObjectList& args) {
       interpreter.Run(script);
     }
   }
-  RunCurrentThreadEventLoop(UV_RUN_NOWAIT);
+
+  if (!HasStackFrame() && !emptying_task_queue_) {
+    const auto loop = GetThreadEventLoop();
+    ASSERT(loop);
+    auto& tasks = loop->GetTaskQueue();
+    emptying_task_queue_ = true;
+    while (!tasks.empty()) {
+      auto next = tasks.front();
+      tasks.pop_front();
+      next.Execute();
+    }
+    emptying_task_queue_ = false;
+    loop->Run(UV_RUN_NOWAIT);
+  }
+}
+
+auto Runtime::VisitPointers(PointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  return vis->Visit(curr_scope_->raw_ptr());
+}
+
+auto Runtime::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
+  ASSERT(vis);
+  auto current_scope = curr_scope_->raw_ptr();
+  if (!vis->Visit(&current_scope))
+    return false;
+  if (!curr_scope_->raw_ptr()->Equals(current_scope)) {
+    curr_scope_ = current_scope->As<LocalScope>();
+    ASSERT(curr_scope_);
+  }
+  return true;
 }
 
 auto Runtime::Eval(const std::string& expr) -> Object* {
@@ -459,5 +523,20 @@ auto Runtime::PopStackFrame() -> StackFrame* {
   stack_.pop();
   DVLOG(1000) << "popped: " << frame->ToString();
   return frame;
+}
+
+void Runtime::AddShutdownListener(ShutdownListener* rhs) {
+  ASSERT(rhs);
+  ShutdownListener::Append(&shutdown_listeners_, rhs);
+  num_shutdown_listeners_ += 1;
+}
+
+void Runtime::Shutdown() {
+  ShutdownListener::Iterator iter(shutdown_listeners_);
+  while (iter.HasNext()) {
+    const auto next = iter.Next();
+    ASSERT(next);
+    next->OnShutdown();
+  }
 }
 }  // namespace gel

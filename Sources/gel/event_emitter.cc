@@ -93,17 +93,18 @@ namespace proc {
 #define EVENT_EMITTER_PROCEEDURE_F(Name) NATIVE_PROCEDURE_F(event_emitter_##Name)
 
 EVENT_EMITTER_PROCEEDURE_F(emit) {
-  NativeArgument<0, EventEmitter> emitter(args);
-  NativeArgument<1, String> event(args);
+  REQUIRED_NATIVE_ARG(0, EventEmitter, emitter);
+  REQUIRED_NATIVE_ARG(1, String, event);
   OptionalNativeArgument<2> data(args);
+  CHECK_NATIVE_ARG(data);
   emitter->Emit(event, data ? data : Null());
   return ReturnNull();
 }
 
 EVENT_EMITTER_PROCEEDURE_F(on) {
-  NativeArgument<0, EventEmitter> emitter(args);
-  NativeArgument<1, String> event(args);
-  NativeArgument<2, Procedure> callback(args);
+  REQUIRED_NATIVE_ARG(0, EventEmitter, emitter);
+  REQUIRED_NATIVE_ARG(1, String, event);
+  REQUIRED_NATIVE_ARG(2, Procedure, callback);
   emitter->On(event, callback);
   return ReturnNull();
 }

@@ -20,6 +20,8 @@ _DECLARE_NATIVE_PROCEDURE(rand_range, "random:range");
 _DECLARE_NATIVE_PROCEDURE(set_car, "set-car!");
 _DECLARE_NATIVE_PROCEDURE(set_cdr, "set-cdr!");
 _DECLARE_NATIVE_PROCEDURE(gel_sizeof, "sizeof");
+_DECLARE_GEL_NATIVE_PROCEDURE(on_shutdown, "on-shutdown");
+_DECLARE_GEL_NATIVE_PROCEDURE(queue_utask, "queue-utask");
 
 _DECLARE_GEL_NATIVE_PROCEDURE(load_bindings, "load-bindings");
 _DECLARE_GEL_NATIVE_PROCEDURE(get_event_loop, "get-event-loop");
@@ -161,7 +163,6 @@ _DECLARE_NATIVE_RX_PROCEDURE(get_operators, "get-operators");
 _DECLARE_NATIVE_PROCEDURE(gel_get_debug, "gel/debug?");
 
 #ifdef GEL_DEBUG
-_DECLARE_NATIVE_PROCEDURE(gel_print_args, "gel/print-args");
 _DECLARE_NATIVE_PROCEDURE(gel_print_roots, "gel/print-roots");
 _DECLARE_NATIVE_PROCEDURE(gel_minor_gc, "gel/minor-gc!");
 _DECLARE_NATIVE_PROCEDURE(gel_major_gc, "gel/major-gc!");

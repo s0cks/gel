@@ -190,8 +190,6 @@ auto InvokeInstanceExpr::ToString() const -> std::string {
 
 auto InvokeInstanceExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
   ASSERT(vis);
-  if (!GetInstance()->Accept(vis))
-    return false;
   return VisitArgs(vis);
 }
 

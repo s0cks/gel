@@ -182,63 +182,55 @@ namespace proc {
 #define NATIVE_RX_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(rx_##Name)
 
 NATIVE_RX_PROCEDURE_F(observer) {
-  NativeArgument<0, Procedure> on_next(args);
+  REQUIRED_NATIVE_ARG(0, Procedure, on_next);
   OptionalNativeArgument<1, Procedure> on_error(args);
   OptionalNativeArgument<2, Procedure> on_completed(args);
   return ReturnNew<Observer>(on_next.GetValue(), on_error.GetValue(), on_completed.GetValue());
 }
 
 NATIVE_RX_PROCEDURE_F(first) {
-  RequiredNativeArgument<0, Observable> source(args);
+  REQUIRED_NATIVE_ARG(0, Observable, source);
   source->Apply(rx::operators::first());
   return DoNothing();
 }
 
 NATIVE_RX_PROCEDURE_F(last) {
-  RequiredNativeArgument<0, Observable> source(args);
+  REQUIRED_NATIVE_ARG(0, Observable, source);
   source->Apply(rx::operators::last());
   return DoNothing();
 }
 
 NATIVE_RX_PROCEDURE_F(skip) {
-  RequiredNativeArgument<0, Observable> source(args);
-  RequiredNativeArgument<1, Long> num_values(args);
+  REQUIRED_NATIVE_ARG(0, Observable, source);
+  REQUIRED_NATIVE_ARG(1, Long, num_values);
   source->Apply(rx::operators::skip(num_values->Get()));
   return DoNothing();
 }
 
 NATIVE_RX_PROCEDURE_F(take) {
-  RequiredNativeArgument<0, Observable> source(args);
-  RequiredNativeArgument<1, Long> num_values(args);
+  REQUIRED_NATIVE_ARG(0, Observable, source);
+  REQUIRED_NATIVE_ARG(1, Long, num_values);
   source->Apply(rx::operators::take(num_values->Get()));
   return DoNothing();
 }
 
 NATIVE_RX_PROCEDURE_F(filter) {
-  RequiredNativeArgument<0, Observable> source(args);
-  if (!source)
-    return Throw(source.GetError());
-  RequiredNativeArgument<1, Procedure> predicate(args);
-  if (!predicate)
-    return Throw(predicate.GetError());
-  source->Apply(rx::operators::filter(rx::CallPredicate(GetRuntime(), predicate)));
+  REQUIRED_NATIVE_ARG(0, Observable, source);
+  REQUIRED_NATIVE_ARG(1, Procedure, filter);
+  source->Apply(rx::operators::filter(rx::CallPredicate(GetRuntime(), filter)));
   return DoNothing();
 }
 
 NATIVE_RX_PROCEDURE_F(take_last) {
-  RequiredNativeArgument<0, Observable> source(args);
-  RequiredNativeArgument<1, Long> num_values(args);
+  REQUIRED_NATIVE_ARG(0, Observable, source);
+  REQUIRED_NATIVE_ARG(0, Long, num_values);
   source->Apply(rx::operators::take_last(num_values->Get()));
   return DoNothing();
 }
 
 NATIVE_RX_PROCEDURE_F(buffer) {
-  RequiredNativeArgument<0, Observable> source(args);
-  if (!source)
-    return Throw(source.GetError());
-  RequiredNativeArgument<1, Long> bucket_size(args);
-  if (!bucket_size)
-    return Throw(bucket_size.GetError());
+  REQUIRED_NATIVE_ARG(0, Observable, source);
+  REQUIRED_NATIVE_ARG(1, Long, bucket_size);
   const auto buffer = rx::operators::buffer(bucket_size->Get());
   const auto map = rx::operators::map([](ObjectList values) {
     return gel::ToList((const ObjectList&)values);
@@ -255,33 +247,29 @@ NATIVE_RX_PROCEDURE_F(observable) {
 NATIVE_RX_PROCEDURE_F(subscribe) {
   const auto runtime = GetRuntime();
   ASSERT(runtime);
-  NativeArgument<0> source(args);
-  if (!source)
-    return Throw(source.GetError());
-  NativeArgument<1> on_next_arg(args);
-  if (!on_next_arg)
-    return Throw(on_next_arg.GetError());
-  if (on_next_arg->IsObserver()) {
+  REQUIRED_NATIVE_ARG(0, Object, source);
+  REQUIRED_NATIVE_ARG(0, Object, on_next);
+  if (on_next->IsObserver()) {
     if (source.GetValue()->IsSubject()) {
-      (source.GetValue())->AsSubject()->Subscribe(on_next_arg->AsObserver());
+      (source.GetValue())->AsSubject()->Subscribe(on_next->AsObserver());
       return DoNothing();
     } else if (source.GetValue()->IsObservable()) {
-      (source.GetValue()->AsObservable())->Subscribe(on_next_arg->AsObserver());
+      (source.GetValue()->AsObservable())->Subscribe(on_next->AsObserver());
       return DoNothing();
     }
   }
-  if (!on_next_arg->IsProcedure())
-    return ThrowError(fmt::format("expected on_next arg `{}` to be a Procedure", (*on_next_arg)));
+  ASSERT(on_next->IsProcedure());
   OptionalNativeArgument<2, Procedure> on_error_arg(args);
   OptionalNativeArgument<3, Procedure> on_completed_arg(args);
-  const auto on_next = rx::CallOnNext(runtime, on_next_arg->AsProcedure());
   const auto on_error = rx::CallOnError(runtime, on_error_arg);
   const auto on_completed = rx::CallOnComplete(runtime, on_completed_arg);
   if (source.GetValue()->IsSubject()) {
-    (source.GetValue())->AsSubject()->Subscribe(on_next, on_error, on_completed);
+    (source.GetValue())->AsSubject()->Subscribe(rx::CallOnNext(runtime, on_next->AsProcedure()), on_error, on_completed);
     return DoNothing();
   } else if (source.GetValue()->IsObservable()) {
-    (source.GetValue()->AsObservable())->GetValue().subscribe(on_next, on_error, on_completed);
+    (source.GetValue()->AsObservable())
+        ->GetValue()
+        .subscribe(rx::CallOnNext(runtime, on_next->AsProcedure()), on_error, on_completed);
     return DoNothing();
   }
   return ThrowError("not implemented");
@@ -298,40 +286,28 @@ NATIVE_RX_PROCEDURE_F(map) {
   ASSERT(runtime);
   if (args.size() != 2)
     return ThrowError(fmt::format("expected args to be: `<observable> <func>`"));
-  NativeArgument<0, Observable> source(args);
-  if (!source)
-    return Throw(source.GetError());
-  NativeArgument<1, Procedure> func(args);
-  if (!source)
-    return Throw(source.GetError());
-  source->AsObservable()->Apply(rx::map(runtime, func));
+  REQUIRED_NATIVE_ARG(0, Observable, source);
+  REQUIRED_NATIVE_ARG(1, Procedure, callback);
+  source->AsObservable()->Apply(rx::map(runtime, callback));
   return DoNothing();
 }
 
 NATIVE_RX_PROCEDURE_F(publish) {
-  NativeArgument<0, Subject> subject(args);
-  if (!subject)
-    return Throw(subject.GetError());
-  NativeArgument<1> value(args);
+  REQUIRED_NATIVE_ARG(0, Subject, subject);
+  REQUIRED_NATIVE_ARG(1, Object, value);
   subject->AsSubject()->Publish(value);
   return DoNothing();
 }
 
 NATIVE_RX_PROCEDURE_F(complete) {
-  NativeArgument<0, Subject> subject(args);
-  if (!subject)
-    return Throw(subject.GetError());
+  REQUIRED_NATIVE_ARG(0, Subject, subject);
   subject->AsSubject()->Complete();
   return DoNothing();
 }
 
 NATIVE_RX_PROCEDURE_F(publish_error) {
-  NativeArgument<0, Subject> subject(args);
-  if (!subject)
-    return Throw(subject.GetError());
-  NativeArgument<1, Error> value(args);
-  if (!value)
-    return Throw(value.GetError());
+  REQUIRED_NATIVE_ARG(0, Subject, subject);
+  REQUIRED_NATIVE_ARG(1, Error, value);
   try {
     throw Exception(value->GetMessage()->Get());
   } catch (const Exception& exc) {

@@ -67,7 +67,7 @@ class ModuleLoader {
 
     friend auto operator<<(std::ostream& stream, const Result& rhs) -> std::ostream& {
       if (!rhs.IsSuccess())
-        return stream << "error: " << rhs.GetError()->ToString();
+        return stream << "error: " << rhs.GetError()->GetMessage()->Get();
       return stream << rhs.GetModule()->ToString();
     }
   };

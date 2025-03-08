@@ -29,6 +29,11 @@ auto WrapOnFinished(Procedure* on_finished) -> OnFinishedCallback {
   };
 }
 
+void Task::Execute() {
+  ASSERT(callback_);
+  GetRuntime()->Call(callback_);
+}
+
 auto EventLoop::Run(const uv_run_mode mode) -> int {
   return uv_run(Get(), mode);
 }

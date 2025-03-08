@@ -705,6 +705,10 @@ class TemplateInvokeExpr : public Expression {
     args_[idx] = expr;
   }
 
+  void AddArgs(const ExpressionList& args) {
+    args_.insert(std::end(args_), std::begin(args), std::end(args));
+  }
+
  public:
   ~TemplateInvokeExpr() override = default;
 
@@ -720,7 +724,7 @@ class TemplateInvokeExpr : public Expression {
     return args_;
   }
 
-  auto GetArgAt(const uint64_t idx) const -> Expression* {
+  virtual auto GetArgAt(const uint64_t idx) const -> Expression* {
     ASSERT(idx >= 0 && idx <= GetNumberOfArgs());
     return args_[idx];
   }
@@ -900,38 +904,25 @@ class InvokeMacroExpr : public Expression {
 
 class InvokeInstanceExpr : public TemplateInvokeExpr<Procedure> {
  private:
-  Expression* instance_;
-
   explicit InvokeInstanceExpr(Procedure* target, Expression* instance, const ExpressionList& args) :
-    TemplateInvokeExpr(target, args),
-    instance_(instance) {
-    ASSERT(instance_);
+    TemplateInvokeExpr(target, {instance}) {
+    AddArgs(args);
   }
 
-  void SetInstance(Expression* expr) {
-    ASSERT(expr);
-    instance_ = expr;
-  }
-
-  void SetChildAt(const uint64_t idx, Expression* expr) override {
-    ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
-    return idx == 0 ? SetInstance(expr) : SetArgAt(idx - 1, expr);
+  inline void SetInstance(Expression* rhs) {
+    ASSERT(rhs);
+    SetArgAt(0, rhs);
   }
 
  public:
   ~InvokeInstanceExpr() override = default;
 
   auto GetInstance() const -> Expression* {
-    return instance_;
-  }
-
-  auto GetChildAt(const uint64_t idx) const -> Expression* override {
-    ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
-    return idx == 0 ? GetInstance() : GetArgAt(idx - 1);
+    return GetArgAt(0);
   }
 
   auto GetNumberOfChildren() const -> uint64_t override {
-    return GetNumberOfArgs() + 1;
+    return GetNumberOfArgs();
   }
 
   auto VisitChildren(ExpressionVisitor* vis) -> bool override;

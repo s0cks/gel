@@ -285,9 +285,7 @@ NATIVE_PROCEDURE_F(gel_get_namespaces) {
 #define NAMESPACE_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(namespace_##Name)
 
 NAMESPACE_PROCEDURE_F(get_owner) {
-  NativeArgument<0> value(args);
-  if (!value)
-    return Throw(value);
+  REQUIRED_NATIVE_ARG(0, Object, value);
   Namespace* target = nullptr;
   if (value->IsNamespace()) {
     target = value->AsNamespace();
@@ -304,9 +302,7 @@ NAMESPACE_PROCEDURE_F(get_owner) {
 }
 
 NAMESPACE_PROCEDURE_F(get_symbol) {
-  NativeArgument<0> value(args);
-  if (!value)
-    return Throw(value);
+  REQUIRED_NATIVE_ARG(0, Object, value);
   Namespace* target = nullptr;
   if (value->IsNamespace()) {
     target = value->AsNamespace();
@@ -323,9 +319,7 @@ NAMESPACE_PROCEDURE_F(get_symbol) {
 }
 
 NAMESPACE_PROCEDURE_F(get_macros) {
-  NativeArgument<0> value(args);
-  if (!value)
-    return Throw(value);
+  REQUIRED_NATIVE_ARG(0, Object, value);
   Namespace* target = nullptr;
   if (value->IsNamespace()) {
     target = value->AsNamespace();
@@ -353,9 +347,7 @@ NAMESPACE_PROCEDURE_F(get_macros) {
 }
 
 NAMESPACE_PROCEDURE_F(get_procedures) {
-  NativeArgument<0> value(args);
-  if (!value)
-    return Throw(value);
+  REQUIRED_NATIVE_ARG(0, Object, value);
   Namespace* target = nullptr;
   if (value->IsNamespace()) {
     target = value->AsNamespace();
@@ -383,9 +375,7 @@ NAMESPACE_PROCEDURE_F(get_procedures) {
 }
 
 NAMESPACE_PROCEDURE_F(get_lambdas) {
-  NativeArgument<0> value(args);
-  if (!value)
-    return Throw(value);
+  REQUIRED_NATIVE_ARG(0, Object, value);
   Namespace* target = nullptr;
   if (value->IsNamespace()) {
     target = value->AsNamespace();
@@ -413,9 +403,7 @@ NAMESPACE_PROCEDURE_F(get_lambdas) {
 }
 
 NAMESPACE_PROCEDURE_F(get_native_procedures) {
-  NativeArgument<0> value(args);
-  if (!value)
-    return Throw(value);
+  REQUIRED_NATIVE_ARG(0, Object, value);
   Namespace* target = nullptr;
   if (value->IsNamespace()) {
     target = value->AsNamespace();

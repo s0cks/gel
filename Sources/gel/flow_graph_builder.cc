@@ -10,6 +10,7 @@
 #include "gel/flags.h"
 #include "gel/gel.h"
 #include "gel/instruction.h"
+#include "gel/local.h"
 #include "gel/local_scope.h"
 #include "gel/rx.h"
 #include "gel/types.h"
@@ -134,20 +135,35 @@ auto EffectVisitor::ReturnCallTo(Procedure* target, const uword num_args) -> boo
 
 auto EffectVisitor::VisitInvokeInstanceExpr(InvokeInstanceExpr* expr) -> bool {
   ASSERT(expr);
-  ValueVisitor for_instance(GetOwner());
-  if (!expr->GetInstance()->Accept(&for_instance)) {
-    LOG(ERROR) << "failed to visit: " << expr->GetInstance()->ToString();
-    return false;
+  if (expr->GetInstance()->IsLiteralExpr() && expr->GetInstance()->AsLiteralExpr()->IsLiteralSymbol()) {
+    const auto symbol = expr->GetInstance()->AsLiteralExpr()->GetValue()->AsSymbol();
+    DLOG(INFO) << "looking for " << symbol << " in:";
+    PRINT_SCOPE(INFO, GetOwner()->GetScope());
+    LocalVariable* local = nullptr;
+    if (GetOwner()->GetScope()->Lookup(symbol, &local)) {
+      Add(ir::LoadLocalInstr::New(local));
+    } else {
+      goto default_for_instance;
+    }
+  } else {
+  default_for_instance:
+    ValueVisitor for_instance(GetOwner());
+    if (!expr->GetInstance()->Accept(&for_instance)) {
+      LOG(ERROR) << "failed to visit: " << expr->GetInstance()->ToString();
+      return false;
+    }
+    DLOG(INFO) << "for_instance value: " << for_instance.GetValue()->ToString();
+    Append(for_instance);
   }
-  Append(for_instance);
-  for (auto idx = 0; idx < expr->GetNumberOfArgs(); idx++) {
+
+  for (auto idx = 1; idx < expr->GetNumberOfArgs(); idx++) {
     const auto arg = expr->GetArgAt(idx);
     ASSERT(arg);
     ValueVisitor for_value(GetOwner());
     LOG_IF(ERROR, !arg->Accept(&for_value)) << "failed to determine value for: " << expr->ToString();
     Append(for_value);
   }
-  return ReturnCallTo(expr->GetTarget(), expr->GetNumberOfArgs() + 1);
+  return ReturnCallTo(expr->GetTarget(), expr->GetNumberOfArgs());
 }
 
 auto EffectVisitor::VisitInvokeNativeExpr(InvokeNativeExpr* expr) -> bool {
@@ -886,9 +902,7 @@ auto EffectVisitor::VisitThrowExpr(expr::ThrowExpr* expr) -> bool {
     return false;
   }
   Append(for_value);
-  if (gel::IsPedantic())
-    AddInstanceOf(for_value.GetValue(), Error::GetClass());
-  Add(ir::ThrowInstr::New(for_value.GetValue()));
+  AddThrow(for_value.GetValue());
   return true;
 }
 
@@ -932,31 +946,17 @@ auto EffectVisitor::VisitStoreFieldExpr(expr::StoreFieldExpr* expr) -> bool {
   return true;
 }
 
-auto FlowGraphBuilder::Build(Lambda* lambda, LocalScope* scope) -> FlowGraph* {
-  ASSERT(lambda);
-  FlowGraphBuilder builder(scope);
-  const auto graph_entry = ir::GraphEntryInstr::New(builder.GetNextBlockId());
-  ASSERT(graph_entry);
-  builder.SetCurrentBlock(graph_entry);
-  const auto target = ir::TargetEntryInstr::New(builder.GetNextBlockId());
-  ASSERT(target);
-  builder.SetCurrentBlock(target);
-  ValueVisitor for_value(&builder);
-  if (!for_value.VisitLambda(lambda)) {
-    LOG(ERROR) << "failed to visit: " << lambda;
-    return nullptr;
-  }
-  AppendFragment(target, for_value);
-  graph_entry->Append(target);
-  graph_entry->AddDominated(target);
-  return new FlowGraph(graph_entry);
-}
-
-auto EffectVisitor::VisitScript(Script* script) -> bool {
+auto EffectVisitor::Build(Script* script) -> bool {
+  ASSERT(script);
+  const auto scope = GetOwner()->PushScope();
+  ASSERT(scope);
+  if (script->HasScope())
+    scope->AddAll(script->GetScope());
   if (!VisitSeqExpr(script->GetBody())) {
     LOG(ERROR) << "failed to visit constructor body";
     return false;
   }
+  GetOwner()->PopScope();
   return true;
 }
 
@@ -992,17 +992,46 @@ auto EffectVisitor::VisitConstructor(Constructor* init) -> bool {
   return true;
 }
 
-auto EffectVisitor::VisitLambda(Lambda* lambda) -> bool {
+auto EffectVisitor::Build(Lambda* lambda) -> bool {
+  ASSERT(lambda);
   const auto scope = GetOwner()->PushScope();
   ASSERT(scope);
   if (lambda->HasScope())
     scope->AddAll(lambda->GetScope());
+  if (lambda->IsEmpty()) {
+    if (lambda->HasDocs()) {
+      AddReturnExit(lambda->GetDocs());
+      return true;
+    }
+    AddThrow(fmt::format("{} is not implemented", *lambda->GetSymbol()));
+    return true;
+  }
   if (!VisitSeqExpr(lambda->GetBody())) {
     LOG(ERROR) << "failed to visit constructor body";
     return false;
   }
   GetOwner()->PopScope();
   return true;
+}
+
+auto FlowGraphBuilder::Build(Lambda* lambda, LocalScope* scope) -> FlowGraph* {
+  ASSERT(lambda);
+  FlowGraphBuilder builder(scope);
+  const auto graph_entry = ir::GraphEntryInstr::New(builder.GetNextBlockId());
+  ASSERT(graph_entry);
+  builder.SetCurrentBlock(graph_entry);
+  const auto target = ir::TargetEntryInstr::New(builder.GetNextBlockId());
+  ASSERT(target);
+  builder.SetCurrentBlock(target);
+  ValueVisitor for_value(&builder);
+  if (!for_value.Build(lambda)) {
+    LOG(ERROR) << "failed to visit: " << lambda;
+    return nullptr;
+  }
+  AppendFragment(target, for_value);
+  graph_entry->Append(target);
+  graph_entry->AddDominated(target);
+  return new FlowGraph(graph_entry);
 }
 
 auto FlowGraphBuilder::Build(Script* script, LocalScope* scope) -> FlowGraph* {
@@ -1016,7 +1045,7 @@ auto FlowGraphBuilder::Build(Script* script, LocalScope* scope) -> FlowGraph* {
   ASSERT(target);
   builder.SetCurrentBlock(target);
   ValueVisitor for_effect(&builder);
-  if (!for_effect.VisitScript(script)) {
+  if (!for_effect.Build(script)) {
     LOG(ERROR) << "failed to visit: " << script;
     return nullptr;
   }

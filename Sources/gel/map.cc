@@ -68,30 +68,24 @@ namespace proc {
 #define MAP_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(map_##Name)
 
 MAP_PROCEDURE_F(contains) {
-  NativeArgument<0, Map> map(args);
-  CHECK_NATIVE_ARG(map);
-  NativeArgument<1> key(args);
-  CHECK_NATIVE_ARG(key);
+  REQUIRED_NATIVE_ARG(0, Map, map);
+  REQUIRED_NATIVE_ARG(1, Object, key);
   return ReturnBool(map->Contains(key));
 }
 
 MAP_PROCEDURE_F(empty) {
-  NativeArgument<0, Map> map(args);
-  CHECK_NATIVE_ARG(map);
+  REQUIRED_NATIVE_ARG(0, Map, map);
   return ReturnBool(map->IsEmpty());
 }
 
 MAP_PROCEDURE_F(size) {
-  NativeArgument<0, Map> map(args);
-  CHECK_NATIVE_ARG(map);
+  REQUIRED_NATIVE_ARG(0, Map, map);
   return ReturnLong(map->GetSize());
 }
 
 MAP_PROCEDURE_F(get) {
-  NativeArgument<0, Map> map(args);
-  CHECK_NATIVE_ARG(map);
-  NativeArgument<1> key(args);
-  CHECK_NATIVE_ARG(key);
+  REQUIRED_NATIVE_ARG(0, Map, map);
+  REQUIRED_NATIVE_ARG(1, Object, key);
   return Return(map->Get(key));
 }
 

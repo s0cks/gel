@@ -55,6 +55,8 @@ void NativeProcedure::InitNatives() {
   InitNative<set_cdr>();
   InitNative<random>();
   InitNative<rand_range>();
+  INIT_GEL_NATIVE(on_shutdown);
+  INIT_GEL_NATIVE(queue_utask);
   INIT_GEL_NATIVE(docs);
   INIT_GEL_NATIVE(load_bindings);
   INIT_GEL_NATIVE(get_event_loop);
@@ -98,7 +100,6 @@ void NativeProcedure::InitNatives() {
 #endif  // GEL_ENABLE_RX
 
 #ifdef GEL_DEBUG
-  InitNative<gel_print_args>();
   InitNative<gel_print_heap>();
   InitNative<gel_print_new_zone>();
   InitNative<gel_print_old_zone>();
@@ -123,13 +124,20 @@ GEL_NATIVE_PROCEDURE_F(get_version) {
 }
 
 GEL_NATIVE_PROCEDURE_F(sizeof) {
-  ASSERT(args.size() == 1);
-  NativeArgument<0> value(args);
-  if (!value)
-    return Throw(value);
-  else if (value->IsClass())
-    return ReturnLong(value->AsClass()->GetAllocationSize());
+  REQUIRED_NATIVE_ARG(0, Object, value);
   return ReturnLong(value->GetType()->GetAllocationSize());
+}
+
+GEL_NATIVE_PROCEDURE_F(on_shutdown) {
+  REQUIRED_NATIVE_ARG(0, Procedure, callback);
+  GetRuntime()->AddShutdownListener(callback);
+  return ReturnNull();
+}
+
+GEL_NATIVE_PROCEDURE_F(queue_utask) {
+  REQUIRED_NATIVE_ARG(0, Procedure, task);
+  GetThreadEventLoop()->AddTask(task);
+  return ReturnNull();
 }
 
 GEL_NATIVE_PROCEDURE_F(docs) {
@@ -186,19 +194,12 @@ GEL_NATIVE_PROCEDURE_F(docs) {
 }
 
 NATIVE_PROCEDURE_F(import) {
-  ASSERT(!args.empty());
-  const auto arg = args[0];
-  ASSERT(arg);
-  const auto symbol = ToSymbol(arg);
-  if (!symbol) {
-    LOG(FATAL) << arg << " is not a valid Symbol.";
-    return false;
-  }
+  REQUIRED_NATIVE_ARG(0, Symbol, symbol);
   if (!GetRuntime()->Import(symbol, GetRuntime()->GetScope())) {
-    LOG(FATAL) << "failed to import module: " << symbol;
+    LOG(FATAL) << "failed to import module: " << symbol->ToString();
     return false;
   }
-  DLOG(INFO) << symbol << " imported!";
+  DLOG(INFO) << symbol->ToString() << " imported!";
   return true;
 }
 
@@ -213,9 +214,7 @@ GEL_NATIVE_PROCEDURE_F(print) {
 }
 
 GEL_NATIVE_PROCEDURE_F(load_bindings) {
-  NativeArgument<0, String> filename(args);
-  if (!filename)
-    return Throw(filename.GetError());
+  REQUIRED_NATIVE_ARG(0, String, filename);
   NativeBindings::Load(filename->Get()) | rx::operators::as_blocking() | rx::operators::subscribe([&filename](const int status) {
     LOG_IF(ERROR, status != EXIT_SUCCESS) << "failed to load bindings from " << filename->Get() << ": " << status;
   });
@@ -253,9 +252,7 @@ NATIVE_PROCEDURE_F(exit) {
 }
 
 GEL_NATIVE_PROCEDURE_F(format) {
-  ASSERT(GetRuntime());
-  ASSERT(args.size() >= 1);
-  NativeArgument<0, String> format(args);
+  REQUIRED_NATIVE_ARG(0, String, format);
   const auto& fmt_val = format->Get();
   ASSERT(!fmt_val.empty());
   fmt::dynamic_format_arg_store<fmt::format_context> fmt_args{};
@@ -269,23 +266,15 @@ GEL_NATIVE_PROCEDURE_F(format) {
 
 // (set-car! <seq> <value>)
 NATIVE_PROCEDURE_F(set_car) {
-  NativeArgument<0, Pair> seq(args);
-  if (!seq)
-    return Throw(seq.GetError());
-  NativeArgument<1> value(args);
-  if (!value)
-    return Throw(value.GetError());
+  REQUIRED_NATIVE_ARG(0, Pair, seq);
+  REQUIRED_NATIVE_ARG(1, Object, value);
   SetCar(seq, value);
   return DoNothing();
 }
 
 NATIVE_PROCEDURE_F(set_cdr) {
-  NativeArgument<0, Pair> seq(args);
-  if (!seq)
-    return Throw(seq.GetError());
-  NativeArgument<1> value(args);
-  if (!value)
-    return Throw(value.GetError());
+  REQUIRED_NATIVE_ARG(0, Pair, seq);
+  REQUIRED_NATIVE_ARG(1, Object, value);
   SetCdr(seq, value);
   return DoNothing();
 }
@@ -297,10 +286,7 @@ GEL_NATIVE_PROCEDURE_F(get_event_loop) {
 #define OBJECT_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(object_##Name)
 
 OBJECT_PROCEDURE_F(hashcode) {
-  ASSERT(args.size() == 1);
-  NativeArgument<0> value(args);
-  if (!value)
-    return Throw(value.GetError());
+  REQUIRED_NATIVE_ARG(0, Object, value);
   return ReturnNew<Long>(value->HashCode());
 }
 
@@ -309,31 +295,19 @@ OBJECT_PROCEDURE_F(hashcode) {
 #define TIMER_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(timer_##Name)
 
 TIMER_PROCEDURE_F(start) {
-  NativeArgument<0, Long> id(args);
-  if (!id)
-    return Throw(id.GetError());
-  NativeArgument<1, Long> timeout(args);
-  if (!timeout)
-    return Throw(timeout.GetError());
-  NativeArgument<2, Long> repeat(args);
-  if (!repeat)
-    return Throw(repeat.GetError());
-  const auto loop = GetThreadEventLoop();
-  ASSERT(loop);
-  const auto timer = loop->GetTimer(id->Get());
-  if (!timer)
+  REQUIRED_NATIVE_ARG(0, Long, id);
+  REQUIRED_NATIVE_ARG(1, Long, timeout);
+  REQUIRED_NATIVE_ARG(2, Long, repeat);
+  const auto timer = GetThreadEventLoop()->GetTimer(id->Get());
+  if (!timer)  // TODO: create new Timer?
     return ThrowError(fmt::format("failed to find Timer w/ id {}", id->Get()));
   timer->Start(timeout->Get(), repeat->Get());
   return Return();
 }
 
 TIMER_PROCEDURE_F(stop) {
-  NativeArgument<0, Long> id(args);
-  if (!id)
-    return Throw(id.GetError());
-  const auto loop = GetThreadEventLoop();
-  ASSERT(loop);
-  const auto timer = loop->GetTimer(id->Get());
+  REQUIRED_NATIVE_ARG(0, Long, id);
+  const auto timer = GetThreadEventLoop()->GetTimer(id->Get());
   if (!timer)
     return ThrowError(fmt::format("failed to find Timer w/ id {}", id->Get()));
   timer->Stop();
@@ -341,12 +315,8 @@ TIMER_PROCEDURE_F(stop) {
 }
 
 TIMER_PROCEDURE_F(again) {
-  NativeArgument<0, Long> id(args);
-  if (!id)
-    return Throw(id.GetError());
-  const auto loop = GetThreadEventLoop();
-  ASSERT(loop);
-  const auto timer = loop->GetTimer(id->Get());
+  REQUIRED_NATIVE_ARG(0, Long, id);
+  const auto timer = GetThreadEventLoop()->GetTimer(id->Get());
   if (!timer)
     return ThrowError(fmt::format("failed to find Timer w/ id {}", id->Get()));
   timer->Again();
@@ -354,27 +324,17 @@ TIMER_PROCEDURE_F(again) {
 }
 
 TIMER_PROCEDURE_F(get_repeat) {
-  NativeArgument<0, Long> id(args);
-  if (!id)
-    return Throw(id.GetError());
-  const auto loop = GetThreadEventLoop();
-  ASSERT(loop);
-  const auto timer = loop->GetTimer(id->Get());
+  REQUIRED_NATIVE_ARG(0, Long, id);
+  const auto timer = GetThreadEventLoop()->GetTimer(id->Get());
   if (!timer)
     return ThrowError(fmt::format("failed to find Timer w/ id {}", id->Get()));
   return ReturnNew<Long>(timer->GetRepeat());
 }
 
 TIMER_PROCEDURE_F(set_repeat) {
-  NativeArgument<0, Long> id(args);
-  if (!id)
-    return Throw(id.GetError());
-  NativeArgument<1, Long> repeat(args);
-  if (!repeat)
-    return Throw(repeat.GetError());
-  const auto loop = GetThreadEventLoop();
-  ASSERT(loop);
-  const auto timer = loop->GetTimer(id->Get());
+  REQUIRED_NATIVE_ARG(0, Long, id);
+  REQUIRED_NATIVE_ARG(1, Long, repeat);
+  const auto timer = GetThreadEventLoop()->GetTimer(id->Get());
   if (!timer)
     return ThrowError(fmt::format("failed to find Timer w/ id {}", id->Get()));
   timer->SetRepeat(repeat->Get());
@@ -382,30 +342,18 @@ TIMER_PROCEDURE_F(set_repeat) {
 }
 
 TIMER_PROCEDURE_F(get_due_in) {
-  NativeArgument<0, Long> id(args);
-  if (!id)
-    return Throw(id.GetError());
-  const auto loop = GetThreadEventLoop();
-  ASSERT(loop);
-  const auto timer = loop->GetTimer(id->Get());
+  REQUIRED_NATIVE_ARG(0, Long, id);
+  const auto timer = GetThreadEventLoop()->GetTimer(id->Get());
   if (!timer)
     return ThrowError(fmt::format("failed to find Timer w/ id {}", id->Get()));
   return ReturnNew<Long>(timer->GetDueIn());
 }
 
 TIMER_PROCEDURE_F(create) {
-  NativeArgument<0, Procedure> on_tick(args);
-  if (!on_tick)
-    return Throw(on_tick.GetError());
-  NativeArgument<1, Long> timeout(args);
-  if (!timeout)
-    return Throw(timeout.GetError());
-  NativeArgument<2, Long> repeat(args);
-  if (!repeat)
-    return Throw(repeat.GetError());
-  const auto loop = GetThreadEventLoop();
-  ASSERT(loop);
-  const auto timer = loop->CreateTimer(on_tick);
+  REQUIRED_NATIVE_ARG(0, Procedure, on_tick);
+  REQUIRED_NATIVE_ARG(1, Long, timeout);
+  REQUIRED_NATIVE_ARG(2, Long, repeat);
+  const auto timer = GetThreadEventLoop()->CreateTimer(on_tick);
   ASSERT(timer);
   timer->Start(timeout->Get(), repeat->Get());
   return ReturnNew<Long>(timer->GetId());

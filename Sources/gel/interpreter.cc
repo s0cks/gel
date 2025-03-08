@@ -42,9 +42,25 @@ auto Interpreter::GetScope() const -> LocalScope* {
 
 void Interpreter::LoadLocal(const uword idx) {
   ASSERT(idx >= 0 && idx <= GetScope()->GetNumberOfLocals());
-  const auto local = GetScope()->GetLocalAt(idx);
-  ASSERT(local && local->HasValue());
-  return PUSH(local->GetValue());
+  DLOG(INFO) << "loading local #" << idx << " from: ";
+  LocalScopePrinter::Print<google::INFO, false>(GetScope(), __FILE__, __LINE__);
+  auto scope = GetScope();
+  do {
+    ASSERT(scope);
+    for (auto i = 0; i < scope->GetNumberOfLocals(); i++) {
+      const auto local = GetScope()->GetLocalAt(i);
+      ASSERT(local);
+      if (local->GetIndex() == idx) {
+        ASSERT(local && local->HasValue());
+        return PUSH(local->GetValue());
+      }
+    }
+    scope = scope->GetParent();
+  } while (scope);
+
+  std::stringstream ss;
+  ss << "failed to load local #" << idx;
+  return Throw(ss);
 }
 
 void Interpreter::StoreLocal(const uword idx) {

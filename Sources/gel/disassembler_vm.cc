@@ -82,6 +82,7 @@ void Disassembler::Disassemble(const Region& region, const char* label) {
         const auto value = decoder.NextObjectPointer();
         ASSERT(value);
         Pointer(value);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+        stream() << " #" << value->GetType()->GetName()->Get();
         break;
       }
       case Bytecode::kPushI: {

@@ -733,26 +733,18 @@ namespace proc {
 #define SET_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(set_##Name)
 
 SET_PROCEDURE_F(contains) {
-  NativeArgument<0, Set> set(args);
-  if (!set)
-    return Throw(set);
-  NativeArgument<1> value(args);
-  if (!value)
-    return Throw(value);
+  REQUIRED_NATIVE_ARG(0, Set, set);
+  REQUIRED_NATIVE_ARG(1, Object, value);
   return ReturnBool(set->Contains(value));
 }
 
 SET_PROCEDURE_F(count) {
-  NativeArgument<0, Set> set(args);
-  if (!set)
-    return Throw(set);
+  REQUIRED_NATIVE_ARG(0, Set, set);
   return ReturnLong(set->GetSize());
 }
 
 SET_PROCEDURE_F(empty) {
-  NativeArgument<0, Set> set(args);
-  if (!set)
-    return Throw(set);
+  REQUIRED_NATIVE_ARG(0, Set, set);
   return ReturnBool(set->IsEmpty());
 }
 

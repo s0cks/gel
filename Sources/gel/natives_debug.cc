@@ -9,55 +9,27 @@
 #include "gel/runtime.h"
 
 namespace gel::proc {
-NATIVE_PROCEDURE_F(gel_print_args) {
-  NativeArgument<0, Procedure> func(args);
-  if (!func)
-    return Throw(func);
-  if (func->IsLambda()) {
-    const auto& arguments = func->AsLambda()->GetArgs();
-    if (arguments) {
-      DLOG(INFO) << func->GetSymbol() << " arguments:";
-      for (auto idx = 0; idx < arguments->GetLength(); idx++) {
-        const auto arg = arguments->Get(idx);
-        ASSERT(arg);
-        DLOG(INFO) << " - " << arg->ToString();
-      }
-    }
-  } else if (func->IsNativeProcedure()) {
-    const auto& arguments = func->AsNativeProcedure()->GetArgs();
-    if (arguments) {
-      DLOG(INFO) << func->GetSymbol() << " arguments:";
-      for (auto idx = 0; idx < arguments->GetLength(); idx++) {
-        const auto arg = arguments->Get(idx);
-        ASSERT(arg);
-        DLOG(INFO) << " - " << arg->ToString();
-      }
-    }
-  }
-  return Return();
-}
-
 NATIVE_PROCEDURE_F(gel_print_heap) {
   const auto heap = GetCurrentThreadHeap();
-  if (!heap)
-    return Return();
-  PrintHeap(*heap);
+  if (heap) {
+    PrintHeap(*heap);
+  }
   return Return();
 }
 
 NATIVE_PROCEDURE_F(gel_print_new_zone) {
   const auto heap = GetCurrentThreadHeap();
-  if (!heap)
-    return Return();
-  PrintNewZone(heap->GetNewZone());
+  if (heap) {
+    PrintNewZone(heap->GetNewZone());
+  }
   return Return();
 }
 
 NATIVE_PROCEDURE_F(gel_print_old_zone) {
   const auto heap = GetCurrentThreadHeap();
-  if (!heap)
-    return Return();
-  PrintOldZone(heap->GetOldZone());
+  if (heap) {
+    PrintOldZone(heap->GetOldZone());
+  }
   return Return();
 }
 
@@ -113,7 +85,6 @@ NATIVE_PROCEDURE_F(gel_get_locals) {
   LocalScope::Iterator iter(GetRuntime()->GetScope());
   return Return(gel::ToList<LocalScope::Iterator, LocalVariable*>(iter, [](LocalVariable* local) -> Object* {
     return gel::ToList(ObjectList{
-
         local->HasValue() ? local->GetValue() : Null(),
         String::New(local->GetSymbol()),
     });
@@ -135,8 +106,7 @@ NATIVE_PROCEDURE_F(gel_get_natives) {
 }
 
 NATIVE_PROCEDURE_F(gel_get_compile_time) {
-  NativeArgument<0, Lambda> target(args);
-  CHECK_NATIVE_ARG(target);
+  REQUIRED_NATIVE_ARG(0, Lambda, target);
   const auto& code = target->GetCode();
   return ReturnLong(code.GetCompileTime());
 }
