@@ -63,10 +63,10 @@ void FlowGraph::DiscoverBlocks() {
   blocks.push_back(init_state);
   while (!blocks.empty()) {
     auto& state = blocks.back();
-    DLOG(INFO) << "processing: " << state;
     if (state.HasSuccessor()) {
       const auto successor = state.NextSuccessor();
-      DLOG(INFO) << "successor: " << successor->ToString();
+      if (successor->GetBlockId() == state.block->GetBlockId())
+        continue;
       if (successor->DiscoverBlocks(state.block, preorder_, parent_)) {
         blocks.emplace_back(successor);
       }

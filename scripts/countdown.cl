@@ -1,4 +1,5 @@
 (def x 10)
 (while (> x 0)
-  (print (format "> {}" x))
+  (printf "> {}" x)
   (set! x (- x 1)))
+(print "launch!")

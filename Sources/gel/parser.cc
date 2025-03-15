@@ -1606,13 +1606,12 @@ auto Parser::ParseDef(expr::Expression** result) -> ParseResult {
   CHECK_RESULT(ParseExpression(&value));
   ASSERT(value);
   // TODO: constant propagation
-  if (value->IsConstantExpr()) {
-    const auto const_value = value->EvalToConstant(scope);
-    ASSERT(const_value);
-    local->SetValue(const_value);
-    return true;
-  }
-  DLOG(INFO) << "creating store local for: " << local->ToString();
+  // if (value->IsConstantExpr()) {
+  //   const auto const_value = value->EvalToConstant(scope);
+  //   ASSERT(const_value);
+  //   local->SetValue(const_value);
+  //   return true;
+  // }
   (*result) = expr::StoreLocalExpr::New(local, value);
   return true;
 }

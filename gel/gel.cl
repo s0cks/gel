@@ -1,3 +1,5 @@
+(defmacro if [test body...]
+  (cond test (begin body)))
 (defmacro debug-only [exprs...]
   (when (debug?)
     exprs))

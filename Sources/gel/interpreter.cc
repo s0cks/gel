@@ -62,13 +62,10 @@ void Interpreter::LoadLocal(const uword idx) {
 }
 
 void Interpreter::StoreLocal(const uword idx) {
-  LocalScopePrinter::Print<google::INFO, false>(GetScope(), __FILE__, __LINE__);
-  ASSERT(idx >= 0 && idx <= GetScope()->GetNumberOfLocals());
   const auto local = GetScope()->GetLocalAt(idx);
   ASSERT(local);
   const auto value = POP;
   ASSERT(value);
-  DLOG(INFO) << "storing " << (*value) << " to: " << local->ToString();
   local->SetValue((*value));
 }
 

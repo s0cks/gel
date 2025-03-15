@@ -233,11 +233,22 @@ auto EffectVisitor::VisitWhenExpr(expr::WhenExpr* expr) -> bool {
   return true;
 }
 
+/*
+
+- cond
+- branch if-false -> join
+- loop_body:
+-   ....
+-   cond
+-   branch if-true -> loop_body
+- join:
+-   ....
+
+ */
 auto EffectVisitor::VisitWhileExpr(expr::WhileExpr* expr) -> bool {  // TODO: clean this up @s0cks
   ASSERT(expr);
   const auto body = ir::TargetEntryInstr::New(GetOwner()->GetNextBlockId());
   ASSERT(body);
-
   const auto join = ir::JoinEntryInstr::New(GetOwner()->GetNextBlockId());
   ASSERT(join);
 
@@ -264,14 +275,11 @@ auto EffectVisitor::VisitWhileExpr(expr::WhileExpr* expr) -> bool {  // TODO: cl
       return false;
     }
     Append(for_test);
-    Add(ir::BranchInstr::BranchFalse(join, join));
+    Add(ir::BranchInstr::BranchFalse(join, body, join));
   }
-
-  Add(body);
 
   SetExitInstr(join);
   GetOwner()->GetCurrentBlock()->AddDominated(body);
-  GetOwner()->GetCurrentBlock()->AddDominated(join);
   return true;
 }
 

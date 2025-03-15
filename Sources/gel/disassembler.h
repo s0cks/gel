@@ -42,10 +42,6 @@ class Disassembler {
   void WritePrefix(const uword address, const uword pos);
 
   inline void WriteOffset(int32_t rhs) {
-    if (rhs < 0)
-      stream() << "-";
-    else
-      stream() << "+";
     stream() << rhs;
   }
 

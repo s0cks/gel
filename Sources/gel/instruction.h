@@ -456,9 +456,7 @@ class JoinEntryInstr : public EntryInstr {
   ~JoinEntryInstr() override = default;
 
   auto IsLetJoin() const -> bool {
-    DLOG(INFO) << "checking if is let-join";
     for (const auto& predecessor : predecessors_) {
-      DLOG(INFO) << "predecessor: " << predecessor->ToString();
       if (predecessor->IsLetEntryInstr())
         return true;
     }

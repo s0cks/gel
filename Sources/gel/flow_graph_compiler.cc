@@ -21,12 +21,10 @@ void FlowGraphCompiler::AssembleFlowGraph(FlowGraph* flow_graph) {
   ASSERT(flow_graph && flow_graph->HasEntry());
   for (const auto& blk : flow_graph->GetPreorder()) {
     ASSERT(blk);
-    DLOG(INFO) << "compiling block " << blk->ToString();
     ir::InstructionIterator iter(blk);
     while (iter.HasNext()) {
       const auto next = iter.Next();
       ASSERT(next);
-      DLOG(INFO) << "compiling " << next->ToString();
       next->Compile(this);
     }
   }
