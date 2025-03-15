@@ -1,8 +1,6 @@
 #ifndef GEL_GV_H
 #define GEL_GV_H
 
-#ifdef GEL_ENABLE_GV
-
 #include <fmt/format.h>
 #include <glog/logging.h>
 #include <graphviz/cgraph.h>
@@ -11,22 +9,115 @@
 
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
 #include "gel/common.h"
+#include "gel/type_traits.h"
 
 namespace gel::dot {
 using Symbol = Agsym_t;
+using Graph = Agraph_t;
+using Node = Agnode_t;
+using NodeList = std::vector<Node*>;
+using Edge = Agedge_t;
+using EdgeList = std::vector<Edge*>;
+
+template <typename T>
+struct is_attr_value {
+  static constexpr const auto value = false;
+};
+
+template <>
+struct is_attr_value<const char*> {
+  static constexpr const auto value = true;
+};
+
+template <>
+struct is_attr_value<std::string> {
+  static constexpr const auto value = true;
+};
+
+template <>
+struct is_attr_value<std::stringstream> {
+  static constexpr const auto value = true;
+};
+
+void SetGraphAttr(Graph* graph, const int kind, const char* name, const char* value);
+
+static inline void SetGraphNodeAttr(Graph* graph, const char* name, const char* value) {
+  ASSERT(name);
+  ASSERT(value);
+  return SetGraphAttr(graph, AGNODE, name, value);
+}
+
+static inline void SetGraphAttr(Graph* graph, const char* name, const char* value) {
+  return SetGraphAttr(graph, AGRAPH, name, value);
+}
+
+static inline void SetGraphEdgeAttr(Graph* graph, const char* name, const char* value) {
+  return SetGraphAttr(graph, AGEDGE, name, value);
+}
+
+template <typename T>
+static inline auto SetProperty(T* obj, const char* name, const char* value) -> int {
+  ASSERT(obj);
+  ASSERT(name);
+  ASSERT(value);
+  return agset(obj, const_cast<char*>(name), value);  // NOLINT(cppcoreguidelines-pro-type-const-cast)
+}
+
+template <typename T>
+static inline auto SetProperty(T* obj, const char* name, const std::string& value) -> int {
+  ASSERT(!value.empty());
+  return SetProperty<T>(obj, name, value.c_str());
+}
+
+template <typename T>
+static inline auto SetProperty(T* obj, const char* name, const std::stringstream& value) -> int {
+  return SetProperty<T>(obj, name, value.str());
+}
+
+auto NewNode(Graph* graph, const char* name) -> Node*;
+auto GetNode(Graph* graph, const char* name) -> Node*;
+
+template <typename V>
+static inline auto SetNodeLabel(Node* node, const V& value, std::enable_if_t<is_attr_value<V>::value>* = nullptr) -> int {
+  ASSERT(node);
+  ASSERT(value);
+  return SetProperty(node, "label", value);
+}
+
+template <typename V>
+static inline auto SetNodeXLabel(Node* node, const V& value, std::enable_if_t<is_attr_value<V>::value>* = nullptr) -> int {
+  return SetProperty(node, "xlabel", value);
+}
+
+auto NewEdge(Graph* graph, const char* name, Node* from, Node* to) -> Edge*;
+auto GetEdge(Graph* graph, const char* name) -> Edge*;
+
+template <typename V>
+static inline auto SetEdgeLabel(Edge* edge, const V& value, std::enable_if_t<is_attr_value<V>::value>* = nullptr) -> int {
+  ASSERT(edge);
+  ASSERT(value);
+  return SetProperty(edge, "label", value);
+}
+
+template <typename V>
+static inline auto SetEdgeHeadlabel(Edge* edge, const V& value, std::enable_if_t<is_attr_value<V>::value>* = nullptr) -> int {
+  return SetProperty(edge, "headlabel", value);
+}
+
 class GraphBuilder;
-class Graph {
+class DotGraph {
   using Handle = Agraph_t;
-  DEFINE_NON_COPYABLE_TYPE(Graph);
+  DEFINE_NON_COPYABLE_TYPE(DotGraph);
 
  private:
   Handle* handle_ = nullptr;
 
-  explicit Graph(Handle* handle) {
+  explicit DotGraph(Handle* handle) {
     SetHandle(handle);
   }
 
@@ -36,7 +127,7 @@ class Graph {
   }
 
  public:
-  ~Graph();
+  ~DotGraph();
 
   auto get() const -> Handle* {
     return handle_;
@@ -51,186 +142,27 @@ class Graph {
   }
 
  public:
-  static inline auto New(Handle* handle) -> Graph* {
-    return new Graph(handle);
+  static inline auto New(Handle* handle) -> DotGraph* {
+    return new DotGraph(handle);
   }
 
-  static inline auto New(const char* name, Agdesc_t desc, Agdisc_t* disc = nullptr) -> Graph* {
+  static inline auto New(const char* name, Agdesc_t desc, Agdisc_t* disc = nullptr) -> DotGraph* {
     return New(agopen(const_cast<char*>(name), desc, disc));  // NOLINT
   }
 
-  static inline auto New(const std::string& name, Agdesc_t desc, Agdisc_t* disc = nullptr) -> Graph* {
+  static inline auto New(const std::string& name, Agdesc_t desc, Agdisc_t* disc = nullptr) -> DotGraph* {
     return New(name.c_str(), desc, disc);
   }
 
-  static auto New(GraphBuilder* builder) -> Graph*;
+  static auto New(GraphBuilder* builder) -> DotGraph*;
 };
 
-class GraphDecorator {
-  DEFINE_NON_COPYABLE_TYPE(GraphDecorator);
-
- protected:
-  using Graph = Agraph_t;
-  using Node = Agnode_t;
-  using NodeList = std::vector<Node*>;
-  using Edge = Agedge_t;
-  using EdgeList = std::vector<Edge*>;
+class GraphBuilder {
+  friend class DotGraph;
+  DEFINE_NON_COPYABLE_TYPE(GraphBuilder);
 
  private:
-  Graph* graph_ = nullptr;
-
-  inline void SetGraph(Graph* graph) {
-    ASSERT(graph);
-    graph_ = graph;
-  }
-
-  template <typename T>
-  inline auto Set(T* obj, const char* name, const char* value) -> int {
-    ASSERT(obj);
-    ASSERT(name);
-    ASSERT(value);
-    return agset(obj, const_cast<char*>(name), value);  // NOLINT(cppcoreguidelines-pro-type-const-cast)
-  }
-
-  template <const bool Create>
-  inline auto N(const char* name) -> Node* {
-    ASSERT(name);
-    return agnode(GetGraph(), const_cast<char*>(name), Create);  // NOLINT(cppcoreguidelines-pro-type-const-cast)
-  }
-
-  template <const bool Create>
-  inline auto E(Node* from, Node* to, const char* name) -> Edge* {
-    ASSERT(from);
-    ASSERT(to);
-    ASSERT(name);
-    return agedge(GetGraph(), from, to, const_cast<char*>(name), Create);  // NOLINT(cppcoreguidelines-pro-type-const-cast)
-  }
-
- protected:
-  explicit GraphDecorator(Graph* graph) {
-    SetGraph(graph);
-  }
-
-  inline void SetAttr(int kind, const char* name, const char* value) {
-    ASSERT(name);
-    ASSERT(value);
-    agattr(GetGraph(), kind, const_cast<char*>(name), const_cast<char*>(value));  // NOLINT(cppcoreguidelines-pro-type-const-cast)
-  }
-
-  inline void SetNodeAttr(const char* name, const char* value) {
-    ASSERT(name);
-    ASSERT(value);
-    return SetAttr(AGNODE, name, value);
-  }
-
-  inline void SetGraphAttr(const char* name, const char* value) {
-    ASSERT(name);
-    ASSERT(value);
-    return SetAttr(AGRAPH, name, value);
-  }
-
-  inline void SetEdgeAttr(const char* name, const char* value) {
-    ASSERT(name);
-    ASSERT(value);
-    return SetAttr(AGEDGE, name, value);
-  }
-
-  inline auto NewNode(const char* name) -> Node* {
-    ASSERT(name);
-    return N<true>(name);
-  }
-
-  inline auto NewNode(const std::string& name) -> Node* {
-    ASSERT(!name.empty());
-    return NewNode(name.c_str());
-  }
-
-  inline auto GetNode(const char* name) -> Node* {
-    ASSERT(name);
-    return N<false>(name);
-  }
-
-  inline auto GetNode(const std::string& name) -> Node* {
-    ASSERT(!name.empty());
-    return GetNode(name.c_str());
-  }
-
-  inline auto HasNode(const char* name) -> bool {
-    ASSERT(name);
-    return GetNode(name) != nullptr;
-  }
-
-  inline auto HasNode(const std::string& name) -> bool {
-    ASSERT(!name.empty());
-    return HasNode(name.c_str());
-  }
-
-  inline auto NewEdge(Node* from, Node* to, const char* name) -> Edge* {
-    ASSERT(from);
-    ASSERT(to);
-    ASSERT(name);
-    return E<true>(from, to, name);
-  }
-
-  inline auto GetEdge(Node* from, Node* to, const char* name) -> Edge* {
-    ASSERT(from);
-    ASSERT(to);
-    ASSERT(name);
-    return E<false>(from, to, name);
-  }
-
-  inline auto SetNodeLabel(Node* node, const char* value) -> int {
-    return Set(node, "label", value);
-  }
-
-  inline auto SetNodeLabel(Node* node, const std::string& value) -> int {
-    ASSERT(node);
-    ASSERT(!value.empty());
-    return SetNodeLabel(node, value.c_str());
-  }
-
-  inline auto SetNodeLabel(Node* node, const std::stringstream& value) -> int {
-    ASSERT(node);
-    return SetNodeLabel(node, value.str());
-  }
-
-  inline auto SetNodeXLabel(Node* node, const char* value) -> int {
-    return Set(node, "xlabel", value);
-  }
-
-  inline auto SetNodeXLabel(Node* node, const std::string& value) -> int {
-    ASSERT(node);
-    ASSERT(!value.empty());
-    return SetNodeXLabel(node, value.c_str());
-  }
-
-  inline auto SetNodeXLabel(Node* node, const std::stringstream& value) -> int {
-    ASSERT(node);
-    return SetNodeXLabel(node, value.str());
-  }
-
-  inline auto SetEdgeLabel(Edge* edge, const char* value) -> int {
-    ASSERT(edge);
-    ASSERT(value);
-    return Set(edge, "label", value);
-  }
-
-  inline auto SetEdgeLabel(Edge* edge, const std::string& value) -> int {
-    ASSERT(edge);
-    ASSERT(!value.empty());
-    return SetEdgeLabel(edge, value.c_str());
-  }
-
- public:
-  virtual ~GraphDecorator() = default;
-
-  auto GetGraph() const -> Graph* {
-    return graph_;
-  }
-};
-
-class GraphBuilder : public GraphDecorator {
-  DEFINE_NON_COPYABLE_TYPE(GraphBuilder);
+  Graph* graph_;
 
  protected:
   static inline auto NewGraph(const char* name, Agdesc_t desc, Agdisc_t* disc = nullptr) -> Agraph_t* {
@@ -241,14 +173,20 @@ class GraphBuilder : public GraphDecorator {
   }
 
  protected:
-  explicit GraphBuilder(Agraph_t* graph) :
-    GraphDecorator(graph) {}
+  explicit GraphBuilder(Graph* graph) :
+    graph_(graph) {
+    ASSERT(graph_);
+  }
   explicit GraphBuilder(const char* name, Agdesc_t desc = Agdirected) :
     GraphBuilder(NewGraph(name, desc)) {}
 
+  auto GetGraph() const -> Graph* {
+    return graph_;
+  }
+
  public:
   virtual ~GraphBuilder() = default;
-  virtual auto Build() -> dot::Graph* = 0;
+  virtual auto Build() -> dot::DotGraph* = 0;
 };
 
 class GraphRenderer {
@@ -306,5 +244,4 @@ class GraphRenderer {
 };
 }  // namespace gel::dot
 
-#endif  // #ifdef GEL_ENABLE_GV
 #endif  // GEL_GV_H

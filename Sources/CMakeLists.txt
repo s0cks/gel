@@ -9,9 +9,12 @@ list(APPEND GEL_LIBRARIES
   glog::glog
   fmt::fmt
   units::units
+  elfio::elfio
   $<IF:$<TARGET_EXISTS:libuv::uv_a>,libuv::uv_a,libuv::uv>
+  graphviz::gvc graphviz::cgraph
   OpenSSL::SSL OpenSSL::Crypto
   Backward::Backward
+  glm::glm
   BZip2::BZip2
   rapidjson)
 

@@ -143,10 +143,12 @@ void Disassembler::Disassemble(const Region& region, const char* label) {
         break;
       }
       case Bytecode::kJump:
-      case Bytecode::kJz:
-      case Bytecode::kJnz:
-      case Bytecode::kJeq:
-      case Bytecode::kJne: {
+      case Bytecode::kBranchEq:
+      case Bytecode::kBranchNeq:
+      case Bytecode::kBranchTrue:
+      case Bytecode::kBranchFalse:
+      case Bytecode::kBranchGreaterThan:
+      case Bytecode::kBranchLessThan: {
         const auto offset = decoder.NextWord();
         WriteOffset(static_cast<int32_t>(offset));
         Comment(static_cast<uint32_t>(ipos + offset));

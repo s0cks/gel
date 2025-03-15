@@ -21,6 +21,7 @@
 #include "gel/token.h"
 #include "gel/tracing.h"
 #include "gel/type_traits.h"
+#include "gel/types.h"
 
 namespace gel {
 static KeywordTrie::Node* keywords_ = new KeywordTrie::Node();
@@ -323,6 +324,33 @@ auto Parser::ParseLiteralNumber(Number** result) -> ParseResult {
   }
 }
 
+auto Parser::ParseLiteralVec(expr::Expression** result) -> ParseResult {
+  EXPECT_NEXT(Token::kLBracket);
+
+  expr::Expression* value = nullptr;
+  expr::ExpressionList values{};
+  do {
+    CHECK_RESULT(ParseExpression(&value));
+    ASSERT(value);
+    values.push_back(value);
+    if (PeekEq(Token::kRBracket)) {
+      if (values.size() >= 2)
+        break;
+      return UnexpectedError(NextToken());
+    }
+  } while (values.size() < 3);
+  EXPECT_NEXT(Token::kRBracket);
+
+  if (values.size() == 2) {
+    (*result) = expr::NewExpr::New(Vec2::GetClass(), values);
+    return true;
+  } else if (values.size() == 3) {
+    (*result) = expr::NewExpr::New(Vec3::GetClass(), values);
+    return true;
+  }
+  NOT_IMPLEMENTED(FATAL);
+}
+
 auto Parser::ParseLiteralValue(Object** result) -> ParseResult {
   switch (PeekKind()) {
     case Token::kLiteralFalse:
@@ -345,6 +373,8 @@ auto Parser::ParseLiteralExpr(expr::Expression** result) -> ParseResult {
     return ParseLiteralLambda(PeekKind(), (expr::LiteralExpr**)result);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   } else if (PeekEq(Token::kLBrace)) {
     return ParseMap(result);
+  } else if (PeekEq(Token::kLBracket)) {
+    return ParseLiteralVec(result);
   }
 
   Object* literal = nullptr;
@@ -696,7 +726,7 @@ auto Parser::ParseLetExpr(expr::Expression** result) -> ParseResult {
   ExpressionList body{};
   CHECK_RESULT(ParseExpressionList(body));
   PopScope();
-  (*result) = LetExpr::New(scope, bindings, body);
+  (*result) = LetExpr::New(scope, bindings, expr::SeqExpr::New(body));
   return true;
 }
 
@@ -833,6 +863,12 @@ auto Parser::ParseExpression(expr::Expression** result, const int depth) -> Pars
     if (next.IsLiteral()) {
       CHECK_RESULT(ParseLiteralExpr(result));
       return true;
+    } else if (next.kind == Token::kLBracket) {
+      CHECK_RESULT(ParseLiteralVec(result));
+      return true;
+    } else if (next.kind == Token::kLBrace) {
+      CHECK_RESULT(ParseMap(result));
+      return true;
     } else if (next.kind == Token::kQuote) {
       CHECK_RESULT(ParseQuotedExpr(result));
       return true;
@@ -921,10 +957,6 @@ auto Parser::ParseExpression(expr::Expression** result, const int depth) -> Pars
         CHECK_RESULT(ParseWhenExpr(result));
         break;
       }
-      case Token::kCaseExpr: {
-        CHECK_RESULT(ParseCaseExpr(result));
-        break;
-      }
       case Token::kWhileExpr: {
         CHECK_RESULT(ParseWhileExpr(result));
         break;
@@ -951,6 +983,11 @@ auto Parser::ParseExpression(expr::Expression** result, const int depth) -> Pars
       }
       case Token::kImportExpr: {
         CHECK_RESULT(ParseImportExpr(result));
+        break;
+      }
+      case Token::kSetFirst:
+      case Token::kSetSecond: {
+        CHECK_RESULT(ParseSetPairField(NextToken(), result));
         break;
       }
       default:
@@ -1033,17 +1070,6 @@ auto Parser::ParseClauseList(expr::ClauseList& clauses) -> ParseResult {
   return true;
 }
 
-auto Parser::ParseCaseExpr(expr::Expression** result) -> ParseResult {
-  EXPECT_NEXT(Token::kCaseExpr);
-  expr::Expression* key = nullptr;
-  CHECK_RESULT(ParseExpression(&key));
-  ASSERT(key);
-  expr::ClauseList clauses{};
-  CHECK_RESULT(ParseClauseList(clauses));
-  (*result) = expr::CaseExpr::New(key, clauses);
-  return true;
-}
-
 auto Parser::ParseWhileExpr(expr::Expression** result) -> ParseResult {
   EXPECT_NEXT(Token::kWhileExpr);
   expr::Expression* test = nullptr;
@@ -1051,7 +1077,7 @@ auto Parser::ParseWhileExpr(expr::Expression** result) -> ParseResult {
   ASSERT(test);
   ExpressionList body{};
   CHECK_RESULT(ParseExpressionList(body));
-  (*result) = expr::WhileExpr::New(test, body);
+  (*result) = expr::WhileExpr::New(test, expr::SeqExpr::New(body));
   return true;
 }
 
@@ -1170,6 +1196,7 @@ auto Parser::NextToken() -> const Token& {
       return NextToken(Token::kBinaryOr);
     case '!':
       Advance();
+
       return NextToken(Token::kNot);
     case '[':
       Advance();
@@ -1529,12 +1556,42 @@ auto Parser::ParseScript(Script** result) -> ParseResult {
   ParseScope scope(this);
   const auto script = Script::New(scope);
   ASSERT(script);
+  scope->AddThisValue(script);
   TopLevelScope toplevel(this, script);
   expr::SeqExpr* body = nullptr;
   CHECK_RESULT(ParseSeqExpr(&body, Token::kEndOfStream));
   if (body)
     script->SetBody(body);
   (*result) = script;
+  return true;
+}
+
+auto Parser::ParseSetPairField(const Token& token, expr::Expression** result) -> ParseResult {
+  TokenKindBitSet expected{};
+  expected.set(Token::kSetFirst);
+  expected.set(Token::kSetSecond);
+  Field* field = nullptr;
+  switch (token.kind) {
+    case Token::kSetFirst: {
+      field = Pair::kFirstField;
+      break;
+    }
+    case Token::kSetSecond: {
+      field = Pair::kSecondField;
+      break;
+    }
+    default:
+      return UnexpectedError(token, expected);
+  }
+  ASSERT(field);
+
+  expr::Expression* instance = nullptr;
+  CHECK_RESULT(ParseExpression(&instance));
+  ASSERT(instance);
+  expr::Expression* value = nullptr;
+  CHECK_RESULT(ParseExpression(&value));
+  ASSERT(value);
+  (*result) = expr::StoreFieldExpr::New(field, instance, value);
   return true;
 }
 
@@ -1771,9 +1828,10 @@ void Parser::Init() {
   DEF_TOKEN("nonnull?", Token::kNonnull);
   DEF_TOKEN("null?", Token::kNull);
   DEF_TOKEN("set!", Token::kSet);
+  DEF_TOKEN("set-first!", Token::kSetFirst);
+  DEF_TOKEN("set-second!", Token::kSetSecond);
   DEF_TOKEN("cond", Token::kCond);
   DEF_TOKEN("when", Token::kWhenExpr);
-  DEF_TOKEN("case", Token::kCaseExpr);
   DEF_TOKEN("while", Token::kWhileExpr);
   DEF_TOKEN("defn", Token::kDefn);
   DEF_TOKEN("let", Token::kLetExpr);

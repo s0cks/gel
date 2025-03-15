@@ -196,6 +196,21 @@ class Parser {
     return NewParseError(ss.str(), actual.pos);
   }
 
+  inline auto UnexpectedError(const Token& actual, const TokenKindBitSet& expected) -> ParseResult {
+    std::stringstream ss;
+    ss << termcolor::colorize;
+    ss << "unexpected: " << actual.kind << ", expected one of: ";
+    for (auto idx = 0; idx < Token::kTotalNumberOfTokens; idx++) {
+      if (expected.test(idx))
+        ss << static_cast<Token::Kind>(idx) << " ";
+    }
+    ss << "at: ";
+    ss << GetWindowBefore();
+    ss << termcolor::underline << actual.text << termcolor::reset;
+    ss << GetWindowAfter();
+    return NewParseError(ss.str(), actual.pos);
+  }
+
  private:
   std::istream& stream_;
   LocalScope* scope_;
@@ -479,6 +494,7 @@ class Parser {
   auto ParseLiteralString(String** result) -> ParseResult;
   auto ParseLiteralSymbol(Symbol** result) -> ParseResult;
   auto ParseLiteralValue(Object** result) -> ParseResult;
+  auto ParseLiteralVec(expr::Expression** result) -> ParseResult;
 
   auto ParseLiteralLambda(const Token::Kind kind, expr::LiteralExpr** result) -> ParseResult;
   auto ParseLambdaExpr() -> expr::LambdaExpr*;
@@ -495,7 +511,6 @@ class Parser {
   auto ParseThrowExpr(expr::Expression**) -> ParseResult;
   auto ParseQuotedExpr(expr::Expression**) -> ParseResult;
   auto ParseWhenExpr(expr::Expression**) -> ParseResult;
-  auto ParseCaseExpr(expr::Expression**) -> ParseResult;
   auto ParseWhileExpr(expr::Expression**) -> ParseResult;
   auto ParseCondExpr(expr::Expression**) -> ParseResult;
   auto ParseLetExpr(expr::Expression**) -> ParseResult;
@@ -507,6 +522,7 @@ class Parser {
   auto ParseNewExpr(expr::Expression**) -> ParseResult;
   auto ParseImportExpr(expr::Expression**) -> ParseResult;
   auto ParseDef(expr::Expression**) -> ParseResult;
+  auto ParseSetPairField(const Token& token, expr::Expression**) -> ParseResult;
   auto ParseDefNative(LocalVariable** local) -> ParseResult;
   auto ParseDefn(LocalVariable** local) -> ParseResult;
   auto ParseDefType(LocalVariable** local) -> ParseResult;

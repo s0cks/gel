@@ -29,6 +29,7 @@
       "id": "target-script",
       "type": "pickString",
       "options": [
+        "test-set-first.cl",
         "say-hello.cl",
         "countdown.cl",
         "test-only.cl",
@@ -60,7 +61,9 @@
         "test-dlopen.cl",
         "test-event-emitter.cl",
         "test-fs-open.cl",
-        "test-on-shutdown.cl"
+        "test-on-shutdown.cl",
+        "test-while.cl",
+        "test-cond.cl"
       ],
       "default": "while.cl",
       "description": "A value that is even."
@@ -97,7 +100,7 @@
         "1",
         "10",
         "100",
-        "1000",
+        "1000"
       ]
     }
   ],
@@ -302,7 +305,7 @@
         "--dump-ast",
         "--dump-flow-graph",
         "-v=${input:verbose-level}",
-        "--expr", "(cond #t (print \"true\") (print \"false\"))",
+        "--expr", "(cond #t (print \"true\") (print \"false\"))"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [
@@ -320,7 +323,7 @@
         "--expr", "(begin (define sq (lambda (x) (* x x))) (sq 10))",
         "--reports-dir", "${workspaceFolder}/reports",
         "--dump-ast",
-        "--dump-flow-graph",
+        "--dump-flow-graph"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [
@@ -338,7 +341,7 @@
         "--module", "(defmodule test)",
         "--reports-dir", "${workspaceFolder}/reports",
         "--dump-ast",
-        "--dump-flow-graph",
+        "--dump-flow-graph"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [
@@ -357,7 +360,7 @@
         "--reports-dir", "${workspaceFolder}/reports",
         "--expr", "(print test)",
         "--dump-ast",
-        "--dump-flow-graph",
+        "--dump-flow-graph"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [
@@ -377,7 +380,7 @@
         "--dump-flow-graph",
         "--module-dir", "${workspaceFolder}/gel",
         "-v=${input:verbose-level}",
-        "--expr", "(begin (define x ${input:even-value}) (cond (even? x) (format \"{} is even\" x) (throw (format \"{} is not even\" x))))",
+        "--expr", "(begin (define x ${input:even-value}) (cond (even? x) (format \"{} is even\" x) (throw (format \"{} is not even\" x))))"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [
@@ -398,7 +401,7 @@
         "--dump-ast",
         "--dump-flow-graph",
         "-v=${input:verbose-level}",
-        "--expr", "(when (> 1 0) (print \"Hello World\") (print \"Test\")))",
+        "--expr", "(when (> 1 0) (print \"Hello World\") (print \"Test\")))"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [
@@ -419,7 +422,7 @@
         "--dump-ast",
         "--dump-flow-graph",
         "-v=${input:verbose-level}",
-        "--expr", "(begin (define x ${input:even-value}) (case x (10 (print \"Hello World\")) (11 (print \"Failed\"))))",
+        "--expr", "(begin (define x ${input:even-value}) (case x (10 (print \"Hello World\")) (11 (print \"Failed\"))))"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [
@@ -475,7 +478,8 @@
         "-log_dir=${workspaceFolder}/logs",
         "-colorlogtostdout",
         "-v=${input:verbose-level}",
-        "${workspaceFolder}/scripts/${input:target-script}"
+        "${workspaceFolder}/scripts/${input:target-script}",
+        "--print-bytecode"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [
@@ -544,6 +548,6 @@
         "TERM": "xterm-256color",
         "GEL_HOME": "${workspaceFolder}/gel"
       }
-    },
+    }
   ]
 }

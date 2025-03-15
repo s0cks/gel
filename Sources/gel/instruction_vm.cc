@@ -1,3 +1,4 @@
+#include "gel/assembler.h"
 #include "gel/common.h"
 #include "gel/expr/expression.h"
 #include "gel/flow_graph_compiler.h"
@@ -11,17 +12,30 @@ namespace gel::ir {
 #define __            compiler->assembler()->
 COMPILE(GraphEntryInstr) {
   ASSERT(compiler);
-  // do nothing
+  auto& info = compiler->GetBlockInfo(this);
+  __ Bind(&info.label);
 }
 
 COMPILE(TargetEntryInstr) {
   ASSERT(compiler);
+  auto& info = compiler->GetBlockInfo(this);
+  __ Bind(&info.label);
   // do nothing
+}
+
+COMPILE(LetEntryInstr) {
+  ASSERT(compiler);
+  auto& info = compiler->GetBlockInfo(this);
+  __ Bind(&info.label);
 }
 
 COMPILE(JoinEntryInstr) {
   ASSERT(compiler);
-  // do nothing
+  auto& info = compiler->GetBlockInfo(this);
+  __ Bind(&info.label);
+  if (IsLetJoin()) {
+    DLOG(INFO) << "joining from let";
+  }
 }
 
 COMPILE(ConstantInstr) {
@@ -151,47 +165,21 @@ COMPILE(StoreFieldInstr) {
 COMPILE(BranchInstr) {
   ASSERT(compiler);
   Label* tbranch = compiler->GetBlockLabel(GetTrueTarget());
-  Label* fbranch = HasFalseTarget() ? compiler->GetBlockLabel(GetFalseTarget()) : nullptr;
-  Label* join = compiler->GetBlockLabel(GetJoin());
   switch (condition_) {
     case kTrue:
-      __ jnz(HasFalseTarget() ? fbranch : join);
+      __ Branch(BranchCondition::kIsTrue, tbranch);
+      break;
+    case kNotTrue:
+      __ Branch(BranchCondition::kIsFalse, tbranch);
       break;
     case kEqual:
-      __ jne(HasFalseTarget() ? fbranch : join);
+      __ Branch(BranchCondition::kEquals, tbranch);
+      break;
+    case kNotEqual:
+      __ Branch(BranchCondition::kNotEquals, tbranch);
       break;
     default:
       LOG(FATAL) << "invalid condition: " << condition_;
-  }
-  // tbranch
-  {
-    __ Bind(tbranch);
-    ir::InstructionIterator iter(GetTrueTarget());
-    while (iter.HasNext()) {
-      const auto next = iter.Next();
-      ASSERT(next);
-      next->Compile(compiler);
-    }
-  }
-  // fbranch
-  if (HasFalseTarget()) {
-    __ Bind(fbranch);
-    ir::InstructionIterator iter(GetFalseTarget());
-    while (iter.HasNext()) {
-      const auto next = iter.Next();
-      ASSERT(next);
-      next->Compile(compiler);
-    }
-  }
-  // join
-  {
-    __ Bind(join);
-    ir::InstructionIterator iter(GetJoin());
-    while (iter.HasNext()) {
-      const auto next = iter.Next();
-      ASSERT(next);
-      next->Compile(compiler);
-    }
   }
 }
 

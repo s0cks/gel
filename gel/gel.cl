@@ -13,12 +13,12 @@
   "Returns a formatted String using the supplied [pattern] and [args...].")
 (defnative print [value] ;; TODO: move to gel/ namespace
   "Prints the supplied [value] to the console.")
-(defnative docs? [o]
-  "Returns the docstring attached to the supplied Object [o].")
-(defnative type? [o]
-  "Returns the type of Object [o].")
-(defnative sizeof [o]
-  "Returns the size of Object [o] in bytes.")
+(defnative docs? [value]
+  "Returns the docstring attached to the supplied Object [value].")
+(defnative type? [value]
+  "Returns the type of Object [value].")
+(defnative sizeof [value]
+  "Returns the size of Object [value] in bytes.")
 (defnative on-shutdown [func])
 (defnative queue-utask [func])
 
@@ -27,7 +27,6 @@
   (defnative emit [emitter event data?]))
 
 (printf "gel v{}" (get-version))
-(printf "this := {}" this)
 (debug-only
   (print "debug mode enabled."))
 

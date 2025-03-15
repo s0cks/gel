@@ -10,16 +10,11 @@ if(ENABLE_RX)
   add_compile_definitions(GEL_ENABLE_RX)
 endif()
 
+option(GEL_ENABLE_GLM "Enable glm bindings" ON)
+
 option(ENABLE_SYMBOL_POOL "Enable the symbol pool" OFF)
 if(ENABLE_SYMBOL_POOL)
   add_compile_definitions(GEL_ENABLE_SYMBOL_POOL)
-endif()
-
-option(ENABLE_GRAPHVIZ "Compile w/ Graphviz" OFF)
-if(ENABLE_GRAPHVIZ)
-  find_package(Graphviz REQUIRED)
-  list(APPEND GEL_LIBRARIES graphviz::gvc graphviz::cgraph)
-  add_compile_definitions(GEL_ENABLE_GV)
 endif()
 
 option(DISABLE_HEAP_ALLOCATOR "Disable the heap allocator." OFF)

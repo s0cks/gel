@@ -19,11 +19,16 @@ namespace gel {
 void FlowGraphCompiler::AssembleFlowGraph(FlowGraph* flow_graph) {
   TRACE_ZONE_NAMED("FlowGraphCompiler::AssembleFlowGraph");
   ASSERT(flow_graph && flow_graph->HasEntry());
-  ir::InstructionIterator iter(flow_graph->GetEntry());
-  while (iter.HasNext()) {
-    const auto next = iter.Next();
-    ASSERT(next);
-    next->Compile(this);
+  for (const auto& blk : flow_graph->GetPreorder()) {
+    ASSERT(blk);
+    DLOG(INFO) << "compiling block " << blk->ToString();
+    ir::InstructionIterator iter(blk);
+    while (iter.HasNext()) {
+      const auto next = iter.Next();
+      ASSERT(next);
+      DLOG(INFO) << "compiling " << next->ToString();
+      next->Compile(this);
+    }
   }
 }
 
@@ -36,6 +41,9 @@ auto FlowGraphCompiler::BuildFlowGraph(E* exec, std::enable_if_t<gel::is_executa
     scope->AddAll(exec->GetScope());
   const auto flow_graph = FlowGraphBuilder::Build(exec, scope);
   LOG_IF(FATAL, !(flow_graph && flow_graph->HasEntry())) << "failed to build FlowGraph for: " << exec;
+  if (FLAGS_print_ir) {
+    DLOG(INFO) << exec->ToString() << " flow graph:";
+  }
   return flow_graph;
 }
 
@@ -59,8 +67,12 @@ auto FlowGraphCompiler::CompileTarget(E* exec, std::enable_if_t<gel::is_executab
   ASSERT(exec);
   TIMER_START;
   MacroExpander::ExpandAll(exec, GetScope());
-  const auto flow_graph = BuildFlowGraph(exec);
+  auto flow_graph = BuildFlowGraph(exec);
   ASSERT(flow_graph && flow_graph->HasEntry());
+
+  flow_graph->DiscoverBlocks();
+  flow_graph->ComputeSSA(0);
+
   AssembleFlowGraph(flow_graph);
   TIMER_STOP(total_ns);
   CompiledCode code(assembler_.Assemble());
@@ -68,13 +80,11 @@ auto FlowGraphCompiler::CompileTarget(E* exec, std::enable_if_t<gel::is_executab
     LOG(ERROR) << "failed to compile: " << exec;
     return false;
   }
-#ifdef GEL_DEBUG
-  DVLOG(10) << exec << " compiled in " << units::time::nanosecond_t(static_cast<double>(total_ns));
+  DVLOG(10) << "compiled in " << units::time::nanosecond_t(static_cast<double>(total_ns));
   code.SetCompileTime(total_ns);
   exec->SetCode(code);
-  if (VLOG_IS_ON(10))
+  if (VLOG_IS_ON(10) || FLAGS_print_bytecode)
     Disassembler::Disassemble(std::cout, exec, GetScope());
-#endif  // GEL_DEBUG
   TRACE_TAG_STR(exec->GetFullyQualifiedName());
   TRACE_MARK;
   return true;

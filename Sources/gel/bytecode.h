@@ -36,10 +36,12 @@
   V(PushT)                   \
   V(PushF)                   \
   V(Jump)                    \
-  V(Jz)                      \
-  V(Jnz)                     \
-  V(Jeq)                     \
-  V(Jne)                     \
+  V(BranchTrue)              \
+  V(BranchFalse)             \
+  V(BranchEq)                \
+  V(BranchNeq)               \
+  V(BranchGreaterThan)       \
+  V(BranchLessThan)          \
   V(Cast)                    \
   V(New)                     \
   V(List)                    \
@@ -50,6 +52,15 @@
   FOR_EACH_BINARY_OP(V)
 
 namespace gel::vm {
+enum BranchCondition : uint8_t {
+  kIsTrue,
+  kIsFalse,
+  kEquals,
+  kNotEquals,
+  kGreaterThan,
+  kLessThan,
+};
+
 using RawBytecode = uint8_t;
 class Bytecode {
   DEFINE_DEFAULT_COPYABLE_TYPE(Bytecode);
@@ -221,14 +232,18 @@ class Bytecode {
         return "instanceof";
       case kJump:
         return "jmp";
-      case kJz:
-        return "jz";
-      case kJnz:
-        return "jnz";
-      case kJeq:
-        return "jeq";
-      case kJne:
-        return "jne";
+      case kBranchEq:
+        return "be";
+      case kBranchNeq:
+        return "bne";
+      case kBranchTrue:
+        return "bt";
+      case kBranchFalse:
+        return "bf";
+      case kBranchGreaterThan:
+        return "bgt";
+      case kBranchLessThan:
+        return "blt";
       case kCheckInstance:
         return "checkinstance";
       case kNew:

@@ -4,6 +4,7 @@
 #include <string>
 #include <type_traits>
 
+#include "gel/bitvector.h"
 #include "gel/common.h"
 #include "gel/expr/expression.h"
 #include "gel/lambda.h"
@@ -20,6 +21,7 @@
   V(LoadLocal)                  \
   V(GraphEntry)                 \
   V(TargetEntry)                \
+  V(LetEntry)                   \
   V(JoinEntry)                  \
   V(LoadField)                  \
   V(StoreField)                 \
@@ -34,12 +36,12 @@
   V(InstanceOf)                 \
   V(Cast)                       \
   V(New)                        \
-  V(NewList)
+  V(NewList)                    \
+  V(Phi)
 
 namespace gel {
 class Assembler;
 class EffectVisitor;
-class ClauseVisitor;
 class NativeProcedure;
 class FlowGraphBuilder;
 class FlowGraphCompiler;
@@ -94,6 +96,14 @@ class Instruction {
   virtual auto GetName() const -> const char* = 0;
   virtual auto ToString() const -> std::string = 0;
   virtual auto Accept(InstructionVisitor* vis) -> bool = 0;
+
+  virtual auto GetSuccessorCount() const -> uword {
+    return 0;
+  }
+
+  virtual auto GetSuccessorAt(const uword idx) const -> EntryInstr* {
+    return nullptr;
+  }
 
   auto GetNext() const -> Instruction* {
     return next_;
@@ -193,12 +203,19 @@ class InstructionIterator {
   }
 
 class EntryInstr : public Instruction {
+  friend class gel::FlowGraph;
   friend class gel::EffectVisitor;
-  friend class gel::ClauseVisitor;
   friend class gel::FlowGraphBuilder;
   DEFINE_NON_COPYABLE_TYPE(EntryInstr);
 
  private:
+  word preorder_num_ = -1;
+  word postorder_num_ = -1;
+  uword offset_ = 0;
+  uword start_pos_ = 0;
+  uword end_pos_ = 0;
+  Instruction* last_ = nullptr;
+
   uint64_t block_id_ = 0;
   EntryInstr* dominator_ = nullptr;
   std::vector<EntryInstr*> dominated_{};
@@ -218,8 +235,47 @@ class EntryInstr : public Instruction {
     dominated_.push_back(instr);
   }
 
+  void SetLastInstruction(Instruction* rhs) {
+    ASSERT(rhs);
+    last_ = rhs;
+  }
+
+  auto DiscoverBlocks(EntryInstr* predecessor, std::vector<EntryInstr*>& preorder, std::vector<word>& parent) -> bool;
+
  public:
   ~EntryInstr() override = default;
+
+  void SetStartPos(const uword rhs) {
+    start_pos_ = rhs;
+  }
+
+  auto GetStartPos() const -> uword {
+    return start_pos_;
+  }
+
+  void SetEndPos(const uword rhs) {
+    end_pos_ = rhs;
+  }
+
+  auto GetEndPos() const -> uword {
+    return end_pos_;
+  }
+
+  auto GetPreorderNum() const -> word {
+    return preorder_num_;
+  }
+
+  void SetPreorderNum(const word rhs) {
+    preorder_num_ = rhs;
+  }
+
+  auto GetPostorderNum() const -> word {
+    return postorder_num_;
+  }
+
+  void SetPostorderNum(const word rhs) {
+    postorder_num_ = rhs;
+  }
 
   auto GetBlockId() const -> uint64_t {
     return block_id_;
@@ -250,43 +306,137 @@ class EntryInstr : public Instruction {
     return GetNext();
   }
 
-  auto GetLastInstruction() const -> Instruction*;
+  auto GetLastInstruction() const -> Instruction* {
+    return last_;
+  }
+
+  virtual void ClearDominated() {
+    dominated_.clear();
+  }
+
   auto VisitDominated(InstructionVisitor* vis) -> bool;
+  virtual auto GetNumberOfPredecessors() const -> uword = 0;
+  virtual auto GetPredecessorAt(const uword idx) const -> EntryInstr* = 0;
+  virtual void ClearPredecessors() = 0;
+  virtual void AddPredecessor(EntryInstr* predecessor) = 0;
 };
 
 class GraphEntryInstr : public EntryInstr {
  private:
-  explicit GraphEntryInstr(const uint64_t blk_id) :
-    EntryInstr(blk_id) {}
+  Object* procedure_;
+  TargetEntryInstr* target_;
+
+  explicit GraphEntryInstr(Object* procedure, const uint64_t blk_id, TargetEntryInstr* target) :
+    EntryInstr(blk_id),
+    procedure_(procedure),
+    target_(target) {
+    ASSERT(procedure_);
+    ASSERT(target_);
+  }
 
  public:
   ~GraphEntryInstr() override = default;
 
-  auto HasTarget() const -> bool {
-    return HasNext() && GetNext()->IsTargetEntryInstr();
+  auto GetProcedure() const -> Object* {
+    return procedure_;
   }
 
   auto GetTarget() const -> TargetEntryInstr* {
-    return HasTarget() ? GetNext()->AsTargetEntryInstr() : nullptr;
+    return target_;
   }
 
   auto GetFirstInstruction() const -> Instruction* override;
 
+  void ClearPredecessors() override {}
+  void AddPredecessor(EntryInstr* blk) override {}
+
+  auto GetNumberOfPredecessors() const -> uword override {
+    return 0;
+  }
+
+  auto GetPredecessorAt(const uword idx) const -> EntryInstr* override {
+    return nullptr;
+  }
+
+  auto GetSuccessorCount() const -> uword override {
+    return 1;
+  }
+
+  auto GetSuccessorAt(const uword idx) const -> EntryInstr* override;
+
   DECLARE_INSTRUCTION(GraphEntryInstr);
 
  public:
-  static inline auto New(const uint64_t blk_id) -> GraphEntryInstr* {
-    return new GraphEntryInstr(blk_id);
+  static inline auto New(Object* proc, const uint64_t idx, TargetEntryInstr* target) -> GraphEntryInstr* {
+    ASSERT(proc);
+    return new GraphEntryInstr(proc, idx, target);
+  }
+};
+
+class LetEntryInstr : public EntryInstr {
+ private:
+  EntryInstr* predecessor_ = nullptr;
+
+  explicit LetEntryInstr(const uint64_t id) :
+    EntryInstr(id) {}
+
+ public:
+  ~LetEntryInstr() override = default;
+
+  void AddPredecessor(EntryInstr* blk) override {
+    ASSERT(blk && predecessor_ == nullptr);
+    predecessor_ = blk;
+  }
+
+  auto GetPredecessorAt(const uword idx) const -> EntryInstr* override {
+    ASSERT(idx == 0 && predecessor_ != nullptr);
+    return predecessor_;
+  }
+
+  void ClearPredecessors() override {
+    predecessor_ = nullptr;
+  }
+
+  auto GetNumberOfPredecessors() const -> uword override {
+    return 1;
+  }
+
+  DECLARE_INSTRUCTION(LetEntryInstr);
+
+ public:
+  static inline auto New(const uint64_t idx) -> LetEntryInstr* {
+    return new LetEntryInstr(idx);
   }
 };
 
 class TargetEntryInstr : public EntryInstr {
  private:
+  EntryInstr* predecessor_ = nullptr;
+
   explicit TargetEntryInstr(const uint64_t blk_id) :
     EntryInstr(blk_id) {}
 
  public:
   ~TargetEntryInstr() override = default;
+
+  void AddPredecessor(EntryInstr* blk) override {
+    ASSERT(blk && predecessor_ == nullptr);
+    predecessor_ = blk;
+  }
+
+  auto GetPredecessorAt(const uword idx) const -> EntryInstr* override {
+    ASSERT(idx == 0 && predecessor_ != nullptr);
+    return predecessor_;
+  }
+
+  void ClearPredecessors() override {
+    predecessor_ = nullptr;
+  }
+
+  auto GetNumberOfPredecessors() const -> uword override {
+    return 1;
+  }
+
   DECLARE_INSTRUCTION(TargetEntryInstr);
 
  public:
@@ -297,11 +447,41 @@ class TargetEntryInstr : public EntryInstr {
 
 class JoinEntryInstr : public EntryInstr {
  private:
+  std::vector<EntryInstr*> predecessors_{};
+
   explicit JoinEntryInstr(const uint64_t blk_id) :
     EntryInstr(blk_id) {}
 
  public:
   ~JoinEntryInstr() override = default;
+
+  auto IsLetJoin() const -> bool {
+    DLOG(INFO) << "checking if is let-join";
+    for (const auto& predecessor : predecessors_) {
+      DLOG(INFO) << "predecessor: " << predecessor->ToString();
+      if (predecessor->IsLetEntryInstr())
+        return true;
+    }
+    return false;
+  }
+
+  void AddPredecessor(EntryInstr* blk) override {
+    ASSERT(blk);
+    predecessors_.push_back(blk);
+  }
+
+  auto GetPredecessorAt(const uword idx) const -> EntryInstr* override {
+    return predecessors_[idx];
+  }
+
+  void ClearPredecessors() override {
+    predecessors_.clear();
+  }
+
+  auto GetNumberOfPredecessors() const -> uword override {
+    return predecessors_.size();
+  }
+
   DECLARE_INSTRUCTION(JoinEntryInstr);
 
  public:
@@ -310,8 +490,95 @@ class JoinEntryInstr : public EntryInstr {
   }
 };
 
+class Input {
+  DEFINE_NON_COPYABLE_TYPE(Input);
+
+ private:
+  Input* next_ = nullptr;
+  Input* previous_ = nullptr;
+  Definition* defn_;
+  Instruction* instr_ = nullptr;
+  word index_ = 0;
+
+ public:
+  explicit Input(Definition* defn) :
+    defn_(defn) {
+    ASSERT(defn_);
+  }
+  ~Input() = default;
+
+  void SetNext(Input* rhs) {
+    ASSERT(rhs);
+    next_ = rhs;
+  }
+
+  auto GetNext() const -> Input* {
+    return next_;
+  }
+
+  inline auto HasNext() const -> bool {
+    return GetNext() != nullptr;
+  }
+
+  void SetPrevious(Input* rhs) {
+    ASSERT(rhs);
+    previous_ = rhs;
+  }
+
+  auto GetPrevious() const -> Input* {
+    return previous_;
+  }
+
+  inline auto HasPrevious() const -> bool {
+    return GetPrevious() != nullptr;
+  }
+
+  auto GetIndex() const -> word {
+    return index_;
+  }
+
+  void SetIndex(const word rhs) {
+    index_ = rhs;
+  }
+
+  auto GetInstruction() const -> Instruction* {
+    return instr_;
+  }
+
+  void SetInstruction(Instruction* rhs) {
+    ASSERT(rhs);
+    instr_ = rhs;
+  }
+
+  auto GetDefinition() const -> Definition* {
+    return defn_;
+  }
+
+  void SetDefinition(Definition* rhs) {
+    ASSERT(rhs);
+    defn_ = rhs;
+  }
+
+  void RemoveFromList();
+  void Bind(Definition* rhs);
+
+ public:
+  static inline void Prepend(Input** list, Input* value) {
+    const auto next = (*list);
+    (*list) = value;
+    if (next) {
+      value->SetNext(next);
+      next->SetPrevious(value);
+    }
+  }
+};
+
 class Definition : public Instruction {
+  friend class Input;
   DEFINE_NON_COPYABLE_TYPE(Definition);
+
+ private:
+  Input* input_use_list_ = nullptr;
 
  protected:
   Definition() = default;
@@ -325,6 +592,19 @@ class Definition : public Instruction {
 
   auto IsDefinition() -> bool {
     return AsDefinition() != nullptr;
+  }
+
+  void SetInputUseList(Input* rhs) {
+    input_use_list_ = rhs;
+  }
+
+  auto GetInputUseList() const -> Input* {
+    return input_use_list_;
+  }
+
+  void AddInput(Input* rhs) {
+    ASSERT(rhs);
+    Input::Prepend(&input_use_list_, rhs);
   }
 };
 
@@ -770,6 +1050,19 @@ class BranchInstr : public Instruction {
     return GetJoin() != nullptr;
   }
 
+  auto GetSuccessorCount() const -> uword override {
+    return HasFalseTarget() ? 2 : 1;
+  }
+
+  auto GetSuccessorAt(const uword idx) const -> EntryInstr* override {
+    if (idx == 0)
+      return GetTrueTarget();
+    else if (idx == 1)
+      return GetFalseTarget();
+    NOT_IMPLEMENTED(ERROR);
+    return nullptr;
+  }
+
   DECLARE_INSTRUCTION(BranchInstr);
 
  public:
@@ -800,6 +1093,12 @@ class BranchInstr : public Instruction {
     ASSERT(true_target);
     ASSERT(join);
     return New(Condition::kNotTrue, true_target, false_target, join);
+  }
+
+  static inline auto BranchFalse(EntryInstr* true_target, JoinEntryInstr* join) -> BranchInstr* {
+    ASSERT(true_target);
+    ASSERT(join);
+    return New(Condition::kNotTrue, true_target, nullptr, join);
   }
 
   static inline auto BranchEqual(EntryInstr* true_target, EntryInstr* false_target, JoinEntryInstr* join) -> BranchInstr* {
@@ -839,6 +1138,14 @@ class GotoInstr : public Definition {
 
   auto HasTarget() const -> bool {
     return GetTarget() != nullptr;
+  }
+
+  auto GetSuccessorCount() const -> uword override {
+    return 1;
+  }
+
+  auto GetSuccessorAt(const uword idx) const -> EntryInstr* override {
+    return GetTarget();
   }
 
   DECLARE_INSTRUCTION(GotoInstr);
@@ -1063,6 +1370,31 @@ class StoreFieldInstr : public Definition {
     ASSERT(instance);
     ASSERT(value);
     return new StoreFieldInstr(field, instance, value);
+  }
+};
+
+class PhiInstr : public Definition {
+ private:
+  JoinEntryInstr* join_;
+  word num_inputs_;
+  BitVector* reaching_ = nullptr;
+  bool alive_ = false;
+
+  PhiInstr(JoinEntryInstr* join, const word num_inputs) :
+    Definition(),
+    join_(join),
+    num_inputs_(num_inputs) {
+    ASSERT(join_);
+  }
+
+ public:
+  ~PhiInstr() override = default;
+
+  DECLARE_INSTRUCTION(PhiInstr);
+
+ public:
+  static inline auto New(JoinEntryInstr* join, const word num_inputs) -> PhiInstr* {
+    return new PhiInstr(join, num_inputs);
   }
 };
 }  // namespace ir

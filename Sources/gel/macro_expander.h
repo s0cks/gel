@@ -3,6 +3,8 @@
 
 #include "gel/common.h"
 #include "gel/expr/expression.h"
+#include "gel/expr/expression_dot.h"
+#include "gel/flags.h"
 #include "gel/local.h"
 #include "gel/local_scope.h"
 
@@ -77,8 +79,17 @@ class MacroExpander {
   static inline void ExpandAll(T* target, LocalScope* locals, std::enable_if_t<gel::has_code<T>::value>* = nullptr) {
     ASSERT(target);
     ASSERT(locals);
+    const auto target_name = target->GetTargetName();
+    if (FLAGS_dump_ast) {
+      expr::GenerateExprDotPng(fmt::format("reports/{}-pre-expansion.png", target_name), target_name, target->GetBody());
+    }
     MacroExpander expander(locals);
     LOG_IF(FATAL, !expander.ExpandAll(target)) << "failed to expand macros in " << target->ToString();
+    if (FLAGS_dump_ast) {
+      if (FLAGS_dump_ast) {
+        expr::GenerateExprDotPng(fmt::format("reports/{}-post-expansion.png", target_name), target_name, target->GetBody());
+      }
+    }
   }
 };
 

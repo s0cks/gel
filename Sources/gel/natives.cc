@@ -48,7 +48,7 @@ void NativeProcedure::InitNatives() {
   INIT_GEL_NATIVE(sizeof);
   INIT_GEL_NATIVE(print);
   INIT_GEL_NATIVE(format);
-  InitNative<type>();
+  INIT_GEL_NATIVE(type);
   InitNative<import>();
   InitNative<exit>();
   InitNative<set_car>();
@@ -238,7 +238,7 @@ NATIVE_PROCEDURE_F(rand_range) {
   return ReturnNew<Long>(distribution(mt));
 }
 
-NATIVE_PROCEDURE_F(type) {
+GEL_NATIVE_PROCEDURE_F(type) {
   ASSERT(!args.empty());
   NativeArgument<0> value(args);
   if (gel::IsNull(value))

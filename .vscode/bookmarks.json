@@ -4,7 +4,7 @@
 			"path": "Sources/gel/parser.cc",
 			"bookmarks": [
 				{
-					"line": 1087,
+					"line": 1114,
 					"column": 18,
 					"label": ""
 				}
@@ -14,7 +14,7 @@
 			"path": "Sources/gel/object.cc",
 			"bookmarks": [
 				{
-					"line": 154,
+					"line": 155,
 					"column": 14,
 					"label": ""
 				}
@@ -26,6 +26,16 @@
 				{
 					"line": 44,
 					"column": 27,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": ".vscode/launch.json",
+			"bookmarks": [
+				{
+					"line": 30,
+					"column": 0,
 					"label": ""
 				}
 			]

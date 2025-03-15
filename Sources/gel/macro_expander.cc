@@ -165,12 +165,6 @@ auto MacroEffectVisitor::VisitInvokeExpr(expr::InvokeExpr* expr) -> bool {
   return true;
 }
 
-auto MacroEffectVisitor::VisitCaseExpr(expr::CaseExpr* expr) -> bool {
-  ASSERT(expr);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return false;
-}
-
 auto MacroEffectVisitor::VisitCastExpr(expr::CastExpr* expr) -> bool {
   ASSERT(expr);
   MacroEffectVisitor for_value(GetOwner());
@@ -191,7 +185,7 @@ auto MacroEffectVisitor::VisitClauseExpr(expr::ClauseExpr* expr) -> bool {
 auto MacroEffectVisitor::VisitCondExpr(expr::CondExpr* expr) -> bool {
   ASSERT(expr);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return false;
+  return true;
 }
 
 auto MacroEffectVisitor::VisitImportExpr(expr::ImportExpr* expr) -> bool {
@@ -208,31 +202,33 @@ auto MacroEffectVisitor::VisitInstanceOfExpr(expr::InstanceOfExpr* expr) -> bool
 
 auto MacroEffectVisitor::VisitLetExpr(expr::LetExpr* expr) -> bool {
   ASSERT(expr);
-  bool bindings_changed = false;
-  expr::BindingList new_bindings{};
-  for (const auto& binding : expr->GetBindings()) {
-    MacroEffectVisitor for_binding(GetOwner());
-    VISIT(for_binding, binding);
-    if (!for_binding) {
-      new_bindings.push_back(binding);
-      continue;
-    }
-    // this c-style cast is okay because expr::Binding is a subclass of expr::Expression
-    bindings_changed = true;
-    const auto& results = (const expr::BindingList&)for_binding.GetResults();  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-    new_bindings.insert(std::begin(new_bindings), std::begin(results), std::end(results));
-  }
+  NOT_IMPLEMENTED(ERROR);
+  // bool bindings_changed = false;
+  // expr::BindingList new_bindings{};
+  // for (const auto& binding : expr->GetBindings()) {
+  //   MacroEffectVisitor for_binding(GetOwner());
+  //   VISIT(for_binding, binding);
+  //   if (!for_binding) {
+  //     new_bindings.push_back(binding);
+  //     continue;
+  //   }
+  //   // this c-style cast is okay because expr::Binding is a subclass of expr::Expression
+  //   bindings_changed = true;
+  //   const auto& results = (const expr::BindingList&)for_binding.GetResults();  //
+  //   NOLINT(cppcoreguidelines-pro-type-cstyle-cast) new_bindings.insert(std::begin(new_bindings), std::begin(results),
+  //   std::end(results));
+  // }
 
-  bool body_changed = false;
-  expr::ExpressionList new_body{};
-  if (!VisitExpressionList(expr->GetBody(), new_body, &body_changed))
-    return false;
+  // bool body_changed = false;
+  // expr::ExpressionList new_body{};
+  // if (!VisitExpressionList(expr->GetBody(), new_body, &body_changed))
+  //   return false;
 
-  if (bindings_changed || body_changed) {
-    const auto bindings = bindings_changed ? new_bindings : expr->GetBindings();
-    const auto body = body_changed ? new_body : expr->GetBody();
-    SetResult(expr::LetExpr::New(expr->GetScope(), bindings, body));
-  }
+  // if (bindings_changed || body_changed) {
+  //   const auto bindings = bindings_changed ? new_bindings : expr->GetBindings();
+  //   const auto body = body_changed ? new_body : expr->GetBody();
+  //   SetResult(expr::LetExpr::New(expr->GetScope(), bindings, body));
+  // }
   return true;
 }
 
@@ -369,8 +365,26 @@ auto MacroEffectVisitor::VisitWhenExpr(expr::WhenExpr* expr) -> bool {
 
 auto MacroEffectVisitor::VisitWhileExpr(expr::WhileExpr* expr) -> bool {
   ASSERT(expr);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return false;
+  bool changed = false;
+
+  MacroEffectVisitor for_test(GetOwner());
+  if (for_test)
+    changed = true;
+
+  MacroEffectVisitor for_body(GetOwner());
+  if (!expr->GetBody()->Accept(&for_body)) {
+    LOG(ERROR) << "failed to visit while-expr body.";
+    return false;
+  }
+  if (for_body)
+    changed = true;
+
+  if (changed) {
+    const auto test = for_test ? for_test.GetResult() : expr->GetTest();
+    const auto body = changed ? SeqExpr::New(for_body.GetResults()) : expr->GetBody();
+    SetResult(expr::WhileExpr::New(test, body));
+  }
+  return true;
 }
 
 auto MacroExpansionSiteEffectVisitor::Expand(expr::LiteralExpr* expr, expr::ExpressionList& results) -> bool {

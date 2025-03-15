@@ -57,7 +57,7 @@ if(DOXYGEN_FOUND)
   configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
 
   add_custom_target(
-    doxygen
+    docs
     COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
     WORKING_DIRECTORY ${DOXYGEN_BUILD_DIR}
     COMMENT "Generate API documentation with Doxygen"

@@ -33,6 +33,10 @@ class Constructor : public Procedure {
  public:
   ~Constructor() override = default;
 
+  auto GetTargetName() const -> std::string {
+    return HasSymbol() ? GetSymbol()->GetSymbolName() : "Constructor";
+  }
+
   auto GetScope() const -> LocalScope* {
     return scope_;
   }

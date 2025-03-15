@@ -87,7 +87,33 @@ class Interpreter {
   void NewList(const uword length);
   void Cast(Class* cls);
   void CheckInstance(Class* cls);
-  void Jump(const Bytecode code, const uword address);
+  void Jump(const uword address);
+
+  inline void Branch(const BranchCondition cond, const uword target) {
+    switch (cond) {
+      case BranchCondition::kIsTrue:
+        return BranchTrue(target);
+      case BranchCondition::kIsFalse:
+        return BranchFalse(target);
+      case BranchCondition::kEquals:
+        return BranchEq(target);
+      case BranchCondition::kNotEquals:
+        return BranchNe(target);
+      case BranchCondition::kGreaterThan:
+        return BranchGt(target);
+      case BranchCondition::kLessThan:
+        return BranchLt(target);
+      default:
+        LOG(FATAL) << "invalid BranchCondition: " << static_cast<word>(cond);
+    }
+  }
+
+  void BranchEq(const uword address);
+  void BranchNe(const uword address);
+  void BranchGt(const uword address);
+  void BranchLt(const uword address);
+  void BranchTrue(const uword address);
+  void BranchFalse(const uword address);
 
   void Throw(Error* error);
 

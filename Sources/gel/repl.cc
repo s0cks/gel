@@ -47,7 +47,6 @@ static inline auto IsClearCommand(const std::string& cmd) -> bool {
 auto Repl::RunRepl() -> int {
   const auto runtime = GetRuntime();
   ASSERT(runtime);
-  runtime->ImportModule("process.cl");
   SetRunning();
   while (IsRunning() && Prompt()) {
     if (IsExitCommand(expression_)) {

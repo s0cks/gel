@@ -1,6 +1,5 @@
 #ifndef GEL_EXPRESSION_DOT_H
 #define GEL_EXPRESSION_DOT_H
-#ifdef GEL_ENABLE_GV
 
 #include <glog/logging.h>
 
@@ -20,26 +19,26 @@ class ExpressionToDot : public dot::GraphBuilder, public ExpressionVisitor {
 
    private:
     ExpressionToDot* owner_ = nullptr;
-    Node* previous_ = nullptr;
-    Node* current_ = nullptr;
+    dot::Node* previous_ = nullptr;
+    dot::Node* current_ = nullptr;
 
     inline void SetOwner(ExpressionToDot* owner) {
       ASSERT(owner);
       owner_ = owner;
     }
 
-    inline void SetPrevious(Node* node) {
+    inline void SetPrevious(dot::Node* node) {
       ASSERT(node);
       previous_ = node;
     }
 
-    inline void SetCurrent(Node* node) {
+    inline void SetCurrent(dot::Node* node) {
       ASSERT(node);
       current_ = node;
     }
 
    public:
-    explicit NodeScope(ExpressionToDot* owner, Node* current) {
+    explicit NodeScope(ExpressionToDot* owner, dot::Node* current) {
       SetOwner(owner);
       if (!HasOwner())
         return;
@@ -61,7 +60,7 @@ class ExpressionToDot : public dot::GraphBuilder, public ExpressionVisitor {
       return GetOwner() != nullptr;
     }
 
-    auto GetPrevious() const -> Node* {
+    auto GetPrevious() const -> dot::Node* {
       return previous_;
     }
 
@@ -74,22 +73,22 @@ class ExpressionToDot : public dot::GraphBuilder, public ExpressionVisitor {
     return fmt::format("e{0:d}", num_expressions_++);
   }
 
-  inline auto NewNode() -> Node* {
+  inline auto NewNode() -> dot::Node* {
     const auto node_id = NextNodeId();
-    return dot::GraphBuilder::NewNode(node_id);
+    return dot::NewNode(GetGraph(), node_id.c_str());
   }
 
  private:
-  Node* parent_ = nullptr;
-  EdgeList edges_{};
+  dot::Node* parent_ = nullptr;
+  dot::EdgeList edges_{};
   uint64_t num_expressions_ = 0;
 
-  inline void SetParent(Node* node) {
+  inline void SetParent(dot::Node* node) {
     ASSERT(node);
     parent_ = node;
   }
 
-  inline auto GetParent() const -> Node* {
+  inline auto GetParent() const -> dot::Node* {
     return parent_;
   }
 
@@ -97,25 +96,27 @@ class ExpressionToDot : public dot::GraphBuilder, public ExpressionVisitor {
     return GetParent() != nullptr;
   }
 
-  inline void CreateEdgeFromParent(Node* node) {
+  inline void CreateEdgeFromParent(dot::Node* node) {
     if (!HasParent())
       return;
     ASSERT(node);
-    const auto edge = NewEdge(GetParent(), node, fmt::format("e{0:d}", edges_.size()).c_str());
+    const auto edge = dot::NewEdge(GetGraph(), fmt::format("e{0:d}", edges_.size()).c_str(), GetParent(), node);
     ASSERT(edge);
     edges_.push_back(edge);
   }
+
+  auto ProcessChildren(Expression* expr, dot::Node* node) -> bool;
 
  public:
   explicit ExpressionToDot(const char* graph_name);
   ~ExpressionToDot() override = default;
 
-  auto Build() -> dot::Graph* override;
+  auto Build() -> dot::DotGraph* override;
 #define DEFINE_VISIT(Name) auto Visit##Name(Name* expr)->bool override;
   FOR_EACH_EXPRESSION_NODE(DEFINE_VISIT)
 #undef DEFINE_VISIT
  public:
-  static inline auto BuildGraph(const char* name, Expression* expr) -> dot::Graph* {
+  static inline auto BuildGraph(const char* name, Expression* expr) -> dot::DotGraph* {
     ASSERT(name);
     ASSERT(expr);
     ExpressionToDot builder(name);
@@ -126,21 +127,22 @@ class ExpressionToDot : public dot::GraphBuilder, public ExpressionVisitor {
     return builder.Build();
   }
 
-  static inline auto BuildGraph(const std::string& name, Expression* expr) -> dot::Graph* {
+  static inline auto BuildGraph(const std::string& name, Expression* expr) -> dot::DotGraph* {
     ASSERT(!name.empty());
     ASSERT(expr);
     return BuildGraph(name.c_str(), expr);
   }
 
-  static inline auto BuildGraph(Symbol* symbol, Expression* expr) -> dot::Graph* {
+  static inline auto BuildGraph(Symbol* symbol, Expression* expr) -> dot::DotGraph* {
     ASSERT(symbol);
     ASSERT(expr);
-    return BuildGraph(symbol->Get(), expr);
+    return BuildGraph(symbol->GetSymbolName(), expr);
   }
 };
+
+void GenerateExprDotPng(const std::filesystem::path& file, const std::string& name, Expression* expr);
 }  // namespace expr
 using namespace expr;
 }  // namespace gel
 
-#endif  // GEL_ENABLE_GV
 #endif  // GEL_EXPRESSION_DOT_H

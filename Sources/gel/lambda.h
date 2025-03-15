@@ -65,6 +65,10 @@ class Lambda : public Procedure {
  public:
   ~Lambda() override = default;
 
+  auto GetTargetName() const -> std::string {
+    return HasSymbol() ? GetSymbol()->GetSymbolName() : "Lambda";
+  }
+
   auto GetScope() const -> LocalScope* {  // TODO: this should never return nullptr
     return scope_;
   }

@@ -1,6 +1,7 @@
 #ifndef GEL_EXPRESSION_H
 #define GEL_EXPRESSION_H
 
+#include <common/TracyProtocol.hpp>
 #include <ostream>
 #include <string>
 #include <utility>
@@ -24,7 +25,6 @@
   V(CondExpr)                       \
   V(ClauseExpr)                     \
   V(WhenExpr)                       \
-  V(CaseExpr)                       \
   V(ImportExpr)                     \
   V(InvokeExpr)                     \
   V(InvokeMacroExpr)                \
@@ -156,7 +156,7 @@ class Expression : public Object {  // TODO: should Expression inherit from Obje
   }
 
   virtual auto VisitChildren(ExpressionVisitor* vis) -> bool {
-    return false;
+    return true;
   }
 
   auto AsExpression() -> Expression* override {
@@ -775,6 +775,11 @@ class InvokeExpr : public TemplateInvokeExpr<Expression> {
     return VisitArgs(vis);
   }
 
+  auto VisitTarget(ExpressionVisitor* vis) -> bool {
+    ASSERT(vis);
+    return GetTarget()->Accept(vis);
+  }
+
   auto IsMacroCall(LocalScope* scope) const -> bool;
   DECLARE_EXPRESSION(InvokeExpr);
 
@@ -969,14 +974,14 @@ class InvokeNativeExpr : public TemplateInvokeExpr<NativeProcedure> {
 class ClauseExpr : public Expression {  // TODO: should this be a WhenExpr?
  private:
   Expression* key_;
-  ExpressionList actions_;
+  SeqExpr* body_;
 
-  ClauseExpr(Expression* key, const ExpressionList& actions) :  // NOLINT(modernize-pass-by-value)
+  ClauseExpr(Expression* key, SeqExpr* body) :
     Expression(),
     key_(key),
-    actions_(actions) {
+    body_(body) {
     ASSERT(key_);
-    ASSERT(!actions_.empty());
+    ASSERT(body_);
   }
 
  public:
@@ -986,26 +991,17 @@ class ClauseExpr : public Expression {  // TODO: should this be a WhenExpr?
     return key_;
   }
 
-  auto GetActions() const -> const ExpressionList& {
-    return actions_;
-  }
-
-  auto GetNumberOfActions() const -> uint64_t {
-    return actions_.size();
-  }
-
-  auto GetActionAt(const uint64_t idx) const -> Expression* {
-    ASSERT(idx >= 0 && idx <= GetNumberOfActions());
-    return actions_[idx];
+  auto GetBody() const -> SeqExpr* {
+    return body_;
   }
 
   auto GetNumberOfChildren() const -> uint64_t override {
-    return 1 + GetNumberOfActions();
+    return 2;
   }
 
   auto GetChildAt(const uint64_t idx) const -> Expression* override {
     ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
-    return idx == 0 ? GetKey() : GetActionAt(idx - 1);
+    return idx == 0 ? GetKey() : idx == 1 ? GetBody() : nullptr;
   }
 
   auto VisitAllActions(ExpressionVisitor* vis) -> bool;
@@ -1013,10 +1009,14 @@ class ClauseExpr : public Expression {  // TODO: should this be a WhenExpr?
   DECLARE_EXPRESSION(ClauseExpr);
 
  public:
-  static inline auto New(Expression* key, const ExpressionList& actions = {}) -> ClauseExpr* {
+  static inline auto New(Expression* key, SeqExpr* body) -> ClauseExpr* {
     ASSERT(key);
-    ASSERT(!actions.empty());
-    return new ClauseExpr(key, actions);
+    ASSERT(body);
+    return new ClauseExpr(key, body);
+  }
+
+  static inline auto New(Expression* key, const ExpressionList& body) -> ClauseExpr* {
+    return New(key, SeqExpr::New(body));
   }
 
   static inline auto New(Expression* key, Expression* action) -> ClauseExpr* {
@@ -1194,59 +1194,19 @@ class WhenExpr : public Expression {
   }
 };
 
-class CaseExpr : public Expression {
- private:
-  Expression* key_;
-  ClauseList clauses_;
-
-  explicit CaseExpr(Expression* key, const ClauseList& clauses) :  // NOLINT(modernize-pass-by-value)
-    Expression(),
-    key_(key),
-    clauses_(clauses) {}
-
- public:
-  ~CaseExpr() override = default;
-
-  inline void SetKey(Expression* expr) {
-    ASSERT(expr);
-    key_ = expr;
-  }
-
-  auto GetKey() const -> Expression* {
-    return key_;
-  }
-
-  auto GetClauses() const -> const ClauseList& {
-    return clauses_;
-  }
-
-  auto GetNumberOfClauses() const -> uint64_t {
-    return clauses_.size();
-  }
-
-  auto GetClauseAt(const uint64_t idx) const -> ClauseExpr* {
-    ASSERT(idx >= 0 && idx <= GetNumberOfClauses());
-    return clauses_[idx];
-  }
-
-  auto VisitAllClauses(ExpressionVisitor* vis) -> bool;
-  auto VisitChildren(ExpressionVisitor* vis) -> bool override;
-  DECLARE_EXPRESSION(CaseExpr);
-
- public:
-  static inline auto New(Expression* key, const ClauseList& clauses = {}) -> CaseExpr* {
-    return new CaseExpr(key, clauses);
-  }
-};
-
-class WhileExpr : public SeqExpr {
+class WhileExpr : public Expression {
  private:
   Expression* test_;
+  SeqExpr* body_;
 
  protected:
-  explicit WhileExpr(Expression* test, const ExpressionList& body) :
-    SeqExpr(body),
-    test_(test) {}
+  explicit WhileExpr(Expression* test, SeqExpr* body) :
+    Expression(),
+    test_(test),
+    body_(body) {
+    ASSERT(test_);
+    ASSERT(body_);
+  }
 
  public:
   ~WhileExpr() override = default;
@@ -1255,10 +1215,14 @@ class WhileExpr : public SeqExpr {
     return test_;
   }
 
+  auto GetBody() const -> SeqExpr* {
+    return body_;
+  }
+
   DECLARE_EXPRESSION(WhileExpr);
 
  public:
-  static inline auto New(Expression* test, const ExpressionList& body = {}) -> WhileExpr* {
+  static inline auto New(Expression* test, SeqExpr* body) -> WhileExpr* {
     return new WhileExpr(test, body);
   }
 };
@@ -1579,17 +1543,28 @@ class LetRxExpr : public TemplateLetExpr {
   }
 };
 
-class LetExpr : public TemplateLetExpr {
+class LetExpr : public Expression {
  private:
+  LocalScope* scope_;
   BindingList bindings_;
+  SeqExpr* body_;
 
  protected:
-  LetExpr(LocalScope* scope, const BindingList& bindings, const ExpressionList& body) :
-    TemplateLetExpr(scope, body),
-    bindings_(bindings) {}
+  LetExpr(LocalScope* scope, const BindingList& bindings, SeqExpr* body) :
+    Expression(),
+    scope_(scope),
+    bindings_(bindings),
+    body_(body) {
+    ASSERT(scope_);
+    ASSERT(body_);
+  }
 
  public:
   ~LetExpr() override = default;
+
+  auto GetScope() const -> LocalScope* {
+    return scope_;
+  }
 
   auto GetBindings() const -> const BindingList& {
     return bindings_;
@@ -1599,25 +1574,23 @@ class LetExpr : public TemplateLetExpr {
     return bindings_.size();
   }
 
-  auto GetBindingAt(const uint64_t idx) const -> Binding* {
-    ASSERT(idx >= 0 && idx <= GetNumberOfBindings());
-    return bindings_[idx];
-  }
-
-  auto GetChildAt(const uint64_t idx) const -> Expression* override {
-    ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
-    if (idx >= GetNumberOfBindings())
-      return SeqExpr::GetChildAt(idx - GetNumberOfBindings());
-    ASSERT(idx >= 0 && idx <= GetNumberOfBindings());
-    return GetBindingAt(idx);
-  }
-
   inline auto HasBindings() const -> bool {
     return GetNumberOfBindings() > 0;
   }
 
-  auto GetNumberOfChildren() const -> uint64_t override {
-    return SeqExpr::GetNumberOfChildren() + GetNumberOfBindings();
+  auto GetBindingAt(const uword idx) const -> Binding* {
+    ASSERT(idx >= 0 && idx <= GetNumberOfBindings());
+    return bindings_[idx];
+  }
+
+  void SetBindingAt(const uword idx, Binding* rhs) {
+    ASSERT(rhs);
+    ASSERT(idx >= 0 && idx <= GetNumberOfBindings());
+    bindings_[idx] = rhs;
+  }
+
+  auto GetBody() const -> SeqExpr* {
+    return body_;
   }
 
   auto IsConstantExpr() const -> bool override {
@@ -1629,7 +1602,7 @@ class LetExpr : public TemplateLetExpr {
   DECLARE_EXPRESSION(LetExpr);
 
  public:
-  static inline auto New(LocalScope* scope, const BindingList& bindings = {}, const ExpressionList& body = {}) -> LetExpr* {
+  static inline auto New(LocalScope* scope, const BindingList& bindings = {}, SeqExpr* body = SeqExpr::New()) -> LetExpr* {
     ASSERT(scope);
     return new LetExpr(scope, bindings, body);
   }

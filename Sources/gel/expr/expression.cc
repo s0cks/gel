@@ -291,18 +291,13 @@ auto QuotedExpr::ToString() const -> std::string {
 auto ClauseExpr::ToString() const -> std::string {
   ToStringHelper<ClauseExpr> helper;
   helper.AddField("key", GetKey());
-  helper.AddField("actions", GetActions());
+  helper.AddField("body", GetBody());
   return helper;
 }
 
 auto ClauseExpr::VisitAllActions(ExpressionVisitor* vis) -> bool {
   ASSERT(vis);
-  for (const auto& action : actions_) {
-    ASSERT(action);
-    if (!action->Accept(vis))
-      return false;
-  }
-  return true;
+  return GetBody()->VisitChildren(vis);
 }
 
 auto ClauseExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
@@ -321,30 +316,6 @@ auto WhenExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
       return false;
   }
   return true;
-}
-
-auto CaseExpr::VisitAllClauses(ExpressionVisitor* vis) -> bool {
-  ASSERT(vis);
-  for (const auto& clause : clauses_) {
-    ASSERT(clause);
-    if (!clause->Accept(vis))
-      return false;
-  }
-  return true;
-}
-
-auto CaseExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
-  ASSERT(vis);
-  if (!GetKey()->Accept(vis))
-    return false;
-  return VisitAllClauses(vis);
-}
-
-auto CaseExpr::ToString() const -> std::string {
-  ToStringHelper<CaseExpr> helper;
-  helper.AddField("key", GetKey());
-  helper.AddField("clauses", GetClauses());
-  return helper;
 }
 
 auto WhenExpr::ToString() const -> std::string {
@@ -446,7 +417,7 @@ auto LetExpr::VisitChildren(ExpressionVisitor* vis) -> bool {
   ASSERT(vis);
   if (!VisitAllBindings(vis))
     return false;
-  return SeqExpr::VisitChildren(vis);
+  return GetBody()->Accept(vis);
 }
 
 auto ListExpr::ToString() const -> std::string {

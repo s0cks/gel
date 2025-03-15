@@ -25,18 +25,26 @@ else()
   find_package(Curses REQUIRED)
 endif()
 
+if(GEL_ENABLE_GLM)
+  add_compile_definitions(GEL_ENABLE_GLM)
+  find_package(glm CONFIG REQUIRED)
+endif()
+
+find_package(Graphviz REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(units CONFIG REQUIRED)
 find_package(libuv CONFIG REQUIRED)
 find_package(RapidJSON CONFIG REQUIRED)
 find_package(Backward CONFIG REQUIRED)
 find_package(Bzip2 REQUIRED)
+find_package(elfio CONFIG REQUIRED)
 
 if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
   add_compile_definitions(GEL_DEBUG)
 endif()
 
 add_subdirectory(Sources)
+add_subdirectory(scripts)
 
 option(ENABLE_TESTS "Enable tests." ON)
 if(ENABLE_TESTS)

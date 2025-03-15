@@ -51,25 +51,7 @@ class Assembler {
     return Jump(Bytecode::kJump, label);
   }
 
-  void jz(Label* label) {
-    ASSERT(label);
-    return Jump(Bytecode::kJz, label);
-  }
-
-  void jnz(Label* label) {
-    ASSERT(label);
-    return Jump(Bytecode::kJnz, label);
-  }
-
-  void jne(Label* label) {
-    ASSERT(label);
-    return Jump(Bytecode::kJne, label);
-  }
-
-  void jeq(Label* label) {
-    ASSERT(label);
-    return Jump(Bytecode::kJeq, label);
-  }
+  void Branch(BranchCondition cond, Label* label);
 
   template <class T>
   inline void EmitAddress(const T* value) {

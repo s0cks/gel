@@ -33,6 +33,8 @@ DECLARE_bool(eval);
 DECLARE_bool(dump_ast);
 DECLARE_bool(dump_flow_graph);
 DECLARE_bool(pedantic);
+DECLARE_bool(print_ir);
+DECLARE_bool(print_bytecode);
 DECLARE_string(reports_dir);
 DECLARE_string(expr);
 DECLARE_string(module);

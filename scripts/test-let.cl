@@ -7,11 +7,11 @@
   (print x)
   (print y)
   (print z))
-(def i
-  (let ((values (0 ... 10)))
-    (cadddr values)))
-(print i)
-(def j
-  (let ((values (0 ... 10)))
-    (print (format "values: {}" values))))
-(print j)
+; (def i
+;   (let ((values (0 ... 10)))
+;     (cadddr values)))
+; (print i)
+; (def j
+;   (let ((values (0 ... 10)))
+;     (print (format "values: {}" values))))
+; (print j)

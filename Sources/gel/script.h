@@ -74,6 +74,10 @@ class Script : public Object {
  public:
   ~Script() override = default;
 
+  auto GetTargetName() const -> std::string {
+    return HasName() ? GetName()->Get() : "Script";
+  }
+
   auto GetName() const -> String* {
     return name_;
   }

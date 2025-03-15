@@ -107,6 +107,7 @@ auto Object::CreateClass() -> Class* {
 #define DECLARE_OBJECT_BINARY_OP(Name)              \
   auto Object::Name(Object* rhs) const -> Object* { \
     NOT_IMPLEMENTED(ERROR);                         \
+    DLOG(ERROR) << ToString();                      \
     return Null();                                  \
   }
 
@@ -184,6 +185,12 @@ void Object::Init() {
   Expression::Init();
   EventLoop::Init();
   EventEmitter::Init();
+
+#ifdef GEL_ENABLE_GLM
+  Vec2::InitClass();
+  Vec3::InitClass();
+#endif  // GEL_ENABLE_GLM
+
 #ifdef GEL_ENABLE_RX
   Observable::InitClass();
   Observer::InitClass();
@@ -361,6 +368,22 @@ auto Long::Equals(Object* rhs) const -> bool {
   return Get() == other->Get();
 }
 
+auto Long::Eq(Object* rhs) const -> Object* {
+  return Bool::Box(Equals(rhs));
+}
+
+auto Long::GreaterThan(Object* rhs) const -> Object* {
+  if (!rhs || !rhs->IsNumber())
+    return Bool::False();
+  return Bool::Box(Get() > rhs->AsNumber()->GetLong());
+}
+
+auto Long::LessThan(Object* rhs) const -> Object* {
+  if (!rhs || !rhs->IsNumber())
+    return Bool::False();
+  return Bool::Box(Get() < rhs->AsNumber()->GetLong());
+}
+
 auto Long::ToString() const -> std::string {
   ToStringHelper<Long> helper;
   helper.AddField("value", Get());
@@ -399,18 +422,26 @@ auto Pair::New(const ObjectList& args) -> Pair* {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
 }
 
+Field* Pair::kFirstField = nullptr;
+Field* Pair::kSecondField = nullptr;
 auto Pair::CreateClass() -> Class* {
-  return Class::New(Seq::GetClass(), kClassName);
+  const auto cls = Class::New(Seq::GetClass(), kClassName);
+  ASSERT(cls);
+  kFirstField = cls->AddField("first");
+  ASSERT(kFirstField);
+  kSecondField = cls->AddField("second");
+  ASSERT(kSecondField);
+  return cls;
 }
 
 auto Pair::VisitPointers(PointerVisitor* vis) -> bool {
   ASSERT(vis);
-  if (HasCar()) {
-    if (!vis->Visit(GetCar()))
+  if (HasFirst()) {
+    if (!vis->Visit(GetFirst()))
       return false;
   }
-  if (HasCdr()) {
-    if (!vis->Visit(GetCdr()))
+  if (HasSecond()) {
+    if (!vis->Visit(GetSecond()))
       return false;
   }
   return true;
@@ -420,13 +451,13 @@ auto Pair::Equals(Object* rhs) const -> bool {
   if (!rhs->IsPair())
     return false;
   const auto other = rhs->AsPair();
-  return GetCar()->Equals(other->GetCar()) && GetCdr()->Equals(other->GetCdr());
+  return GetFirst()->Equals(other->GetFirst()) && GetSecond()->Equals(other->GetSecond());
 }
 
 auto Pair::ToString() const -> std::string {
   ToStringHelper<Pair> helper;
-  helper.AddField("car", GetCar());
-  helper.AddField("cdr", GetCdr());
+  helper.AddField("first", GetFirst());
+  helper.AddField("second", GetSecond());
   return helper;
 }
 
@@ -461,10 +492,10 @@ auto Pair::VisitEmptyPointerPointer(PointerPointerVisitor* vis) -> bool {
 
 auto Pair::HashCode() const -> uword {
   uword hash = 0;
-  if (HasCar())
-    CombineHash(hash, GetCar());
-  if (HasCdr())
-    CombineHash(hash, GetCdr());
+  if (HasFirst())
+    CombineHash(hash, GetFirst());
+  if (HasSecond())
+    CombineHash(hash, GetSecond());
   return hash;
 }
 
@@ -551,8 +582,8 @@ auto String::ValueOf(Object* rhs) -> String* {
     if (pair->IsEmpty()) {
       ss << ")";
     } else {
-      PrintValue(ss, pair->GetCar());
-      auto next = pair->GetCdr();
+      PrintValue(ss, pair->GetFirst());
+      auto next = pair->GetSecond();
       do {
         if (gel::IsNull(next)) {
           ss << ")";
@@ -565,8 +596,8 @@ auto String::ValueOf(Object* rhs) -> String* {
           break;
         }
         ss << " ";
-        PrintValue(ss, next->AsPair()->GetCar());
-        next = next->AsPair()->GetCdr();
+        PrintValue(ss, next->AsPair()->GetFirst());
+        next = next->AsPair()->GetSecond();
       } while (true);
     }
   } else if (rhs->IsError()) {
@@ -613,8 +644,8 @@ auto Set::Of(Object* value) -> Set* {
       return Of();
     else if (value->AsPair()->IsTuple())
       return Of({
-          value->AsPair()->GetCar(),
-          value->AsPair()->GetCdr(),
+          value->AsPair()->GetFirst(),
+          value->AsPair()->GetSecond(),
       });
     ObjectList values;
     auto v = value;
@@ -698,8 +729,8 @@ auto PrintValue(std::ostream& stream, Object* value) -> std::ostream& {
       stream << ")";
       return stream;
     }
-    PrintValue(stream, pair->GetCar());
-    auto next = pair->GetCdr();
+    PrintValue(stream, pair->GetFirst());
+    auto next = pair->GetSecond();
     do {
       if (gel::IsNull(next)) {
         stream << ")";
@@ -712,8 +743,8 @@ auto PrintValue(std::ostream& stream, Object* value) -> std::ostream& {
         return stream;
       }
       stream << " ";
-      PrintValue(stream, next->AsPair()->GetCar());
-      next = next->AsPair()->GetCdr();
+      PrintValue(stream, next->AsPair()->GetFirst());
+      next = next->AsPair()->GetSecond();
     } while (true);
   } else if (value->IsSet()) {
     stream << "(";
@@ -724,6 +755,19 @@ auto PrintValue(std::ostream& stream, Object* value) -> std::ostream& {
         stream << ", ";
     }
     stream << ")";
+    return stream;
+  } else if (value->IsVec2()) {
+    stream << "[";
+    stream << value->AsVec2()->GetX() << " ";
+    stream << value->AsVec2()->GetY();
+    stream << "]";
+    return stream;
+  } else if (value->IsVec3()) {
+    stream << "[";
+    stream << value->AsVec3()->GetX() << " ";
+    stream << value->AsVec3()->GetY() << " ";
+    stream << value->AsVec3()->GetZ();
+    stream << "]";
     return stream;
   }
   return stream << value->ToString();

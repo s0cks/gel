@@ -316,10 +316,14 @@ class Number : public Object {
   }
 
   auto GetLong() const -> uint64_t {
+    if (std::holds_alternative<double>(value()))
+      return static_cast<uint64_t>(GetDouble());
     return std::get<uint64_t>(value());
   }
 
   auto GetDouble() const -> double {
+    if (std::holds_alternative<uint64_t>(value()))
+      return static_cast<double>(GetLong());
     return std::get<double>(value());
   }
 
@@ -348,6 +352,10 @@ class Long : public Number {
   auto Divide(Object* rhs) const -> Object* override;
   auto Modulus(Object* rhs) const -> Object* override;
   auto Compare(Object* rhs) const -> int override;
+
+  auto Eq(Object* rhs) const -> Object* override;
+  auto GreaterThan(Object* rhs) const -> Object* override;
+  auto LessThan(Object* rhs) const -> Object* override;
   DECLARE_TYPE(Long);
 
  public:
@@ -383,53 +391,56 @@ class Double : public Number {
 };
 
 class Pair : public Seq {
- private:
-  Object* car_;
-  Object* cdr_;
+ public:
+  static Field* kFirstField;
+  static Field* kSecondField;
 
  protected:
   explicit Pair(Object* car = nullptr, Object* cdr = nullptr) :
-    Seq(),
-    car_(car),
-    cdr_(cdr) {}
+    Seq() {
+    if (car)
+      SetFirst(car);
+    if (cdr)
+      SetSecond(cdr);
+  }
 
   auto VisitPointers(PointerVisitor* vis) -> bool override;
 
  public:
   ~Pair() override = default;
 
-  auto GetCar() const -> Object* {
-    return car_;
+  auto GetFirst() const -> Object* {
+    return GetField(kFirstField);
   }
 
-  inline auto HasCar() const -> bool {
-    return GetCar() != nullptr;
+  inline auto HasFirst() const -> bool {
+    return GetFirst() != nullptr;
   }
 
-  void SetCar(Object* rhs) {
+  void SetFirst(Object* rhs) {  // TODO: reduce visibility
     ASSERT(rhs);
-    car_ = rhs;
+    SetField(kFirstField, rhs);
   }
 
-  auto GetCdr() const -> Object* {
-    return cdr_;
+  auto GetSecond() const -> Object* {
+    return GetField(kSecondField);
   }
 
-  inline auto HasCdr() const -> bool {
-    return GetCdr() != nullptr;
+  inline auto HasSecond() const -> bool {
+    return GetSecond() != nullptr;
   }
 
-  void SetCdr(Object* rhs) {
+  void SetSecond(Object* rhs) {  // TODO: reduce visibility
     ASSERT(rhs);
-    cdr_ = rhs;
+    SetField(kSecondField, rhs);
   }
 
   auto IsEmpty() const -> bool override {
-    return !HasCar() && !HasCdr();
+    return !HasFirst() && !HasSecond();
   }
 
   auto IsTuple() const -> bool {
-    return HasCdr() && !GetCdr()->IsPair();
+    return HasSecond() && !GetSecond()->IsPair();
   }
 
   DECLARE_TYPE(Pair);
@@ -644,13 +655,13 @@ static inline auto ToList(Iter& iter, const std::function<Object*(T)>& map) -> O
 
 static inline auto Car(Object* rhs) -> Object* {
   ASSERT(rhs && rhs->IsPair());
-  const auto value = rhs->AsPair()->GetCar();
+  const auto value = rhs->AsPair()->GetFirst();
   return value ? value : Null();
 }
 
 static inline auto Cdr(Object* rhs) -> Object* {
   ASSERT(rhs && rhs->IsPair());
-  const auto value = rhs->AsPair()->GetCdr();
+  const auto value = rhs->AsPair()->GetSecond();
   return value ? value : Null();
 }
 
@@ -668,12 +679,12 @@ static inline auto Not(Object* rhs) -> Object* {
 
 static inline void SetCar(Object* seq, Object* value) {
   ASSERT(seq && seq->IsPair());
-  (seq->AsPair())->SetCar(value);
+  (seq->AsPair())->SetFirst(value);
 }
 
 static inline void SetCdr(Object* seq, Object* value) {
   ASSERT(seq && seq->IsPair());
-  (seq->AsPair())->SetCdr(value);
+  (seq->AsPair())->SetSecond(value);
 }
 
 template <typename T>
@@ -732,8 +743,8 @@ struct formatter<gel::Pair> : public formatter<std::string> {
       ctx.out() << ")";
       return ctx.out();
     }
-    format_to(ctx.out(), "{}", *(value.GetCar()));
-    auto next = value.GetCdr();
+    format_to(ctx.out(), "{}", *(value.GetFirst()));
+    auto next = value.GetSecond();
     do {
       if (gel::IsNull(next)) {
         ctx.out() << ")";
@@ -746,8 +757,8 @@ struct formatter<gel::Pair> : public formatter<std::string> {
         return ctx.out();
       }
       ctx.out() << " ";
-      format_to(ctx.out(), "{}", next->AsPair()->GetCar());
-      next = next->AsPair()->GetCdr();
+      format_to(ctx.out(), "{}", next->AsPair()->GetFirst());
+      next = next->AsPair()->GetSecond();
     } while (true);
   }
 };

@@ -21,6 +21,8 @@
     "rapidjson",
     "backward-cpp",
     "openssl",
-    "bzip2"
+    "bzip2",
+    "elfio",
+    "glm"
   ]
 }

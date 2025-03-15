@@ -242,12 +242,10 @@ class CallScope {
   LocalScope* scope_{};
 
  public:
-  CallScope(Runtime* runtime, Object* this_value = nullptr) :
+  CallScope(Runtime* runtime) :
     runtime_(runtime) {
     ASSERT(runtime_);
     scope_ = runtime_->PushScope();
-    if (this_value)
-      scope_->AddThisValue(this_value);
   }
   ~CallScope() {
     ASSERT(runtime_);
@@ -292,7 +290,7 @@ class CallStackFrame {
 void Runtime::Call(Constructor* init, const ObjectList& args) {
   ASSERT(init);
   {
-    CallScope locals(this, init);
+    CallScope locals(this);
     if (init->HasScope())
       locals->AddAll(init->GetScope());
     if (init->HasArgs()) {
@@ -312,8 +310,16 @@ void Runtime::Call(Constructor* init, const ObjectList& args) {
       }
     }
     LOG_IF(FATAL, !FlowGraphCompiler::Compile(init, locals)) << "failed to compile: " << init;
-    StackFrameGuard<Constructor> stack_guard(init);
     {
+#ifdef GEL_DEBUG
+
+      if (VLOG_IS_ON(10)) {
+        DLOG(INFO) << init->ToString() << " execution scope:";
+        PRINT_SCOPE(INFO, locals);
+      }
+
+#endif  // GEL_DEBUG
+      StackFrameGuard<Constructor> stack_guard(init);
       CallStackFrame call_frame(init, locals);
       Interpreter interpreter(this);
       interpreter.Run<Constructor>(init);
@@ -338,9 +344,8 @@ void Runtime::Call(Constructor* init, const ObjectList& args) {
 void Runtime::Call(Lambda* lambda, const ObjectList& args) {
   ASSERT(lambda);
   {
-    CallScope locals(this, lambda);
-    if (lambda->HasScope())
-      locals->AddAll(lambda->GetScope());
+    CallScope locals(this);
+    locals->AddThisValue(lambda);
     if (lambda->HasArgs()) {
       const auto& lambda_args = lambda->GetArgs();
       ASSERT(lambda_args);
@@ -358,8 +363,16 @@ void Runtime::Call(Lambda* lambda, const ObjectList& args) {
       }
     }
     LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, locals)) << "failed to compile: " << lambda;
-    StackFrameGuard<Lambda> stack_guard(lambda);
     {
+#ifdef GEL_DEBUG
+
+      if (VLOG_IS_ON(10)) {
+        DLOG(INFO) << lambda->ToString() << " execution scope:";
+        PRINT_SCOPE(INFO, locals);
+      }
+
+#endif  // GEL_DEBUG
+      StackFrameGuard<Lambda> stack_guard(lambda);
       CallStackFrame call_frame(lambda, locals);
       Interpreter interpreter(this);
       interpreter.Run(lambda);
@@ -389,13 +402,20 @@ void Runtime::Call(NativeProcedure* native, const ObjectList& args) {
     throw Exception(ss.str());
     return;
   }
-
   {
-    CallScope locals(this, native);
+    CallScope locals(this);
     for (auto idx = 0; idx < args.size(); idx++) {
       locals->Add(Symbol::New(fmt::format("arg{}", idx)), args[idx]);
     }
     {
+#ifdef GEL_DEBUG
+
+      if (VLOG_IS_ON(10)) {
+        DLOG(INFO) << native->ToString() << " execution scope:";
+        PRINT_SCOPE(INFO, locals);
+      }
+
+#endif  // GEL_DEBUG
       StackFrameGuard<NativeProcedure> guard(native);
       CallStackFrame stack_frame(native, locals);
       LOG_IF(FATAL, !native->GetEntry()->Apply(args)) << "failed to apply: " << native->ToString() << " with args: " << args;
@@ -420,10 +440,18 @@ void Runtime::Call(NativeProcedure* native, const ObjectList& args) {
 void Runtime::Call(Script* script, const ObjectList& args) {
   ASSERT(script);
   {
-    CallScope locals(this, script);
+    CallScope locals(this);
     if (script->HasScope())
       locals->AddAll(script->GetScope());
     {
+#ifdef GEL_DEBUG
+
+      if (VLOG_IS_ON(10)) {
+        DLOG(INFO) << script->ToString() << " execution scope:";
+        PRINT_SCOPE(INFO, locals);
+      }
+
+#endif  // GEL_DEBUG
       StackFrameGuard<Script> stack_guard(script);
       CallStackFrame stack_frame(script, locals);
       Interpreter interpreter(this);

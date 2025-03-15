@@ -14,8 +14,8 @@
 
 namespace gel {
 class FlowGraphBuilder {
-  friend class ClauseVisitor;
   friend class EffectVisitor;
+  friend class CondClauseEffectVisitor;
   DEFINE_NON_COPYABLE_TYPE(FlowGraphBuilder);
 
  private:
@@ -272,6 +272,11 @@ class EffectVisitor : public ExpressionVisitor {
 #define DECLARE_VISIT(Name) virtual auto Visit##Name(Name* name)->bool override;
   FOR_EACH_EXPRESSION_NODE(DECLARE_VISIT)
 #undef DECLARE_VISIT
+
+  auto operator()(expr::Expression* expr) -> bool {
+    ASSERT(expr);
+    return expr->Accept(this);
+  }
 };
 
 class ValueVisitor : public EffectVisitor {
@@ -302,6 +307,13 @@ class ValueVisitor : public EffectVisitor {
   inline auto HasValue() const -> bool {
     return GetValue() != nullptr;
   }
+
+  auto VisitSeqExpr(expr::SeqExpr* expr) -> bool override;
+
+  auto operator()(expr::Expression* rhs) -> bool {
+    ASSERT(rhs);
+    return rhs->Accept(this);
+  }
 };
 
 class RxEffectVisitor : public EffectVisitor {
@@ -327,6 +339,39 @@ class RxEffectVisitor : public EffectVisitor {
   }
 
   auto VisitRxOpExpr(expr::RxOpExpr* expr) -> bool override;
+};
+
+class CondClauseEffectVisitor : public EffectVisitor {
+  DEFINE_NON_COPYABLE_TYPE(CondClauseEffectVisitor);
+
+ private:
+  ir::TargetEntryInstr* target_;
+  ir::JoinEntryInstr* join_;
+
+ public:
+  explicit CondClauseEffectVisitor(FlowGraphBuilder* owner, ir::TargetEntryInstr* target, ir::JoinEntryInstr* join) :
+    EffectVisitor(owner),
+    target_(target),
+    join_(join) {
+    ASSERT(target_);
+    ASSERT(join_);
+  }
+  ~CondClauseEffectVisitor() override = default;
+
+  auto GetTarget() const -> ir::TargetEntryInstr* {
+    return target_;
+  }
+
+  auto GetJoin() const -> ir::JoinEntryInstr* {
+    return join_;
+  }
+
+  auto VisitClauseExpr(expr::ClauseExpr* expr) -> bool override;
+
+  auto operator()(expr::ClauseExpr* expr) -> bool {
+    ASSERT(expr);
+    return expr->Accept(this);
+  }
 };
 }  // namespace gel
 

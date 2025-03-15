@@ -6,6 +6,64 @@
 #include "gel/to_string_helper.h"
 
 namespace gel::ir {
+void Input::Bind(Definition* rhs) {
+  ASSERT(rhs);
+  RemoveFromList();
+  SetDefinition(rhs);
+  rhs->AddInput(this);
+}
+
+void Input::RemoveFromList() {
+  const auto next = GetNext();
+  const auto defn = GetDefinition();
+  if (this == defn->GetInputUseList()) {
+    defn->SetInputUseList(next);
+    if (next)
+      next->SetPrevious(nullptr);
+  } else {
+    const auto previous = GetPrevious();
+    if (previous)
+      previous->SetNext(next);
+    if (next)
+      next->SetPrevious(previous);
+  }
+
+  previous_ = next_ = nullptr;
+}
+
+static inline auto IsMarked(EntryInstr* blk, std::vector<EntryInstr*>& preorder) -> bool {
+  ASSERT(blk);
+  const auto index = blk->GetPreorderNum();
+  return index >= 0 && index < preorder.size() && preorder[index] == blk;
+}
+
+auto EntryInstr::DiscoverBlocks(EntryInstr* predecessor, std::vector<EntryInstr*>& preorder, std::vector<word>& parent) -> bool {
+  if (IsMarked(this, preorder)) {
+    AddPredecessor(predecessor);
+    return false;
+  }
+
+  ClearPredecessors();
+  if (predecessor != nullptr)
+    AddPredecessor(predecessor);
+  const auto parent_num = predecessor == nullptr ? -1 : predecessor->GetPreorderNum();
+  parent.push_back(parent_num);
+  SetPreorderNum(static_cast<word>(preorder.size()));
+  preorder.push_back(this);
+
+  Instruction* last = this;
+  InstructionIterator iter(last);
+  while (iter.HasNext()) {
+    last = iter.Next();
+  }
+  SetLastInstruction(last);
+  return true;
+}
+
+auto GraphEntryInstr::GetSuccessorAt(const uword idx) const -> EntryInstr* {
+  return GetTarget();
+}
+
 void Instruction::Append(Instruction* instr) {
   ASSERT(instr);
   if (HasNext())
@@ -47,13 +105,6 @@ auto ConstantInstr::ToString() const -> std::string {
   return helper;
 }
 
-auto EntryInstr::GetLastInstruction() const -> Instruction* {
-  Instruction* last = nullptr;
-  InstructionIterator iter(GetFirstInstruction());  // NOLINT
-  while (iter.HasNext()) last = iter.Next();
-  return last;
-}
-
 auto EntryInstr::VisitDominated(InstructionVisitor* vis) -> bool {
   ASSERT(vis);
   for (const auto& dominated : dominated_) {
@@ -73,6 +124,12 @@ auto GraphEntryInstr::ToString() const -> std::string {
   ToStringHelper<GraphEntryInstr> helper;
   helper.AddField("block_id", GetBlockId());
   helper.AddField("target", GetTarget());
+  return helper;
+}
+
+auto LetEntryInstr::ToString() const -> std::string {
+  ToStringHelper<LetEntryInstr> helper{};
+  helper.AddField("id", GetBlockId());
   return helper;
 }
 

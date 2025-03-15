@@ -39,6 +39,8 @@ struct Position {
   V(DefMacro)                 \
   V(DefType)                  \
   V(Set)                      \
+  V(SetFirst)                 \
+  V(SetSecond)                \
   V(Def)                      \
   V(Defn)                     \
   V(Comment)                  \
@@ -196,9 +198,8 @@ struct Token {
   }
 
   auto IsLiteral() const -> bool {
-    return kind == Token::kLBrace || IsFunctionLiteral() || IsSymbol() || kind == Token::kLiteralTrue ||
-           kind == Token::kLiteralFalse || kind == Token::kLiteralLong || kind == Token::kLiteralDouble ||
-           kind == Token::kLiteralString;
+    return IsFunctionLiteral() || IsSymbol() || kind == Token::kLiteralTrue || kind == Token::kLiteralFalse ||
+           kind == Token::kLiteralLong || kind == Token::kLiteralDouble || kind == Token::kLiteralString;
   }
 
   auto IsIdentifier() const -> bool {
@@ -287,6 +288,8 @@ struct Token {
     return stream;
   }
 };
+
+using TokenKindBitSet = std::bitset<Token::kTotalNumberOfTokens>;
 
 static inline auto operator<<(std::ostream& stream, const Token::KindSet& rhs) -> std::ostream& {
   for (auto idx = 0; idx < Token::kTotalNumberOfTokens; idx++) {

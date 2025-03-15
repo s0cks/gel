@@ -108,6 +108,17 @@ auto Class::GetAllocationSize() const -> uword {
       total_size += sizeof(uword);
     }
     return total_size;
+  } else if (Equals(Pair::kClass)) {
+    const auto cls = Pair::GetClass();
+    ASSERT(cls);
+    uword total_size = sizeof(Pair);
+    for (auto idx = 0; idx < cls->GetNumberOfFields(); idx++) {
+      const auto field = cls->GetFieldAt(idx);
+      ASSERT(field);
+      field->SetOffset(total_size);
+      total_size += sizeof(uword);
+    }
+    return total_size;
   }
   return 0;
 }

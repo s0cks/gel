@@ -42,8 +42,6 @@ auto Interpreter::GetScope() const -> LocalScope* {
 
 void Interpreter::LoadLocal(const uword idx) {
   ASSERT(idx >= 0 && idx <= GetScope()->GetNumberOfLocals());
-  DLOG(INFO) << "loading local #" << idx << " from: ";
-  LocalScopePrinter::Print<google::INFO, false>(GetScope(), __FILE__, __LINE__);
   auto scope = GetScope();
   do {
     ASSERT(scope);
@@ -70,6 +68,7 @@ void Interpreter::StoreLocal(const uword idx) {
   ASSERT(local);
   const auto value = POP;
   ASSERT(value);
+  DLOG(INFO) << "storing " << (*value) << " to: " << local->ToString();
   local->SetValue((*value));
 }
 
@@ -110,30 +109,62 @@ void Interpreter::Push(const Bytecode code) {
   }
 }
 
-void Interpreter::Jump(const Bytecode code, const uword target) {
-  switch (code.op()) {
-    case Bytecode::kJnz: {
-      const auto value = POP;
-      ASSERT(value);
-      if (!gel::Truth((*value)))
-        current_ = target;
-      return;
-    }
-    case Bytecode::kJne: {
-      const auto rhs = POP;
-      ASSERT(rhs);
-      const auto lhs = POP;
-      ASSERT(lhs);
-      if (!(*lhs)->Equals((*rhs)))
-        current_ = target;
-      return;
-    }
-    case Bytecode::kJump:
-      current_ = target;
-      return;
-    default:
-      LOG(FATAL) << "invalid Jump bytecode: " << code;
-  }
+void Interpreter::Jump(const uword target) {
+  current_ = target;
+}
+
+void Interpreter::BranchTrue(const uword target) {
+  const auto lhs = POP;
+  LOG_IF(FATAL, !lhs) << "expected a value";
+  if (gel::Truth((*lhs)))
+    current_ = target;
+}
+
+void Interpreter::BranchFalse(const uword target) {
+  const auto lhs = POP;
+  LOG_IF(FATAL, !lhs) << "expected a value";
+  if (!gel::Truth((*lhs)))
+    current_ = target;
+}
+
+void Interpreter::BranchEq(const uword target) {
+  const auto lhs = POP;
+  LOG_IF(FATAL, !lhs) << "expected a lhs value";
+  const auto rhs = POP;
+  LOG_IF(FATAL, !rhs) << "expected a rhs value";
+  const auto value = (*lhs)->Equals(*rhs);
+  if (value)
+    current_ = target;
+}
+
+void Interpreter::BranchNe(const uword target) {
+  const auto lhs = POP;
+  LOG_IF(FATAL, !lhs) << "expected a lhs value";
+  const auto rhs = POP;
+  LOG_IF(FATAL, !rhs) << "expected a rhs value";
+  const auto value = (*lhs)->Equals(*rhs);
+  if (!value)
+    current_ = target;
+}
+
+void Interpreter::BranchGt(const uword target) {
+  const auto lhs = POP;
+  LOG_IF(FATAL, !lhs) << "expected a lhs value";
+  const auto rhs = POP;
+  LOG_IF(FATAL, !rhs) << "expected a rhs value";
+  const auto value = (*lhs)->GreaterThan(*rhs);
+  if (gel::Truth(value))
+    current_ = target;
+}
+
+void Interpreter::BranchLt(const uword target) {
+  const auto lhs = POP;
+  LOG_IF(FATAL, !lhs) << "expected a lhs value";
+  const auto rhs = POP;
+  LOG_IF(FATAL, !rhs) << "expected a rhs value";
+  const auto value = (*lhs)->LessThan(*rhs);
+  if (gel::Truth(value))
+    current_ = target;
 }
 
 void Interpreter::nop() {
@@ -454,13 +485,19 @@ void Interpreter::Run(const uword start_address) {
         frame->SetReturnAddress(TOP.value_or(Null())->GetStartingAddress());
         return;
       }
-      case Bytecode::kJump:
-      case Bytecode::kJz:
-      case Bytecode::kJnz:
-      case Bytecode::kJeq:
-      case Bytecode::kJne: {
-        const auto offset = NextWord();
-        Jump(op, start_address + (pos + offset));
+      case Bytecode::kJump: {
+        const auto target = start_address + (pos + NextWord());
+        Jump(target);
+        break;
+      }
+      case Bytecode::kBranchTrue:
+      case Bytecode::kBranchFalse:
+      case Bytecode::kBranchEq:
+      case Bytecode::kBranchNeq:
+      case Bytecode::kBranchGreaterThan:
+      case Bytecode::kBranchLessThan: {
+        const auto target = start_address + (pos + NextWord());
+        Branch(static_cast<BranchCondition>(op - Bytecode::kBranchTrue), target);
         continue;
       }
       case Bytecode::kStoreField:

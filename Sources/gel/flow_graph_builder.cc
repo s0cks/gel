@@ -137,8 +137,6 @@ auto EffectVisitor::VisitInvokeInstanceExpr(InvokeInstanceExpr* expr) -> bool {
   ASSERT(expr);
   if (expr->GetInstance()->IsLiteralExpr() && expr->GetInstance()->AsLiteralExpr()->IsLiteralSymbol()) {
     const auto symbol = expr->GetInstance()->AsLiteralExpr()->GetValue()->AsSymbol();
-    DLOG(INFO) << "looking for " << symbol << " in:";
-    PRINT_SCOPE(INFO, GetOwner()->GetScope());
     LocalVariable* local = nullptr;
     if (GetOwner()->GetScope()->Lookup(symbol, &local)) {
       Add(ir::LoadLocalInstr::New(local));
@@ -152,7 +150,6 @@ auto EffectVisitor::VisitInvokeInstanceExpr(InvokeInstanceExpr* expr) -> bool {
       LOG(ERROR) << "failed to visit: " << expr->GetInstance()->ToString();
       return false;
     }
-    DLOG(INFO) << "for_instance value: " << for_instance.GetValue()->ToString();
     Append(for_instance);
   }
 
@@ -196,66 +193,9 @@ auto EffectVisitor::VisitInvokeExpr(InvokeExpr* expr) -> bool {
   return ReturnCallTo(for_target.GetValue(), expr->GetNumberOfArgs());
 }
 
-auto EffectVisitor::VisitCaseExpr(expr::CaseExpr* expr) -> bool {
-  ASSERT(expr);
-  const auto join = JoinEntryInstr::New(GetOwner()->GetNextBlockId());
-  ASSERT(join);
-
-  for (const auto& clause : expr->GetClauses()) {
-    ASSERT(clause);
-    EffectVisitor for_clause(GetOwner());
-    if (clause && !clause->Accept(&for_clause)) {
-      LOG(ERROR) << "failed to visit clause: " << clause->ToString();
-      return false;
-    }
-    for_clause.Add(GotoInstr::New(join));
-
-    ValueVisitor for_test(GetOwner());
-    if (!expr->GetKey()->Accept(&for_test)) {
-      return false;
-    }
-    ASSERT(clause->GetKey());
-    if (!clause->GetKey()->Accept(&for_test)) {
-      LOG(ERROR) << "failed to visit test for cond: " << expr->ToString();
-      return false;
-    }
-
-    ASSERT(for_clause.GetEntryInstr() != nullptr && for_clause.GetEntryInstr()->IsEntryInstr());
-    const auto target = for_clause.GetEntryInstr()->AsEntryInstr();
-    const auto cmp = ir::BinaryOpInstr::NewEq(for_test.GetValue(), for_test.GetValue());  // TODO: fix this
-    for_test.Add(cmp);
-    const auto branch = ir::BranchInstr::BranchTrue(target, join);
-    for_test.Add(branch);
-    Append(for_test);
-    GetOwner()->GetCurrentBlock()->AddDominated(target);
-  }
-
-  SetExitInstr(join);
-  GetOwner()->GetCurrentBlock()->AddDominated(join);
-  return true;
-}
-
 auto EffectVisitor::VisitClauseExpr(expr::ClauseExpr* expr) -> bool {
   ASSERT(expr);
-
-  const auto target = TargetEntryInstr::New(GetOwner()->GetNextBlockId());
-  ASSERT(target);
-  Add(target);
-
-  auto remaining = expr->GetNumberOfActions();
-  for (const auto& action : expr->GetActions()) {
-    ASSERT(action);
-    EffectVisitor for_action(GetOwner());
-    if (!action->Accept(&for_action)) {
-      LOG(ERROR) << "failed to visit action for: " << expr->ToString();
-      return false;
-    }
-    if (--remaining <= 0)
-      for_action.AddImplicitReturn();
-    AppendFragment(target, for_action);
-    SetExitInstr(for_action.GetExitInstr());
-  }
-  GetOwner()->GetCurrentBlock()->AddDominated(target);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return true;
 }
 
@@ -295,36 +235,42 @@ auto EffectVisitor::VisitWhenExpr(expr::WhenExpr* expr) -> bool {
 
 auto EffectVisitor::VisitWhileExpr(expr::WhileExpr* expr) -> bool {  // TODO: clean this up @s0cks
   ASSERT(expr);
-  const auto target = ir::TargetEntryInstr::New(GetOwner()->GetNextBlockId());
-  ASSERT(target);
-  Add(target);
-
-  const auto body_target = ir::TargetEntryInstr::New(GetOwner()->GetNextBlockId());
-  ASSERT(body_target);
+  const auto body = ir::TargetEntryInstr::New(GetOwner()->GetNextBlockId());
+  ASSERT(body);
 
   const auto join = ir::JoinEntryInstr::New(GetOwner()->GetNextBlockId());
   ASSERT(join);
 
-  ValueVisitor for_test(GetOwner());
-  if (!expr->GetTest()->Accept(&for_test)) {
-    LOG(ERROR) << "failed to visit test for: " << expr->ToString();
+  EffectVisitor for_body(GetOwner());
+  if (!expr->GetBody()->Accept(&for_body)) {
+    LOG(ERROR) << "failed to visit while-expr body.";
     return false;
   }
-  AppendFragment(target, for_test);
-  target->Append(ir::BranchInstr::BranchTrue(body_target, join));
-
-  EffectVisitor for_body(GetOwner());
-  for (const auto& expr : expr->GetBody()) {
-    if (!expr->Accept(&for_body)) {
-      LOG(ERROR) << "failed to visit action for: " << expr->ToString();
+  AppendFragment(body, for_body);
+  {
+    ValueVisitor for_test(GetOwner());
+    if (!expr->GetTest()->Accept(&for_test)) {
+      LOG(ERROR) << "failed to visit test for: " << expr->ToString();
       return false;
     }
+    AppendFragment(body, for_test);
+    body->Append(ir::BranchInstr::BranchTrue(body, join));
   }
-  AppendFragment(body_target, for_body);
-  body_target->Append(ir::GotoInstr::New(target));
+
+  {
+    ValueVisitor for_test(GetOwner());
+    if (!expr->GetTest()->Accept(&for_test)) {
+      LOG(ERROR) << "failed to visit test for: " << expr->ToString();
+      return false;
+    }
+    Append(for_test);
+    Add(ir::BranchInstr::BranchFalse(join, join));
+  }
+
+  Add(body);
 
   SetExitInstr(join);
-  GetOwner()->GetCurrentBlock()->AddDominated(target);
+  GetOwner()->GetCurrentBlock()->AddDominated(body);
   GetOwner()->GetCurrentBlock()->AddDominated(join);
   return true;
 }
@@ -604,48 +550,42 @@ auto EffectVisitor::VisitBinding(expr::Binding* expr) -> bool {
   return true;
 }
 
-/*
- * [ TargetEntryInstr ] - PushFrame()
- *      ...
- * [ TargetEntryInstr ] - PushFrame()
- *      ...
- * [ ReturnInstr ] - PopFrame()
- *      ...
- * [ ReturnInstr] - PopFrame()
- */
 auto EffectVisitor::VisitLetExpr(expr::LetExpr* expr) -> bool {
   ASSERT(expr);
-  const auto target = ir::TargetEntryInstr::New(GetOwner()->GetNextBlockId());
+  const auto target = ir::LetEntryInstr::New(GetOwner()->GetNextBlockId());
   ASSERT(target);
   Add(ir::GotoInstr::New(target));
   const auto join = ir::JoinEntryInstr::New(GetOwner()->GetNextBlockId());
   ASSERT(join);
-  const auto new_scope = GetOwner()->PushScope();
-  ASSERT(new_scope);
-  // process body
+
+  for (auto idx = 0; idx < expr->GetNumberOfBindings(); idx++) {
+    const auto binding = expr->GetBindingAt(idx);
+    DLOG(INFO) << "visiting: " << binding->ToString();
+    ValueVisitor for_value(GetOwner());
+    if (!binding->GetValue()->Accept(&for_value)) {
+      LOG(ERROR) << "failed to visit let-expr binding: " << binding->ToString();
+      return false;
+    }
+    AppendFragment(target, for_value);
+    target->Append(ir::StoreLocalInstr::New(binding->GetLocal(), for_value.GetValue()));
+  }
+
   uword idx = 0;
   ir::Definition* return_value = nullptr;
   while (IsOpen() && (idx < expr->GetNumberOfChildren())) {
     const auto child = expr->GetChildAt(idx++);
     ASSERT(child);
+    DLOG(INFO) << "visiting: " << child->ToString();
     ValueVisitor for_value(GetOwner());
     if (!child->Accept(&for_value))
       break;
     AppendFragment(target, for_value);
-    return_value = for_value.GetValue();
     if (!IsOpen())
       break;
   }
-  if (!return_value) {
-    return_value = ir::ConstantInstr::New(Null());
-    target->Append(return_value);
-  }
-  ASSERT(return_value);
-  ReturnDefinition(return_value);
   target->Append(ir::GotoInstr::New(join));
-  // TODO: need to pop block
-  GetOwner()->PopScope();
   SetExitInstr(join);
+  GetOwner()->GetCurrentBlock()->AddDominated(target);
   return true;
 }
 
@@ -683,55 +623,48 @@ auto EffectVisitor::VisitBeginExpr(BeginExpr* expr) -> bool {
   return true;
 }
 
+auto CondClauseEffectVisitor::VisitClauseExpr(expr::ClauseExpr* expr) -> bool {
+  ASSERT(expr);
+  EffectVisitor for_body(GetOwner());
+  if (!for_body(expr->GetBody())) {
+    LOG(ERROR) << "failed to visit clause-expr body: " << expr->GetBody()->ToString();
+    return false;
+  }
+  Append(for_body);
+  Add(ir::GotoInstr::New(GetJoin()));
+  return true;
+}
+
 auto EffectVisitor::VisitCondExpr(CondExpr* expr) -> bool {
   ASSERT(expr);
-  const auto alt_target = ir::TargetEntryInstr::New(GetOwner()->GetNextBlockId());
-  ASSERT(alt_target);
   const auto join = ir::JoinEntryInstr::New(GetOwner()->GetNextBlockId());
-
-  for (const auto& clause : expr->GetClauses()) {
-    // process conseq
+  ASSERT(join);
+  for (auto idx = 0; idx < expr->GetNumberOfClauses(); idx++) {
+    const auto clause = expr->GetClauseAt(idx);
+    ASSERT(clause);
     const auto target = ir::TargetEntryInstr::New(GetOwner()->GetNextBlockId());
     ASSERT(target);
-    for (const auto& action : clause->GetActions()) {
-      ASSERT(action);
-      ValueVisitor for_action(GetOwner());
-      if (!action->Accept(&for_action)) {
-        LOG(ERROR) << "failed to visit conseq for cond: " << expr->ToString();
-        return false;
-      }
-      AppendFragment(target, for_action);
-    }
-    target->Append(ir::GotoInstr::New(join));
-    GetOwner()->GetCurrentBlock()->AddDominated(target);
+    const auto clause_join = ir::JoinEntryInstr::New(GetOwner()->GetNextBlockId());
+    ASSERT(clause_join);
 
-    ir::BranchInstr* branch = nullptr;
-    if (clause->GetKey()->IsBinaryOpExpr()) {
-      const auto cond = clause->GetKey()->AsBinaryOpExpr();
-      ASSERT(cond);
-      if (cond->IsEqOp()) {
-        // lhs
-        ValueVisitor for_left(GetOwner());
-        LOG_IF(FATAL, !cond->GetLeft()->Accept(&for_left)) << "failed to visit: " << cond->GetLeft();
-        Append(for_left);
-        // rhs
-        ValueVisitor for_right(GetOwner());
-        LOG_IF(FATAL, !cond->GetRight()->Accept(&for_right)) << "failed to visit: " << cond->GetRight();
-        Append(for_right);
-        branch = ir::BranchInstr::BranchEqual(target, alt_target, join);
-      }
+    const auto test = clause->GetKey();
+    ValueVisitor for_test(GetOwner());
+    if (!for_test(test)) {
+      LOG(ERROR) << "failed to visit clause-expr test: " << test->ToString();
+      return false;
     }
-    if (!branch) {
-      ValueVisitor for_test(GetOwner());
-      if (!clause->GetKey()->Accept(&for_test)) {
-        LOG(ERROR) << "failed to visit clause for cond: " << expr->ToString();
-        return false;
-      }
-      Append(for_test);
-      branch = ir::BranchInstr::BranchTrue(target, alt_target, join);
+    Append(for_test);
+    Add(ir::BranchInstr::BranchTrue(target, clause_join, clause_join));
+
+    CondClauseEffectVisitor for_clause(GetOwner(), target, join);
+    if (!clause->Accept(&for_clause)) {
+      LOG(ERROR) << "failed to visit clause-expr: " << clause->ToString();
+      return false;
     }
-    ASSERT(branch);
-    Add(branch);
+    AppendFragment(target, for_clause);
+
+    SetExitInstr(clause_join);
+    GetOwner()->GetCurrentBlock()->AddDominated(target);
   }
 
   if (expr->HasAlternate()) {  // process alt (else)
@@ -740,13 +673,11 @@ auto EffectVisitor::VisitCondExpr(CondExpr* expr) -> bool {
       LOG(ERROR) << "failed to visit alternate for cond: " << expr->ToString();
       return false;
     }
-    AppendFragment(alt_target, for_alt);
-    alt_target->Append(ir::GotoInstr::New(join));
-    GetOwner()->GetCurrentBlock()->AddDominated(alt_target);
+    Append(for_alt);
+    Add(ir::GotoInstr::New(join));
   }
 
   SetExitInstr(join);
-  GetOwner()->GetCurrentBlock()->AddDominated(join);
   return true;
 }
 
@@ -963,6 +894,22 @@ auto EffectVisitor::Build(Script* script) -> bool {
 auto EffectVisitor::VisitSeqExpr(expr::SeqExpr* expr) -> bool {
   ASSERT(expr);
   auto index = 0;
+  while (IsOpen() && (index < expr->GetNumberOfChildren())) {
+    const auto child = expr->GetChildAt(index++);
+    EffectVisitor for_value(GetOwner());
+    LOG_IF(FATAL, !child->Accept(&for_value)) << "failed to visit: " << child->ToString();
+    Append(for_value);
+    if (!IsOpen()) {
+      LOG(WARNING) << "breaking";
+      break;
+    }
+  }
+  return true;
+}
+
+auto ValueVisitor::VisitSeqExpr(expr::SeqExpr* expr) -> bool {
+  ASSERT(expr);
+  auto index = 0;
   ir::Definition* return_value = nullptr;
   const auto& body = expr->GetBody();
   while (IsOpen() && (index < body.size())) {
@@ -1017,9 +964,6 @@ auto EffectVisitor::Build(Lambda* lambda) -> bool {
 auto FlowGraphBuilder::Build(Lambda* lambda, LocalScope* scope) -> FlowGraph* {
   ASSERT(lambda);
   FlowGraphBuilder builder(scope);
-  const auto graph_entry = ir::GraphEntryInstr::New(builder.GetNextBlockId());
-  ASSERT(graph_entry);
-  builder.SetCurrentBlock(graph_entry);
   const auto target = ir::TargetEntryInstr::New(builder.GetNextBlockId());
   ASSERT(target);
   builder.SetCurrentBlock(target);
@@ -1029,18 +973,18 @@ auto FlowGraphBuilder::Build(Lambda* lambda, LocalScope* scope) -> FlowGraph* {
     return nullptr;
   }
   AppendFragment(target, for_value);
+
+  const auto graph_entry = ir::GraphEntryInstr::New(lambda, builder.GetNextBlockId(), target);
+  ASSERT(graph_entry);
   graph_entry->Append(target);
   graph_entry->AddDominated(target);
-  return new FlowGraph(graph_entry);
+  return new FlowGraph(lambda, graph_entry);
 }
 
 auto FlowGraphBuilder::Build(Script* script, LocalScope* scope) -> FlowGraph* {
   ASSERT(script);
   ASSERT(scope);
   FlowGraphBuilder builder(scope);
-  const auto graph_entry = ir::GraphEntryInstr::New(builder.GetNextBlockId());
-  ASSERT(graph_entry);
-  builder.SetCurrentBlock(graph_entry);
   const auto target = ir::TargetEntryInstr::New(builder.GetNextBlockId());
   ASSERT(target);
   builder.SetCurrentBlock(target);
@@ -1050,18 +994,18 @@ auto FlowGraphBuilder::Build(Script* script, LocalScope* scope) -> FlowGraph* {
     return nullptr;
   }
   AppendFragment(target, for_effect);
+
+  const auto graph_entry = ir::GraphEntryInstr::New(script, builder.GetNextBlockId(), target);
+  ASSERT(graph_entry);
   graph_entry->Append(target);
   graph_entry->AddDominated(target);
-  return new FlowGraph(graph_entry);
+  return new FlowGraph(script, graph_entry);
 }
 
 auto FlowGraphBuilder::Build(Constructor* init, LocalScope* scope) -> FlowGraph* {
   ASSERT(init);
   ASSERT(scope);
   FlowGraphBuilder builder(scope);
-  const auto graph_entry = ir::GraphEntryInstr::New(builder.GetNextBlockId());
-  ASSERT(graph_entry);
-  builder.SetCurrentBlock(graph_entry);
   const auto target = ir::TargetEntryInstr::New(builder.GetNextBlockId());
   ASSERT(target);
   builder.SetCurrentBlock(target);
@@ -1071,8 +1015,11 @@ auto FlowGraphBuilder::Build(Constructor* init, LocalScope* scope) -> FlowGraph*
     return nullptr;
   }
   AppendFragment(target, for_effect);
+
+  const auto graph_entry = ir::GraphEntryInstr::New(init, builder.GetNextBlockId(), target);
+  ASSERT(graph_entry);
   graph_entry->Append(target);
   graph_entry->AddDominated(target);
-  return new FlowGraph(graph_entry);
+  return new FlowGraph(init, graph_entry);
 }
 }  // namespace gel

@@ -1,0 +1,6 @@
+(def coords (0 0))
+(set-first! coords 1)
+(print coords)
+(set-second! coords 1)
+(print coords)
+(print '())

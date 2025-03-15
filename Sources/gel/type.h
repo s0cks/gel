@@ -13,6 +13,18 @@ class Instruction;
 class Definition;
 }  // namespace ir
 
+#ifdef GEL_ENABLE_GLM
+
+#define FOR_EACH_GLM_TYPE(V) \
+  V(Vec2)                    \
+  V(Vec3)
+
+#else
+
+#define FOR_EACH_GLM_TYPE(V)
+
+#endif  // GEL_ENABLE_GLM
+
 #define FOR_EACH_PRIMITIVE_TYPE(V) \
   V(Seq)                           \
   V(Class)                         \
@@ -42,7 +54,8 @@ class Definition;
 
 #define FOR_EACH_TYPE(V)     \
   FOR_EACH_PRIMITIVE_TYPE(V) \
-  FOR_EACH_RX_TYPE(V)
+  FOR_EACH_RX_TYPE(V)        \
+  FOR_EACH_GLM_TYPE(V)
 
 class Object;
 #define FORWARD_DECLARE(Name) class Name;

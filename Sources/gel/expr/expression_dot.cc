@@ -1,5 +1,4 @@
 #include "gel/expr/expression_dot.h"
-#ifdef GEL_ENABLE_GV
 
 #include <glog/logging.h>
 
@@ -7,55 +6,173 @@
 
 #include "gel/common.h"
 #include "gel/expr/expression.h"
+#include "gel/gv.h"
+#include "gel/types.h"
 
-namespace gel {
+namespace gel::expr {
 ExpressionToDot::ExpressionToDot(const char* graph_name) :
   dot::GraphBuilder(graph_name) {
-  SetNodeAttr("label", "");
-  SetNodeAttr("xlabel", "");
+  dot::SetGraphNodeAttr(GetGraph(), "label", "");
+  dot::SetGraphNodeAttr(GetGraph(), "xlabel", "");
+  dot::SetGraphEdgeAttr(GetGraph(), "arrowhead", "vee");
+  dot::SetGraphEdgeAttr(GetGraph(), "decorate", "true");
 }
 
-static inline auto ToString(Object* datum) -> std::string {
-  ASSERT(datum);
-  std::stringstream ss;
-  if (datum->IsLong()) {
-    ss << datum->AsLong()->Get();
-  } else if (datum->IsDouble()) {
-    ss << datum->AsDouble()->Get();
-  } else if (datum->IsSymbol()) {
-    ss << datum->AsSymbol()->Get();
-  } else {
-    ss << datum->ToString();
-  }
-  return ss.str();
+auto ExpressionToDot::VisitBinding(Binding* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return false;
 }
 
-auto ExpressionToDot::VisitLocalDef(LocalDef* expr) -> bool {
+auto ExpressionToDot::VisitNewExpr(NewExpr* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return false;
+}
+
+auto ExpressionToDot::VisitSeqExpr(SeqExpr* expr) -> bool {
   ASSERT(expr);
   // create new node
   const auto node = NewNode();
   ASSERT(node);
   {
-    // set label
-    const auto symbol = expr->GetSymbol();
-    ASSERT(symbol);
+    // create node labels
+    // label
     std::stringstream label;
     label << expr->GetName() << std::endl;
-    label << "Symbol := " << ToString(symbol);
-    SetNodeLabel(node, label);
+    dot::SetNodeLabel(node, label);
+    // xlabel
+    std::stringstream xlabel;
+    xlabel << expr->GetNumberOfChildren() << " expressions";
+    dot::SetNodeXLabel(node, xlabel);
   }
+  CreateEdgeFromParent(node);
+  return ProcessChildren(expr, node);
+}
+
+auto ExpressionToDot::VisitCastExpr(CastExpr* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return false;
+}
+
+auto ExpressionToDot::VisitRxOpExpr(RxOpExpr* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return false;
+}
+
+auto ExpressionToDot::VisitLetRxExpr(LetRxExpr* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return false;
+}
+
+auto ExpressionToDot::VisitImportExpr(ImportExpr* expr) -> bool {  // TODO: add import target
+  ASSERT(expr);
+  // create new node
+  const auto node = NewNode();
+  ASSERT(node);
   {
-    // process children
-    NodeScope scope(this, node);
-    const auto value = expr->GetValue();
-    ASSERT(value);
-    if (!value->Accept(this)) {
-      LOG(ERROR) << "failed to visit: " << value->ToString();
+    // create node labels
+    // label
+    std::stringstream label;
+    label << expr->GetName() << std::endl;
+    dot::SetNodeLabel(node, label);
+  }
+  CreateEdgeFromParent(node);
+  return ProcessChildren(expr, node);
+}
+
+auto ExpressionToDot::VisitNewMapExpr(NewMapExpr* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return false;
+}
+
+auto ExpressionToDot::VisitInstanceOfExpr(InstanceOfExpr* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return false;
+}
+
+auto ExpressionToDot::VisitStoreFieldExpr(StoreFieldExpr* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return false;
+}
+
+auto ExpressionToDot::VisitStoreLocalExpr(StoreLocalExpr* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return false;
+}
+
+auto ExpressionToDot::VisitInvokeMacroExpr(InvokeMacroExpr* expr) -> bool {
+  ASSERT(expr);
+  const auto node = NewNode();
+  ASSERT(node);
+  {
+    // label
+    std::stringstream label{};
+    label << expr->GetName() << std::endl;
+    label << "Target: " << expr->GetTarget()->GetSymbol()->GetFullyQualifiedName();
+    dot::SetNodeLabel(node, label);
+  }
+  CreateEdgeFromParent(node);
+  NodeScope scope(this, node);
+  for (auto idx = 0; idx < expr->GetNumberOfArgs(); idx++) {
+    const auto arg = expr->GetArgAt(idx);
+    ASSERT(arg);
+    if (!arg->Accept(this)) {
+      LOG(ERROR) << "failed to visit arg #" << idx << ": " << arg->ToString();
       return false;
     }
   }
-  CreateEdgeFromParent(node);
   return true;
+}
+
+auto ExpressionToDot::VisitInvokeNativeExpr(InvokeNativeExpr* expr) -> bool {
+  ASSERT(expr);
+  // create new node
+  const auto node = NewNode();
+  ASSERT(node);
+  {
+    // label
+    std::stringstream label{};
+    label << expr->GetName() << std::endl;
+    label << "Target: " << expr->GetTarget()->GetSymbol()->GetFullyQualifiedName();
+    dot::SetNodeLabel(node, label);
+  }
+  CreateEdgeFromParent(node);
+  return ProcessChildren(expr, node);
+}
+
+auto ExpressionToDot::VisitInvokeInstanceExpr(InvokeInstanceExpr* expr) -> bool {
+  ASSERT(expr);
+  // create new node
+  const auto node = NewNode();
+  {
+    // label
+    std::stringstream label{};
+    label << expr->GetName() << std::endl;
+    label << "Target: " << expr->GetTarget()->GetSymbol()->GetFullyQualifiedName();
+    dot::SetNodeLabel(node, label);
+  }
+  CreateEdgeFromParent(node);
+  return ProcessChildren(expr, node);
+}
+
+auto ExpressionToDot::VisitLoadInstanceMethodExpr(LoadInstanceMethodExpr* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return false;
+}
+
+auto ExpressionToDot::VisitLoadFieldExpr(LoadFieldExpr* expr) -> bool {
+  ASSERT(expr);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return false;
 }
 
 auto ExpressionToDot::VisitBeginExpr(BeginExpr* expr) -> bool {
@@ -68,44 +185,14 @@ auto ExpressionToDot::VisitBeginExpr(BeginExpr* expr) -> bool {
     // label
     std::stringstream label;
     label << expr->GetName() << std::endl;
-    SetNodeLabel(node, label);
+    dot::SetNodeLabel(node, label);
     // xlabel
     std::stringstream xlabel;
     xlabel << expr->GetNumberOfChildren() << " expressions";
-    SetNodeXLabel(node, xlabel);
+    dot::SetNodeXLabel(node, xlabel);
   }
   CreateEdgeFromParent(node);
-  {
-    // process children
-    NodeScope scope(this, node);
-    if (!expr->VisitChildren(this)) {
-      LOG(ERROR) << "failed to visit children of: " << expr->ToString();
-      return false;
-    }
-  }
-  return true;
-}
-
-auto ExpressionToDot::VisitCaseExpr(expr::CaseExpr* expr) -> bool {
-  ASSERT(expr);
-  const auto node = NewNode();
-  ASSERT(node);
-  {
-    // create node labels
-    std::stringstream label;
-    label << expr->GetName() << std::endl;
-    SetNodeLabel(node, label);
-  }
-  CreateEdgeFromParent(node);
-  {
-    // process children
-    NodeScope scope(this, node);
-    if (!expr->VisitChildren(this)) {
-      LOG(ERROR) << "failed to visit children of: " << expr->ToString();
-      return false;
-    }
-  }
-  return true;
+  return ProcessChildren(expr, node);
 }
 
 auto ExpressionToDot::VisitListExpr(expr::ListExpr* expr) -> bool {
@@ -122,18 +209,10 @@ auto ExpressionToDot::VisitClauseExpr(expr::ClauseExpr* expr) -> bool {
     // create node labels
     std::stringstream label;
     label << expr->GetName() << std::endl;
-    SetNodeLabel(node, label);
+    dot::SetNodeLabel(node, label);
   }
   CreateEdgeFromParent(node);
-  {
-    // process children
-    NodeScope scope(this, node);
-    if (!expr->VisitChildren(this)) {
-      LOG(ERROR) << "failed to visit children of: " << expr->ToString();
-      return false;
-    }
-  }
-  return true;
+  return ProcessChildren(expr, node);
 }
 
 auto ExpressionToDot::VisitWhileExpr(expr::WhileExpr* expr) -> bool {
@@ -144,18 +223,10 @@ auto ExpressionToDot::VisitWhileExpr(expr::WhileExpr* expr) -> bool {
     // create node labels
     std::stringstream label;
     label << expr->GetName() << std::endl;
-    SetNodeLabel(node, label);
+    dot::SetNodeLabel(node, label);
   }
   CreateEdgeFromParent(node);
-  {
-    // process children
-    NodeScope scope(this, node);
-    if (!expr->VisitChildren(this)) {
-      LOG(ERROR) << "failed to visit children of: " << expr->ToString();
-      return false;
-    }
-  }
-  return true;
+  return ProcessChildren(expr, node);
 }
 
 auto ExpressionToDot::VisitWhenExpr(expr::WhenExpr* expr) -> bool {
@@ -166,18 +237,10 @@ auto ExpressionToDot::VisitWhenExpr(expr::WhenExpr* expr) -> bool {
     // create node labels
     std::stringstream label;
     label << expr->GetName() << std::endl;
-    SetNodeLabel(node, label);
+    dot::SetNodeLabel(node, label);
   }
   CreateEdgeFromParent(node);
-  {
-    // process children
-    NodeScope scope(this, node);
-    if (!expr->VisitChildren(this)) {
-      LOG(ERROR) << "failed to visit children of: " << expr->ToString();
-      return false;
-    }
-  }
-  return true;
+  return ProcessChildren(expr, node);
 }
 
 auto ExpressionToDot::VisitBinaryOpExpr(BinaryOpExpr* expr) -> bool {
@@ -189,23 +252,10 @@ auto ExpressionToDot::VisitBinaryOpExpr(BinaryOpExpr* expr) -> bool {
     std::stringstream label;
     label << expr->GetName() << std::endl;
     label << "Op: " << expr->GetOp();
-    SetNodeLabel(node, label);
+    dot::SetNodeLabel(node, label);
   }
   CreateEdgeFromParent(node);
-  {
-    // process children
-    NodeScope scope(this, node);
-    if (!expr->VisitChildren(this)) {
-      LOG(ERROR) << "failed to visit children of: " << expr->ToString();
-      return false;
-    }
-  }
-  return true;
-}
-
-auto ExpressionToDot::VisitEvalExpr(EvalExpr* expr) -> bool {
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return true;
+  return ProcessChildren(expr, node);
 }
 
 auto ExpressionToDot::VisitInvokeExpr(InvokeExpr* expr) -> bool {
@@ -214,21 +264,26 @@ auto ExpressionToDot::VisitInvokeExpr(InvokeExpr* expr) -> bool {
   const auto node = NewNode();
   ASSERT(node);
   {
-    // create node labels
-    // label
     std::stringstream label;
     label << expr->GetName() << std::endl;
-    SetNodeLabel(node, label);
+    dot::SetNodeLabel(node, label);
+  }
+  CreateEdgeFromParent(node);
+  {
+    // target
+    NodeScope scope(this, node);
+    if (!expr->VisitTarget(this)) {
+      LOG(ERROR) << "failed to visit target: " << expr->GetTarget();
+    }
   }
   {
-    // process children
+    // args
     NodeScope scope(this, node);
-    if (!expr->VisitChildren(this)) {
+    if (!expr->VisitArgs(this)) {
       LOG(ERROR) << "failed to visit children of: " << expr->ToString();
       return false;
     }
   }
-  CreateEdgeFromParent(node);
   return true;
 }
 
@@ -241,12 +296,20 @@ auto ExpressionToDot::VisitLiteralExpr(LiteralExpr* expr) -> bool {
     // label
     std::stringstream label;
     label << expr->GetName() << std::endl;
-    const auto value = expr->GetValue();
-    ASSERT(value);
-    label << "Value := " << ToString(value);
-    SetNodeLabel(node, label);
+    label << expr->GetValue()->ToString();
+    dot::SetNodeLabel(node, label);
   }
   CreateEdgeFromParent(node);
+  return true;
+}
+
+auto ExpressionToDot::ProcessChildren(Expression* expr, dot::Node* node) -> bool {
+  ASSERT(node);
+  NodeScope scope(this, node);
+  if (!expr->VisitChildren(this)) {
+    LOG(ERROR) << "failed to visit children of: " << expr->ToString();
+    return false;
+  }
   return true;
 }
 
@@ -260,41 +323,10 @@ auto ExpressionToDot::VisitUnaryOpExpr(UnaryOpExpr* expr) -> bool {
     std::stringstream label;
     label << expr->GetName() << std::endl;
     label << "Op := " << expr->GetOp();
-    SetNodeLabel(node, label);
+    dot::SetNodeLabel(node, label);
   }
   CreateEdgeFromParent(node);
-  {
-    // process children
-    NodeScope scope(this, node);
-    if (!expr->VisitChildren(this)) {
-      LOG(ERROR) << "failed to visit children of: " << expr->ToString();
-      return false;
-    }
-  }
-  return true;
-}
-
-auto ExpressionToDot::VisitLambdaExpr(LambdaExpr* expr) -> bool {
-  ASSERT(expr);
-  const auto node = NewNode();
-  ASSERT(node);
-  {
-    // create node labels
-    // label
-    std::stringstream label;
-    label << expr->GetName() << std::endl;
-    SetNodeLabel(node, label);
-  }
-  CreateEdgeFromParent(node);
-  {
-    // process children
-    NodeScope scope(this, node);
-    if (!expr->VisitChildren(this)) {
-      LOG(ERROR) << "failed to visit children of: " << expr->ToString();
-      return false;
-    }
-  }
-  return true;
+  return ProcessChildren(expr, node);
 }
 
 auto ExpressionToDot::VisitQuotedExpr(QuotedExpr* expr) -> bool {
@@ -306,33 +338,9 @@ auto ExpressionToDot::VisitQuotedExpr(QuotedExpr* expr) -> bool {
     // label
     std::stringstream label;
     label << expr->GetName() << std::endl;
-    SetNodeLabel(node, label);
+    dot::SetNodeLabel(node, label);
   }
   CreateEdgeFromParent(node);
-  return true;
-}
-
-auto ExpressionToDot::VisitSetExpr(SetExpr* expr) -> bool {
-  ASSERT(expr);
-  const auto node = NewNode();
-  ASSERT(node);
-  {
-    // create node labels
-    // label
-    std::stringstream label;
-    label << expr->GetName() << std::endl;
-    label << "Symbol := " << expr->GetSymbol();
-    SetNodeLabel(node, label);
-  }
-  CreateEdgeFromParent(node);
-  {
-    // process children
-    NodeScope scope(this, node);
-    if (!expr->VisitChildren(this)) {
-      LOG(ERROR) << "failed to visit children of: " << expr->ToString();
-      return false;
-    }
-  }
   return true;
 }
 
@@ -345,18 +353,10 @@ auto ExpressionToDot::VisitThrowExpr(ThrowExpr* expr) -> bool {
     // label
     std::stringstream label;
     label << expr->GetName() << std::endl;
-    SetNodeLabel(node, label);
+    dot::SetNodeLabel(node, label);
   }
   CreateEdgeFromParent(node);
-  {
-    // process children
-    NodeScope scope(this, node);
-    if (!expr->VisitChildren(this)) {
-      LOG(ERROR) << "failed to visit children of: " << expr->ToString();
-      return false;
-    }
-  }
-  return true;
+  return ProcessChildren(expr, node);
 }
 
 auto ExpressionToDot::VisitCondExpr(CondExpr* expr) -> bool {
@@ -368,7 +368,7 @@ auto ExpressionToDot::VisitCondExpr(CondExpr* expr) -> bool {
     // label
     std::stringstream label;
     label << expr->GetName() << std::endl;
-    SetNodeLabel(node, label);
+    dot::SetNodeLabel(node, label);
   }
   {
     // process children
@@ -379,30 +379,6 @@ auto ExpressionToDot::VisitCondExpr(CondExpr* expr) -> bool {
     }
   }
   CreateEdgeFromParent(node);
-  return true;
-}
-
-auto ExpressionToDot::VisitMacroDef(MacroDef* expr) -> bool {
-  ASSERT(expr);
-  const auto node = NewNode();
-  ASSERT(node);
-  {
-    // create node labels
-    // label
-    std::stringstream label;
-    label << expr->GetName() << std::endl;
-    label << "Symbol := " << expr->GetSymbol()->Get();
-    SetNodeLabel(node, label);
-  }
-  CreateEdgeFromParent(node);
-  {
-    // process children
-    NodeScope scope(this, node);
-    if (!expr->VisitChildren(this)) {
-      LOG(ERROR) << "failed to visit children of: " << expr->ToString();
-      return false;
-    }
-  }
   return true;
 }
 
@@ -415,38 +391,25 @@ auto ExpressionToDot::VisitLetExpr(LetExpr* expr) -> bool {
     // label
     std::stringstream label;
     label << expr->GetName() << std::endl;
-    SetNodeLabel(node, label);
+    dot::SetNodeLabel(node, label);
   }
   CreateEdgeFromParent(node);
-  {
-    // process children
-    NodeScope scope(this, node);
-    if (!expr->VisitChildren(this)) {
-      LOG(ERROR) << "failed to visit children of: " << expr->ToString();
-      return false;
-    }
-  }
-  return true;
+  return ProcessChildren(expr, node);
 }
 
-auto ExpressionToDot::VisitImportDef(ImportDef* expr) -> bool {
+auto ExpressionToDot::Build() -> dot::DotGraph* {
+  return dot::DotGraph::New(this);
+}
+
+void GenerateExprDotPng(const std::filesystem::path& path, const std::string& name, Expression* expr) {
+  ASSERT(!name.empty());
   ASSERT(expr);
-  const auto node = NewNode();
-  ASSERT(node);
-  {
-    // create node labels
-    // label
-    std::stringstream label;
-    label << expr->GetName() << std::endl;
-    label << "Symbol := " << expr->GetSymbol()->Get();
-    SetNodeLabel(node, label);
-  }
-  CreateEdgeFromParent(node);
-  return true;
+  dot::GraphRenderer render{};
+  const auto dot = ExpressionToDot::BuildGraph(name, expr);
+  ASSERT(dot);
+  const auto file = fopen(path.c_str(), "wb");
+  ASSERT(file);
+  render.RenderPngTo(dot->get(), file);
+  fclose(file);
 }
-
-auto ExpressionToDot::Build() -> dot::Graph* {
-  return dot::Graph::New(this);
-}
-}  // namespace gel
-#endif  // GEL_ENABLE_GV
+}  // namespace gel::expr

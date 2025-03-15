@@ -51,4 +51,35 @@ void Assembler::Jump(Bytecode::Op op, Label* label) {
     EmitLabelLink(label);
   }
 }
+
+void Assembler::Branch(BranchCondition cond, Label* label) {
+  ASSERT(label);
+  switch (cond) {
+    case kEquals:
+      EmitOp(Bytecode::kBranchEq);
+      break;
+    case kNotEquals:
+      EmitOp(Bytecode::kBranchNeq);
+      break;
+    case kGreaterThan:
+      EmitOp(Bytecode::kBranchGreaterThan);
+      break;
+    case kLessThan:
+      EmitOp(Bytecode::kBranchLessThan);
+      break;
+    case kIsTrue:
+      EmitOp(Bytecode::kBranchTrue);
+      break;
+    case kIsFalse:
+      EmitOp(Bytecode::kBranchFalse);
+      break;
+  }
+  if (label->IsBound()) {
+    const auto offset = static_cast<word>(label->GetPos() - cbuffer().GetSize());
+    ASSERT(offset <= 0);
+    buffer().Emit<word>(offset);
+  } else {
+    EmitLabelLink(label);
+  }
+}
 }  // namespace gel

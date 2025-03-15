@@ -11,15 +11,16 @@ DECLARE_GEL_NATIVE_PROCEDURE(print);
 DECLARE_GEL_NATIVE_PROCEDURE(format);
 _DECLARE_GEL_NATIVE_PROCEDURE(get_version, "get-version");
 _DECLARE_GEL_NATIVE_PROCEDURE(docs, "docs?");
+_DECLARE_GEL_NATIVE_PROCEDURE(type, "type?");
+_DECLARE_GEL_NATIVE_PROCEDURE(sizeof, "sizeof");
 
 DECLARE_NATIVE_PROCEDURE(import);
 DECLARE_NATIVE_PROCEDURE(exit);
 DECLARE_NATIVE_PROCEDURE(random);
-_DECLARE_NATIVE_PROCEDURE(type, "type?");
+
 _DECLARE_NATIVE_PROCEDURE(rand_range, "random:range");
 _DECLARE_NATIVE_PROCEDURE(set_car, "set-car!");
 _DECLARE_NATIVE_PROCEDURE(set_cdr, "set-cdr!");
-_DECLARE_NATIVE_PROCEDURE(gel_sizeof, "sizeof");
 _DECLARE_GEL_NATIVE_PROCEDURE(on_shutdown, "on-shutdown");
 _DECLARE_GEL_NATIVE_PROCEDURE(queue_utask, "queue-utask");
 
