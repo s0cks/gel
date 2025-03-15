@@ -114,10 +114,6 @@ struct Token {
         return '*';
       case kDivide:
         return '/';
-      case kBinaryAnd:
-        return '&';
-      case kBinaryOr:
-        return '|';
       case kEq:
         return '=';
       case kModulus:

@@ -117,8 +117,11 @@ DECLARE_OBJECT_BINARY_OP(Multiply);
 DECLARE_OBJECT_BINARY_OP(Divide);
 DECLARE_OBJECT_BINARY_OP(Modulus);
 DECLARE_OBJECT_BINARY_OP(Eq);
-DECLARE_OBJECT_BINARY_OP(BinaryAnd);
-DECLARE_OBJECT_BINARY_OP(BinaryOr);
+DECLARE_OBJECT_BINARY_OP(BitAnd);
+DECLARE_OBJECT_BINARY_OP(BitOr);
+DECLARE_OBJECT_BINARY_OP(BitXor);
+DECLARE_OBJECT_BINARY_OP(ShiftLeft);
+DECLARE_OBJECT_BINARY_OP(ShiftRight);
 DECLARE_OBJECT_BINARY_OP(GreaterThan);
 DECLARE_OBJECT_BINARY_OP(GreaterThanEqual);
 DECLARE_OBJECT_BINARY_OP(LessThan);
@@ -246,21 +249,16 @@ auto Bool::Equals(Object* rhs) const -> bool {
 auto Bool::New(const ObjectList& args) -> Bool* {
   if (args.empty())
     return False();
-  else if (args.size() == 1)
+  else if (args.size() == 1) {
+    if (args[0]->IsNumber() && (args[0]->AsNumber()->GetLong() == 0))
+      return False();
     return Box(gel::Truth(args[0]));
+  }
   return Box(gel::Truth(gel::ToList(args)));
 }
 
 auto Bool::ToString() const -> std::string {
   return Get() ? "#T" : "#F";
-}
-
-auto Bool::BinaryAnd(Object* rhs) const -> Object* {
-  return Box(Get() && Truth(rhs));
-}
-
-auto Bool::BinaryOr(Object* rhs) const -> Object* {
-  return Box(Get() || Truth(rhs));
 }
 
 auto Bool::CreateClass() -> Class* {
@@ -296,6 +294,10 @@ auto Bool::HashCode() const -> uword {
   uword hash = 0;
   CombineHash(hash, Get());
   return hash;
+}
+
+auto Number::BitNot() const -> Object* {
+  return Long::New(~GetLong());
 }
 
 auto Number::CreateClass() -> Class* {
@@ -370,6 +372,39 @@ auto Long::Equals(Object* rhs) const -> bool {
 
 auto Long::Eq(Object* rhs) const -> Object* {
   return Bool::Box(Equals(rhs));
+}
+
+auto Long::BitAnd(Object* rhs) const -> Object* {
+  if (!rhs || !rhs->IsNumber())
+    throw Exception(fmt::format("{} is not a Number.", (*rhs)));
+  return Long::New(GetLong() & rhs->AsNumber()->GetLong());
+}
+
+auto Long::BitOr(Object* rhs) const -> Object* {
+  if (!rhs || !rhs->IsNumber())
+    throw Exception(fmt::format("{} is not a Number.", (*rhs)));
+  return Long::New(GetLong() | rhs->AsNumber()->GetLong());
+}
+
+auto Long::BitXor(Object* rhs) const -> Object* {
+  ASSERT(rhs);
+  if (!rhs->IsNumber())
+    throw Exception(fmt::format("{} is not a Number.", (*rhs)));
+  return Long::New(GetLong() ^ rhs->AsNumber()->GetLong());
+}
+
+auto Long::ShiftLeft(Object* rhs) const -> Object* {
+  ASSERT(rhs);
+  if (!rhs->IsNumber())
+    throw Exception(fmt::format("{} is not a Number.", (*rhs)));
+  return Long::New(GetLong() << rhs->AsNumber()->GetLong());
+}
+
+auto Long::ShiftRight(Object* rhs) const -> Object* {
+  ASSERT(rhs);
+  if (!rhs->IsNumber())
+    throw Exception(fmt::format("{} is not a Number.", (*rhs)));
+  return Long::New(GetLong() >> rhs->AsNumber()->GetLong());
 }
 
 auto Long::GreaterThan(Object* rhs) const -> Object* {

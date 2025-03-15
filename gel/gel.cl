@@ -22,6 +22,34 @@
 (defnative on-shutdown [func])
 (defnative queue-utask [func])
 
+(defnative compare [x y])
+
+(defn any? [x]
+  "Returns true for any Object [x]."
+  #t)
+(defn pos? [n]
+  "Returns true if Number [n] is positive."
+  (> n 0))
+(defn neg? [n]
+  "Returns true if Number [n] is negative."
+  (< n 0))
+(defnative nan? [n]
+  "Returns true if Number [n] equals NaN.")
+(defnative abs [n]
+  "Returns the abs value of Number [n].")
+(defnative bit-str [n]
+  "Returns the a String of bits for Number [n].")
+
+(defn bit-test [n p]
+  "Returns true if bit at position [p] is set in Number [n]."
+  (Bool (bit-and n (bit-shl 1 p))))
+(defn bit-set [n p]
+  "Sets the bit at position [p] in Number [n]."
+  (bit-or n (bit-shl 1 p)))
+(defn bit-clear [n p]
+  "Clears the bit at position [p] in Number [n]."
+  (bit-and n (bit-not (bit-shl 1 p))))
+
 (deftype EventEmitter
   (defnative on [emitter event func])
   (defnative emit [emitter event data?]))
@@ -40,10 +68,6 @@
 (import "macro.cl")
 (import "module.cl")
 
-(defnative set-car! [p v] ;; TODO: create instruction
-  "Sets the first value of Pair [p] to [v].")
-(defnative set-cdr! [p v] ;; TODO: create instruction
-  "Sets the second value of Pair [p] to [v].")
 (defn apply [f seq]
   (cond (null? seq) seq
     (begin

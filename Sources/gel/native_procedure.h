@@ -141,6 +141,14 @@ class NativeProcedureEntry {
     return Return(T::New(args...));
   }
 
+  inline auto ReturnString(const std::string& rhs) const -> bool {
+    return ReturnNew<String>(rhs);
+  }
+
+  inline auto ReturnString(const std::stringstream& rhs) const -> bool {
+    return ReturnString(rhs.str());
+  }
+
   inline auto ReturnBool(const bool rhs) const -> bool {
     return Return(Bool::Box(rhs));
   }

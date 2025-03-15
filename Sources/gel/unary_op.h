@@ -6,6 +6,7 @@
   V(Car)                     \
   V(Cdr)                     \
   V(Nonnull)                 \
-  V(Null)
+  V(Null)                    \
+  V(BitNot)
 
 #endif  // GEL_UNARY_OP_H

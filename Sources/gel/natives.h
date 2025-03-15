@@ -26,6 +26,7 @@ _DECLARE_GEL_NATIVE_PROCEDURE(queue_utask, "queue-utask");
 
 _DECLARE_GEL_NATIVE_PROCEDURE(load_bindings, "load-bindings");
 _DECLARE_GEL_NATIVE_PROCEDURE(get_event_loop, "get-event-loop");
+_DECLARE_GEL_NATIVE_PROCEDURE(bit_str, "bit-str");
 
 #undef DECLARE_GEL_NATIVE_PROCEDURE
 #undef _DECLARE_GEL_NATIVE_PROCEDURE

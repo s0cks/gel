@@ -9,8 +9,11 @@ namespace gel {
   V(Divide)                   \
   V(Modulus)                  \
   V(Eq)                       \
-  V(BinaryAnd)                \
-  V(BinaryOr)                 \
+  V(ShiftLeft)                \
+  V(ShiftRight)               \
+  V(BitAnd)                   \
+  V(BitOr)                    \
+  V(BitXor)                   \
   V(GreaterThan)              \
   V(GreaterThanEqual)         \
   V(LessThan)                 \

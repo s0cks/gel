@@ -301,6 +301,14 @@ void Interpreter::ExecUnaryOp(const Bytecode code) {
       PUSH(new_value);
       return;
     }
+    case Bytecode::kBitNot: {
+      if (!value->IsNumber())
+        throw Exception("");
+      const auto new_value = value->AsNumber()->BitNot();
+      ASSERT(new_value);
+      PUSH(new_value);
+      return;
+    }
     default:
       LOG(FATAL) << "invalid UnaryOp: " << code;
   }

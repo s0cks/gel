@@ -31,6 +31,7 @@
 #include "gel/native_procedure.h"
 #include "gel/object.h"
 #include "gel/parser.h"
+#include "gel/platform.h"
 #include "gel/procedure.h"
 #include "gel/runtime.h"
 #include "gel/rx.h"
@@ -55,6 +56,7 @@ void NativeProcedure::InitNatives() {
   InitNative<set_cdr>();
   InitNative<random>();
   InitNative<rand_range>();
+  INIT_GEL_NATIVE(bit_str);
   INIT_GEL_NATIVE(on_shutdown);
   INIT_GEL_NATIVE(queue_utask);
   INIT_GEL_NATIVE(docs);
@@ -140,12 +142,15 @@ GEL_NATIVE_PROCEDURE_F(queue_utask) {
   return ReturnNull();
 }
 
+GEL_NATIVE_PROCEDURE_F(bit_str) {
+  REQUIRED_NATIVE_ARG(0, Number, value);
+  std::stringstream ss;
+  ss << std::bitset<kWordSize>(value->GetLong());
+  return ReturnString(ss);
+}
+
 GEL_NATIVE_PROCEDURE_F(docs) {
-  if (args.empty())
-    return DoNothing();
-  OptionalNativeArgument<0, Procedure> func(args);
-  if (!func)
-    return Throw(func.GetError());
+  REQUIRED_NATIVE_ARG(0, Procedure, func);
   if (func->IsLambda()) {
     const auto lambda = func->AsLambda();
     std::stringstream ss;

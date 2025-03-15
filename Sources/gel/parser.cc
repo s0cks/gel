@@ -1188,15 +1188,8 @@ auto Parser::NextToken() -> const Token& {
     case '=':
       Advance();
       return NextToken(Token::kEq);
-    case '&':
-      Advance();
-      return NextToken(Token::kBinaryAnd);
-    case '|':
-      Advance();
-      return NextToken(Token::kBinaryOr);
     case '!':
       Advance();
-
       return NextToken(Token::kNot);
     case '[':
       Advance();
@@ -1820,8 +1813,12 @@ void Parser::Init() {
   DEF_TOKEN("fn", Token::kFn);
   DEF_TOKEN("quote", Token::kQuote);
   DEF_TOKEN("not", Token::kNot);
-  DEF_TOKEN("and", Token::kBinaryAnd);
-  DEF_TOKEN("or", Token::kBinaryOr);
+  DEF_TOKEN("bit-and", Token::kBitAnd);
+  DEF_TOKEN("bit-or", Token::kBitOr);
+  DEF_TOKEN("bit-xor", Token::kBitXor);
+  DEF_TOKEN("bit-shl", Token::kShiftLeft);
+  DEF_TOKEN("bit-shr", Token::kShiftRight);
+  DEF_TOKEN("bit-not", Token::kBitNot);
   DEF_TOKEN("throw", Token::kThrowExpr);
   DEF_TOKEN("eq?", Token::kEq);
   DEF_TOKEN("instanceof?", Token::kInstanceOf);

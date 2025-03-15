@@ -214,9 +214,9 @@ class Bytecode {
         return "mod";
       case kEq:
         return "eq";
-      case kBinaryAnd:
+      case kBitAnd:
         return "band";
-      case kBinaryOr:
+      case kBitOr:
         return "bor";
       case kGreaterThan:
         return "gt";

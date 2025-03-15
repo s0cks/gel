@@ -270,6 +270,10 @@ auto UnaryOpExpr::EvalToConstant(LocalScope* scope) const -> Object* {
       return Bool::Box(gel::IsNull(value));
     case UnaryOp::kNonnull:
       return Bool::Box(!gel::IsNull(value));
+    case UnaryOp::kBitNot:
+      if (!gel::IsNumber(value))
+        return gel::Null();
+      return value->AsNumber()->BitNot();
     default:
       LOG(FATAL) << "invalid UnaryOp: " << GetOp();
   }

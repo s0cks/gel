@@ -226,11 +226,19 @@ class Assembler {
   }
 
   inline void band() {
-    return EmitOp(Bytecode::kBinaryAnd);
+    return EmitOp(Bytecode::kBitAnd);
   }
 
   inline void bor() {
-    return EmitOp(Bytecode::kBinaryOr);
+    return EmitOp(Bytecode::kBitOr);
+  }
+
+  inline void bxor() {
+    return EmitOp(Bytecode::kBitXor);
+  }
+
+  inline void bnot() {
+    return EmitOp(Bytecode::kBitNot);
   }
 
   inline void gt() {
@@ -247,6 +255,14 @@ class Assembler {
 
   inline void lte() {
     return EmitOp(Bytecode::kLessThanEqual);
+  }
+
+  inline void shl() {
+    return EmitOp(Bytecode::kShiftLeft);
+  }
+
+  inline void shr() {
+    return EmitOp(Bytecode::kShiftRight);
   }
 
   inline void cons() {

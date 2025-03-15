@@ -261,9 +261,6 @@ class Bool : public Object {
     return Get() ? False() : True();
   }
 
-  auto BinaryOr(Object* rhs) const -> Object* override;
-  auto BinaryAnd(Object* rhs) const -> Object* override;
-
   DECLARE_TYPE(Bool);
 
  private:
@@ -327,6 +324,8 @@ class Number : public Object {
     return std::get<double>(value());
   }
 
+  auto BitNot() const -> Object*;
+
   DECLARE_TYPE(Number);
 
  public:
@@ -352,6 +351,11 @@ class Long : public Number {
   auto Divide(Object* rhs) const -> Object* override;
   auto Modulus(Object* rhs) const -> Object* override;
   auto Compare(Object* rhs) const -> int override;
+  auto BitAnd(Object* rhs) const -> Object* override;
+  auto BitOr(Object* rhs) const -> Object* override;
+  auto BitXor(Object* rhs) const -> Object* override;
+  auto ShiftLeft(Object* rhs) const -> Object* override;
+  auto ShiftRight(Object* rhs) const -> Object* override;
 
   auto Eq(Object* rhs) const -> Object* override;
   auto GreaterThan(Object* rhs) const -> Object* override;
@@ -590,12 +594,6 @@ static inline auto IsNull(Object* rhs) -> bool {
   if (!rhs)
     return true;
   return (rhs->IsPair() && rhs->AsPair()->IsEmpty());
-}
-
-static inline auto BinaryAnd(Object* lhs, Object* rhs) -> Object* {
-  ASSERT(lhs);
-  ASSERT(rhs);
-  return lhs->BinaryAnd(rhs);
 }
 
 static inline auto Cons(Object* lhs, Object* rhs) -> Object* {

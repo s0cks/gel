@@ -1,7 +1,6 @@
 #ifndef GEL_EXPRESSION_H
 #define GEL_EXPRESSION_H
 
-#include <common/TracyProtocol.hpp>
 #include <ostream>
 #include <string>
 #include <utility>

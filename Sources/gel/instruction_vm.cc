@@ -74,11 +74,14 @@ COMPILE(BinaryOpInstr) {
     case expr::kEq:
       __ eq();
       break;
-    case expr::kBinaryAnd:
+    case expr::kBitAnd:
       __ band();
       break;
-    case expr::kBinaryOr:
+    case expr::kBitOr:
       __ bor();
+      break;
+    case expr::kBitXor:
+      __ bxor();
       break;
     case expr::kGreaterThan:
       __ gt();
@@ -97,6 +100,12 @@ COMPILE(BinaryOpInstr) {
       break;
     case expr::kInstanceOf:
       __ instanceof();
+      break;
+    case expr::kShiftLeft:
+      __ shl();
+      break;
+    case expr::kShiftRight:
+      __ shr();
       break;
     default:
       LOG(FATAL) << "invalid BinaryOp: " << GetOp();
@@ -120,6 +129,9 @@ COMPILE(UnaryOpInstr) {
       break;
     case expr::kNull:
       __ isnull();
+      break;
+    case expr::kBitNot:
+      __ bnot();
       break;
     default:
       LOG(FATAL) << "invalid UnaryOp: " << GetOp();
