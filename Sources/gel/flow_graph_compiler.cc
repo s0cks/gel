@@ -21,10 +21,12 @@ void FlowGraphCompiler::AssembleFlowGraph(FlowGraph* flow_graph) {
   ASSERT(flow_graph && flow_graph->HasEntry());
   for (const auto& blk : flow_graph->GetPreorder()) {
     ASSERT(blk);
+    DVLOG(10) << "compiling " << blk->ToString();
     ir::InstructionIterator iter(blk);
     while (iter.HasNext()) {
       const auto next = iter.Next();
       ASSERT(next);
+      DVLOG(10) << "compiling " << next->ToString() << "....";
       next->Compile(this);
     }
   }
@@ -81,7 +83,7 @@ auto FlowGraphCompiler::CompileTarget(E* exec, std::enable_if_t<gel::is_executab
   DVLOG(10) << "compiled in " << units::time::nanosecond_t(static_cast<double>(total_ns));
   code.SetCompileTime(total_ns);
   exec->SetCode(code);
-  if (VLOG_IS_ON(10) || FLAGS_print_bytecode)
+  if (VLOG_IS_ON(1) || FLAGS_print_bytecode)
     Disassembler::Disassemble(std::cout, exec, GetScope());
   TRACE_TAG_STR(exec->GetFullyQualifiedName());
   TRACE_MARK;

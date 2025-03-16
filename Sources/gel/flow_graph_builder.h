@@ -308,6 +308,7 @@ class ValueVisitor : public EffectVisitor {
     return GetValue() != nullptr;
   }
 
+  auto VisitDoExpr(expr::DoExpr* expr) -> bool override;
   auto VisitSeqExpr(expr::SeqExpr* expr) -> bool override;
 
   auto operator()(expr::Expression* rhs) -> bool {

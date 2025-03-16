@@ -3,7 +3,7 @@
     (eq? x 10) (print "ten")
     (eq? x 11) (print "elven")
     (eq? x 12)
-      (begin
+      (do
         (print "twelve")
         (print "twelve is even"))
     (print "idk")))

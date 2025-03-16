@@ -1,5 +1,5 @@
 (defmacro if [test body...]
-  (cond test (begin body)))
+  (cond test (do body)))
 (defmacro debug-only [exprs...]
   (when (debug?)
     exprs))
@@ -72,7 +72,7 @@
 
 (defn apply [f seq]
   (cond (null? seq) seq
-    (begin
+    (do
       (f (car seq))
       (apply f (cdr seq)))))
 

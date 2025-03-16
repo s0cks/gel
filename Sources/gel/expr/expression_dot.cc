@@ -175,7 +175,7 @@ auto ExpressionToDot::VisitLoadFieldExpr(LoadFieldExpr* expr) -> bool {
   return false;
 }
 
-auto ExpressionToDot::VisitBeginExpr(BeginExpr* expr) -> bool {
+auto ExpressionToDot::VisitDoExpr(DoExpr* expr) -> bool {
   ASSERT(expr);
   // create new node
   const auto node = NewNode();

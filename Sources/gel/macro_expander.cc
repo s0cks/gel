@@ -49,9 +49,12 @@ auto MacroEffectVisitor::VisitSeqExpr(expr::SeqExpr* expr) -> bool {
   return true;
 }
 
-auto MacroEffectVisitor::VisitBeginExpr(expr::BeginExpr* expr) -> bool {
+auto MacroEffectVisitor::VisitDoExpr(expr::DoExpr* expr) -> bool {
   ASSERT(expr);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  MacroEffectVisitor for_body(GetOwner());
+  VISIT(for_body, expr->GetBody());
+  if (for_body)
+    SetResult(expr::DoExpr::New(for_body.GetResultAsSeq()));
   return true;
 }
 

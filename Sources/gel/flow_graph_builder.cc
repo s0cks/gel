@@ -141,7 +141,7 @@ auto EffectVisitor::VisitInvokeInstanceExpr(InvokeInstanceExpr* expr) -> bool {
     if (GetOwner()->GetScope()->Lookup(symbol, &local)) {
       Add(ir::LoadLocalInstr::New(local));
     } else {
-      goto default_for_instance;
+      goto default_for_instance;  // NOLINT(cppcoreguidelines-avoid-goto)
     }
   } else {
   default_for_instance:
@@ -615,19 +615,14 @@ auto EffectVisitor::VisitCastExpr(expr::CastExpr* expr) -> bool {
   return true;
 }
 
-auto EffectVisitor::VisitBeginExpr(BeginExpr* expr) -> bool {
+auto EffectVisitor::VisitDoExpr(DoExpr* expr) -> bool {
   ASSERT(expr);
-  uint64_t idx = 0;
-  while (IsOpen() && (idx < expr->GetNumberOfChildren())) {
-    const auto child = expr->GetChildAt(idx++);
-    ASSERT(child);
-    EffectVisitor vis(GetOwner());
-    if (!child->Accept(&vis))
-      break;
-    Append(vis);
-    if (!IsOpen())
-      break;
+  EffectVisitor for_body(GetOwner());
+  if (!expr->GetBody()->Accept(&for_body)) {
+    LOG(ERROR) << "failed to visit do-expr body: " << expr->GetBody()->ToString();
+    return false;
   }
+  Append(for_body);
   return true;
 }
 
@@ -912,6 +907,19 @@ auto EffectVisitor::VisitSeqExpr(expr::SeqExpr* expr) -> bool {
       break;
     }
   }
+  return true;
+}
+
+auto ValueVisitor::VisitDoExpr(expr::DoExpr* expr) -> bool {
+  ASSERT(expr);
+  ValueVisitor for_body(GetOwner());
+  if (!for_body(expr->GetBody())) {
+    LOG(ERROR) << "failed to visit do-expr body: " << expr->GetBody()->ToString();
+    return false;
+  }
+  Append(for_body);
+  if (for_body.HasValue())
+    ReturnValue(for_body.GetValue());
   return true;
 }
 

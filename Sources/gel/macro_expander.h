@@ -145,6 +145,12 @@ class MacroEffectVisitor : public ExpressionVisitor {
     return result_[0];
   }
 
+  auto GetResultAsSeq() const -> expr::SeqExpr* {
+    if (result_.size() == 1 && result_[0]->IsSeqExpr())
+      return result_[0]->AsSeqExpr();
+    return expr::SeqExpr::New(result_);
+  }
+
   auto begin() const -> expr::ExpressionList::const_iterator {
     return std::begin(GetResults());
   }

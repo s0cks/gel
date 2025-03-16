@@ -505,7 +505,7 @@ class Parser {
   auto ParseSetExpr(expr::Expression**) -> ParseResult;
   auto ParseCallExpr(expr::Expression**) -> ParseResult;
   auto ParseLiteralExpr(expr::Expression**) -> ParseResult;
-  auto ParseBeginExpr(expr::Expression**) -> ParseResult;
+  auto ParseDoExpr(expr::Expression**) -> ParseResult;
   auto ParseUnaryOpExpr(expr::Expression**) -> ParseResult;
   auto ParseBinaryExpr(expr::Expression**) -> ParseResult;
   auto ParseThrowExpr(expr::Expression**) -> ParseResult;

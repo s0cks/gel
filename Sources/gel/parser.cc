@@ -384,18 +384,18 @@ auto Parser::ParseLiteralExpr(expr::Expression** result) -> ParseResult {
   return true;
 }
 
-auto Parser::ParseBeginExpr(expr::Expression** result) -> ParseResult {
+auto Parser::ParseDoExpr(expr::Expression** result) -> ParseResult {
   ParseScope scope(this);
-  EXPECT_NEXT(Token::kBeginExpr);
+  EXPECT_NEXT(Token::kDoExpr);
   expr::ExpressionList body{};
   expr::Expression* expr = nullptr;
   while (!PeekEq(Token::kRParen)) {
     CHECK_RESULT(ParseExpression(&expr));
-    ASSERT(expr);
-    body.push_back(expr);
+    if (expr)
+      body.push_back(expr);
   }
-  ASSERT(PeekEq(Token::kRParen));
-  (*result) = expr::BeginExpr::New(body);
+  ASSERT(PeekEq(Token::kRParen));  // TODO: convert to ParseSeqExpr
+  (*result) = expr::DoExpr::New(expr::SeqExpr::New(body));
   return true;
 }
 
@@ -922,8 +922,8 @@ auto Parser::ParseExpression(expr::Expression** result, const int depth) -> Pars
         CHECK_RESULT(ParseNewExpr(result));
         break;
       }
-      case Token::kBeginExpr: {
-        CHECK_RESULT(ParseBeginExpr(result));
+      case Token::kDoExpr: {
+        CHECK_RESULT(ParseDoExpr(result));
         break;
       }
       case Token::kSet: {
@@ -1804,7 +1804,7 @@ void Parser::Init() {
   DEF_TOKEN("cons", Token::kCons);
   DEF_TOKEN("car", Token::kCar);
   DEF_TOKEN("cdr", Token::kCdr);
-  DEF_TOKEN("begin", Token::kBeginExpr);
+  DEF_TOKEN("do", Token::kDoExpr);
   DEF_TOKEN("add", Token::kAdd);
   DEF_TOKEN("subtract", Token::kSubtract);
   DEF_TOKEN("multiply", Token::kMultiply);

@@ -218,7 +218,9 @@ auto Long::HashCode() const -> uword {
 }
 
 auto Long::Unbox(Object* rhs) -> uint64_t {
-  if (!rhs || !rhs->IsLong())
+  if (!rhs)
+    throw Exception(fmt::format("expected null to be a Long."));
+  if (!rhs->IsLong())
     throw Exception(fmt::format("expected `{}` to be a Long.", *rhs));
   return rhs->AsLong()->Get();
 }

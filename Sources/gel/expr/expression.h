@@ -19,7 +19,7 @@
   V(LiteralExpr)                    \
   V(UnaryOpExpr)                    \
   V(BinaryOpExpr)                   \
-  V(BeginExpr)                      \
+  V(DoExpr)                         \
   V(WhileExpr)                      \
   V(CondExpr)                       \
   V(ClauseExpr)                     \
@@ -661,19 +661,52 @@ class SeqExpr : public Expression {
   }
 };
 
-class BeginExpr : public SeqExpr {
+class DoExpr : public Expression {
+ private:
+  Expression* body_;
+
  protected:
-  explicit BeginExpr(const ExpressionList& expressions) :
-    SeqExpr(expressions) {}
+  explicit DoExpr(Expression* body) :
+    Expression(),
+    body_(body) {}
+
+  void SetBody(Expression* rhs) {
+    ASSERT(rhs);
+    body_ = rhs;
+  }
+
+  void SetChildAt(const uint64_t idx, Expression* rhs) override {
+    ASSERT(rhs);
+    ASSERT(idx == 0);
+    return SetBody(rhs);
+  }
 
  public:
-  ~BeginExpr() override = default;
+  ~DoExpr() override = default;
 
-  DECLARE_EXPRESSION(BeginExpr);
+  auto GetBody() const -> Expression* {
+    return body_;
+  }
+
+  auto GetNumberOfChildren() const -> uint64_t override {
+    return 1;
+  }
+
+  auto GetChildAt(const uint64_t idx) const -> Expression* override {
+    ASSERT(idx == 0);
+    return body_;
+  }
+
+  auto VisitChildren(ExpressionVisitor* vis) -> bool override {
+    ASSERT(vis);
+    return GetBody()->Accept(vis);
+  }
+
+  DECLARE_EXPRESSION(DoExpr);
 
  public:
-  static inline auto New(const ExpressionList& expressions = {}) -> BeginExpr* {
-    return new BeginExpr(expressions);
+  static inline auto New(Expression* body) -> DoExpr* {
+    return new DoExpr(body);
   }
 };
 

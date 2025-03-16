@@ -175,7 +175,8 @@
       "args": [
         "-logtostdout",
         "-colorlogtostdout",
-        "-v=${input:verbose-level}"
+        "-v=${input:verbose-level}",
+        "--dump-ast"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [

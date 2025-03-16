@@ -134,10 +134,9 @@ auto BinaryOpExpr::ToString() const -> std::string {
   return helper;
 }
 
-auto BeginExpr::ToString() const -> std::string {
-  ToStringHelper<BeginExpr> helper;
-  if (!IsEmpty())
-    helper.AddField("num_expressions", GetNumberOfChildren());
+auto DoExpr::ToString() const -> std::string {
+  ToStringHelper<DoExpr> helper;
+  helper.AddField("body", GetBody());
   return helper;
 }
 
