@@ -3,7 +3,7 @@
 #include "gel/array.h"
 #include "gel/common.h"
 #include "gel/constructor.h"
-#include "gel/expr/expression.h"
+#include "gel/expression.h"
 #include "gel/macro.h"
 #include "gel/native_procedure.h"
 #include "gel/parser.h"
@@ -27,6 +27,12 @@ void Module::GetAllLoadedModules(std::vector<Module*>& results) {
     ASSERT(m);
     results.push_back(m);
   }
+}
+
+auto Module::Compare(Object* rhs) const -> int {
+  ASSERT(rhs);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return -1;
 }
 
 auto Module::CreateConstructor(Module* rhs, expr::SeqExpr* body) -> Constructor* {

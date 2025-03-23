@@ -9,7 +9,7 @@
 #include <sstream>
 
 #include "gel/common.h"
-#include "gel/expr/expression.h"
+#include "gel/expression.h"
 #include "gel/flow_graph.h"
 #include "gel/flow_graph_builder.h"
 #include "gel/gv.h"

@@ -13,6 +13,7 @@ _DECLARE_GEL_NATIVE_PROCEDURE(get_version, "get-version");
 _DECLARE_GEL_NATIVE_PROCEDURE(docs, "docs?");
 _DECLARE_GEL_NATIVE_PROCEDURE(type, "type?");
 _DECLARE_GEL_NATIVE_PROCEDURE(sizeof, "sizeof");
+DECLARE_GEL_NATIVE_PROCEDURE(compare);
 
 DECLARE_NATIVE_PROCEDURE(import);
 DECLARE_NATIVE_PROCEDURE(exit);
@@ -27,9 +28,6 @@ _DECLARE_GEL_NATIVE_PROCEDURE(queue_utask, "queue-utask");
 _DECLARE_GEL_NATIVE_PROCEDURE(load_bindings, "load-bindings");
 _DECLARE_GEL_NATIVE_PROCEDURE(get_event_loop, "get-event-loop");
 _DECLARE_GEL_NATIVE_PROCEDURE(bit_str, "bit-str");
-
-#undef DECLARE_GEL_NATIVE_PROCEDURE
-#undef _DECLARE_GEL_NATIVE_PROCEDURE
 
 // ----------------------------------------------------------------------------------------------------
 // Object
@@ -71,20 +69,6 @@ DECLARE_TIMER_PROCEDURE(create);
 
 #undef _DECLARE_TIMER_PROCEDURE
 #undef DECLARE_TIMER_PROCEDURE
-// ----------------------------------------------------------------------------------------------------
-
-// ----------------------------------------------------------------------------------------------------
-// Set
-// ----------------------------------------------------------------------------------------------------
-#define _DECLARE_SET_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(set_##Name, "Set/" Sym)
-#define DECLARE_SET_PROCEDURE(Name)       _DECLARE_SET_PROCEDURE(Name, #Name);
-
-DECLARE_SET_PROCEDURE(contains);
-DECLARE_SET_PROCEDURE(count);
-_DECLARE_SET_PROCEDURE(empty, "empty?");
-
-#undef _DECLARE_SET_PROCEDURE
-#undef DECLARE_SET_PROCEDURE
 // ----------------------------------------------------------------------------------------------------
 
 #ifdef GEL_ENABLE_RX

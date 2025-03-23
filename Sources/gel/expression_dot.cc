@@ -1,11 +1,11 @@
-#include "gel/expr/expression_dot.h"
+#include "gel/expression_dot.h"
 
 #include <glog/logging.h>
 
 #include <algorithm>
 
 #include "gel/common.h"
-#include "gel/expr/expression.h"
+#include "gel/expression.h"
 #include "gel/gv.h"
 #include "gel/types.h"
 
@@ -26,8 +26,19 @@ auto ExpressionToDot::VisitBinding(Binding* expr) -> bool {
 
 auto ExpressionToDot::VisitNewExpr(NewExpr* expr) -> bool {
   ASSERT(expr);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return false;
+  // create new node
+  const auto node = NewNode();
+  ASSERT(node);
+  {
+    // create node labels
+    // label
+    std::stringstream label;
+    label << expr->GetName() << std::endl;
+    label << "Type: " << expr->GetTargetClass()->GetName();
+    dot::SetNodeLabel(node, label);
+  }
+  CreateEdgeFromParent(node);
+  return ProcessChildren(expr, node);
 }
 
 auto ExpressionToDot::VisitSeqExpr(SeqExpr* expr) -> bool {

@@ -74,7 +74,7 @@ class Object : public HeapObject {
 #define DECLARE_BINARY_OP(Name) virtual auto Name(Object* rhs) const -> Object*;
   FOR_EACH_BINARY_OP(DECLARE_BINARY_OP)
 
-  virtual auto Compare(Object* rhs) const -> int;
+  virtual auto Compare(Object* rhs) const -> int = 0;
 
   auto GetField(Field* field) const -> Object* {
     ASSERT(field);
@@ -147,9 +147,16 @@ struct ObjectHasher {
   }
 };
 
-struct ObjectComparator {
+struct ObjectEquals {
   auto operator()(Object* lhs, Object* rhs) const -> bool {
+    ASSERT(rhs);
     return lhs->Equals(rhs);
+  }
+};
+
+struct ObjectComparator {
+  auto operator()(Object* lhs, Object* rhs) const -> int {
+    return lhs->Compare(rhs);
   }
 };
 
@@ -187,6 +194,7 @@ static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream
  public:                                                                    \
   auto HashCode() const -> uword override;                                  \
   auto Equals(Object* rhs) const -> bool override;                          \
+  auto Compare(Object* rhs) const -> int override;                          \
   auto GetType() const -> Class* override {                                 \
     return GetClass();                                                      \
   }                                                                         \
@@ -350,7 +358,6 @@ class Long : public Number {
   auto Multiply(Object* rhs) const -> Object* override;
   auto Divide(Object* rhs) const -> Object* override;
   auto Modulus(Object* rhs) const -> Object* override;
-  auto Compare(Object* rhs) const -> int override;
   auto BitAnd(Object* rhs) const -> Object* override;
   auto BitOr(Object* rhs) const -> Object* override;
   auto BitXor(Object* rhs) const -> Object* override;
@@ -502,7 +509,7 @@ class String : public StringObject {
 
  public:
   ~String() override = default;
-
+  auto Eq(Object* rhs) const -> Object* override;
   auto Equals(const std::string& rhs) const -> bool;
   DECLARE_TYPE(String);
 
@@ -519,55 +526,6 @@ class String : public StringObject {
 
   static auto Empty() -> String*;
   static auto ValueOf(Object* rhs) -> String*;
-};
-
-class Set : public Object {
- public:
-  using StorageType = std::unordered_set<Object*, ObjectHasher, ObjectComparator>;
-
- private:
-  StorageType data_;
-
- protected:
-  Set(const StorageType& data) :
-    Object(),
-    data_(data) {}
-
-  inline auto Find(Object* rhs) const -> StorageType::const_iterator {
-    return data().find(rhs);
-  }
-
- public:
-  ~Set() override = default;
-
-  auto data() const -> const StorageType& {
-    return data_;
-  }
-
-  auto GetSize() const -> uword {
-    return data().size();
-  }
-
-  inline auto IsEmpty() const -> bool {
-    return data().empty();
-  }
-
-  auto Contains(Object* rhs) const -> bool {
-    const auto& pos = Find(rhs);
-    return pos != std::end(data());
-  }
-
-  DECLARE_TYPE(Set);
-
- public:
-  static auto Of(Object* value) -> Set*;
-  static inline auto Of(const StorageType& data = {}) -> Set* {
-    return new Set(data);
-  }
-
-  static inline auto Empty() -> Set* {
-    return Of();
-  }
 };
 
 auto PrintValue(std::ostream& stream, Object* value) -> std::ostream&;

@@ -3,7 +3,7 @@
 #include <sstream>
 
 #include "gel/common.h"
-#include "gel/expr/expression.h"
+#include "gel/expression.h"
 #include "gel/local.h"
 #include "gel/local_scope.h"
 #include "gel/namespace.h"
@@ -59,6 +59,12 @@ auto Macro::ToString() const -> std::string {
   if (IsEmpty())
     helper.AddField("empty", IsEmpty());
   return helper;
+}
+
+auto Macro::Compare(Object* rhs) const -> int {
+  ASSERT(rhs);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return -1;
 }
 
 #define INIT_MACRO_NATIVE(Name) InitNative<macro_##Name>();

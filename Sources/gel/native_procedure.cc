@@ -18,6 +18,12 @@ auto NativeProcedureEntry::Return(Object* rhs) const -> bool {
   return DoNothing();
 }
 
+auto NativeProcedure::Compare(Object* rhs) const -> int {
+  ASSERT(rhs);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return -1;
+}
+
 auto NativeProcedureEntry::ThrowNotImplementedError() const -> bool {
   std::stringstream ss;
   if (HasNative()) {

@@ -5,7 +5,7 @@
 #include <ostream>
 
 #include "gel/common.h"
-#include "gel/expr/expression.h"
+#include "gel/expression.h"
 
 namespace gel {
 struct Position {
@@ -63,6 +63,7 @@ struct Position {
   V(Colon)                    \
   V(Dollar)                   \
   V(Dispatch)                 \
+  V(BeginSet)                 \
   V(LiteralNumber)            \
   V(LiteralDouble)            \
   V(LiteralLong)              \
@@ -195,7 +196,8 @@ struct Token {
 
   auto IsLiteral() const -> bool {
     return IsFunctionLiteral() || IsSymbol() || kind == Token::kLiteralTrue || kind == Token::kLiteralFalse ||
-           kind == Token::kLiteralLong || kind == Token::kLiteralDouble || kind == Token::kLiteralString;
+           kind == Token::kLiteralLong || kind == Token::kLiteralDouble || kind == Token::kLiteralString ||
+           kind == Token::kBeginSet;
   }
 
   auto IsIdentifier() const -> bool {

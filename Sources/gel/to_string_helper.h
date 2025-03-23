@@ -8,7 +8,7 @@
 #include <type_traits>
 
 #include "gel/common.h"
-#include "gel/expr/expression.h"
+#include "gel/expression.h"
 #include "gel/instruction.h"
 #include "gel/macro.h"
 #include "gel/object.h"

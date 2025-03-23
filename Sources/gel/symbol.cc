@@ -61,6 +61,12 @@ auto Symbol::New(const ObjectList& args) -> Symbol* {
   NOT_IMPLEMENTED(FATAL);
 }
 
+auto Symbol::Compare(Object* rhs) const -> int {
+  ASSERT(rhs);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return -1;
+}
+
 auto Symbol::ToString() const -> std::string {
   ToStringHelper<Symbol> helper;
   helper.AddField("value", GetFullyQualifiedName());

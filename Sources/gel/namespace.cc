@@ -3,7 +3,7 @@
 #include <algorithm>
 
 #include "gel/common.h"
-#include "gel/expr/expression.h"
+#include "gel/expression.h"
 #include "gel/local.h"
 #include "gel/native_procedure.h"
 #include "gel/pointer.h"
@@ -47,6 +47,12 @@ auto Namespace::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
   if (!VisitPointerPointer(vis, &docs_))
     return false;
   return true;
+}
+
+auto Namespace::Compare(Object* rhs) const -> int {
+  ASSERT(rhs);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return -1;
 }
 
 auto Namespace::HashCode() const -> uword {

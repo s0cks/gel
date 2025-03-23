@@ -8,7 +8,7 @@
 #include "gel/argument.h"
 #include "gel/common.h"
 #include "gel/compiled_code.h"
-#include "gel/expr/expression.h"
+#include "gel/expression.h"
 #include "gel/object.h"
 #include "gel/pointer.h"
 #include "gel/procedure.h"

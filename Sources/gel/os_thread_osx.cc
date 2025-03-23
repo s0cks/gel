@@ -43,7 +43,7 @@ class ThreadStartData {
 
 auto SetThreadName(const ThreadId& thread, const char* name) -> bool {
   static std::array<char, kThreadNameMaxLength> kThreadNameBuffer{};
-  snprintf(&kThreadNameBuffer[0], kThreadNameMaxLength - 1, "%s", name);  // NOLINT(cppcoreguidelines-pro-type-vararg)
+  snprintf(&kThreadNameBuffer[0], kThreadNameMaxLength - 1, "%s", name);
   const pthread_status status = pthread_setname_np((const char*)&kThreadNameBuffer[0]);
   LOG_IF(ERROR, !status) << "couldn't set thread name: " << status;
   return status;
@@ -117,7 +117,7 @@ auto GetThreadName(const ThreadId& thread) -> std::string {
 
 auto SetThreadName(const ThreadId& thread, const std::string& name) -> bool {
   static std::array<char, kThreadNameMaxLength> kThreadNameBuffer{};
-  snprintf(&kThreadNameBuffer[0], kThreadNameMaxLength - 1, "%s", name.data());  // NOLINT(cppcoreguidelines-pro-type-vararg)
+  snprintf(&kThreadNameBuffer[0], kThreadNameMaxLength - 1, "%s", name.data());
   const pthread_status status = pthread_setname_np(&kThreadNameBuffer[0]);
   LOG_IF(ERROR, !status) << "couldn't set thread name: " << status;
   DLOG_IF(INFO, status) << "set thread name to `" << std::string(&kThreadNameBuffer[0], kThreadNameMaxLength) << "`";

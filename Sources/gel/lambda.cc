@@ -6,7 +6,7 @@
 #include <sstream>
 
 #include "gel/common.h"
-#include "gel/expr/expression.h"
+#include "gel/expression.h"
 #include "gel/flow_graph_builder.h"
 #include "gel/local_scope.h"
 #include "gel/pointer.h"
@@ -28,6 +28,12 @@ auto Lambda::Equals(Object* rhs) const -> bool {
 
 auto Lambda::HashCode() const -> uword {
   return Procedure::HashCode();
+}
+
+auto Lambda::Compare(Object* rhs) const -> int {
+  ASSERT(rhs);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return -1;
 }
 
 auto Lambda::VisitPointers(PointerVisitor* vis) -> bool {

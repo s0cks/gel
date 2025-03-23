@@ -12,7 +12,7 @@
 #include <variant>
 
 #include "gel/common.h"
-#include "gel/expr/expression.h"
+#include "gel/expression.h"
 #include "gel/instruction.h"
 #include "gel/lambda.h"
 #include "gel/local.h"
@@ -495,6 +495,7 @@ class Parser {
   auto ParseLiteralSymbol(Symbol** result) -> ParseResult;
   auto ParseLiteralValue(Object** result) -> ParseResult;
   auto ParseLiteralVec(expr::Expression** result) -> ParseResult;
+  auto ParseLiteralSet(expr::Expression** result) -> ParseResult;
 
   auto ParseLiteralLambda(const Token::Kind kind, expr::LiteralExpr** result) -> ParseResult;
   auto ParseLambdaExpr() -> expr::LambdaExpr*;

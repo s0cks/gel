@@ -17,7 +17,7 @@
 #include "gel/common.h"
 #include "gel/event_emitter.h"
 #include "gel/event_loop.h"
-#include "gel/expr/expression.h"
+#include "gel/expression.h"
 #include "gel/heap.h"
 #include "gel/namespace.h"
 #include "gel/natives.h"
@@ -184,7 +184,7 @@ void Object::Init() {
   ArrayBase::InitClass();
   Macro::Init();
   Error::InitClass();
-  Set::InitClass();
+  Set::Init();
   Expression::Init();
   EventLoop::Init();
   EventEmitter::Init();
@@ -223,6 +223,12 @@ auto Long::Unbox(Object* rhs) -> uint64_t {
   if (!rhs->IsLong())
     throw Exception(fmt::format("expected `{}` to be a Long.", *rhs));
   return rhs->AsLong()->Get();
+}
+
+auto Double::Compare(Object* rhs) const -> int {
+  ASSERT(rhs);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return -1;
 }
 
 auto Double::CreateClass() -> Class* {
@@ -287,6 +293,11 @@ auto Bool::False() -> Bool* {
   return kFalse;
 }
 
+auto Bool::Compare(Object* rhs) const -> int {
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return false;
+}
+
 auto Object::FieldAddr(Field* field) const -> Object** {
   ASSERT(field && field->GetOffset() > 0);
   return FieldAddrAtOffset(field->GetOffset());
@@ -300,6 +311,12 @@ auto Bool::HashCode() const -> uword {
 
 auto Number::BitNot() const -> Object* {
   return Long::New(~GetLong());
+}
+
+auto Number::Compare(Object* rhs) const -> int {
+  ASSERT(rhs);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return -1;
 }
 
 auto Number::CreateClass() -> Class* {
@@ -459,6 +476,12 @@ auto Pair::New(const ObjectList& args) -> Pair* {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
 }
 
+auto Pair::Compare(Object* rhs) const -> int {
+  ASSERT(rhs);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return -1;
+}
+
 Field* Pair::kFirstField = nullptr;
 Field* Pair::kSecondField = nullptr;
 auto Pair::CreateClass() -> Class* {
@@ -564,12 +587,22 @@ auto String::CreateClass() -> Class* {
   return Class::New(Object::GetClass(), kClassName);
 }
 
+auto String::Compare(Object* rhs) const -> int {
+  if (!rhs || !rhs->IsString())
+    return 1;
+  return Get().compare(rhs->AsString()->Get());
+}
+
 auto String::Equals(const std::string& rhs) const -> bool {
   return StringObject::Equals(rhs);
 }
 
 auto String::Equals(Object* rhs) const -> bool {
   return StringObject::Equals(rhs);
+}
+
+auto String::Eq(Object* rhs) const -> Object* {
+  return Bool::Box(Equals(rhs));
 }
 
 auto String::New(const ObjectList& args) -> String* {
@@ -655,60 +688,6 @@ auto StringObject::HashCode() const -> uword {
   return hash;
 }
 
-auto Set::HashCode() const -> uword {
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return 0;
-}
-
-auto Set::Equals(Object* rhs) const -> bool {
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return false;
-}
-
-auto Set::ToString() const -> std::string {
-  ToStringHelper<Set> helper;
-  helper.AddField("size", GetSize());
-  return helper;
-}
-
-auto Set::Of(Object* value) -> Set* {
-  if (gel::IsNull(value))
-    return Set::Of();
-  else if (value->IsSet())
-    return value->AsSet();
-  else if (value->IsPair()) {
-    if (value->AsPair()->IsEmpty())
-      return Of();
-    else if (value->AsPair()->IsTuple())
-      return Of({
-          value->AsPair()->GetFirst(),
-          value->AsPair()->GetSecond(),
-      });
-    ObjectList values;
-    auto v = value;
-    while (!gel::IsNull(v)) {
-      values.push_back(gel::Car(v));
-      v = gel::Cdr(v);
-    }
-    return Of(StorageType(std::begin(values), std::end(values)));
-  }
-  return Of(StorageType{value});
-}
-
-auto Set::New(const ObjectList& args) -> Set* {
-  if (args.empty())
-    return Of();
-  else if (args.size() == 1)
-    return Of(args[0]);
-  StorageType data(args.begin(), args.end());
-  return Of(data);
-}
-
-auto Set::CreateClass() -> Class* {
-  ASSERT(kClass == nullptr);
-  return Class::New(Seq::GetClass(), "Set");
-}
-
 auto Seq::New(const ObjectList& args) -> Seq* {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
   return nullptr;
@@ -784,14 +763,14 @@ auto PrintValue(std::ostream& stream, Object* value) -> std::ostream& {
       next = next->AsPair()->GetSecond();
     } while (true);
   } else if (value->IsSet()) {
-    stream << "(";
+    stream << "#{";
     auto remaining = value->AsSet()->GetSize();
     for (const auto& value : value->AsSet()->data()) {
       PrintValue(stream, value);
       if (--remaining > 0)
-        stream << ", ";
+        stream << " ";
     }
-    stream << ")";
+    stream << "}";
     return stream;
   } else if (value->IsVec2()) {
     stream << "[";
@@ -809,26 +788,4 @@ auto PrintValue(std::ostream& stream, Object* value) -> std::ostream& {
   }
   return stream << value->ToString();
 }
-
-namespace proc {
-#define SET_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(set_##Name)
-
-SET_PROCEDURE_F(contains) {
-  REQUIRED_NATIVE_ARG(0, Set, set);
-  REQUIRED_NATIVE_ARG(1, Object, value);
-  return ReturnBool(set->Contains(value));
-}
-
-SET_PROCEDURE_F(count) {
-  REQUIRED_NATIVE_ARG(0, Set, set);
-  return ReturnLong(set->GetSize());
-}
-
-SET_PROCEDURE_F(empty) {
-  REQUIRED_NATIVE_ARG(0, Set, set);
-  return ReturnBool(set->IsEmpty());
-}
-
-#undef SET_PROCEDURE_F
-}  // namespace proc
 }  // namespace gel

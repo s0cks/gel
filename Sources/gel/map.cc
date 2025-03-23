@@ -35,6 +35,12 @@ auto Map::Equals(Object* rhs) const -> bool {
   return false;
 }
 
+auto Map::Compare(Object* rhs) const -> int {
+  ASSERT(rhs);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return -1;
+}
+
 auto Map::ToString() const -> std::string {
   ToStringHelper<Map> helper;
   helper.AddField("size", GetSize());

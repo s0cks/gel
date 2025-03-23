@@ -9,7 +9,7 @@
 #include "gel/assembler_base.h"
 #include "gel/bytecode.h"
 #include "gel/common.h"
-#include "gel/expr/expression.h"
+#include "gel/expression.h"
 #include "gel/to_string_helper.h"
 
 namespace gel {

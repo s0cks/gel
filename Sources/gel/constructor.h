@@ -2,7 +2,7 @@
 #define GEL_CONSTRUCTOR_H
 
 #include "gel/compiled_code.h"
-#include "gel/expr/expression.h"
+#include "gel/expression.h"
 #include "gel/procedure.h"
 
 namespace gel {

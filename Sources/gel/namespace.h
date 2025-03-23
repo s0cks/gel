@@ -7,7 +7,7 @@
 #include "gel/argument.h"
 #include "gel/common.h"
 #include "gel/constructor.h"
-#include "gel/expr/expression.h"
+#include "gel/expression.h"
 #include "gel/object.h"
 #include "gel/pointer.h"
 #include "gel/type_traits.h"

@@ -137,6 +137,12 @@ auto Buffer::Copy(String* src) -> Buffer* {
   return Buffer::Copy(src->Get());
 }
 
+auto Buffer::Compare(Object* rhs) const -> int {
+  ASSERT(rhs);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return -1;
+}
+
 auto Buffer::New(const ObjectList& args) -> Buffer* {
   if (args.empty() || gel::IsNull(args[0]))
     return Buffer::New(kDefaultBufferSize);

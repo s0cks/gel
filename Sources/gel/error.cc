@@ -18,6 +18,12 @@ auto Error::HashCode() const -> uword {
   return hash;
 }
 
+auto Error::Compare(Object* rhs) const -> int {
+  ASSERT(rhs);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return -1;
+}
+
 auto Error::Equals(Object* rhs) const -> bool {
   if (!rhs || !rhs->IsError())
     return false;

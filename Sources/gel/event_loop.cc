@@ -43,6 +43,12 @@ auto EventLoop::Submit(fs::RequestBase* request) -> int {
   return request->Execute(this);
 }
 
+auto EventLoop::Compare(Object* rhs) const -> int {
+  ASSERT(rhs);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return -1;
+}
+
 auto EventLoop::CreateTimer(Procedure* on_tick) -> Timer* {
   const auto timer = Timer::New(timers_.size() + 1, on_tick);
   ASSERT(timer);
@@ -245,6 +251,12 @@ void Timer::OnTick(uv_timer_t* handle) {
   const auto runtime = GetRuntime();
   ASSERT(runtime);
   return runtime->Call(on_tick);
+}
+
+auto Timer::Compare(Object* rhs) const -> int {
+  ASSERT(rhs);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return -1;
 }
 
 namespace fs {

@@ -67,6 +67,7 @@
 (import "class.cl")
 (import "namespace.cl")
 (import "map.cl")
+(import "set.cl")
 (import "macro.cl")
 (import "module.cl")
 

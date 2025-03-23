@@ -33,6 +33,7 @@
 #include "gel/parser.h"
 #include "gel/platform.h"
 #include "gel/procedure.h"
+#include "gel/repl.h"
 #include "gel/runtime.h"
 #include "gel/rx.h"
 #include "gel/shared_lib.h"
@@ -62,6 +63,7 @@ void NativeProcedure::InitNatives() {
   INIT_GEL_NATIVE(docs);
   INIT_GEL_NATIVE(load_bindings);
   INIT_GEL_NATIVE(get_event_loop);
+  INIT_GEL_NATIVE(compare);
 
 #define InitTimerNative(Name) InitNative<timer_##Name>()
   InitTimerNative(create);
@@ -72,12 +74,6 @@ void NativeProcedure::InitNatives() {
   InitTimerNative(get_repeat);
   InitTimerNative(set_repeat);
 #undef InitTimerNative
-
-#define InitSetNative(Name) InitNative<set_##Name>()
-  InitSetNative(contains);
-  InitSetNative(empty);
-  InitSetNative(count);
-#undef InitSetNative
 
 #ifdef GEL_ENABLE_RX
 #define REGISTER_RX(Name) InitNative<rx_##Name>();
@@ -140,6 +136,12 @@ GEL_NATIVE_PROCEDURE_F(queue_utask) {
   REQUIRED_NATIVE_ARG(0, Procedure, task);
   GetThreadEventLoop()->AddTask(task);
   return ReturnNull();
+}
+
+GEL_NATIVE_PROCEDURE_F(compare) {
+  REQUIRED_NATIVE_ARG(0, Object, x);
+  REQUIRED_NATIVE_ARG(1, Object, y);
+  return ReturnLong(x->Compare(y));
 }
 
 GEL_NATIVE_PROCEDURE_F(bit_str) {
@@ -214,6 +216,14 @@ GEL_NATIVE_PROCEDURE_F(print) {
   if (VLOG_IS_ON(100))
     PrintValue(google::LogMessage(__FILE__, __LINE__, google::LogSeverity::INFO).stream(), args[0]);
 #endif  // GEL_DEBUG
+  if (IsReplInitializedForCurrentThread()) {
+    std::stringstream ss;
+    PrintValue(ss, args[0]);
+    const auto repl = GetReplForCurrentThread();
+    ASSERT(repl);
+    repl->Print(ss);
+    return ReturnNull();
+  }
   PrintValue(std::cout, args[0]) << std::endl;
   return ReturnNull();
 }
@@ -301,12 +311,12 @@ OBJECT_PROCEDURE_F(hashcode) {
 
 TIMER_PROCEDURE_F(start) {
   REQUIRED_NATIVE_ARG(0, Long, id);
-  REQUIRED_NATIVE_ARG(1, Long, timeout);
+  REQUIRED_NATIVE_ARG(1, Long, timeout_value);
   REQUIRED_NATIVE_ARG(2, Long, repeat);
   const auto timer = GetThreadEventLoop()->GetTimer(id->Get());
   if (!timer)  // TODO: create new Timer?
     return ThrowError(fmt::format("failed to find Timer w/ id {}", id->Get()));
-  timer->Start(timeout->Get(), repeat->Get());
+  timer->Start(timeout_value->Get(), repeat->Get());
   return Return();
 }
 
@@ -356,11 +366,11 @@ TIMER_PROCEDURE_F(get_due_in) {
 
 TIMER_PROCEDURE_F(create) {
   REQUIRED_NATIVE_ARG(0, Procedure, on_tick);
-  REQUIRED_NATIVE_ARG(1, Long, timeout);
+  REQUIRED_NATIVE_ARG(1, Long, timeout_value);
   REQUIRED_NATIVE_ARG(2, Long, repeat);
   const auto timer = GetThreadEventLoop()->CreateTimer(on_tick);
   ASSERT(timer);
-  timer->Start(timeout->Get(), repeat->Get());
+  timer->Start(timeout_value->Get(), repeat->Get());
   return ReturnNew<Long>(timer->GetId());
 }
 

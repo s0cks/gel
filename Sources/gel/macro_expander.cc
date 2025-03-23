@@ -1,7 +1,7 @@
 #include "gel/macro_expander.h"
 
 #include "gel/common.h"
-#include "gel/expr/expression.h"
+#include "gel/expression.h"
 #include "gel/local.h"
 #include "gel/local_scope.h"
 #include "gel/macro.h"

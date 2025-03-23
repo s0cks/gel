@@ -12,7 +12,7 @@
 #include "gel/disassembler.h"
 #include "gel/error.h"
 #include "gel/event_loop.h"
-#include "gel/expr/expression.h"
+#include "gel/expression.h"
 #include "gel/instruction.h"
 #include "gel/lambda.h"
 #include "gel/local.h"

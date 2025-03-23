@@ -304,6 +304,12 @@ void Class::Add(Field* field) {
   fields_->Push(field);
 }
 
+auto Class::Compare(Object* rhs) const -> int {
+  if (!rhs || !rhs->IsClass())
+    return 1;
+  return GetName()->Compare(rhs->AsClass()->GetName());
+}
+
 auto Field::IsNamed(const std::string& name) -> Field::Predicate {
   ASSERT(!name.empty());
   return [&name](Field* field) {
@@ -449,6 +455,15 @@ auto Field::Equals(Object* rhs) const -> bool {
 auto Field::New(const ObjectList& args) -> Field* {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
   return nullptr;
+}
+
+auto Field::Compare(Object* rhs) const -> int {
+  if (!rhs || !rhs->IsField())
+    return 1;
+  int result = 0;
+  if ((result = GetOwner()->Compare(rhs->AsField()->GetOwner())) != 0)
+    return result;
+  return GetName()->Compare(rhs->AsField()->GetName());
 }
 
 #define INIT_CLASS_NATIVE(Name) InitNative<class_##Name>();

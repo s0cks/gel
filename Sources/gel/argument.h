@@ -52,6 +52,7 @@ class Argument : public Object {
     return vararg_;
   }
 
+  auto Compare(Object* rhs) const -> int override;
   auto HashCode() const -> uword override;
   auto Equals(Object* rhs) const -> bool override;
   auto ToString() const -> std::string override;

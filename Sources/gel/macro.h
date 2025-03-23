@@ -3,7 +3,7 @@
 
 #include "gel/argument.h"
 #include "gel/common.h"
-#include "gel/expr/expression.h"
+#include "gel/expression.h"
 #include "gel/object.h"
 #include "gel/type_traits.h"
 

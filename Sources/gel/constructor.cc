@@ -16,6 +16,12 @@ auto Constructor::HashCode() const -> uword {
   return 0;
 }
 
+auto Constructor::Compare(Object* rhs) const -> int {
+  ASSERT(rhs);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return -1;
+}
+
 auto Constructor::ToString() const -> std::string {
   ToStringHelper<Constructor> helper{};
   return helper;

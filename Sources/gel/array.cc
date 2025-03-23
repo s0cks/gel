@@ -64,6 +64,12 @@ auto ArrayBase::HashCode() const -> uword {
   return 0;
 }
 
+auto ArrayBase::Compare(Object* rhs) const -> int {
+  ASSERT(rhs);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return -1;
+}
+
 auto ArrayBase::ToString() const -> std::string {
   std::stringstream ss;
   ss << "Array(";

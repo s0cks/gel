@@ -6,7 +6,7 @@
 
 #include "gel/common.h"
 #include "gel/constructor.h"
-#include "gel/expr/expression.h"
+#include "gel/expression.h"
 #include "gel/flags.h"
 #include "gel/gel.h"
 #include "gel/instruction.h"

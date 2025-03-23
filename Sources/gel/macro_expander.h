@@ -2,8 +2,8 @@
 #define GEL_MACRO_EXPANDER_H
 
 #include "gel/common.h"
-#include "gel/expr/expression.h"
-#include "gel/expr/expression_dot.h"
+#include "gel/expression.h"
+#include "gel/expression_dot.h"
 #include "gel/flags.h"
 #include "gel/local.h"
 #include "gel/local_scope.h"

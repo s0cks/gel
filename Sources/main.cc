@@ -13,8 +13,8 @@
 #include "gel/collector.h"
 #include "gel/common.h"
 #include "gel/error.h"
-#include "gel/expr/expression.h"
-#include "gel/expr/expression_dot.h"
+#include "gel/expression.h"
+#include "gel/expression_dot.h"
 #include "gel/flags.h"
 #include "gel/flow_graph_builder.h"
 #include "gel/flow_graph_compiler.h"
@@ -145,7 +145,8 @@ auto main(int argc, char** argv) -> int {
     result = ExecuteScript(std::string(argv[1]));
   } else {
     ASSERT(argc <= 1);
-    result = Repl::Run();
+    Repl::Init();
+    result = GetReplForCurrentThread()->Run();
   }
   GetRuntime()->Shutdown();
   return result;

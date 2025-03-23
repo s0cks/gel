@@ -75,6 +75,12 @@ auto Vec2::New(Pair* rhs) -> Vec2* {
   return New(rhs->GetFirst()->AsNumber(), rhs->GetSecond()->AsNumber());
 }
 
+auto Vec2::Compare(Object* rhs) const -> int {
+  ASSERT(rhs);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return -1;
+}
+
 auto Vec2::New(const std::vector<Object*>& args) -> Vec2* {
   if (args.empty())
     return New(glm::vec2(0));
@@ -95,6 +101,12 @@ auto Vec3::ToString() const -> std::string {
   helper.AddField("y", GetY());
   helper.AddField("z", GetZ());
   return helper;
+}
+
+auto Vec3::Compare(Object* rhs) const -> int {
+  ASSERT(rhs);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return -1;
 }
 
 auto Vec3::Equals(Object* rhs) const -> bool {

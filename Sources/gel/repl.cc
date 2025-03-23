@@ -4,32 +4,63 @@
 #include <iostream>
 
 #include "gel/common.h"
+#include "gel/gel.h"
 #include "gel/module.h"
 #include "gel/runtime.h"
-
-#if defined(OS_IS_OSX) || defined(OS_IS_LINUX)
-
-#include <ncurses.h>
-
-#else
-#error "Unsupported Operating System"
-#endif
+#include "gel/thread_local.h"
 
 namespace gel {
-Repl::Repl(std::istream& is, std::ostream& os, LocalScope* scope) :
-  in_(is),
-  out_(os),
+Repl::Repl(LocalScope* scope) :
   scope_(scope) {
-  ASSERT(in().good());
-  ASSERT(out().good());
   ASSERT(scope_);
-  expression_.reserve(Parser::kDefaultChunkSize);
+  history_.reserve(kDefaultReplHistoryLength);
+  expression_.reserve(kDefaultReplBufferLength);
 }
 
-auto Repl::Prompt() -> bool {
-  out() << ">>> ";
-  std::getline(in(), expression_);
-  return in().good();
+void Repl::RefreshLine(const std::string& line, const std::string& prompt) {
+  int x = 0;
+  int y = 0;
+  getyx(window_, y, x);
+  wmove(window_, y, 0);
+  wclrtoeol(window_);
+  wprintw(window_, "%s %s", prompt.c_str(), line.c_str());
+}
+
+void Repl::PrintCR() {
+  wprintw(window_, "\n");
+  wrefresh(window_);
+}
+
+auto Repl::Prompt(const std::string& prompt) -> std::string {
+  PrintCR();
+  std::string command{};
+  RefreshLine(command, prompt);
+  int ch = 0;
+  bool eoc = false;
+  while (!eoc) {
+    switch (ch = wgetch(window_)) {
+      case 127: {
+        command.pop_back();
+        break;
+      }
+      case 10: {
+        eoc = true;
+        break;
+      }
+      default: {
+        if (ch != -1)
+          command += static_cast<char>(ch);
+        break;
+      }
+    }
+    RefreshLine(command, prompt);
+  }
+  return command;
+}
+
+void Repl::ClearScreen() {
+  wclear(window_);
+  PrintBanner();
 }
 
 static inline auto IsExitCommand(const std::string& cmd) -> bool {
@@ -44,40 +75,97 @@ static inline auto IsClearCommand(const std::string& cmd) -> bool {
   return cmd == "clear" || cmd == "cls";
 }
 
-auto Repl::RunRepl() -> int {
-  const auto runtime = GetRuntime();
-  ASSERT(runtime);
+void Repl::PrintBanner() {
+  const auto version = gel::GetVersion();
+  wprintw(window_, "gel v%s repl. Type 'exit' to exit.\n", version.c_str());
+}
+
+void Repl::Print(std::string value) {
+  ASSERT(!value.empty());
+  wprintw(window_, "%s", value.c_str());
+}
+
+void Repl::Terminate() {
+  SetRunning(false);
+}
+
+void Repl::PrintHelp() {
+  Print("No help available.");  // TODO: print help
+  PrintCR();
+}
+
+auto Repl::Run() -> int {
+  initscr();
+  cbreak();
+  noecho();
+
+  window_ = newwin(0, 0, 0, 0);
+  ASSERT(window_);
+  nodelay(window_, true);
+  keypad(window_, true);
+
+  PrintBanner();
+
   SetRunning();
-  while (IsRunning() && Prompt()) {
-    if (IsExitCommand(expression_)) {
-      SetRunning(false);
+  while (IsRunning()) {
+    const auto command = Prompt(">>>");
+    PrintCR();
+    if (IsExitCommand(command)) {
+      Terminate();
       continue;
-    } else if (IsHelpCommand(expression_)) {
-      // TODO: print help
-      Respond("No help available.");
+    } else if (IsHelpCommand(command)) {
+      PrintHelp();
       continue;
-    } else if (IsClearCommand(expression_)) {
-      ClearOut();
-      continue;
-    }
-
-    if (expression_.empty()) {
-      Respond("Nothing to eval.");
+    } else if (IsClearCommand(command)) {
+      ClearScreen();
       continue;
     }
 
-    const auto [result, duration] = TimedExecution<Object*>([this]() {
+    if (command.empty()) {
+      Print("Nothing to eval");
+      PrintCR();
+      continue;
+    }
+
+    history_.push_back(command);
+    const auto [result, duration] = TimedExecution<Object*>([this, command]() {
       try {
-        return Runtime::Eval(expression_);
+        return Runtime::Eval(command);
       } catch (const gel::Exception& exc) {
         return (Object*)Error::New(exc.GetMessage());
       }
     });
-    if (!gel::IsNull(result))
-      Respond(result);
-    if (VLOG_IS_ON(10))
-      out() << "finished in " << units::time::nanosecond_t(static_cast<double>(duration.count())) << std::endl;
+    if (!gel::IsNull(result)) {
+      // do nothing
+      // Respond(result);
+      if (VLOG_IS_ON(10)) {
+        // do nothing
+      }
+      // out() << "finished in " << units::time::nanosecond_t(static_cast<double>(duration.count())) << std::endl;
+    }
+
+    PrintCR();
   }
+
+  endwin();
   return EXIT_SUCCESS;
+}
+
+static ThreadLocal<Repl> instance_{};
+
+auto GetReplForCurrentThread() -> Repl* {
+  ASSERT(instance_);
+  return instance_.Get();
+}
+
+auto IsReplInitializedForCurrentThread() -> bool {
+  return instance_.Has();
+}
+
+void Repl::Init(LocalScope* scope) {
+  ASSERT(scope);
+  ASSERT(!IsReplInitializedForCurrentThread());
+  instance_.Set(new Repl(scope));
+  ASSERT(IsReplInitializedForCurrentThread());
 }
 }  // namespace gel

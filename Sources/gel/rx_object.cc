@@ -58,6 +58,11 @@ auto Observable::New(Object* value) -> Observable* {
   return New(rx::source::just(value));
 }
 
+auto Observable::Compare(Object* rhs) const -> int {
+  NOT_IMPLEMENTED(ERROR);  // TODO: not implemented
+  return 0;
+}
+
 auto Observable::New(const ObjectList& args) -> Observable* {
   if (args.empty() || gel::IsNull(args[0]))
     return Empty();
@@ -97,6 +102,11 @@ auto Observer::HashCode() const -> uword {
 auto Observer::New() -> Observer* {
   return new Observer(
       rx::make_lambda_observer<gel::Object*>(rx::DoNothingOnNext(), rx::DoNothingOnError(), rx::DoNothingOnComplete()));
+}
+
+auto Observer::Compare(Object* rhs) const -> int {
+  NOT_IMPLEMENTED(ERROR);  // TODO: not implemented
+  return 0;
 }
 
 auto Observer::New(const ObjectList& args) -> Observer* {
@@ -151,6 +161,11 @@ auto PublishSubject::HashCode() const -> uword {
   return Subject::HashCode();
 }
 
+auto PublishSubject::Compare(Object* rhs) const -> int {
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return 0;
+}
+
 auto PublishSubject::CreateClass() -> Class* {
   return Class::New(Subject::GetClass(), "PublishSubject");
 }
@@ -166,6 +181,11 @@ auto ReplaySubject::ToString() const -> std::string {
 
 auto ReplaySubject::HashCode() const -> uword {
   return Subject::HashCode();
+}
+
+auto ReplaySubject::Compare(Object* rhs) const -> int {
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return 0;
 }
 
 auto ReplaySubject::Equals(Object* rhs) const -> bool {

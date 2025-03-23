@@ -5,7 +5,7 @@
 #include <filesystem>
 
 #include "gel/common.h"
-#include "gel/expr/expression.h"
+#include "gel/expression.h"
 #include "gel/macro.h"
 #include "gel/namespace.h"
 #include "gel/object.h"

@@ -209,7 +209,7 @@ struct Percent {
     static constexpr const auto kFormattedLength = 8;
     const auto kFormatBuffer = std::string(kFormattedLength, '\0');
     memset((void*)&kFormatBuffer[0], '\0', kFormattedLength);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg,cppcoreguidelines-pro-type-cstyle-cast)
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
     snprintf((char*)&kFormatBuffer[0], kFormattedLength, "%.2f%%", rhs.value);
     return stream << kFormatBuffer;
   }

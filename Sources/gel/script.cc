@@ -5,7 +5,7 @@
 #include <fstream>
 
 #include "gel/common.h"
-#include "gel/expr/expression_dot.h"
+#include "gel/expression_dot.h"
 #include "gel/flags.h"
 #include "gel/flow_graph_builder.h"
 #include "gel/flow_graph_compiler.h"
@@ -42,6 +42,12 @@ void Script::Append(Namespace* ns) {
   ns->SetOwner(this);
   if (scope_)
     LOG_IF(FATAL, !scope_->Add(ns)) << "failed to add " << ns << " to scope.";
+}
+
+auto Script::Compare(Object* rhs) const -> int {
+  ASSERT(rhs);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return -1;
 }
 
 auto Script::Equals(Object* rhs) const -> bool {

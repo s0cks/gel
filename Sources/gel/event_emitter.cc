@@ -38,6 +38,12 @@ auto EventEmitter::HashCode() const -> uword {
   return hash;
 }
 
+auto EventEmitter::Compare(Object* rhs) const -> int {
+  ASSERT(rhs);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return -1;
+}
+
 auto EventEmitter::CreateClass() -> Class* {
   ASSERT(kClass == nullptr);
   const auto cls = Class::New(Object::GetClass(), kClassName);

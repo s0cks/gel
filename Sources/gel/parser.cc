@@ -7,7 +7,7 @@
 
 #include "gel/argument.h"
 #include "gel/common.h"
-#include "gel/expr/expression.h"
+#include "gel/expression.h"
 #include "gel/instruction.h"
 #include "gel/lambda.h"
 #include "gel/local.h"
@@ -351,6 +351,23 @@ auto Parser::ParseLiteralVec(expr::Expression** result) -> ParseResult {
   NOT_IMPLEMENTED(FATAL);
 }
 
+auto Parser::ParseLiteralSet(expr::Expression** result) -> ParseResult {
+  EXPECT_NEXT(Token::kBeginSet);
+
+  expr::Expression* value = nullptr;
+  expr::ExpressionList values{};
+  do {
+    CHECK_RESULT(ParseExpression(&value));
+    values.push_back(value);
+    if (PeekEq(Token::kRBrace))
+      break;
+  } while (true);
+  EXPECT_NEXT(Token::kRBrace);
+
+  (*result) = expr::NewExpr::New(Set::GetClass(), values);
+  return true;
+}
+
 auto Parser::ParseLiteralValue(Object** result) -> ParseResult {
   switch (PeekKind()) {
     case Token::kLiteralFalse:
@@ -375,6 +392,8 @@ auto Parser::ParseLiteralExpr(expr::Expression** result) -> ParseResult {
     return ParseMap(result);
   } else if (PeekEq(Token::kLBracket)) {
     return ParseLiteralVec(result);
+  } else if (PeekEq(Token::kBeginSet)) {
+    return ParseLiteralSet(result);
   }
 
   Object* literal = nullptr;
@@ -1214,8 +1233,11 @@ auto Parser::NextToken() -> const Token& {
         case 't':
           Advance(2);
           return NextToken(Token::kLiteralTrue);
+        case '{':
+          Advance(2);
+          return NextToken(Token::kBeginSet);
       }
-      if (IsValidIdentifierChar(PeekChar(1))) {
+      if (IsValidIdentifierChar(PeekChar(1))) {  // TODO: remove
         Advance();
         token_len_ = 0;
         while (IsValidIdentifierChar(PeekChar(), token_len_ == 0) && PeekChar() != '?') {
