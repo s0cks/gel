@@ -146,9 +146,13 @@ class Disassembler {
     ASSERT(scope);
     if (exec->HasScope())
       scope->AddAll(exec->GetScope());
-    const auto label = exec->GetFullyQualifiedName();
     Disassembler disassembler(scope);
-    disassembler.Disassemble(exec->GetCode(), label);
+    std::stringstream label{};
+    label << exec->GetFullyQualifiedName();
+#ifdef GEL_DEBUG
+    label << " " << exec->GetType()->GetName()->Get();
+#endif  // GEL_DEBUG
+    disassembler.Disassemble(exec->GetCode(), label.str().c_str());
     stream << disassembler;
   }
 };

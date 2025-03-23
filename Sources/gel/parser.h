@@ -485,6 +485,8 @@ class Parser {
 
   auto ParseLoadSymbol() -> LoadLocalInstr*;
   auto ParseArguments(Array<Argument*>** args, const bool bind = false) -> ParseResult;
+  auto ParseBinding(expr::BindingExpr** result) -> ParseResult;
+  auto ParseBindingList(expr::BindingList& bindings, const bool push_scope = true) -> ParseResult;
   auto ParseExpressionList(expr::ExpressionList& expressions, const bool push_scope = true) -> ParseResult;
   auto ParseRxOpList(expr::RxOpList& operators) -> ParseResult;
   auto ParseClauseList(expr::ClauseList& clauses) -> ParseResult;
@@ -517,6 +519,8 @@ class Parser {
   auto ParseLetExpr(expr::Expression**) -> ParseResult;
   auto ParseRxOpExpr(expr::Expression**) -> ParseResult;
   auto ParseLetRxExpr(expr::Expression**) -> ParseResult;
+  auto ParseForeachExpr(expr::Expression**) -> ParseResult;
+  auto ParseForeachBindingExpr(LocalVariable** local, expr::Expression** value) -> ParseResult;
   auto ParseListExpr(expr::Expression**) -> ParseResult;
   auto ParseInstanceOfExpr(expr::Expression**) -> ParseResult;
   auto ParseCastExpr(expr::Expression**) -> ParseResult;

@@ -2,6 +2,7 @@
 
 #include <glog/logging.h>
 
+#include <cstddef>
 #include <unordered_map>
 #include <utility>
 
@@ -737,7 +738,7 @@ auto Parser::ParseLetExpr(expr::Expression** result) -> ParseResult {
       ss << "failed to add " << (*local) << " to current scope.";
       return ReturnError(ss, pos_);
     }
-    bindings.emplace_back(Binding::New(local, value));
+    bindings.emplace_back(BindingExpr::New(local, value));
     EXPECT_NEXT(Token::kRParen);
   }
   EXPECT_NEXT(Token::kRParen);
@@ -801,6 +802,38 @@ auto Parser::ParseArguments(Array<Argument*>** args, const bool bind) -> ParseRe
   }
   ClearParsingArgs();
   ExpectNext(Token::kRBracket);
+  return true;
+}
+
+auto Parser::ParseBinding(expr::BindingExpr** result) -> ParseResult {
+  Symbol* symbol = nullptr;
+  CHECK_RESULT(ParseLiteralSymbol(&symbol));
+  const auto scope = GetScope();
+  {
+    LocalVariable* it_local = LocalVariable::New(scope, "$");
+    LOG_IF(FATAL, !scope->Add(it_local)) << "failed to add " << (*it_local) << " to current scope.";
+  }
+  LocalVariable* local = LocalVariable::New(scope, symbol);
+  LOG_IF(FATAL, !scope->Add(local)) << "failed to add " << (*local) << " to current scope.";
+  expr::Expression* value = nullptr;
+  CHECK_RESULT(ParseExpression(&value));
+  (*result) = expr::BindingExpr::New(local, value);
+  return true;
+}
+
+auto Parser::ParseBindingList(expr::BindingList& bindings, const bool push_scope) -> ParseResult {
+  if (push_scope)
+    PushScope();
+
+  expr::BindingExpr* binding = nullptr;
+  while (!PeekEq(Token::kRBracket)) {
+    CHECK_RESULT(ParseBinding(&binding));
+    if (binding)
+      bindings.push_back(binding);
+  }
+
+  if (push_scope)
+    PopScope();
   return true;
 }
 
@@ -986,6 +1019,10 @@ auto Parser::ParseExpression(expr::Expression** result, const int depth) -> Pars
       }
       case Token::kCastExpr: {
         CHECK_RESULT(ParseCastExpr(result));
+        break;
+      }
+      case Token::kForeachExpr: {
+        CHECK_RESULT(ParseForeachExpr(result));
         break;
       }
       case Token::kInstanceOfExpr: {
@@ -1776,6 +1813,21 @@ auto Parser::ParseDefNamespace(LocalVariable** result) -> ParseResult {
   return true;
 }
 
+auto Parser::ParseForeachExpr(expr::Expression** result) -> ParseResult {
+  EXPECT_NEXT(Token::kForeachExpr);
+
+  expr::BindingExpr* binding = nullptr;
+  EXPECT_NEXT(Token::kLBracket);
+  CHECK_RESULT(ParseBinding(&binding));
+  EXPECT_NEXT(Token::kRBracket);
+
+  expr::ExpressionList body{};
+  CHECK_RESULT(ParseExpressionList(body));
+
+  (*result) = expr::ForeachExpr::New(binding, expr::SeqExpr::New(body));
+  return true;
+}
+
 auto Parser::ParseDefNative(LocalVariable** local) -> ParseResult {
   ASSERT(local);
   const auto start_pos = GetPos();
@@ -1856,5 +1908,6 @@ void Parser::Init() {
   DEF_TOKEN("let:rx", Token::kLetRxExpr);
   DEF_TOKEN("defnative", Token::kDefNative);
   DEF_TOKEN("deftype", Token::kDefType);
+  DEF_TOKEN("foreach", Token::kForeachExpr);
 }
 }  // namespace gel

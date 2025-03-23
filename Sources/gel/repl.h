@@ -6,6 +6,7 @@
 
 #include "gel/error.h"
 #include "gel/local_scope.h"
+#include "gel/object.h"
 #include "gel/parser.h"
 
 namespace gel {
@@ -71,6 +72,7 @@ class Repl {
 
   auto Run() -> int;
   void Print(std::string value);
+  void Print(Object* value);
   void Terminate();
 
   inline void Print(const std::stringstream& ss) {

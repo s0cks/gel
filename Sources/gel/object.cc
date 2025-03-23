@@ -70,6 +70,7 @@ DEFINE_NEW_OPERATOR(Script);           // NOLINT(cppcoreguidelines-pro-type-rein
 DEFINE_NEW_OPERATOR(Error);            // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Namespace);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Set);              // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Iterator);         // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Map);              // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Module);           // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(EventLoop);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
@@ -188,6 +189,7 @@ void Object::Init() {
   Expression::Init();
   EventLoop::Init();
   EventEmitter::Init();
+  Iterator::Init();
 
 #ifdef GEL_ENABLE_GLM
   Vec2::InitClass();

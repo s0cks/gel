@@ -5,6 +5,7 @@
 #include "gel/error.h"
 #include "gel/event_emitter.h"
 #include "gel/event_loop.h"
+#include "gel/iterator.h"
 #include "gel/lambda.h"
 #include "gel/macro.h"
 #include "gel/map.h"

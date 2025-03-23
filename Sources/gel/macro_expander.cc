@@ -34,6 +34,22 @@ auto MacroEffectVisitor::VisitExpressionList(const expr::ExpressionList& source,
   return true;
 }
 
+auto MacroEffectVisitor::VisitForeachExpr(expr::ForeachExpr* expr) -> bool {
+  ASSERT(expr);
+  MacroEffectVisitor for_binding(GetOwner());
+  VISIT(for_binding, expr->GetBinding());
+
+  MacroEffectVisitor for_body(GetOwner());
+  VISIT(for_body, expr->GetBody());
+
+  if (for_binding || for_body) {
+    const auto new_binding = for_binding ? for_binding.GetResult()->AsBindingExpr() : expr->GetBinding();
+    const auto new_body = for_body ? for_body.GetResultAsSeq() : expr->GetBody();
+    SetResult(expr::ForeachExpr::New(new_binding, new_body));
+  }
+  return true;
+}
+
 auto MacroEffectVisitor::VisitSeqExpr(expr::SeqExpr* expr) -> bool {
   ASSERT(expr);
   for (auto idx = 0; idx < expr->GetNumberOfChildren(); idx++) {
@@ -85,7 +101,7 @@ auto MacroEffectVisitor::VisitBinaryOpExpr(expr::BinaryOpExpr* expr) -> bool {
   return true;
 }
 
-auto MacroEffectVisitor::VisitBinding(expr::Binding* expr) -> bool {
+auto MacroEffectVisitor::VisitBindingExpr(expr::BindingExpr* expr) -> bool {
   ASSERT(expr);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return true;

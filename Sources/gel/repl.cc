@@ -6,6 +6,7 @@
 #include "gel/common.h"
 #include "gel/gel.h"
 #include "gel/module.h"
+#include "gel/object.h"
 #include "gel/runtime.h"
 #include "gel/thread_local.h"
 
@@ -85,6 +86,12 @@ void Repl::Print(std::string value) {
   wprintw(window_, "%s", value.c_str());
 }
 
+void Repl::Print(Object* value) {
+  std::stringstream ss{};
+  PrintValue(ss, value);
+  return Print(std::move(ss.str()));
+}
+
 void Repl::Terminate() {
   SetRunning(false);
 }
@@ -136,8 +143,7 @@ auto Repl::Run() -> int {
       }
     });
     if (!gel::IsNull(result)) {
-      // do nothing
-      // Respond(result);
+      Print(result);
       if (VLOG_IS_ON(10)) {
         // do nothing
       }

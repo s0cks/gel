@@ -105,8 +105,11 @@ void Disassembler::Disassemble(const Region& region, const char* label) {
       case Bytecode::kLoadLocal: {
         const auto index = decoder.NextAddress();
         const auto local = GetScope()->GetLocalAt(index);
-        ASSERT(local);
-        Local((*local));
+        if (local) {
+          Local((*local), false);
+        } else {
+          LocalIndex(index);
+        }
         break;
       }
       case Bytecode::kLoadLocal0:
@@ -117,8 +120,11 @@ void Disassembler::Disassemble(const Region& region, const char* label) {
         if (GetScope()->IsEmpty() || index > GetScope()->GetNumberOfLocals())
           break;
         const auto local = GetScope()->GetLocalAt(index);
-        ASSERT(local);
-        Local((*local), false);
+        if (local) {
+          Local((*local), false);
+        } else {
+          LocalIndex(index);
+        }
         break;
       }
       case Bytecode::kStoreLocal: {
@@ -126,8 +132,11 @@ void Disassembler::Disassemble(const Region& region, const char* label) {
         if (GetScope()->IsEmpty() || index > GetScope()->GetNumberOfLocals())
           break;
         const auto local = GetScope()->GetLocalAt(index);
-        ASSERT(local);
-        Local((*local));
+        if (local) {
+          Local((*local), false);
+        } else {
+          LocalIndex(index);
+        }
         break;
       }
       case Bytecode::kStoreLocal0:
@@ -138,8 +147,11 @@ void Disassembler::Disassemble(const Region& region, const char* label) {
         if (GetScope()->IsEmpty() || index > GetScope()->GetNumberOfLocals())
           break;
         const auto local = GetScope()->GetLocalAt(index);
-        ASSERT(local);
-        Local((*local), false);
+        if (local) {
+          Local((*local), false);
+        } else {
+          LocalIndex(index);
+        }
         break;
       }
       case Bytecode::kJump:

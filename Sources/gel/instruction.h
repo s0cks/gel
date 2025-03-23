@@ -1395,6 +1395,15 @@ class PhiInstr : public Definition {
     return new PhiInstr(join, num_inputs);
   }
 };
+
+static inline void PrintInstructions(Instruction* start) {
+  ASSERT(start);
+  InstructionIterator iter(start);
+  while (iter.HasNext()) {
+    const auto next = iter.Next();
+    DLOG(INFO) << " - " << next->ToString();
+  }
+}
 }  // namespace ir
 
 using ir::EntryInstr;

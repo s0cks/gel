@@ -32,7 +32,8 @@
   V(LoadInstanceMethodExpr)         \
   V(StoreFieldExpr)                 \
   V(StoreLocalExpr)                 \
-  V(Binding)                        \
+  V(BindingExpr)                    \
+  V(ForeachExpr)                    \
   V(LetExpr)                        \
   V(RxOpExpr)                       \
   V(LetRxExpr)                      \
@@ -1381,32 +1382,38 @@ class StoreFieldExpr : public Expression {
   }
 };
 
-class Binding : public Expression {
+class BindingExpr : public TemplateExpression<1> {
  private:
   LocalVariable* local_;
-  Expression* value_;
 
  protected:
-  Binding(LocalVariable* local, Expression* value) :
-    local_(local),
-    value_(value) {}
+  BindingExpr(LocalVariable* local, Expression* value) :
+    local_(local) {
+    ASSERT(local_);
+    SetValue(value);
+  }
+
+  inline void SetValue(Expression* rhs) {
+    ASSERT(rhs);
+    SetChildAt(0, rhs);
+  }
 
  public:
-  ~Binding() override = default;
+  ~BindingExpr() override = default;
 
   auto GetLocal() const -> LocalVariable* {
     return local_;
   }
 
   auto GetValue() const -> Expression* {
-    return value_;
+    return GetChildAt(0);
   }
 
-  DECLARE_EXPRESSION(Binding);
+  DECLARE_EXPRESSION(BindingExpr);
 
  public:
-  static inline auto New(LocalVariable* local, Expression* value) -> Binding* {
-    return new Binding(local, value);
+  static inline auto New(LocalVariable* local, Expression* value) -> BindingExpr* {
+    return new BindingExpr(local, value);
   }
 };
 
@@ -1478,7 +1485,7 @@ class ImportExpr : public Expression {
   }
 };
 
-using BindingList = std::vector<Binding*>;
+using BindingList = std::vector<BindingExpr*>;
 
 static inline auto operator<<(std::ostream& stream, const BindingList& rhs) -> std::ostream& {
   stream << "[";
@@ -1616,12 +1623,12 @@ class LetExpr : public Expression {
     return GetNumberOfBindings() > 0;
   }
 
-  auto GetBindingAt(const uword idx) const -> Binding* {
+  auto GetBindingAt(const uword idx) const -> BindingExpr* {
     ASSERT(idx >= 0 && idx <= GetNumberOfBindings());
     return bindings_[idx];
   }
 
-  void SetBindingAt(const uword idx, Binding* rhs) {
+  void SetBindingAt(const uword idx, BindingExpr* rhs) {
     ASSERT(rhs);
     ASSERT(idx >= 0 && idx <= GetNumberOfBindings());
     bindings_[idx] = rhs;
@@ -1746,6 +1753,44 @@ class CastExpr : public TemplateExpression<1> {
     ASSERT(cls);
     ASSERT(value);
     return new CastExpr(cls, value);
+  }
+};
+
+class ForeachExpr : public TemplateExpression<2> {
+ private:
+  inline void SetBinding(BindingExpr* rhs) {
+    ASSERT(rhs);
+    SetChildAt(0, rhs);
+  }
+
+  inline void SetBody(Expression* rhs) {
+    ASSERT(rhs);
+    SetChildAt(1, rhs);
+  }
+
+ public:
+  ForeachExpr(BindingExpr* binding, Expression* body) :
+    TemplateExpression() {
+    SetBinding(binding);
+    SetBody(body);
+  }
+  ~ForeachExpr() override = default;
+
+  auto GetBinding() const -> BindingExpr* {
+    return GetChildAt(0)->AsBindingExpr();
+  }
+
+  auto GetBody() const -> Expression* {
+    return GetChildAt(1);
+  }
+
+  DECLARE_EXPRESSION(ForeachExpr);
+
+ public:
+  static inline auto New(BindingExpr* binding, Expression* body) -> ForeachExpr* {
+    ASSERT(binding);
+    ASSERT(body);
+    return new ForeachExpr(binding, body);
   }
 };
 

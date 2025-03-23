@@ -18,7 +18,7 @@ ExpressionToDot::ExpressionToDot(const char* graph_name) :
   dot::SetGraphEdgeAttr(GetGraph(), "decorate", "true");
 }
 
-auto ExpressionToDot::VisitBinding(Binding* expr) -> bool {
+auto ExpressionToDot::VisitBindingExpr(BindingExpr* expr) -> bool {
   ASSERT(expr);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return false;
@@ -381,16 +381,23 @@ auto ExpressionToDot::VisitCondExpr(CondExpr* expr) -> bool {
     label << expr->GetName() << std::endl;
     dot::SetNodeLabel(node, label);
   }
+  CreateEdgeFromParent(node);
+  return ProcessChildren(expr, node);
+}
+
+auto ExpressionToDot::VisitForeachExpr(expr::ForeachExpr* expr) -> bool {
+  ASSERT(expr);
+  const auto node = NewNode();
+  ASSERT(node);
   {
-    // process children
-    NodeScope scope(this, node);
-    if (!expr->VisitChildren(this)) {
-      LOG(ERROR) << "failed to visit children of: " << expr->ToString();
-      return false;
-    }
+    // create node labels
+    // label
+    std::stringstream label;
+    label << expr->GetName() << std::endl;
+    dot::SetNodeLabel(node, label);
   }
   CreateEdgeFromParent(node);
-  return true;
+  return ProcessChildren(expr, node);
 }
 
 auto ExpressionToDot::VisitLetExpr(LetExpr* expr) -> bool {

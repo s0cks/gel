@@ -27,6 +27,7 @@ class Definition;
 
 #define FOR_EACH_PRIMITIVE_TYPE(V) \
   V(Seq)                           \
+  V(Iterator)                      \
   V(Class)                         \
   V(Field)                         \
   V(Bool)                          \

@@ -335,8 +335,8 @@ auto WhileExpr::ToString() const -> std::string {
   return helper;
 }
 
-auto Binding::ToString() const -> std::string {
-  ToStringHelper<Binding> helper;
+auto BindingExpr::ToString() const -> std::string {
+  ToStringHelper<BindingExpr> helper;
   helper.AddField("local", GetLocal());
   helper.AddField("value", GetValue());
   return helper;
@@ -361,6 +361,13 @@ auto LetRxExpr::ToString() const -> std::string {
   ToStringHelper<LetRxExpr> helper;
   helper.AddField("scope", GetScope());
   helper.AddField("source", GetSource());
+  helper.AddField("body", GetBody());
+  return helper;
+}
+
+auto ForeachExpr::ToString() const -> std::string {
+  ToStringHelper<ForeachExpr> helper{};
+  helper.AddField("binding", GetBinding());
   helper.AddField("body", GetBody());
   return helper;
 }

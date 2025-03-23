@@ -70,6 +70,7 @@
 (import "set.cl")
 (import "macro.cl")
 (import "module.cl")
+(import "iterator.cl")
 
 (defn apply [f seq]
   (cond (null? seq) seq

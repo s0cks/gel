@@ -8,12 +8,14 @@
 #include "gel/expression.h"
 #include "gel/flow_graph.h"
 #include "gel/instruction.h"
+#include "gel/lambda.h"
 #include "gel/local.h"
 #include "gel/object.h"
 #include "gel/type_traits.h"
 
 namespace gel {
 class FlowGraphBuilder {
+  friend class ValueVisitor;
   friend class EffectVisitor;
   friend class CondClauseEffectVisitor;
   DEFINE_NON_COPYABLE_TYPE(FlowGraphBuilder);
@@ -23,6 +25,7 @@ class FlowGraphBuilder {
   GraphEntryInstr* entry_ = nullptr;
   EntryInstr* block_ = nullptr;
   uint64_t num_blocks_ = 0;
+  uint64_t num_temps_ = 0;
 
   inline void SetScope(LocalScope* scope) {
     ASSERT(scope);
@@ -226,15 +229,11 @@ class EffectVisitor : public ExpressionVisitor {
     return block_;
   }
 
-  inline auto CreateReturnForExit(ir::Instruction* exit_instr) -> ir::ReturnInstr* {
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
-    return exit_instr->IsDefinition() ? ir::ReturnInstr::New((ir::Definition*)exit_instr) : ir::ReturnInstr::New();
-  }
-
   inline void AddImplicitReturn() {
-    const auto exit = GetExitInstr();
-    if (exit && !exit->IsReturnInstr())
-      Add(CreateReturnForExit(exit));
+    ASSERT(IsOpen());
+    if (GetExitInstr()->IsDefinition())
+      return AddReturnExit(GetExitInstr()->AsDefinition());
+    return AddReturnExit(Bind(gel::ConstantInstr::New(gel::Null())));
   }
 
   virtual void ReturnValue(ir::Definition* defn) {}
@@ -266,9 +265,13 @@ class EffectVisitor : public ExpressionVisitor {
     return IsEmpty() || GetExitInstr() != nullptr;
   }
 
-  auto Build(Script* script) -> bool;
-  auto Build(Lambda* lambda) -> bool;
-  auto VisitConstructor(Constructor* init) -> bool;
+  auto IsClosed() const -> bool {
+    return !IsOpen();
+  }
+
+  virtual auto VisitScript(Script* script) -> bool;
+  virtual auto VisitLambda(Lambda* lambda) -> bool;
+  virtual auto VisitConstructor(Constructor* init) -> bool;
 #define DECLARE_VISIT(Name) virtual auto Visit##Name(Name* name)->bool override;
   FOR_EACH_EXPRESSION_NODE(DECLARE_VISIT)
 #undef DECLARE_VISIT
@@ -276,6 +279,21 @@ class EffectVisitor : public ExpressionVisitor {
   auto operator()(expr::Expression* expr) -> bool {
     ASSERT(expr);
     return expr->Accept(this);
+  }
+
+  auto operator()(Script* rhs) -> bool {
+    ASSERT(rhs);
+    return VisitScript(rhs);
+  }
+
+  auto operator()(Lambda* rhs) -> bool {
+    ASSERT(rhs);
+    return VisitLambda(rhs);
+  }
+
+  auto operator()(Constructor* rhs) -> bool {
+    ASSERT(rhs);
+    return VisitConstructor(rhs);
   }
 };
 
@@ -295,6 +313,10 @@ class ValueVisitor : public EffectVisitor {
     value_ = Bind(defn);
   }
 
+  inline void ReturnNull() {
+    return ReturnDefinition(ir::ConstantInstr::New(gel::Null()));
+  }
+
  public:
   explicit ValueVisitor(FlowGraphBuilder* owner) :
     EffectVisitor(owner) {}
@@ -310,6 +332,7 @@ class ValueVisitor : public EffectVisitor {
 
   auto VisitDoExpr(expr::DoExpr* expr) -> bool override;
   auto VisitSeqExpr(expr::SeqExpr* expr) -> bool override;
+  auto VisitBindingExpr(expr::BindingExpr* expr) -> bool override;
 
   auto operator()(expr::Expression* rhs) -> bool {
     ASSERT(rhs);
