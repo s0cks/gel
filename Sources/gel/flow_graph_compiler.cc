@@ -36,10 +36,7 @@ template <class E>
 auto FlowGraphCompiler::BuildFlowGraph(E* exec, std::enable_if_t<gel::is_executable<E>::value>*) -> FlowGraph* {
   TRACE_ZONE_NAMED("FlowGraphCompiler::BuildFlowGraph");
   ASSERT(exec);
-  const auto scope = LocalScope::New(GetScope());
-  if (exec->HasScope())
-    scope->AddAll(exec->GetScope());
-  const auto flow_graph = FlowGraphBuilder::Build(exec, scope);
+  const auto flow_graph = FlowGraphBuilder::Build(exec);
   LOG_IF(FATAL, !(flow_graph && flow_graph->HasEntry())) << "failed to build FlowGraph for: " << exec;
   if (FLAGS_print_ir) {
     DLOG(INFO) << exec->ToString() << " flow graph:";

@@ -10,7 +10,9 @@
 #include "gel/instruction.h"
 #include "gel/lambda.h"
 #include "gel/local.h"
+#include "gel/local_scope.h"
 #include "gel/object.h"
+#include "gel/runtime.h"
 #include "gel/type_traits.h"
 
 namespace gel {
@@ -93,9 +95,9 @@ class FlowGraphBuilder {
   }
 
  public:
-  static auto Build(Script* script, LocalScope* scope) -> FlowGraph*;
-  static auto Build(Lambda* lambda, LocalScope* scope) -> FlowGraph*;
-  static auto Build(Constructor* init, LocalScope* scope) -> FlowGraph*;
+  static auto Build(Script* script, LocalScope* scope = LocalScope::New()) -> FlowGraph*;
+  static auto Build(Lambda* lambda, LocalScope* scope = LocalScope::New()) -> FlowGraph*;
+  static auto Build(Constructor* init, LocalScope* scope = LocalScope::New()) -> FlowGraph*;
 };
 
 class ValueVisitor;

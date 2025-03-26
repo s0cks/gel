@@ -30,7 +30,7 @@ auto Lambda::HashCode() const -> uword {
   return Procedure::HashCode();
 }
 
-auto Lambda::Compare(Object* rhs) const -> int {
+auto Lambda::Compare(Object* rhs) const -> bool {
   ASSERT(rhs);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return -1;

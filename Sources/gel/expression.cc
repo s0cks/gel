@@ -485,22 +485,7 @@ auto NewExpr::VisitArgs(ExpressionVisitor* vis) -> bool {
 }
 
 auto NewExpr::IsConstantExpr() const -> bool {
-  const auto scope = GetRuntime()->GetScope();
-  ASSERT(scope);
-  for (const auto& arg : args_) {
-    if (!arg->IsConstantExpr()) {
-      return false;
-    } else if (expr::IsLiteralSymbol(arg)) {
-      const auto literal = arg->AsLiteralExpr()->GetValue()->AsSymbol();
-      ASSERT(literal);
-      LocalVariable* local = nullptr;
-      if (!scope->Lookup(literal, &local))
-        return false;
-      if (!local || !local->HasValue())
-        return false;
-    }
-  }
-  return true;
+  return false;
 }
 
 auto NewExpr::EvalToConstant(LocalScope* scope) const -> Object* {

@@ -61,7 +61,7 @@ auto Symbol::New(const ObjectList& args) -> Symbol* {
   NOT_IMPLEMENTED(FATAL);
 }
 
-auto Symbol::Compare(Object* rhs) const -> int {
+auto Symbol::Compare(Object* rhs) const -> bool {
   ASSERT(rhs);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return -1;

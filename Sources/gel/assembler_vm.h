@@ -55,10 +55,14 @@ class Assembler {
 
   template <class T>
   inline void EmitAddress(const T* value) {
-    return Emit(value->GetStartingAddress());
+    return EmitUWord(value->GetStartingAddress());
   }
 
-  inline void Emit(const uword value) {
+  inline void EmitWord(const word rhs) {
+    return buffer().Emit<word>(rhs);
+  }
+
+  inline void EmitUWord(const uword value) {
     buffer().Emit<uword>(value);
   }
 
@@ -85,7 +89,7 @@ class Assembler {
 
   inline void list(const uword length) {
     EmitOp(Bytecode::kList);
-    Emit(length);
+    EmitUWord(length);
   }
 
   inline void ldfield(Field* field) {
@@ -102,12 +106,12 @@ class Assembler {
 
   inline void pushq(const uword value) {
     EmitOp(Bytecode::kPushQ);
-    Emit(value);
+    EmitUWord(value);
   }
 
-  inline void pushl(const uword rhs) {
+  inline void pushl(const word rhs) {
     EmitOp(Bytecode::kPushI);
-    Emit(rhs);
+    EmitWord(rhs);
   }
 
   inline void pusht() {
@@ -144,19 +148,19 @@ class Assembler {
     ASSERT(func);
     EmitOp(Bytecode::kInvoke);
     EmitAddress(func);
-    Emit(num_args);
+    EmitUWord(num_args);
   }
 
   inline void invokedynamic(const uword num_args) {
     EmitOp(Bytecode::kInvokeDynamic);
-    Emit(num_args);
+    EmitUWord(num_args);
   }
 
   inline void invokenative(Procedure* func, const uword num_args) {
     ASSERT(func);
     EmitOp(Bytecode::kInvokeNative);
     EmitAddress(func);
-    Emit(num_args);
+    EmitUWord(num_args);
   }
 
   void th() {
@@ -169,7 +173,7 @@ class Assembler {
     if (idx <= kTotalLLInstrs)
       return EmitOp(static_cast<Bytecode::Op>(Bytecode::kLoadLocal0 + idx));
     EmitOp(Bytecode::kLoadLocal);
-    Emit(idx);
+    EmitUWord(idx);
   }
 
   inline void StoreLocal(const uword idx) {
@@ -178,7 +182,7 @@ class Assembler {
     if (idx <= kTotalSLInstrs)
       return EmitOp(static_cast<Bytecode::Op>(Bytecode::kStoreLocal0 + idx));
     EmitOp(Bytecode::kStoreLocal);
-    Emit(idx);
+    EmitUWord(idx);
   }
 
   inline void negate() {
@@ -283,7 +287,7 @@ class Assembler {
     ASSERT(cls);
     EmitOp(Bytecode::kNew);
     EmitAddress(cls);
-    Emit(num_args);
+    EmitUWord(num_args);
   }
 
   auto Assemble() const -> Region;

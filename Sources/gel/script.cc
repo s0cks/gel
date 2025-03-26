@@ -44,7 +44,7 @@ void Script::Append(Namespace* ns) {
     LOG_IF(FATAL, !scope_->Add(ns)) << "failed to add " << ns << " to scope.";
 }
 
-auto Script::Compare(Object* rhs) const -> int {
+auto Script::Compare(Object* rhs) const -> bool {
   ASSERT(rhs);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return -1;

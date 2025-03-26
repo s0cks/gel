@@ -110,7 +110,7 @@ class ArrayBase : public Object {
 
   auto HashCode() const -> uword override;
   auto Equals(Object* rhs) const -> bool override;
-  auto Compare(Object* rhs) const -> int override;
+  auto Compare(Object* rhs) const -> bool override;
   auto ToString() const -> std::string override;
 
   auto VisitPointers(PointerVisitor* vis) -> bool override;

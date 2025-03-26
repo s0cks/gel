@@ -303,7 +303,12 @@ auto EffectVisitor::VisitForeachExpr(expr::ForeachExpr* expr) -> bool {
 
   const auto scope = GetOwner()->GetScope();
   LocalVariable* it_local = nullptr;
-  LOG_IF(FATAL, !scope->Lookup("$", &it_local, false)) << "failed to find it_local in current scope.";
+  if (!scope->Lookup("$", &it_local)) {
+    LOG(ERROR) << "failed to find it_local in current scope:";
+    _PRINT_SCOPE_AT_LEVEL(google::ERROR, scope, true);
+    return false;
+  }
+
   Add(ir::StoreLocalInstr::New(it_local, Bind(ir::NewInstr::New(Iterator::GetClass(), 1))));
   Add(ir::LoadLocalInstr::New(it_local));
   Add(ir::InvokeNativeInstr::New(ir::ConstantInstr::New(proc::iter_has_next::Get()->GetNative()), 1));
@@ -1045,10 +1050,15 @@ auto EffectVisitor::VisitLambda(Lambda* lambda) -> bool {
     AddThrow(fmt::format("{} is not implemented", *lambda->GetSymbol()));
     return true;
   }
-  if (!VisitSeqExpr(lambda->GetBody())) {
-    LOG(ERROR) << "failed to visit constructor body";
+  ValueVisitor for_value(GetOwner());
+  if (!for_value(lambda->GetBody())) {
+    LOG(ERROR) << "failed to visit lambda body: " << lambda->GetBody();
     return false;
   }
+  if (for_value.IsOpen())
+    for_value.AddImplicitReturn();
+  ASSERT(for_value.IsClosed());
+  Append(for_value);
   GetOwner()->PopScope();
   return true;
 }

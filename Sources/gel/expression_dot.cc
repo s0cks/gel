@@ -20,8 +20,17 @@ ExpressionToDot::ExpressionToDot(const char* graph_name) :
 
 auto ExpressionToDot::VisitBindingExpr(BindingExpr* expr) -> bool {
   ASSERT(expr);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return false;
+  const auto node = NewNode();
+  ASSERT(node);
+  {
+    // create node labels
+    // label
+    std::stringstream label;
+    label << expr->GetName() << std::endl;
+    dot::SetNodeLabel(node, label);
+  }
+  CreateEdgeFromParent(node);
+  return ProcessChildren(expr, node);
 }
 
 auto ExpressionToDot::VisitNewExpr(NewExpr* expr) -> bool {

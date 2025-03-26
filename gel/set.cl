@@ -6,6 +6,7 @@
   (defnative superset? [a b])
   (defnative select [set filter])
   (deftype Set
+    (defnative insert [s v])
     (defnative contains? [s v])
     (defnative count [s])
     (defnative empty? [s])))

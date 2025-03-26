@@ -74,7 +74,7 @@ class Object : public HeapObject {
 #define DECLARE_BINARY_OP(Name) virtual auto Name(Object* rhs) const -> Object*;
   FOR_EACH_BINARY_OP(DECLARE_BINARY_OP)
 
-  virtual auto Compare(Object* rhs) const -> int = 0;
+  virtual auto Compare(Object* rhs) const -> bool = 0;
 
   auto GetField(Field* field) const -> Object* {
     ASSERT(field);
@@ -155,7 +155,7 @@ struct ObjectEquals {
 };
 
 struct ObjectComparator {
-  auto operator()(Object* lhs, Object* rhs) const -> int {
+  auto operator()(Object* lhs, Object* rhs) const -> bool {
     return lhs->Compare(rhs);
   }
 };
@@ -194,7 +194,7 @@ static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream
  public:                                                                    \
   auto HashCode() const -> uword override;                                  \
   auto Equals(Object* rhs) const -> bool override;                          \
-  auto Compare(Object* rhs) const -> int override;                          \
+  auto Compare(Object* rhs) const -> bool override;                         \
   auto GetType() const -> Class* override {                                 \
     return GetClass();                                                      \
   }                                                                         \
@@ -298,15 +298,17 @@ class Bool : public Object {
   }
 };
 
+using RawLong = int64_t;
+
 class Number : public Object {
   friend class Long;
   friend class Double;
 
  private:
-  std::variant<uint64_t, double> value_;
+  std::variant<RawLong, double> value_;
 
  protected:
-  explicit Number(const uint64_t value) :
+  explicit Number(const RawLong value) :
     Object(),
     value_(value) {}
   explicit Number(const double value) :
@@ -316,18 +318,18 @@ class Number : public Object {
  public:
   ~Number() override = default;
 
-  auto value() const -> const std::variant<uint64_t, double>& {
+  auto value() const -> const std::variant<RawLong, double>& {
     return value_;
   }
 
-  auto GetLong() const -> uint64_t {
+  auto GetLong() const -> RawLong {
     if (std::holds_alternative<double>(value()))
-      return static_cast<uint64_t>(GetDouble());
-    return std::get<uint64_t>(value());
+      return static_cast<RawLong>(GetDouble());
+    return std::get<RawLong>(value());
   }
 
   auto GetDouble() const -> double {
-    if (std::holds_alternative<uint64_t>(value()))
+    if (std::holds_alternative<RawLong>(value()))
       return static_cast<double>(GetLong());
     return std::get<double>(value());
   }
@@ -337,19 +339,19 @@ class Number : public Object {
   DECLARE_TYPE(Number);
 
  public:
-  static auto New(const uint64_t rhs) -> Number*;
+  static auto New(const RawLong rhs) -> Number*;
   static auto New(const double rhs) -> Number*;
 };
 
 class Long : public Number {
  protected:
-  explicit Long(const uint64_t value) :
+  explicit Long(const RawLong value) :
     Number(value) {}
 
  public:
   ~Long() override = default;
 
-  inline auto Get() const -> uint64_t {
+  inline auto Get() const -> RawLong {
     return GetLong();
   }
 
@@ -370,11 +372,11 @@ class Long : public Number {
   DECLARE_TYPE(Long);
 
  public:
-  static inline auto New(const uintptr_t value) -> Long* {
+  static inline auto New(const RawLong value) -> Long* {
     return new Long(value);
   }
 
-  static auto Unbox(Object* rhs) -> uint64_t;
+  static auto Unbox(Object* rhs) -> RawLong;
 };
 
 class Double : public Number {
@@ -511,6 +513,8 @@ class String : public StringObject {
   ~String() override = default;
   auto Eq(Object* rhs) const -> Object* override;
   auto Equals(const std::string& rhs) const -> bool;
+
+  auto ToBuffer() const -> Buffer*;
   DECLARE_TYPE(String);
 
  public:
@@ -586,7 +590,7 @@ static inline auto ToList(Iter& iter) -> Object* {
   return result;
 }
 
-static inline auto ListFromRange(const uint64_t from, const uint64_t to) -> gel::Object* {
+static inline auto ListFromRange(const int64_t from, const int64_t to) -> gel::Object* {
   auto first = std::min(from, to);
   auto last = std::max(from, to);
   Object* result = Null();

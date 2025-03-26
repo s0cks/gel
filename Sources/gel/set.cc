@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "gel/common.h"
+#include "gel/native_procedure.h"
 #include "gel/object.h"
 #include "gel/to_string_helper.h"
 
@@ -43,7 +44,7 @@ auto Set::ToString() const -> std::string {
   return helper;
 }
 
-auto Set::Compare(Object* rhs) const -> int {
+auto Set::Compare(Object* rhs) const -> bool {
   ASSERT(rhs);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return -1;
@@ -94,6 +95,7 @@ void Set::Init() {
   InitNative<gel_union>();
   InitNative<gel_difference>();
   InitNative<gel_intersection>();
+  InitNative<gel_subset>();
 #define INIT_SET_NATIVE(Name) InitNative<set_##Name>()
   INIT_SET_NATIVE(contains);
   INIT_SET_NATIVE(empty);
@@ -120,7 +122,19 @@ NATIVE_PROCEDURE_F(gel_intersection) {
   return Return(Set::Intersection(a, b));
 }
 
+NATIVE_PROCEDURE_F(gel_subset) {
+  REQUIRED_NATIVE_ARG(0, Set, a);
+  REQUIRED_NATIVE_ARG(1, Set, b);
+  return ReturnBool(std::includes(a->begin(), a->end(), b->begin(), b->end()));
+}
+
 #define SET_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(set_##Name)
+
+SET_PROCEDURE_F(insert) {
+  REQUIRED_NATIVE_ARG(0, Set, set);
+  REQUIRED_NATIVE_ARG(1, Object, value);
+  return ReturnBool(set->Insert(value));
+}
 
 SET_PROCEDURE_F(contains) {
   REQUIRED_NATIVE_ARG(0, Set, set);

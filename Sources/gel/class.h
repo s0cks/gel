@@ -22,17 +22,7 @@ class String;
 class PointerPointerVisitor;
 using ClassList = std::vector<Class*>;
 
-class ClassVisitor {
-  DEFINE_NON_COPYABLE_TYPE(ClassVisitor);
-
- protected:
-  ClassVisitor() = default;
-
- public:
-  virtual ~ClassVisitor() = default;
-  virtual auto Visit(Class* cls) -> bool = 0;
-};
-DECLARE_VISITOR_WRAPPER(Class, Class*);
+DECLARE_VISITOR(Class);
 
 class Class : public Object {
   friend class Long;

@@ -345,7 +345,8 @@ void Runtime::Call(Lambda* lambda, const ObjectList& args) {
   ASSERT(lambda);
   {
     CallScope locals(this);
-    locals->AddThisValue(lambda);
+    if (lambda->HasScope())
+      locals->AddAll(lambda->GetScope());
     if (lambda->HasArgs()) {
       const auto& lambda_args = lambda->GetArgs();
       ASSERT(lambda_args);
@@ -496,18 +497,14 @@ auto Runtime::Eval(const std::string& expr) -> Object* {
   DVLOG(10) << "evaluating expression:" << std::endl << expr;
   const auto runtime = GetRuntime();
   ASSERT(runtime);
-  const auto scope = runtime->PushScope();
   const auto args = Array<Argument*>::New(0);
   ASSERT(args);
   const auto lambda = Lambda::New(args, {});
   ASSERT(lambda);
-  const auto this_local = LocalVariable::New(scope, "this", lambda);
-  ASSERT(this_local);
-  LOG_IF(FATAL, !scope->Add(this_local)) << "failed to add " << (*this_local) << " to scope.";
-  const auto parsed = Parser::ParseExpr(expr, scope);
+  const auto parsed = Parser::ParseExpr(expr);
   if (parsed)
     lambda->SetBody(expr::SeqExpr::New(parsed));
-  LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, scope)) << "failed to compile: " << expr;
+  LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, runtime->GetInitScope())) << "failed to compile: " << expr;
   const auto result = runtime->CallPop(lambda);
   runtime->PopScope();
   return result ? result : Null();

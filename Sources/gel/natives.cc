@@ -141,7 +141,7 @@ GEL_NATIVE_PROCEDURE_F(queue_utask) {
 GEL_NATIVE_PROCEDURE_F(compare) {
   REQUIRED_NATIVE_ARG(0, Object, x);
   REQUIRED_NATIVE_ARG(1, Object, y);
-  return ReturnLong(x->Compare(y));
+  return ReturnBool(x->Compare(y));
 }
 
 GEL_NATIVE_PROCEDURE_F(bit_str) {
@@ -242,15 +242,15 @@ static std::mt19937_64 mt(rand_device_());  // NOLINT(cppcoreguidelines-avoid-no
 NATIVE_PROCEDURE_F(random) {
   ASSERT(HasRuntime());
   ASSERT(args.empty());
-  return ReturnNew<Long>(mt());
+  return ReturnLong(static_cast<RawLong>(mt()));
 }
 
 NATIVE_PROCEDURE_F(rand_range) {
   ASSERT(HasRuntime());
   NativeArgument<0, Long> min(args);
   NativeArgument<1, Long> max(args);
-  std::uniform_int_distribution<uint64_t> distribution(Long::Unbox(min), Long::Unbox(max));
-  return ReturnNew<Long>(distribution(mt));
+  std::uniform_int_distribution<RawLong> distribution(Long::Unbox(min), Long::Unbox(max));
+  return ReturnLong(distribution(mt));
 }
 
 GEL_NATIVE_PROCEDURE_F(type) {
@@ -302,7 +302,7 @@ GEL_NATIVE_PROCEDURE_F(get_event_loop) {
 
 OBJECT_PROCEDURE_F(hashcode) {
   REQUIRED_NATIVE_ARG(0, Object, value);
-  return ReturnNew<Long>(value->HashCode());
+  return ReturnLong(value->HashCode());
 }
 
 #undef OBJECT_PROCEDURE_F
@@ -343,7 +343,7 @@ TIMER_PROCEDURE_F(get_repeat) {
   const auto timer = GetThreadEventLoop()->GetTimer(id->Get());
   if (!timer)
     return ThrowError(fmt::format("failed to find Timer w/ id {}", id->Get()));
-  return ReturnNew<Long>(timer->GetRepeat());
+  return ReturnLong(timer->GetRepeat());
 }
 
 TIMER_PROCEDURE_F(set_repeat) {
@@ -361,7 +361,7 @@ TIMER_PROCEDURE_F(get_due_in) {
   const auto timer = GetThreadEventLoop()->GetTimer(id->Get());
   if (!timer)
     return ThrowError(fmt::format("failed to find Timer w/ id {}", id->Get()));
-  return ReturnNew<Long>(timer->GetDueIn());
+  return ReturnLong(timer->GetDueIn());
 }
 
 TIMER_PROCEDURE_F(create) {
@@ -371,7 +371,7 @@ TIMER_PROCEDURE_F(create) {
   const auto timer = GetThreadEventLoop()->CreateTimer(on_tick);
   ASSERT(timer);
   timer->Start(timeout_value->Get(), repeat->Get());
-  return ReturnNew<Long>(timer->GetId());
+  return ReturnLong(timer->GetId());
 }
 
 #undef TIMER_PROCEDURE_F

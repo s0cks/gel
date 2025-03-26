@@ -63,7 +63,11 @@ void Interpreter::LoadLocal(const uword idx) {
 
 void Interpreter::StoreLocal(const uword idx) {
   const auto local = GetScope()->GetLocalAt(idx);
-  ASSERT(local);
+  if (!local) {
+    LOG(ERROR) << "failed to find local #" << idx << " in current scope:";
+    _PRINT_SCOPE_AT_LEVEL(google::ERROR, GetScope(), true);
+    LOG(FATAL) << "";
+  }
   const auto value = POP;
   ASSERT(value);
   local->SetValue((*value));

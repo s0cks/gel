@@ -18,7 +18,7 @@ auto Error::HashCode() const -> uword {
   return hash;
 }
 
-auto Error::Compare(Object* rhs) const -> int {
+auto Error::Compare(Object* rhs) const -> bool {
   ASSERT(rhs);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return -1;

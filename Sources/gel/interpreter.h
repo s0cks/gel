@@ -44,7 +44,7 @@ class Interpreter {
   }
 
   inline auto NextLong() -> Long* {
-    return Long::New(NextUWord());
+    return Long::New(NextWord());
   }
 
   inline auto NextAddress() -> uword {

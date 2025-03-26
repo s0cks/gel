@@ -26,7 +26,7 @@ class ModuleVisitor {
   virtual ~ModuleVisitor() = default;
   virtual auto Visit(Module* m) -> bool = 0;
 };
-DECLARE_VISITOR_WRAPPER(Module, Module*);
+DECLARE_VISITOR_WRAPPER(Module, Module);
 
 class ModuleLoader;
 class Module : public Object {

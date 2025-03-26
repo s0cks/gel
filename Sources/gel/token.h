@@ -260,8 +260,8 @@ struct Token {
     return atof(text.data());
   }
 
-  auto AsLong() const -> uint64_t {
-    return atol(text.data());
+  auto AsLong() const -> RawLong {
+    return static_cast<RawLong>(atol(text.data()));
   }
 
   auto AsInt() const -> uint32_t {

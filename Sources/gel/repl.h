@@ -35,6 +35,23 @@ class Repl {
   std::string expression_{};
   bool running_ = false;
   std::vector<std::string> history_{};
+  int history_index_ = 0;
+
+  auto NextHistoryIndex() -> int& {
+    history_index_ += 1;
+    if (history_index_ > history_.size())
+      history_index_ = -1;
+    return history_index_;
+  }
+
+  auto NextHistoryItem(int ch) -> std::string;
+
+  auto PreviousHistoryIndex() -> int& {
+    history_index_ -= 1;
+    if (history_index_ < -1)
+      history_index_ = static_cast<int>(history_.size());
+    return history_index_;
+  }
 
   auto Prompt(const std::string& prompt) -> std::string;
 

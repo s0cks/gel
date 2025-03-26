@@ -18,7 +18,7 @@ auto NativeProcedureEntry::Return(Object* rhs) const -> bool {
   return DoNothing();
 }
 
-auto NativeProcedure::Compare(Object* rhs) const -> int {
+auto NativeProcedure::Compare(Object* rhs) const -> bool {
   ASSERT(rhs);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return -1;

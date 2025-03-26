@@ -304,9 +304,9 @@ void Class::Add(Field* field) {
   fields_->Push(field);
 }
 
-auto Class::Compare(Object* rhs) const -> int {
+auto Class::Compare(Object* rhs) const -> bool {
   if (!rhs || !rhs->IsClass())
-    return 1;
+    return false;
   return GetName()->Compare(rhs->AsClass()->GetName());
 }
 
@@ -457,9 +457,9 @@ auto Field::New(const ObjectList& args) -> Field* {
   return nullptr;
 }
 
-auto Field::Compare(Object* rhs) const -> int {
+auto Field::Compare(Object* rhs) const -> bool {
   if (!rhs || !rhs->IsField())
-    return 1;
+    return false;
   int result = 0;
   if ((result = GetOwner()->Compare(rhs->AsField()->GetOwner())) != 0)
     return result;

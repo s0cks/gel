@@ -35,7 +35,7 @@ auto Map::Equals(Object* rhs) const -> bool {
   return false;
 }
 
-auto Map::Compare(Object* rhs) const -> int {
+auto Map::Compare(Object* rhs) const -> bool {
   ASSERT(rhs);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return -1;

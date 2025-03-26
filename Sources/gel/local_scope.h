@@ -295,7 +295,9 @@ class LocalScopePrinter : public LocalVariableVisitor {
   }
 };
 
-#define PRINT_SCOPE_AT_LEVEL(Severity, Scope) LocalScopePrinter::Print<Severity>((Scope), __FILE__, __LINE__)
+#define _PRINT_SCOPE_AT_LEVEL(Severity, Scope, Recursive) \
+  LocalScopePrinter::Print<Severity, Recursive>((Scope), __FILE__, __LINE__)
+#define PRINT_SCOPE_AT_LEVEL(Severity, Scope) _PRINT_SCOPE_AT_LEVEL(Severity, Scope, false)
 #define PRINT_SCOPE(Severity, Scope)          PRINT_SCOPE_AT_LEVEL(google::Severity, Scope)
 
 }  // namespace gel

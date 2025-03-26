@@ -554,7 +554,8 @@ class Parser {
   auto ParseModule(const std::string& name, Module** result) -> ParseResult;
 
  public:
-  static inline auto ParseExpr(std::istream& stream, LocalScope* scope = LocalScope::New()) -> expr::Expression* {
+  static inline auto ParseExpr(std::istream& stream, LocalScope* scope = LocalScope::New(GetRuntime()->GetInitScope()))
+      -> expr::Expression* {
     ASSERT(stream.good());
     ASSERT(scope);
     Parser parser(stream, scope, GetThreadModuleLoader());
@@ -564,7 +565,8 @@ class Parser {
     return result;
   }
 
-  static inline auto ParseExpr(const std::string& expr, LocalScope* scope = LocalScope::New()) -> expr::Expression* {
+  static inline auto ParseExpr(const std::string& expr, LocalScope* scope = LocalScope::New(GetRuntime()->GetInitScope()))
+      -> expr::Expression* {
     ASSERT(!expr.empty());
     ASSERT(scope);
     std::istringstream ss(expr);

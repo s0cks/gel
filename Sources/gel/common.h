@@ -125,19 +125,19 @@ static inline auto IsPow2(T x) -> bool {
 }
 
 #define DECLARE_VISITOR_WRAPPER(Name, Type)           \
-  class Name##VisitorWrapper : public Name##Visitor { \
-    using Callback = std::function<bool(Type)>;       \
+  class Name##VisitorWrapper : public Type##Visitor { \
+    using Callback = std::function<bool(Type*)>;      \
     DEFINE_NON_COPYABLE_TYPE(Name##VisitorWrapper);   \
                                                       \
    private:                                           \
     Callback delegate_;                               \
                                                       \
    public:                                            \
-    Name##VisitorWrapper(const Callback& delegate) :  \
+    Name##VisitorWrapper(Callback delegate) :         \
       Name##Visitor(),                                \
-      delegate_(delegate) {}                          \
+      delegate_(std::move(delegate)) {}               \
     ~Name##VisitorWrapper() override = default;       \
-    auto Visit(Type ptr) -> bool override {           \
+    auto Visit(Type* ptr) -> bool override {          \
       return delegate_(ptr);                          \
     }                                                 \
   };
@@ -152,7 +152,7 @@ static inline auto IsPow2(T x) -> bool {
     virtual ~Type##Visitor() = default;          \
     virtual auto Visit(Type* value) -> bool = 0; \
   };                                             \
-  DECLARE_VISITOR_WRAPPER(Type, Type*);
+  DECLARE_VISITOR_WRAPPER(Type, Type);
 
 static inline void Split(const std::string& str, const char delimiter, std::vector<std::string>& results) {
   std::string current;

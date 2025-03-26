@@ -29,7 +29,7 @@ void Module::GetAllLoadedModules(std::vector<Module*>& results) {
   }
 }
 
-auto Module::Compare(Object* rhs) const -> int {
+auto Module::Compare(Object* rhs) const -> bool {
   ASSERT(rhs);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return -1;

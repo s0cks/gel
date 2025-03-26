@@ -172,7 +172,7 @@ class Expression : public Object {  // TODO: should Expression inherit from Obje
     return false;
   }
 
-  auto Compare(Object* rhs) const -> int override {
+  auto Compare(Object* rhs) const -> bool override {
     ASSERT(rhs);
     NOT_IMPLEMENTED(ERROR);  // TODO: implement
     return -1;

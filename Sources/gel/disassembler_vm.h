@@ -60,8 +60,8 @@ class BytecodeDecoder {
     return next;
   }
 
-  inline auto NextLong() -> uword {
-    return NextUWord();
+  inline auto NextLong() -> word {
+    return NextWord();
   }
 
   inline auto NextAddress() -> uword {

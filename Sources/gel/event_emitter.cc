@@ -38,7 +38,7 @@ auto EventEmitter::HashCode() const -> uword {
   return hash;
 }
 
-auto EventEmitter::Compare(Object* rhs) const -> int {
+auto EventEmitter::Compare(Object* rhs) const -> bool {
   ASSERT(rhs);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return -1;

@@ -18,6 +18,7 @@
 #define TRACE_ZONE
 #define TRACE_ZONE_NAMED(Name)
 #define TRACE_TAG(Value)
+#define TRACE_TAG_STR(Value)
 
 #endif  // GEL_TRACING
 

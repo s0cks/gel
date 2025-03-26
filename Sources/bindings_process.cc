@@ -39,9 +39,9 @@ NATIVE_PROCEDURE_F(process_get_cwd) {
 NATIVE_PROCEDURE_F(process_get_pid) {
 #if defined(OS_IS_OSX) || defined(OS_IS_LINUX)
   const auto pid = getpid();
-  return ReturnLong(static_cast<uword>(pid));
+  return ReturnLong(static_cast<RawLong>(pid));
 #elif defined(OS_IS_WINDOWS)
-  const auto pid = static_cast<uword>(GetCurrentProcessId());
+  const auto pid = static_cast<word>(GetCurrentProcessId());
   return ReturnLong(pid);
 #else
   return ReturnNull();
@@ -51,7 +51,7 @@ NATIVE_PROCEDURE_F(process_get_pid) {
 NATIVE_PROCEDURE_F(process_get_gid) {
 #if defined(OS_IS_OSX) || defined(OS_IS_LINUX)
   const auto gid = getgid();
-  return ReturnLong(static_cast<uword>(gid));
+  return ReturnLong(static_cast<RawLong>(gid));
 #else
   return ReturnNull();
 #endif
@@ -60,7 +60,7 @@ NATIVE_PROCEDURE_F(process_get_gid) {
 NATIVE_PROCEDURE_F(process_get_uid) {
 #if defined(OS_IS_OSX) || defined(OS_IS_LINUX)
   const auto uid = getuid();
-  return ReturnLong(static_cast<uword>(uid));
+  return ReturnLong(static_cast<RawLong>(uid));
 #else
   return ReturnNull();
 #endif

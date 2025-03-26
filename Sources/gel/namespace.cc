@@ -49,7 +49,7 @@ auto Namespace::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
   return true;
 }
 
-auto Namespace::Compare(Object* rhs) const -> int {
+auto Namespace::Compare(Object* rhs) const -> bool {
   ASSERT(rhs);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return -1;

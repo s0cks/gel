@@ -49,76 +49,64 @@ auto Buffer::Equals(Object* rhs) const -> bool {
   return false;
 }
 
-struct DefaultEncoding {
-  auto Matches(String* rhs) const -> bool {
-    return rhs == nullptr || rhs->Equals("raw") || rhs->Equals("ascii");
-  }
+auto DefaultBufferEncoding::Encode(const Buffer* rhs) const -> String* {
+  std::string value(reinterpret_cast<const char*>(rhs->data()), rhs->GetCapacity());
+  return String::New(value);
+}
 
-  auto operator()(const Buffer* rhs) const -> String* {
-    ASSERT(rhs);
-    return String::New(std::string((const char*)rhs->data()));  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-  }
-};
+auto DefaultBufferEncoding::Decode(const String* rhs) const -> Buffer* {
+  if (!rhs || rhs->IsEmpty())
+    return Buffer::New(0);
+  return Buffer::Copy(rhs->Get());
+}
 
-struct HexEncoding {
-  auto Matches(String* rhs) const -> bool {
-    return rhs != nullptr && rhs->Equals("hex");
-  }
+auto HexBufferEncoding::Decode(const String* rhs) const -> Buffer* {
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return nullptr;
+}
 
-  auto operator()(const Buffer* rhs) const -> String* {
-    ASSERT(rhs);
-    const auto buff_length = rhs->wpos();
-    const auto hex_buff_length = 1 + buff_length * 2;
-    char hex[hex_buff_length];
-    size_t hex_length = 0;
-    OPENSSL_buf2hexstr_ex(&hex[0], hex_buff_length, &hex_length, rhs->data(), rhs->wpos(), '\0');
-    std::string result(hex, hex_length);
-    return String::New(result);
-  }
-};
+auto HexBufferEncoding::Encode(const Buffer* rhs) const -> String* {
+  ASSERT(rhs);
+  const auto buff_length = rhs->wpos();
+  const auto hex_buff_length = 1 + buff_length * 2;
+  std::vector<char> hex{};
+  hex.resize(hex_buff_length);
+  size_t hex_length = 0;
+  OPENSSL_buf2hexstr_ex(&hex[0], hex_buff_length, &hex_length, rhs->data(), rhs->wpos(), '\0');
+  std::string result(hex.data(), hex_length);
+  return String::New(result);
+}
 
-struct Base64Encoding {
-  auto Matches(String* rhs) const -> bool {
-    return rhs != nullptr && (rhs->Equals("b64") || rhs->Equals("base64"));
-  }
+auto Base64BufferEncoding::Decode(const String* rhs) const -> Buffer* {
+  ASSERT(rhs);
+  const auto length = 3 * rhs->Get().length() / 4;
+  std::string data(length + 1, '\0');
+  const auto decoded =
+      EVP_DecodeBlock(reinterpret_cast<unsigned char*>(data.data()), reinterpret_cast<const unsigned char*>(rhs->Get().data()),
+                      static_cast<int>(rhs->Get().size()));
+  LOG_IF(WARNING, decoded != length) << "base64 decoding issue decoding " << rhs->ToString();
+  return Buffer::Copy(data);
+}
 
-  auto Decode(String* rhs) const -> String* {
-    const auto length = 3 * rhs->Get().length() / 4;
-    std::string data(length + 1, '\0');
-    const auto decoded = EVP_DecodeBlock((unsigned char*)data.data(), (const unsigned char*)rhs->Get().data(), rhs->Get().size());
-    LOG_IF(WARNING, decoded != length) << "base64 decoding issue decoding " << rhs->ToString();
-    return String::New(data);
-  }
-
-  auto operator()(const Buffer* rhs) const -> String* {
-    ASSERT(rhs);
-    const auto length = 4 * ((rhs->wpos() + 2) / 3);
-    std::string data(length + 1, '\0');
-    const auto encoded = EVP_EncodeBlock((unsigned char*)data.data(), rhs->data(), (int)rhs->wpos());
-    LOG_IF(WARNING, encoded != length) << "base64 encoding issue encoding " << rhs->ToString();
-    return String::New(data);
-  }
-};
-
-static const Base64Encoding kBase64Encoding{};
-static const DefaultEncoding kDefaultEncoding{};
-static const HexEncoding kHexEncoding{};
+auto Base64BufferEncoding::Encode(const Buffer* rhs) const -> String* {
+  ASSERT(rhs);
+  const auto length = 4 * ((rhs->wpos() + 2) / 3);
+  std::string data(length + 1, '\0');
+  const auto encoded = EVP_EncodeBlock(reinterpret_cast<unsigned char*>(data.data()), rhs->data(), static_cast<int>(rhs->wpos()));
+  LOG_IF(WARNING, encoded != length) << "base64 encoding issue encoding " << rhs->ToString();
+  return String::New(data);
+}
 
 auto Buffer::ToString(String* encoding) const -> String* {
-  if (kDefaultEncoding.Matches(encoding))
-    goto default_encoding;
   ASSERT(encoding);
-  if (kHexEncoding.Matches(encoding)) {
-    return kHexEncoding(this);
-  } else if (kBase64Encoding.Matches(encoding)) {
-    return kBase64Encoding(this);
-  } else if (!kDefaultEncoding.Matches(encoding)) {
-    std::stringstream ss;
-    ss << "`" << encoding->Get() << "` is an invalid encoding for Buffer.";
-    return String::New(ss.str());
+  if (HexBufferEncoding::Matches(encoding)) {
+    return HexBufferEncoding{}.Encode(this);
+  } else if (Base64BufferEncoding::Matches(encoding)) {
+    return Base64BufferEncoding{}.Encode(this);
   }
 default_encoding:
-  return kDefaultEncoding(this);
+  ASSERT(DefaultBufferEncoding::Matches(encoding));
+  return DefaultBufferEncoding{}.Encode(this);
 }
 
 auto Buffer::ToString() const -> std::string {
@@ -137,7 +125,7 @@ auto Buffer::Copy(String* src) -> Buffer* {
   return Buffer::Copy(src->Get());
 }
 
-auto Buffer::Compare(Object* rhs) const -> int {
+auto Buffer::Compare(Object* rhs) const -> bool {
   ASSERT(rhs);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return -1;
@@ -149,23 +137,17 @@ auto Buffer::New(const ObjectList& args) -> Buffer* {
   else if (gel::IsLong(args[0]))
     return Buffer::New(args[0]->AsLong()->Get());
   else if (gel::IsString(args[0])) {
+    RequiredNativeArgument<0, String> value(args);
     if (args.size() > 1 && gel::IsString(args[1])) {
       const auto encoding = args[1]->AsString();
       ASSERT(encoding);
-      if (kDefaultEncoding.Matches(encoding))
-        goto default_encoding;
-      ASSERT(encoding);
-      if (kHexEncoding.Matches(encoding)) {
-        return nullptr;
-      } else if (kBase64Encoding.Matches(encoding)) {
-        return Buffer::Copy(kBase64Encoding.Decode(args[0]->AsString()));
-      } else if (!kDefaultEncoding.Matches(encoding)) {
-        std::stringstream ss;
-        ss << "`" << encoding->Get() << "` is an invalid encoding for Buffer.";
-        return nullptr;
+      if (HexBufferEncoding::Matches(encoding)) {
+        return HexBufferEncoding{}.Decode(value);
+      } else if (Base64BufferEncoding::Matches(encoding)) {
+        return Base64BufferEncoding{}.Decode(value);
       }
-    default_encoding:
-      return nullptr;
+      ASSERT(DefaultBufferEncoding::Matches(encoding));
+      return DefaultBufferEncoding{}.Decode(value);
     }
     return Buffer::Copy(args[0]->AsString());
   }
@@ -189,7 +171,7 @@ namespace proc {
 
 BUFFER_PROCEEDURE_F(get_capacity) {
   REQUIRED_NATIVE_ARG(0, Buffer, buffer);
-  return ReturnNew<Long>(buffer->GetCapacity());
+  return ReturnLong(static_cast<RawLong>(buffer->GetCapacity()));
 }
 
 BUFFER_PROCEEDURE_F(to_string) {

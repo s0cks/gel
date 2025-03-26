@@ -106,10 +106,10 @@ NATIVE_FS_PROCEDURE_F(rmdir) {
   return ReturnBool(loop->Rmdir(path->Get(), on_success, on_error, on_finished));
 }
 
-static inline auto WrapOpenFileOnNext(Procedure* on_next) -> std::function<void(uword)> {
-  return [on_next](uword next) {
+static inline auto WrapOpenFileOnNext(Procedure* on_next) -> FileOpenedCallback {
+  return [on_next](Long* next) {
     if (on_next)
-      GetRuntime()->Call(on_next, {Long::New(next)});
+      GetRuntime()->Call(on_next, {next});
   };
 }
 

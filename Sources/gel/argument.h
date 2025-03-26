@@ -52,7 +52,7 @@ class Argument : public Object {
     return vararg_;
   }
 
-  auto Compare(Object* rhs) const -> int override;
+  auto Compare(Object* rhs) const -> bool override;
   auto HashCode() const -> uword override;
   auto Equals(Object* rhs) const -> bool override;
   auto ToString() const -> std::string override;
@@ -74,7 +74,7 @@ class Argument : public Object {
   }
 
   static inline auto IsNamed(const std::string& name) -> std::function<bool(Argument*)> {
-    return [&name](Argument* arg) {
+    return [name](Argument* arg) {
       return arg && arg->GetName()->Equals(name);
     };
   }

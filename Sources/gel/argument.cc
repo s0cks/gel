@@ -56,7 +56,7 @@ auto Argument::ToString() const -> std::string {
   return helper;
 }
 
-auto Argument::Compare(Object* rhs) const -> int {
+auto Argument::Compare(Object* rhs) const -> bool {
   ASSERT(rhs);
   NOT_IMPLEMENTED(ERROR);  // TODOD: implement
   return -1;

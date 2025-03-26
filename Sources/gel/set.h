@@ -50,6 +50,12 @@ class Set : public Object {
     return pos != std::end(data());
   }
 
+  auto Insert(Object* rhs) -> bool {
+    ASSERT(rhs);
+    const auto [pos, success] = data_.insert(rhs);
+    return success;
+  }
+
   DECLARE_TYPE(Set);
 
  public:
@@ -79,11 +85,12 @@ DECLARE_GEL_NATIVE_PROCEDURE(union);
 DECLARE_GEL_NATIVE_PROCEDURE(difference);
 DECLARE_GEL_NATIVE_PROCEDURE(intersection);
 // _DECLARE_GEL_NATIVE_PROCEDURE(superset, "superset?");
-// _DECLARE_GEL_NATIVE_PROCEDURE(subset, "subset?");
+_DECLARE_GEL_NATIVE_PROCEDURE(subset, "subset?");
 
 #define _DECLARE_SET_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(set_##Name, "Set:" Sym)
 #define DECLARE_SET_PROCEDURE(Name)       _DECLARE_SET_PROCEDURE(Name, #Name);
 
+DECLARE_SET_PROCEDURE(insert);
 _DECLARE_SET_PROCEDURE(contains, "contains?");
 DECLARE_SET_PROCEDURE(count);
 _DECLARE_SET_PROCEDURE(empty, "empty?");

@@ -129,8 +129,10 @@ auto VisitThreadEventLoopPointerPointer(const std::function<bool(Pointer**)>& vi
 auto GetThreadEventLoop() -> EventLoop*;
 void RunCurrentThreadEventLoop(const uv_run_mode mode);
 
-auto OpenFileAsync(std::string path, const int flags, const int mode, const std::function<void(uword)>& on_success,
-                   const OnErrorCallback& on_error, const OnFinishedCallback& on_finished) -> bool;
+using FileOpenedCallback = std::function<void(Long*)>;
+
+auto OpenFileAsync(std::string path, const int flags, const int mode, FileOpenedCallback on_success, OnErrorCallback on_error,
+                   OnFinishedCallback on_finished) -> bool;
 
 namespace fs {
 class RequestBase {
@@ -325,14 +327,14 @@ class StatRequest : public TemplateRequest<uword> {
   DECLARE_FS_REQUEST_TYPE(StatRequest);
 };
 
-class OpenFileRequest : public TemplateRequest<uword> {
+class OpenFileRequest : public TemplateRequest<Long*> {
  private:
   int flags_;
   int mode_;
 
  public:
-  OpenFileRequest(const std::string& path, const int flags, const int mode, const std::function<void(uword)>& on_success,
-                  const OnErrorCallback& on_error, const OnSuccessCallback& on_finished) :
+  OpenFileRequest(const std::string& path, const int flags, const int mode, FileOpenedCallback on_success,
+                  OnErrorCallback on_error, OnSuccessCallback on_finished) :
     TemplateRequest(path, on_success, on_error, on_finished),
     flags_(flags),
     mode_(mode) {}

@@ -16,7 +16,7 @@ auto Constructor::HashCode() const -> uword {
   return 0;
 }
 
-auto Constructor::Compare(Object* rhs) const -> int {
+auto Constructor::Compare(Object* rhs) const -> bool {
   ASSERT(rhs);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return -1;

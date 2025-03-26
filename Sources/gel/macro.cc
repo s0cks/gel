@@ -61,7 +61,7 @@ auto Macro::ToString() const -> std::string {
   return helper;
 }
 
-auto Macro::Compare(Object* rhs) const -> int {
+auto Macro::Compare(Object* rhs) const -> bool {
   ASSERT(rhs);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return -1;

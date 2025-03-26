@@ -17,6 +17,7 @@
 #include "gel/common.h"
 #include "gel/event_emitter.h"
 #include "gel/event_loop.h"
+#include "gel/exception.h"
 #include "gel/expression.h"
 #include "gel/heap.h"
 #include "gel/namespace.h"
@@ -135,9 +136,9 @@ auto Object::Cons(Object* rhs) const -> Object* {
 
 #undef DECLARE_OBJECT_BINARY_OP
 
-auto Object::Compare(Object* rhs) const -> int {
+auto Object::Compare(Object* rhs) const -> bool {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return 0;
+  return false;
 }
 
 auto Object::VisitClassPointerPointer(PointerPointerVisitor* vis) -> bool {
@@ -219,7 +220,7 @@ auto Long::HashCode() const -> uword {
   return hash;
 }
 
-auto Long::Unbox(Object* rhs) -> uint64_t {
+auto Long::Unbox(Object* rhs) -> int64_t {
   if (!rhs)
     throw Exception(fmt::format("expected null to be a Long."));
   if (!rhs->IsLong())
@@ -227,10 +228,10 @@ auto Long::Unbox(Object* rhs) -> uint64_t {
   return rhs->AsLong()->Get();
 }
 
-auto Double::Compare(Object* rhs) const -> int {
-  ASSERT(rhs);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return -1;
+auto Double::Compare(Object* rhs) const -> bool {
+  if (!rhs || !rhs->IsDouble())
+    return false;
+  return Get() < rhs->AsDouble()->Get();
 }
 
 auto Double::CreateClass() -> Class* {
@@ -295,9 +296,10 @@ auto Bool::False() -> Bool* {
   return kFalse;
 }
 
-auto Bool::Compare(Object* rhs) const -> int {
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return false;
+auto Bool::Compare(Object* rhs) const -> bool {
+  if (!rhs || !rhs->IsBool())
+    return false;
+  return Get() < rhs->AsBool()->Get();
 }
 
 auto Object::FieldAddr(Field* field) const -> Object** {
@@ -315,10 +317,10 @@ auto Number::BitNot() const -> Object* {
   return Long::New(~GetLong());
 }
 
-auto Number::Compare(Object* rhs) const -> int {
+auto Number::Compare(Object* rhs) const -> bool {
   ASSERT(rhs);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return -1;
+  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return false;
 }
 
 auto Number::CreateClass() -> Class* {
@@ -329,7 +331,7 @@ auto Number::New(const ObjectList& args) -> Number* {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
 }
 
-auto Number::New(const uint64_t rhs) -> Number* {
+auto Number::New(const RawLong rhs) -> Number* {
   return Long::New(rhs);
 }
 
@@ -374,14 +376,10 @@ FOR_EACH_NUMBER_BINARY_OP(DEFINE_BINARY_OP);
 DEFINE_BINARY_OP(Modulus, %);
 #undef DEFINE_BINARY_OP
 
-auto Long::Compare(Object* rhs) const -> int {
-  ASSERT(rhs && rhs->IsLong());
-  if (Get() < rhs->AsLong()->Get())
-    return -1;
-  else if (Get() > rhs->AsLong()->Get())
-    return +1;
-  ASSERT(Get() == rhs->AsLong()->Get());
-  return 0;
+auto Long::Compare(Object* rhs) const -> bool {
+  if (!rhs || !rhs->IsLong())
+    return false;
+  return Get() < rhs->AsLong()->Get();
 }
 
 auto Long::Equals(Object* rhs) const -> bool {
@@ -396,14 +394,18 @@ auto Long::Eq(Object* rhs) const -> Object* {
 }
 
 auto Long::BitAnd(Object* rhs) const -> Object* {
-  if (!rhs || !rhs->IsNumber())
-    throw Exception(fmt::format("{} is not a Number.", (*rhs)));
+  if (gel::IsNull(rhs))
+    throw IllegalArgumentException("rhs equals '()");
+  else if (!rhs->IsNumber())
+    throw IllegalArgumentException(fmt::format("expected `{}` to be a Number.", (*rhs)));
   return Long::New(GetLong() & rhs->AsNumber()->GetLong());
 }
 
 auto Long::BitOr(Object* rhs) const -> Object* {
-  if (!rhs || !rhs->IsNumber())
-    throw Exception(fmt::format("{} is not a Number.", (*rhs)));
+  if (gel::IsNull(rhs))
+    throw IllegalArgumentException("rhs equals '()");
+  else if (!rhs->IsNumber())
+    throw IllegalArgumentException(fmt::format("expected `{}` to be a Number.", (*rhs)));
   return Long::New(GetLong() | rhs->AsNumber()->GetLong());
 }
 
@@ -478,10 +480,12 @@ auto Pair::New(const ObjectList& args) -> Pair* {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
 }
 
-auto Pair::Compare(Object* rhs) const -> int {
-  ASSERT(rhs);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return -1;
+auto Pair::Compare(Object* rhs) const -> bool {
+  if (!rhs || !rhs->IsPair())
+    return false;
+  if (GetFirst() < rhs->AsPair()->GetFirst())
+    return true;
+  return GetSecond() < rhs->AsPair()->GetSecond();
 }
 
 Field* Pair::kFirstField = nullptr;
@@ -589,10 +593,14 @@ auto String::CreateClass() -> Class* {
   return Class::New(Object::GetClass(), kClassName);
 }
 
-auto String::Compare(Object* rhs) const -> int {
+auto String::Compare(Object* rhs) const -> bool {
   if (!rhs || !rhs->IsString())
-    return 1;
+    return false;
   return Get().compare(rhs->AsString()->Get());
+}
+
+auto String::ToBuffer() const -> Buffer* {
+  return Buffer::Copy(Get());
 }
 
 auto String::Equals(const std::string& rhs) const -> bool {

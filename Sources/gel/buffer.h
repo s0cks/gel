@@ -12,6 +12,51 @@ namespace gel {
   V(32)                                 \
   V(64)
 
+#define FOR_EACH_BUFFER_ENCODING(V) \
+  V(Default)                        \
+  V(Hex)                            \
+  V(Base64)
+
+class BufferEncoding {
+  DEFINE_NON_COPYABLE_TYPE(BufferEncoding);
+
+ public:
+  BufferEncoding() = default;
+  virtual ~BufferEncoding() = default;
+  virtual auto Decode(const String* value) const -> Buffer* = 0;
+  virtual auto Encode(const Buffer* value) const -> String* = 0;
+};
+
+class DefaultBufferEncoding : public BufferEncoding {
+ public:
+  auto Decode(const String* value) const -> Buffer* override;
+  auto Encode(const Buffer* value) const -> String* override;
+
+  static inline auto Matches(String* rhs) -> bool {
+    return rhs == nullptr || (rhs && (rhs->Equals("default") || rhs->Equals("none")));
+  }
+};
+
+class Base64BufferEncoding : public BufferEncoding {
+ public:
+  auto Decode(const String* value) const -> Buffer* override;
+  auto Encode(const Buffer* value) const -> String* override;
+
+  static inline auto Matches(String* rhs) -> bool {
+    return rhs != nullptr && (rhs->Equals("b64") || rhs->Equals("base64"));
+  }
+};
+
+class HexBufferEncoding : public BufferEncoding {
+ public:
+  auto Decode(const String* rhs) const -> Buffer* override;
+  auto Encode(const Buffer* rhs) const -> String* override;
+
+  static inline auto Matches(String* rhs) -> bool {
+    return rhs != nullptr && rhs->Equals("hex");
+  }
+};
+
 class Buffer : public Object {
   static constexpr const auto kDefaultBufferSize = 4096;
   static constexpr const auto kMaxBufferSize = 4 * 1024 * 1024;

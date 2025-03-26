@@ -1,6 +1,8 @@
 #ifndef GEL_POINTER_H
 #define GEL_POINTER_H
 
+#include <functional>
+
 #include "gel/common.h"
 #include "gel/platform.h"
 #include "gel/tag.h"
@@ -20,7 +22,25 @@ class PointerVisitor {
 
   auto Visit(Object* ptr) -> bool;
 };
-DECLARE_VISITOR_WRAPPER(Pointer, Pointer*);
+
+class PointerVisitorWrapper : public PointerVisitor {
+  using Callback = std::function<bool(Pointer*)>;
+  DEFINE_NON_COPYABLE_TYPE(PointerVisitorWrapper);
+
+ private:
+  Callback delegate_;
+
+ public:
+  PointerVisitorWrapper(Callback delegate) :
+    PointerVisitor(),
+    delegate_(std::move(delegate)) {}
+  ~PointerVisitorWrapper() override = default;
+
+  auto Visit(Pointer* value) -> bool override {
+    ASSERT(value);
+    return delegate_(value);
+  }
+};
 
 class PointerPointerVisitor {
   DEFINE_NON_COPYABLE_TYPE(PointerPointerVisitor);
@@ -32,7 +52,24 @@ class PointerPointerVisitor {
   virtual ~PointerPointerVisitor() = default;
   virtual auto Visit(Pointer** ptr) -> bool = 0;
 };
-DECLARE_VISITOR_WRAPPER(PointerPointer, Pointer**);
+
+class PointerPointerVisitorWrapper : public PointerPointerVisitor {
+  using Callback = std::function<bool(Pointer**)>;
+  DEFINE_NON_COPYABLE_TYPE(PointerPointerVisitorWrapper);
+
+ private:
+  Callback delegate_;
+
+ public:
+  PointerPointerVisitorWrapper(Callback delegate) :
+    PointerPointerVisitor(),
+    delegate_(delegate) {}
+  ~PointerPointerVisitorWrapper() override = default;
+
+  auto Visit(Pointer** value) -> bool override {
+    return delegate_(value);
+  }
+};
 
 class PointerIterator {
   DEFINE_NON_COPYABLE_TYPE(PointerIterator);

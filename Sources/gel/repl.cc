@@ -32,6 +32,20 @@ void Repl::PrintCR() {
   wrefresh(window_);
 }
 
+auto Repl::NextHistoryItem(int ch) -> std::string {
+  switch (ch) {
+    case KEY_UP:
+      NextHistoryIndex();
+      break;
+    case KEY_DOWN:
+      PreviousHistoryIndex();
+      break;
+  }
+  if (history_index_ == -1)
+    return {};
+  return history_[history_.size() - history_index_];
+}
+
 auto Repl::Prompt(const std::string& prompt) -> std::string {
   PrintCR();
   std::string command{};
@@ -40,6 +54,11 @@ auto Repl::Prompt(const std::string& prompt) -> std::string {
   bool eoc = false;
   while (!eoc) {
     switch (ch = wgetch(window_)) {
+      case KEY_UP:
+      case KEY_DOWN: {
+        command = NextHistoryItem(ch);
+        break;
+      }
       case 127: {
         command.pop_back();
         break;

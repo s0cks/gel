@@ -161,8 +161,12 @@ class NativeProcedureEntry {
     return Return(Bool::False());
   }
 
-  inline auto ReturnLong(const uint64_t rhs) const -> bool {
+  inline auto ReturnLong(const RawLong rhs) const -> bool {
     return ReturnNew<Long>(rhs);
+  }
+
+  inline auto ReturnLong(const uword rhs) const -> bool {
+    return ReturnLong(static_cast<RawLong>(rhs));
   }
 
   inline auto ReturnDouble(const double rhs) const -> bool {

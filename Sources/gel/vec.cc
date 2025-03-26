@@ -75,7 +75,7 @@ auto Vec2::New(Pair* rhs) -> Vec2* {
   return New(rhs->GetFirst()->AsNumber(), rhs->GetSecond()->AsNumber());
 }
 
-auto Vec2::Compare(Object* rhs) const -> int {
+auto Vec2::Compare(Object* rhs) const -> bool {
   ASSERT(rhs);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return -1;
@@ -103,7 +103,7 @@ auto Vec3::ToString() const -> std::string {
   return helper;
 }
 
-auto Vec3::Compare(Object* rhs) const -> int {
+auto Vec3::Compare(Object* rhs) const -> bool {
   ASSERT(rhs);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return -1;

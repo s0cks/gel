@@ -43,7 +43,7 @@ auto EventLoop::Submit(fs::RequestBase* request) -> int {
   return request->Execute(this);
 }
 
-auto EventLoop::Compare(Object* rhs) const -> int {
+auto EventLoop::Compare(Object* rhs) const -> bool {
   ASSERT(rhs);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return -1;
@@ -207,10 +207,11 @@ void RunCurrentThreadEventLoop(const uv_run_mode mode) {
   while (event_loop->Run(UV_RUN_NOWAIT) != 0);  // do nothing
 }
 
-auto OpenFileAsync(std::string path, const int flags, const int mode, const std::function<void(uword)>& on_success,
-                   const OnErrorCallback& on_error, const OnFinishedCallback& on_finished) -> bool {
+auto OpenFileAsync(std::string path, const int flags, const int mode, FileOpenedCallback on_success, OnErrorCallback on_error,
+                   OnFinishedCallback on_finished) -> bool {
   ASSERT(!path.empty());
-  auto request = new fs::OpenFileRequest(std::move(path), flags, mode, on_success, on_error, on_finished);
+  auto request =
+      new fs::OpenFileRequest(std::move(path), flags, mode, std::move(on_success), std::move(on_error), std::move(on_finished));
   ASSERT(request);
   return GetThreadEventLoop()->Submit(request) == 0;
 }
@@ -253,7 +254,7 @@ void Timer::OnTick(uv_timer_t* handle) {
   return runtime->Call(on_tick);
 }
 
-auto Timer::Compare(Object* rhs) const -> int {
+auto Timer::Compare(Object* rhs) const -> bool {
   ASSERT(rhs);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return -1;
@@ -325,7 +326,7 @@ FS_REQUEST_CALLBACK_F(OpenFileRequest) {
         fmt::format("error reading stats of file {}: {}", request->GetPath(), uv_strerror(static_cast<int>(result)));
     return request->OnError(Error::New(message));
   }
-  request->OnNext(result);
+  request->OnNext(Long::New(static_cast<RawLong>(result)));
   uv_fs_req_cleanup(handle);
   request->OnFinished();
 }

@@ -20,7 +20,7 @@ auto Iterator::HashCode() const -> uword {
   return 0;
 }
 
-auto Iterator::Compare(Object* rhs) const -> int {
+auto Iterator::Compare(Object* rhs) const -> bool {
   ASSERT(rhs);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return -1;
