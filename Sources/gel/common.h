@@ -220,7 +220,7 @@ struct Percent {
 using Clock = std::chrono::high_resolution_clock;
 
 template <typename R>
-static inline auto TimedExecution(const std::function<R()>& func) -> std::pair<R, Clock::duration> {
+static inline auto TimedExecution(std::function<R()> func) -> std::pair<R, Clock::duration> {
   const auto start_ts = Clock::now();
   const auto result = func();
   const auto stop_ts = Clock::now();

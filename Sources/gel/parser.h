@@ -555,18 +555,23 @@ class Parser {
 
  public:
   static inline auto ParseExpr(std::istream& stream, LocalScope* scope = LocalScope::New(GetRuntime()->GetInitScope()))
-      -> expr::Expression* {
+      -> Lambda* {
     ASSERT(stream.good());
     ASSERT(scope);
     Parser parser(stream, scope, GetThreadModuleLoader());
     expr::Expression* result = nullptr;
     if (!parser.ParseExpression(&result))
       return nullptr;
-    return result;
+    ASSERT(result);
+    const auto lambda = Lambda::New();
+    ASSERT(lambda);
+    lambda->SetBody(expr::SeqExpr::New(result));
+    lambda->SetScope(parser.GetScope());
+    return lambda;
   }
 
   static inline auto ParseExpr(const std::string& expr, LocalScope* scope = LocalScope::New(GetRuntime()->GetInitScope()))
-      -> expr::Expression* {
+      -> Lambda* {
     ASSERT(!expr.empty());
     ASSERT(scope);
     std::istringstream ss(expr);

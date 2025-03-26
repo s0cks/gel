@@ -86,7 +86,7 @@ void Disassembler::Disassemble(const Region& region, const char* label) {
         break;
       }
       case Bytecode::kPushI: {
-        const auto value = decoder.NextAddress();
+        const auto value = decoder.NextWord();
         stream() << value;
         break;
       }

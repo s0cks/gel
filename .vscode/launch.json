@@ -174,7 +174,6 @@
       "request": "launch",
       "program": "${workspaceFolder}/build/Sources/gelrt",
       "args": [
-        "-colorlogtostdout",
         "-v=${input:verbose-level}",
         "-log_dir=${workspaceFolder}/logs",
         "--dump-ast"

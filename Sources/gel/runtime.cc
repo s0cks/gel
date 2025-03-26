@@ -496,14 +496,8 @@ auto Runtime::Eval(const std::string& expr) -> Object* {
   ASSERT(!expr.empty());
   DVLOG(10) << "evaluating expression:" << std::endl << expr;
   const auto runtime = GetRuntime();
-  ASSERT(runtime);
-  const auto args = Array<Argument*>::New(0);
-  ASSERT(args);
-  const auto lambda = Lambda::New(args, {});
+  const auto lambda = Parser::ParseExpr(expr);
   ASSERT(lambda);
-  const auto parsed = Parser::ParseExpr(expr);
-  if (parsed)
-    lambda->SetBody(expr::SeqExpr::New(parsed));
   LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, runtime->GetInitScope())) << "failed to compile: " << expr;
   const auto result = runtime->CallPop(lambda);
   runtime->PopScope();

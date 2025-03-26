@@ -82,9 +82,7 @@ struct TimedResult {
 static inline auto Execute(const std::string& expr) -> int {
   if (FLAGS_dump_ast) {
     try {
-      const auto args = Array<Argument*>::New(0);
-      ASSERT(args);
-      const auto lambda = Lambda::New(args, expr::SeqExpr::New(Parser::ParseExpr(expr)));
+      const auto lambda = Parser::ParseExpr(expr);
       LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, GetRuntime()->GetScope())) << "failed to compile: " << expr;
     } catch (const gel::Exception& exc) {
       LOG(ERROR) << "failed to execute expression.";
@@ -146,7 +144,7 @@ auto main(int argc, char** argv) -> int {
   } else {
     ASSERT(argc <= 1);
     Repl::Init();
-    result = GetReplForCurrentThread()->Run();
+    result = RunReplInCurrentThread();
   }
   GetRuntime()->Shutdown();
   return result;

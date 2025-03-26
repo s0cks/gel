@@ -31,7 +31,7 @@ void Assembler::Bind(Label* label) {
   const auto bound = static_cast<word>(cbuffer().GetSize() + sizeof(RawBytecode));
   while (label->IsLinked()) {
     const auto pos = label->GetLinkPos();
-    const auto dest = static_cast<word>(bound - pos);
+    const auto dest = bound - pos;
     const auto next = buffer().LoadAt<word>(pos);
     buffer().StoreAt<word>(pos, dest);
     label->pos_ = next;

@@ -21,6 +21,7 @@ namespace gel {
 class Repl {
   static constexpr const auto kDefaultReplHistoryLength = 50;
   static constexpr const auto kDefaultReplBufferLength = Parser::kDefaultChunkSize;
+
   DEFINE_NON_COPYABLE_TYPE(Repl);
 
  private:
@@ -35,25 +36,23 @@ class Repl {
   std::string expression_{};
   bool running_ = false;
   std::vector<std::string> history_{};
-  int history_index_ = 0;
+  int history_index_ = -1;
 
-  auto NextHistoryIndex() -> int& {
+  void IncHistoryIndex() {
     history_index_ += 1;
-    if (history_index_ > history_.size())
+    if (history_index_ >= history_.size())
       history_index_ = -1;
-    return history_index_;
+  }
+
+  void DecHistoryIndex() {
+    history_index_ -= 1;
+    if (history_index_ < -1)
+      history_index_ = static_cast<int>(history_.size() - 1);
   }
 
   auto NextHistoryItem(int ch) -> std::string;
 
-  auto PreviousHistoryIndex() -> int& {
-    history_index_ -= 1;
-    if (history_index_ < -1)
-      history_index_ = static_cast<int>(history_.size());
-    return history_index_;
-  }
-
-  auto Prompt(const std::string& prompt) -> std::string;
+  auto Prompt(const std::string& prompt) -> std::string&;
 
   void SetRunning(const bool rhs = true) {
     running_ = rhs;
@@ -64,6 +63,8 @@ class Repl {
   void PrintBanner();
   void PrintHelp();
   void RefreshLine(const std::string& line, const std::string& prompt);
+
+  void EvalExpr();
 
  public:
   explicit Repl(LocalScope* scope);
@@ -102,6 +103,11 @@ class Repl {
 
 auto IsReplInitializedForCurrentThread() -> bool;
 auto GetReplForCurrentThread() -> Repl*;
+
+static inline auto RunReplInCurrentThread() -> int {
+  ASSERT(IsReplInitializedForCurrentThread());
+  return GetReplForCurrentThread()->Run();
+}
 }  // namespace gel
 
 #endif  // GEL_REPL_H

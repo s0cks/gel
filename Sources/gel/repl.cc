@@ -1,6 +1,9 @@
 #include "gel/repl.h"
 
+#include <ncurses.h>
+
 #include <algorithm>
+#include <exception>
 #include <iostream>
 
 #include "gel/common.h"
@@ -16,6 +19,18 @@ Repl::Repl(LocalScope* scope) :
   ASSERT(scope_);
   history_.reserve(kDefaultReplHistoryLength);
   expression_.reserve(kDefaultReplBufferLength);
+
+  initscr();
+  cbreak();
+  noecho();
+
+  window_ = newwin(0, 0, 0, 0);
+  ASSERT(window_);
+  nodelay(window_, true);
+  keypad(window_, true);
+
+  PrintBanner();
+  PrintCR();
 }
 
 void Repl::RefreshLine(const std::string& line, const std::string& prompt) {
@@ -23,8 +38,9 @@ void Repl::RefreshLine(const std::string& line, const std::string& prompt) {
   int y = 0;
   getyx(window_, y, x);
   wmove(window_, y, 0);
-  wclrtoeol(window_);
+  wclrtobot(window_);
   wprintw(window_, "%s %s", prompt.c_str(), line.c_str());
+  wrefresh(window_);
 }
 
 void Repl::PrintCR() {
@@ -35,32 +51,32 @@ void Repl::PrintCR() {
 auto Repl::NextHistoryItem(int ch) -> std::string {
   switch (ch) {
     case KEY_UP:
-      NextHistoryIndex();
+      IncHistoryIndex();
       break;
     case KEY_DOWN:
-      PreviousHistoryIndex();
+      DecHistoryIndex();
       break;
   }
   if (history_index_ == -1)
     return {};
-  return history_[history_.size() - history_index_];
+  return history_[history_.size() - 1 - history_index_];
 }
 
-auto Repl::Prompt(const std::string& prompt) -> std::string {
+auto Repl::Prompt(const std::string& prompt) -> std::string& {
   PrintCR();
-  std::string command{};
-  RefreshLine(command, prompt);
+  RefreshLine(expression_, prompt);
   int ch = 0;
   bool eoc = false;
   while (!eoc) {
     switch (ch = wgetch(window_)) {
       case KEY_UP:
       case KEY_DOWN: {
-        command = NextHistoryItem(ch);
+        expression_ = NextHistoryItem(ch);
         break;
       }
       case 127: {
-        command.pop_back();
+        if (!expression_.empty())
+          expression_.pop_back();
         break;
       }
       case 10: {
@@ -69,17 +85,18 @@ auto Repl::Prompt(const std::string& prompt) -> std::string {
       }
       default: {
         if (ch != -1)
-          command += static_cast<char>(ch);
+          expression_ += static_cast<char>(ch);
         break;
       }
     }
-    RefreshLine(command, prompt);
+    RefreshLine(expression_, prompt);
   }
-  return command;
+  return expression_;
 }
 
 void Repl::ClearScreen() {
   wclear(window_);
+  wmove(window_, 0, 0);
   PrintBanner();
 }
 
@@ -97,7 +114,7 @@ static inline auto IsClearCommand(const std::string& cmd) -> bool {
 
 void Repl::PrintBanner() {
   const auto version = gel::GetVersion();
-  wprintw(window_, "gel v%s repl. Type 'exit' to exit.\n", version.c_str());
+  wprintw(window_, "gel v%s repl. Type 'exit' to exit.", version.c_str());
 }
 
 void Repl::Print(std::string value) {
@@ -117,61 +134,57 @@ void Repl::Terminate() {
 
 void Repl::PrintHelp() {
   Print("No help available.");  // TODO: print help
-  PrintCR();
+}
+
+void Repl::EvalExpr() {
+  const auto [result, duration] = TimedExecution<Object*>([this]() {
+    try {
+      return Runtime::Eval(expression_);
+    } catch (const gel::Exception& exc) {
+      return (Object*)Error::New(exc.GetMessage());
+    }
+  });
+  if (!gel::IsNull(result)) {
+    Print(result);
+    if (VLOG_IS_ON(10)) {
+      // do nothing
+    }
+    // out() << "finished in " << units::time::nanosecond_t(static_cast<double>(duration.count())) << std::endl;
+  }
 }
 
 auto Repl::Run() -> int {
-  initscr();
-  cbreak();
-  noecho();
-
-  window_ = newwin(0, 0, 0, 0);
-  ASSERT(window_);
-  nodelay(window_, true);
-  keypad(window_, true);
-
-  PrintBanner();
-
   SetRunning();
   while (IsRunning()) {
-    const auto command = Prompt(">>>");
-    PrintCR();
-    if (IsExitCommand(command)) {
-      Terminate();
-      continue;
-    } else if (IsHelpCommand(command)) {
-      PrintHelp();
-      continue;
-    } else if (IsClearCommand(command)) {
-      ClearScreen();
-      continue;
-    }
-
-    if (command.empty()) {
-      Print("Nothing to eval");
+    try {
+      const auto& command = Prompt(">>>");
       PrintCR();
-      continue;
-    }
-
-    history_.push_back(command);
-    const auto [result, duration] = TimedExecution<Object*>([this, command]() {
-      try {
-        return Runtime::Eval(command);
-      } catch (const gel::Exception& exc) {
-        return (Object*)Error::New(exc.GetMessage());
+      if (command.empty()) {
+        Print("Nothing to eval");
+        goto next;  // NOLINT(cppcoreguidelines-avoid-goto)
       }
-    });
-    if (!gel::IsNull(result)) {
-      Print(result);
-      if (VLOG_IS_ON(10)) {
-        // do nothing
-      }
-      // out() << "finished in " << units::time::nanosecond_t(static_cast<double>(duration.count())) << std::endl;
-    }
 
-    PrintCR();
+      if (IsExitCommand(command)) {
+        goto terminate;  // NOLINT(cppcoreguidelines-avoid-goto)
+      } else if (IsHelpCommand(command)) {
+        PrintHelp();
+        goto next;  // NOLINT(cppcoreguidelines-avoid-goto)
+      } else if (IsClearCommand(command)) {
+        ClearScreen();
+        goto next;  // NOLINT(cppcoreguidelines-avoid-goto)
+      }
+
+      history_.push_back(command);
+      EvalExpr();
+    next:
+      expression_.clear();
+      PrintCR();
+    } catch (...) {
+      Print(Error::New(std::current_exception()));
+    }
   }
 
+terminate:
   endwin();
   return EXIT_SUCCESS;
 }

@@ -1,6 +1,7 @@
 #ifndef GEL_ERROR_H
 #define GEL_ERROR_H
 
+#include <exception>
 #include <string>
 
 #include "gel/common.h"
@@ -59,6 +60,18 @@ class Error : public Object {
   static inline auto New(Object* rhs) -> Error* {
     ASSERT(rhs);
     return New(String::ValueOf(rhs));
+  }
+
+  static inline auto New(const std::exception& exc) -> Error* {
+    return Error::New(exc.what());
+  }
+
+  static inline auto New(const std::exception_ptr exc) -> Error* {
+    try {
+      std::rethrow_exception(exc);
+    } catch (const std::exception& e) {
+      return New(e);
+    }
   }
 };
 }  // namespace gel

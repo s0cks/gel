@@ -60,7 +60,7 @@ auto Observable::New(Object* value) -> Observable* {
 
 auto Observable::Compare(Object* rhs) const -> bool {
   NOT_IMPLEMENTED(ERROR);  // TODO: not implemented
-  return 0;
+  return false;
 }
 
 auto Observable::New(const ObjectList& args) -> Observable* {
@@ -106,7 +106,7 @@ auto Observer::New() -> Observer* {
 
 auto Observer::Compare(Object* rhs) const -> bool {
   NOT_IMPLEMENTED(ERROR);  // TODO: not implemented
-  return 0;
+  return false;
 }
 
 auto Observer::New(const ObjectList& args) -> Observer* {
@@ -163,7 +163,7 @@ auto PublishSubject::HashCode() const -> uword {
 
 auto PublishSubject::Compare(Object* rhs) const -> bool {
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return 0;
+  return false;
 }
 
 auto PublishSubject::CreateClass() -> Class* {
@@ -185,7 +185,7 @@ auto ReplaySubject::HashCode() const -> uword {
 
 auto ReplaySubject::Compare(Object* rhs) const -> bool {
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return 0;
+  return false;
 }
 
 auto ReplaySubject::Equals(Object* rhs) const -> bool {
