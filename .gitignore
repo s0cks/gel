@@ -5,10 +5,6 @@
 build/*
 !/build/.gitkeep
 
-# keep docs/ dir
-docs/*
-!/docs/.gitkeep
-
 # keep logs/ dir
 logs/*
 !/logs/.gitkeep

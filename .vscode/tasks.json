@@ -161,15 +161,15 @@
     },
     {
       "type": "shell",
-      "label": "clean: docs/",
+      "label": "clean: docs",
       "options": {
         "cwd": "${workspaceFolder}/docs/"
       },
       "osx": {
-        "command": "find . '!' -name '.gitkeep' -delete"
+        "command": "[ -e html ] && rm -r html || echo ''",
       },
       "linux": {
-        "command": "find '!' -name '.gitkeep' -delete"
+        "command": "rm -r html/"
       },
       "problemMatcher": [],
       "detail": "Clean the docs/ directory."
