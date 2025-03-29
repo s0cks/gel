@@ -80,8 +80,13 @@ auto FlowGraphCompiler::CompileTarget(E* exec, std::enable_if_t<gel::is_executab
   DVLOG(10) << "compiled in " << units::time::nanosecond_t(static_cast<double>(total_ns));
   code.SetCompileTime(total_ns);
   exec->SetCode(code);
-  if (VLOG_IS_ON(1) || FLAGS_print_bytecode)
-    Disassembler::Disassemble(std::cout, exec, GetScope());
+  if (VLOG_IS_ON(1) || FLAGS_print_bytecode) {
+    std::stringstream ss;
+    ss << std::endl;
+    Disassembler::Disassemble(ss, exec, GetScope());
+    ss << std::endl;
+    LOG(INFO) << ss.rdbuf();
+  }
   TRACE_TAG_STR(exec->GetFullyQualifiedName());
   TRACE_MARK;
   return true;

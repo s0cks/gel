@@ -34,6 +34,15 @@ auto MacroEffectVisitor::VisitExpressionList(const expr::ExpressionList& source,
   return true;
 }
 
+auto MacroEffectVisitor::VisitBindingExpr(expr::BindingExpr* expr) -> bool {
+  ASSERT(expr);
+  MacroEffectVisitor for_value(GetOwner());
+  VISIT(for_value, expr->GetValue());
+  if (for_value)
+    SetResult(expr::BindingExpr::New(expr->GetLocal(), for_value.GetResult()));
+  return true;
+}
+
 auto MacroEffectVisitor::VisitForeachExpr(expr::ForeachExpr* expr) -> bool {
   ASSERT(expr);
   MacroEffectVisitor for_binding(GetOwner());
@@ -98,12 +107,6 @@ auto MacroEffectVisitor::VisitBinaryOpExpr(expr::BinaryOpExpr* expr) -> bool {
     ASSERT(rhs);
     SetResult(expr::BinaryOpExpr::New(expr->GetOp(), lhs, rhs));
   }
-  return true;
-}
-
-auto MacroEffectVisitor::VisitBindingExpr(expr::BindingExpr* expr) -> bool {
-  ASSERT(expr);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return true;
 }
 

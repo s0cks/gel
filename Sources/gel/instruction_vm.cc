@@ -10,6 +10,7 @@ namespace gel::ir {
 #define COMPILE(Name) void Name::Compile(FlowGraphCompiler* compiler)
 
 #define __            compiler->assembler()->
+
 COMPILE(GraphEntryInstr) {
   ASSERT(compiler);
   auto& info = compiler->GetBlockInfo(this);

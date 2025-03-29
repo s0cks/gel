@@ -292,7 +292,7 @@ class Bytecode {
 #undef DEFINE_TO_STRING
       case kInvalid:
       default:
-        return stream << "Unknown gel::Bytecode(" << rhs.raw() << ")";
+        return stream << "Unknown gel::Bytecode(" << static_cast<word>(rhs.raw()) << ")";
     }
   }
 };

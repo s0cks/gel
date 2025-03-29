@@ -405,7 +405,8 @@ auto Parser::ParseLiteralExpr(expr::Expression** result) -> ParseResult {
 }
 
 auto Parser::ParseDoExpr(expr::Expression** result) -> ParseResult {
-  ParseScope scope(this);
+  DLOG(INFO) << "parsing do-expr....";
+  // ParseScope scope(this);
   EXPECT_NEXT(Token::kDoExpr);
   expr::ExpressionList body{};
   expr::Expression* expr = nullptr;
@@ -1648,6 +1649,7 @@ auto Parser::ParseSetPairField(const Token& token, expr::Expression** result) ->
 }
 
 auto Parser::ParseDef(expr::Expression** result) -> ParseResult {
+  DLOG(INFO) << "parsing def-expr....";
   EXPECT_NEXT(Token::kDef);
   Symbol* symbol = nullptr;
   CHECK_RESULT(ParseLiteralSymbol(&symbol));
@@ -1664,13 +1666,6 @@ auto Parser::ParseDef(expr::Expression** result) -> ParseResult {
   expr::Expression* value = nullptr;
   CHECK_RESULT(ParseExpression(&value));
   ASSERT(value);
-  // TODO: constant propagation
-  // if (value->IsConstantExpr()) {
-  //   const auto const_value = value->EvalToConstant(scope);
-  //   ASSERT(const_value);
-  //   local->SetValue(const_value);
-  //   return true;
-  // }
   (*result) = expr::StoreLocalExpr::New(local, value);
   return true;
 }

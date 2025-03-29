@@ -87,7 +87,7 @@ class Assembler {
     return EmitOp(Bytecode::kRet);
   }
 
-  inline void list(const uword length) {
+  inline void list(const uword length) {  // TODO: remove in favour of new
     EmitOp(Bytecode::kList);
     EmitUWord(length);
   }

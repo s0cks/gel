@@ -125,7 +125,7 @@ auto ExpressionToDot::VisitStoreFieldExpr(StoreFieldExpr* expr) -> bool {
 auto ExpressionToDot::VisitStoreLocalExpr(StoreLocalExpr* expr) -> bool {
   ASSERT(expr);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return false;
+  return true;
 }
 
 auto ExpressionToDot::VisitInvokeMacroExpr(InvokeMacroExpr* expr) -> bool {

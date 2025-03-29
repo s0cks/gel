@@ -217,11 +217,9 @@ GEL_NATIVE_PROCEDURE_F(print) {
     PrintValue(google::LogMessage(__FILE__, __LINE__, google::LogSeverity::INFO).stream(), args[0]);
 #endif  // GEL_DEBUG
   if (IsReplInitializedForCurrentThread()) {
-    std::stringstream ss;
-    PrintValue(ss, args[0]);
     const auto repl = GetReplForCurrentThread();
     ASSERT(repl);
-    repl->Print(ss);
+    repl->Print(args[0]);
     return ReturnNull();
   }
   PrintValue(std::cout, args[0]) << std::endl;

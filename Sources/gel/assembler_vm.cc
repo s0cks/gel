@@ -7,7 +7,7 @@ void Assembler::EmitLabel(Label* label) {
   ASSERT(label);
   if (label->IsBound()) {
     const auto offset = label->GetPos() - cbuffer().GetSize();
-    buffer().Emit<word>(static_cast<word>(offset));
+    buffer().Emit<uword>(offset);
   } else {
     EmitLabelLink(label);
   }

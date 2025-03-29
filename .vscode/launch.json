@@ -176,7 +176,7 @@
       "args": [
         "-v=${input:verbose-level}",
         "-log_dir=${workspaceFolder}/logs",
-        "--dump-ast"
+        "--print-bytecode"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [

@@ -119,13 +119,14 @@ void Repl::PrintBanner() {
 
 void Repl::Print(std::string value) {
   ASSERT(!value.empty());
-  wprintw(window_, "%s", value.c_str());
+  wprintw(window_, "%s\n", value.c_str());
+  wrefresh(window_);
 }
 
 void Repl::Print(Object* value) {
   std::stringstream ss{};
   PrintValue(ss, value);
-  return Print(std::move(ss.str()));
+  return Print(ss);
 }
 
 void Repl::Terminate() {

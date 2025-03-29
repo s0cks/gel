@@ -566,7 +566,9 @@ class Parser {
     const auto lambda = Lambda::New();
     ASSERT(lambda);
     lambda->SetBody(expr::SeqExpr::New(result));
-    lambda->SetScope(parser.GetScope());
+    lambda->SetScope(scope);
+    DLOG(INFO) << "parsed expr scope: ";
+    PRINT_SCOPE(INFO, lambda->GetScope());
     return lambda;
   }
 
