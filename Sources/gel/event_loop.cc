@@ -8,6 +8,7 @@
 #include "gel/procedure.h"
 #include "gel/runtime.h"
 #include "gel/thread_local.h"
+#include "gel/timer.h"
 #include "gel/to_string_helper.h"
 
 namespace gel {
@@ -27,11 +28,6 @@ auto WrapOnFinished(Procedure* on_finished) -> OnFinishedCallback {
   return gel::IsNull(on_finished) ? OnFinishedCallback{} : [on_finished]() {
     return GetRuntime()->Call(on_finished);
   };
-}
-
-void Task::Execute() {
-  ASSERT(callback_);
-  GetRuntime()->Call(callback_);
 }
 
 auto EventLoop::Run(const uv_run_mode mode) -> int {
@@ -214,50 +210,6 @@ auto OpenFileAsync(std::string path, const int flags, const int mode, FileOpened
       new fs::OpenFileRequest(std::move(path), flags, mode, std::move(on_success), std::move(on_error), std::move(on_finished));
   ASSERT(request);
   return GetThreadEventLoop()->Submit(request) == 0;
-}
-
-auto Timer::ToString() const -> std::string {
-  ToStringHelper<Timer> helper;
-  helper.AddField("handle", (const void*)&handle());
-  return helper;
-}
-
-auto Timer::HashCode() const -> uword {
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return 0;
-}
-
-auto Timer::Equals(Object* rhs) const -> bool {
-  if (!rhs || !rhs->IsTimer())
-    return false;
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return false;
-}
-
-auto Timer::CreateClass() -> Class* {
-  ASSERT(kClass == nullptr);
-  return Class::New(Object::GetClass(), "Timer");
-}
-
-auto Timer::New(const ObjectList& args) -> Timer* {
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return nullptr;
-}
-
-void Timer::OnTick(uv_timer_t* handle) {
-  const auto timer = ((Timer*)uv_handle_get_data((uv_handle_t*)handle));  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-  ASSERT(timer);
-  const auto on_tick = timer->GetCallback();
-  ASSERT(on_tick);
-  const auto runtime = GetRuntime();
-  ASSERT(runtime);
-  return runtime->Call(on_tick);
-}
-
-auto Timer::Compare(Object* rhs) const -> bool {
-  ASSERT(rhs);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return -1;
 }
 
 namespace fs {

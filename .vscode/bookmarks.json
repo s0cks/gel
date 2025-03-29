@@ -14,7 +14,7 @@
 			"path": "Sources/gel/object.cc",
 			"bookmarks": [
 				{
-					"line": 160,
+					"line": 139,
 					"column": 14,
 					"label": ""
 				}
@@ -24,7 +24,7 @@
 			"path": "Sources/gel/natives.cc",
 			"bookmarks": [
 				{
-					"line": 46,
+					"line": 47,
 					"column": 27,
 					"label": ""
 				}

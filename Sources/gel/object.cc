@@ -32,27 +32,6 @@
 #include "gel/types.h"
 
 namespace gel {
-#ifdef GEL_DISABLE_HEAP
-
-#define DEFINE_NEW_OPERATOR(Name)                     \
-  auto Name::operator new(const size_t sz) -> void* { \
-    return malloc(sz);                                \
-  }
-
-#else
-
-#define DEFINE_NEW_OPERATOR(Name)                                             \
-  auto Name::operator new(const size_t sz) -> void* {                         \
-    const auto alloc_size = Name::kClass ? kClass->GetAllocationSize() : sz;  \
-    const auto heap = GetCurrentThreadHeap();                                 \
-    ASSERT(heap);                                                             \
-    const auto address = heap->TryAllocate(alloc_size > 0 ? alloc_size : sz); \
-    ASSERT(address != UNALLOCATED);                                           \
-    return reinterpret_cast<void*>(address);                                  \
-  }
-
-#endif  // GEL_DISABLE_HEAP
-
 DEFINE_NEW_OPERATOR(Seq);              // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Field);            // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Bool);             // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)

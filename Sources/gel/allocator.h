@@ -75,6 +75,28 @@ class HeapObject {
   auto operator new(const size_t sz)->void*; \
   void operator delete(void* ptr);
 
+#ifdef GEL_DISABLE_HEAP
+
+#define DEFINE_NEW_OPERATOR(Name)                     \
+  auto Name::operator new(const size_t sz) -> void* { \
+    return malloc(sz);                                \
+  }
+
+#else
+
+// TODO: add assertions for Name::kClass && sz <= kClass->GetAllocationSize()
+#define DEFINE_NEW_OPERATOR(Name)                                             \
+  auto Name::operator new(const size_t sz) -> void* {                         \
+    const auto alloc_size = Name::kClass ? kClass->GetAllocationSize() : sz;  \
+    const auto heap = GetCurrentThreadHeap();                                 \
+    ASSERT(heap);                                                             \
+    const auto address = heap->TryAllocate(alloc_size > 0 ? alloc_size : sz); \
+    ASSERT(address != UNALLOCATED);                                           \
+    return reinterpret_cast<void*>(address);                                  \
+  }
+
+#endif  // GEL_DISABLE_HEAP
+
 namespace sys {
 class Allocator {
   DEFINE_NON_INSTANTIABLE_TYPE(Allocator);

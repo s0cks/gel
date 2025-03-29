@@ -38,6 +38,7 @@
 #include "gel/rx.h"
 #include "gel/shared_lib.h"
 #include "gel/stack_frame.h"
+#include "gel/timer.h"
 #include "gel/type.h"
 #include "gel/zone.h"
 
