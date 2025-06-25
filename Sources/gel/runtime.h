@@ -2,7 +2,6 @@
 #define GEL_RUNTIME_H
 
 #include <gflags/gflags_declare.h>
-
 #include <rpp/observers/dynamic_observer.hpp>
 #include <rpp/sources/fwd.hpp>
 #include <stack>
@@ -84,7 +83,8 @@ class ShutdownListener {
 
   auto Last() -> ShutdownListener* {
     ShutdownListener* current = this;
-    while (current->HasNext()) current = current->GetNext();
+    while (current->HasNext())
+      current = current->GetNext();
     return current;
   }
 

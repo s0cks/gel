@@ -1,7 +1,11 @@
 #include "gel/constructor.h"
 
+#include <string>
+
 #include "gel/common.h"
+#include "gel/platform.h"
 #include "gel/to_string_helper.h"
+#include "gel/type.h"
 
 namespace gel {
 auto Constructor::Equals(Object* rhs) const -> bool {

@@ -1,16 +1,12 @@
 #include "gel/lambda.h"
 
 #include <glog/logging.h>
-
-#include <ranges>
-#include <sstream>
+#include <string>
 
 #include "gel/common.h"
-#include "gel/expression.h"
-#include "gel/flow_graph_builder.h"
 #include "gel/local_scope.h"
+#include "gel/platform.h"
 #include "gel/pointer.h"
-#include "gel/runtime.h"
 #include "gel/to_string_helper.h"
 #include "gel/type.h"
 

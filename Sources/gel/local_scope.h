@@ -1,10 +1,20 @@
 #ifndef GEL_LOCAL_SCOPE_H
 #define GEL_LOCAL_SCOPE_H
 
+#include <cstdint>
+#include <string>
+#include <type_traits>
+#include <vector>
+
 #include "gel/allocator.h"
 #include "gel/array.h"
+#include "gel/common.h"
 #include "gel/local.h"
+#include "gel/object.h"
+#include "gel/platform.h"
 #include "gel/pointer.h"
+#include "gel/rx.h"
+#include "gel/type_traits.h"
 
 namespace gel {
 class Symbol;
@@ -253,8 +263,8 @@ class LocalScopePrinter : public LocalVariableVisitor {
   }
 
  public:
-  LocalScopePrinter(const char* file, const int line, const google::LogSeverity severity = google::INFO, const int indent = 0,
-                    const bool recursive = true) :
+  LocalScopePrinter(const char* file, const int line, const google::LogSeverity severity = google::INFO,
+                    const int indent = 0, const bool recursive = true) :
     file_(file),
     line_(line),
     severity_(severity),

@@ -1,7 +1,12 @@
 #include "gel/argument.h"
 
+#include <cstddef>
+#include <string>
+
 #include "gel/common.h"
 #include "gel/heap.h"
+#include "gel/object.h"
+#include "gel/platform.h"
 #include "gel/to_string_helper.h"
 
 namespace gel {

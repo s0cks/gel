@@ -2,6 +2,7 @@
 #define GEL_UTIL_H
 
 #include <glog/logging.h>
+#include <string>
 
 #include "gel/common.h"
 

@@ -1,6 +1,9 @@
 #ifndef GEL_THREAD_LOCAL_H
 #define GEL_THREAD_LOCAL_H
 
+#include <functional>
+#include <ostream>
+
 #include "gel/common.h"
 #include "gel/os_thread.h"
 #include "gel/platform.h"

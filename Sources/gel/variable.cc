@@ -1,6 +1,7 @@
 #include "gel/variable.h"
 
 #include <sstream>
+#include <string>
 
 namespace gel {
 auto Variable::ToString() const -> std::string {

@@ -1,8 +1,13 @@
 #include "gel/iterator.h"
 
+#include <string>
+
 #include "gel/common.h"
 #include "gel/native_procedure.h"
+#include "gel/object.h"
+#include "gel/platform.h"
 #include "gel/to_string_helper.h"
+#include "gel/type.h"
 
 namespace gel {
 auto Iterator::CreateClass() -> Class* {

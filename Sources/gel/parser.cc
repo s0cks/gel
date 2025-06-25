@@ -1,23 +1,21 @@
 #include "gel/parser.h"
 
+#include <cctype>
+#include <cstdlib>
+#include <fmt/format.h>
 #include <glog/logging.h>
-
-#include <cstddef>
-#include <unordered_map>
-#include <utility>
+#include <optional>
 
 #include "gel/argument.h"
 #include "gel/common.h"
 #include "gel/expression.h"
-#include "gel/instruction.h"
 #include "gel/lambda.h"
 #include "gel/local.h"
 #include "gel/local_scope.h"
-#include "gel/macro.h"
 #include "gel/module.h"
 #include "gel/module_loader.h"
-#include "gel/native_procedure.h"
-#include "gel/object.h"
+#include "gel/namespace.h"
+#include "gel/procedure.h"
 #include "gel/script.h"
 #include "gel/token.h"
 #include "gel/tracing.h"
@@ -388,7 +386,8 @@ auto Parser::ParseLiteralValue(Object** result) -> ParseResult {
 
 auto Parser::ParseLiteralExpr(expr::Expression** result) -> ParseResult {
   if (PeekEq(Token::kFn) || PeekEq(Token::kDispatch)) {
-    return ParseLiteralLambda(PeekKind(), (expr::LiteralExpr**)result);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+    return ParseLiteralLambda(PeekKind(),
+                              (expr::LiteralExpr**)result);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   } else if (PeekEq(Token::kLBrace)) {
     return ParseMap(result);
   } else if (PeekEq(Token::kLBracket)) {
@@ -1390,7 +1389,8 @@ auto Parser::NextToken() -> const Token& {
         whole = false;
       buffer_[token_len_++] = next;
     }
-    return whole ? NextToken(Token::kLiteralLong, GetBufferedText()) : NextToken(Token::kLiteralDouble, GetBufferedText());
+    return whole ? NextToken(Token::kLiteralLong, GetBufferedText())
+                 : NextToken(Token::kLiteralDouble, GetBufferedText());
   } else if (IsValidIdentifierChar(next, true)) {
     token_len_ = 0;
     auto ckw = keywords_;
@@ -1505,7 +1505,8 @@ auto Parser::ParseLambda(const Token::Kind kind, Lambda** result) -> ParseResult
 
     if (!parsed_args.empty()) {  // TODO this is really dumb
       Array<Argument*>* args = Array<Argument*>::New(static_cast<word>(parsed_args.size()));
-      for (const auto& arg : parsed_args) args->Push(arg);
+      for (const auto& arg : parsed_args)
+        args->Push(arg);
       if (args)
         lambda->SetArgs(args);
     }
@@ -1831,8 +1832,9 @@ auto Parser::ParseDefNative(LocalVariable** local) -> ParseResult {
   CHECK_RESULT(ParseLiteralSymbol(&symbol));
   ASSERT(symbol);
 
-  const auto native = HasTopLevel() && GetTopLevel()->IsClass() ? GetTopLevel()->AsClass()->FindOrCreateNativeProcedure(symbol)
-                                                                : NativeProcedure::FindOrCreate(symbol);
+  const auto native = HasTopLevel() && GetTopLevel()->IsClass()
+                        ? GetTopLevel()->AsClass()->FindOrCreateNativeProcedure(symbol)
+                        : NativeProcedure::FindOrCreate(symbol);
   if (!native) {
     (*local) = nullptr;
     std::stringstream ss;

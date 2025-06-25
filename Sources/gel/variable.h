@@ -1,9 +1,12 @@
 #ifndef GEL_VARIABLE_H
 #define GEL_VARIABLE_H
 
+#include <ostream>
 #include <string>
 #include <utility>
+#include <vector>
 
+#include "gel/common.h"
 #include "gel/object.h"
 
 namespace gel {

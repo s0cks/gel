@@ -5,6 +5,7 @@
 #include "gel/common.h"
 #include "gel/expression.h"
 #include "gel/local.h"
+#include "gel/macro.h"
 #include "gel/native_procedure.h"
 #include "gel/pointer.h"
 #include "gel/procedure.h"

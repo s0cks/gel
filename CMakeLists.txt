@@ -8,6 +8,7 @@ project(
   HOMEPAGE_URL ${BUILD_JSON_HOMEPAGE}
   LANGUAGES C CXX)
 
+include(IWYU)
 include(Options)
 find_package(Threads REQUIRED)
 find_package(glog CONFIG REQUIRED)

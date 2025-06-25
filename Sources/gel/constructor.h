@@ -1,9 +1,15 @@
 #ifndef GEL_CONSTRUCTOR_H
 #define GEL_CONSTRUCTOR_H
 
+#include <string>
+
+#include "gel/common.h"
 #include "gel/compiled_code.h"
 #include "gel/expression.h"
+#include "gel/local_scope.h"
+#include "gel/object.h"
 #include "gel/procedure.h"
+#include "gel/type.h"
 
 namespace gel {
 class Constructor : public Procedure {
@@ -15,7 +21,7 @@ class Constructor : public Procedure {
  private:
   LocalScope* scope_ = nullptr;
   expr::SeqExpr* body_ = nullptr;
-  CompiledCode code_{};
+  CompiledCode* code_ = nullptr;
 
   explicit Constructor(Symbol* symbol, expr::SeqExpr* body) :
     Procedure(symbol),
@@ -26,7 +32,8 @@ class Constructor : public Procedure {
     scope_ = rhs;
   }
 
-  void SetCode(const CompiledCode& rhs) {
+  void SetCode(CompiledCode* rhs) {
+    ASSERT(rhs);
     code_ = rhs;
   }
 
@@ -61,7 +68,7 @@ class Constructor : public Procedure {
     return GetSymbol()->GetFullyQualifiedName();
   }
 
-  auto GetCode() const -> const CompiledCode& {
+  auto GetCode() const -> CompiledCode* {
     return code_;
   }
 

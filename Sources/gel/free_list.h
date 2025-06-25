@@ -1,10 +1,16 @@
 #ifndef GEL_FREE_LIST_H
 #define GEL_FREE_LIST_H
 
+#include <ostream>
+#include <string>
+
 #include "gel/common.h"
 #include "gel/free_pointer.h"
 #include "gel/memory_region.h"
 #include "gel/platform.h"
+#include "gel/pointer.h"
+#include "gel/region.h"
+#include "gel/tag.h"
 
 namespace gel {
 class FreeList : public Region {
@@ -87,7 +93,8 @@ class FreeList : public Region {
   }
 
   auto IsEmpty() const -> bool {
-    return head()->GetStartingAddress() == GetStartingAddress() && head()->GetPointerSize() == GetSize() && !head()->HasNext();
+    return head()->GetStartingAddress() == GetStartingAddress() && head()->GetPointerSize() == GetSize() &&
+           !head()->HasNext();
   }
 
   void Remove(const Region& region);

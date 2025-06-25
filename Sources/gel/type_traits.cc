@@ -1,5 +1,7 @@
 #include "gel/type_traits.h"
 
+#include <type_traits>
+
 #include "gel/object.h"
 
 namespace gel {

@@ -1,13 +1,21 @@
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <sstream>
+#include <string>
+
 #include "gel/array.h"
-#include "gel/buffer.h"
 #include "gel/common.h"
-#include "gel/event_emitter.h"
-#include "gel/event_loop.h"
 #include "gel/heap.h"
+#include "gel/module.h"
 #include "gel/native_procedure.h"
 #include "gel/natives.h"
+#include "gel/object.h"
+#include "gel/platform.h"
 #include "gel/pointer.h"
+#include "gel/procedure.h"
 #include "gel/to_string_helper.h"
+#include "gel/type.h"
 #include "gel/types.h"
 
 namespace gel {

@@ -1,5 +1,6 @@
 #include "gel/async_task.h"
 
+#include "gel/common.h"
 #include "gel/runtime.h"
 
 namespace gel {

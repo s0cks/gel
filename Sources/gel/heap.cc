@@ -1,10 +1,10 @@
 #include "gel/heap.h"
 
+#include <units.h>
+
 #include "gel/collector.h"
 #include "gel/common.h"
-#include "gel/os_thread.h"
 #include "gel/platform.h"
-#include "gel/region.h"
 #include "gel/thread_local.h"
 #include "gel/zone.h"
 

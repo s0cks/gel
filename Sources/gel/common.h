@@ -1,16 +1,22 @@
 #ifndef GEL_COMMON_H
 #define GEL_COMMON_H
 
-#include <glog/logging.h>
-#include <units.h>
-
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
+#include <exception>
 #include <filesystem>
 #include <functional>
-#include <ranges>
+#include <glog/logging.h>
+#include <optional>
+#include <ostream>
+#include <sstream>
+#include <string>
+#include <units.h>
 #include <unordered_set>
+#include <utility>
+#include <vector>
 
 #include "gel/platform.h"
 #ifdef GEL_DEBUG

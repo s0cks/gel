@@ -1,5 +1,3 @@
-#include "gel/common.h"
-#include "gel/platform.h"
 #ifndef GEL_DISASSEMBLER_H
 #error "Please #include <gel/disassembler.h> instead."
 #endif  // GEL_DISASSEMBLER_H
@@ -8,6 +6,9 @@
 #define GEL_DISASSEMBLER_VM_H
 
 #include "gel/bytecode.h"
+#include "gel/common.h"
+#include "gel/object.h"
+#include "gel/platform.h"
 #include "gel/region.h"
 
 namespace gel {

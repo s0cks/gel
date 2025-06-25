@@ -1,8 +1,7 @@
 #include "gel/object.h"
 
-#include <glog/logging.h>
-
 #include <exception>
+#include <glog/logging.h>
 #include <iterator>
 #include <rpp/observers/fwd.hpp>
 #include <rpp/observers/observer.hpp>
@@ -55,7 +54,6 @@ DEFINE_NEW_OPERATOR(Map);              // NOLINT(cppcoreguidelines-pro-type-rein
 DEFINE_NEW_OPERATOR(Module);           // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(EventLoop);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Timer);            // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Buffer);           // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(EventEmitter);     // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Observer);         // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Observable);       // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
@@ -602,7 +600,8 @@ auto String::New(const ObjectList& args) -> String* {
   else if (gel::IsBuffer(args[0])) {
     const auto buffer = args[0]->AsBuffer();
     ASSERT(buffer);
-    std::string value((const char*)buffer->data(), buffer->GetCapacity());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
+    std::string value((const char*)buffer->data(), buffer->GetCapacity());
     return String::New(value);
   }
   return ValueOf(args[0]);

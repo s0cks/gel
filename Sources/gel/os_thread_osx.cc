@@ -1,13 +1,18 @@
 #include "gel/os_thread.h"
 #ifdef OS_IS_OSX
 
+#include <array>
+#include <cstdio>
+#include <cstring>
 #include <fmt/format.h>
 #include <glog/logging.h>
+#include <ios>
 #include <pthread.h>
 #include <pthread_spis.h>
-
+#include <string>
 #include <utility>
 
+#include "gel/common.h"
 namespace gel {
 class ThreadStartData {
   DEFINE_NON_COPYABLE_TYPE(ThreadStartData);
@@ -97,7 +102,8 @@ auto Join(const ThreadId& thread) -> bool {
     LOG(ERROR) << "couldn't join thread: " << status;
     return false;
   }
-  VLOG(3) << thread_name << " thread finished w/ result: " << std::string(&kThreadResultBuffer[0], kThreadMaxResultLength);
+  VLOG(3) << thread_name
+          << " thread finished w/ result: " << std::string(&kThreadResultBuffer[0], kThreadMaxResultLength);
   return true;
 }
 

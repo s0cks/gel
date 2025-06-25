@@ -1,8 +1,13 @@
 #include "gel/vec.h"
 
+#include <cstddef>
+#include <string>
+#include <vector>
+
 #include "gel/common.h"
 #include "gel/heap.h"
 #include "gel/object.h"
+#include "gel/platform.h"
 #include "gel/to_string_helper.h"
 
 namespace gel {

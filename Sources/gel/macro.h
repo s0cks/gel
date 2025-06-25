@@ -1,15 +1,23 @@
 #ifndef GEL_MACRO_H
 #define GEL_MACRO_H
 
+#include <cstdint>
+#include <functional>
+#include <string>
+#include <type_traits>
+
 #include "gel/argument.h"
+#include "gel/array.h"
 #include "gel/common.h"
 #include "gel/expression.h"
+#include "gel/native_procedure.h"
 #include "gel/object.h"
+#include "gel/symbol.h"
 #include "gel/type_traits.h"
 
 namespace gel {
-class Parser;
 class Macro;
+class Parser;
 DECLARE_VISITOR(Macro);
 class Macro : public Object {
   friend class Script;
@@ -148,7 +156,8 @@ class Macro : public Object {
   }
 
  public:
-  static inline auto New(Symbol* symbol, Array<Argument*>* args = nullptr, const expr::ExpressionList& body = {}) -> Macro* {
+  static inline auto New(Symbol* symbol, Array<Argument*>* args = nullptr, const expr::ExpressionList& body = {})
+      -> Macro* {
     return new Macro(symbol, args, body);
   }
 };

@@ -1,9 +1,18 @@
-#include "gel/assembler.h"
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <ostream>
+#include <string>
+
+#include "gel/bytecode.h"
 #include "gel/common.h"
 #include "gel/disassembler.h"
 #include "gel/local.h"
 #include "gel/object.h"
 #include "gel/platform.h"
+#include "gel/region.h"
 
 namespace gel {
 void Disassembler::WritePrefix(const uword address, const uword pos) {

@@ -1,6 +1,12 @@
 #include "gel/to_string_helper.h"
 
+#include <algorithm>
+#include <sstream>
+#include <string>
+
+#include "gel/common.h"
 #include "gel/object.h"
+#include "gel/platform.h"
 
 namespace gel::tostring {
 void ToStringHelperBase::AddField(const std::string& name, const gel::Object* value) {

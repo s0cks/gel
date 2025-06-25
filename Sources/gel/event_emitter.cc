@@ -1,12 +1,15 @@
 #include "gel/event_emitter.h"
 
+#include <string>
+
 #include "gel/common.h"
 #include "gel/native_procedure.h"
-#include "gel/natives.h"
 #include "gel/object.h"
+#include "gel/platform.h"
 #include "gel/runtime.h"
 #include "gel/to_string_helper.h"
 #include "gel/trie.h"
+#include "gel/type.h"
 
 namespace gel {
 void EventEmitter::EventListener::Call(Object* data) {

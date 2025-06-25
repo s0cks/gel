@@ -11,7 +11,8 @@ auto malloc(const uword sz) -> uword {
 auto realloc(const uword ptr, const uword sz) -> uword {
   ASSERT(ptr);
   ASSERT(sz >= 0);
-  return (uword)std::realloc((void*)ptr, sz);  // NOLINT(cppcoreguidelines-no-malloc,cppcoreguidelines-pro-type-cstyle-cast)
+  // NOLINTNEXTLINE(cppcoreguidelines-no-malloc,cppcoreguidelines-pro-type-cstyle-cast)
+  return (uword)std::realloc((void*)ptr, sz);
 }
 
 void free(const uword ptr) {

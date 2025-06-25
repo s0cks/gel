@@ -1,12 +1,11 @@
-#include <gel/plugin.h>
+#include <cstdlib>
 #include <glog/logging.h>
 #include <uv.h>
-
-#include <cstdlib>
 
 #include "gel/common.h"
 #include "gel/event_loop.h"
 #include "gel/native_procedure.h"
+#include "gel/plugin.h"
 #include "gel/procedure.h"
 #include "gel/runtime.h"
 

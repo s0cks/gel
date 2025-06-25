@@ -15,8 +15,8 @@ namespace gel {
     return false;                                             \
   }
 
-auto MacroEffectVisitor::VisitExpressionList(const expr::ExpressionList& source, expr::ExpressionList& dest, bool* changed)
-    -> bool {
+auto MacroEffectVisitor::VisitExpressionList(const expr::ExpressionList& source, expr::ExpressionList& dest,
+                                             bool* changed) -> bool {
   for (const auto& expr : source) {
     MacroEffectVisitor for_effect(GetOwner());
     if (!for_effect(expr)) {
@@ -428,8 +428,8 @@ auto MacroExpansionSiteEffectVisitor::Expand(expr::LiteralExpr* expr, expr::Expr
   return true;
 }
 
-auto MacroExpansionSiteEffectVisitor::VisitExpressionList(const expr::ExpressionList& source, expr::ExpressionList& dest,
-                                                          bool* changed) -> bool {
+auto MacroExpansionSiteEffectVisitor::VisitExpressionList(const expr::ExpressionList& source,
+                                                          expr::ExpressionList& dest, bool* changed) -> bool {
   for (const auto& expr : source) {
     MacroExpansionSiteEffectVisitor for_effect(GetOwner(), GetSite());
     if (!for_effect(expr)) {

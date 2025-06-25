@@ -10,6 +10,7 @@
 #include "gel/type_traits.h"
 
 namespace gel {
+class CompiledCode;
 class Disassembler {
   DEFINE_NON_COPYABLE_TYPE(Disassembler);
 
@@ -132,6 +133,8 @@ class Disassembler {
   inline void Disassemble(const Region& region, const std::string& label) {
     return Disassemble(region, label.c_str());
   }
+
+  void Disassemble(CompiledCode* code, const std::string& label);
 
   friend auto operator<<(std::ostream& stream, const Disassembler& rhs) -> std::ostream& {
     return stream << rhs.stream().rdbuf();

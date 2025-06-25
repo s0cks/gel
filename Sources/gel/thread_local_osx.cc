@@ -1,3 +1,10 @@
+#include <cstring>
+#include <ostream>
+#include <pthread.h>
+
+#include "gel/common.h"
+#include "gel/os_thread.h"
+#include "gel/platform.h"
 #include "gel/thread_local.h"
 #ifdef OS_IS_OSX
 

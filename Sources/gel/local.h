@@ -1,9 +1,10 @@
 #ifndef GEL_LOCAL_H
 #define GEL_LOCAL_H
 
+#include <cstdint>
+#include <functional>
 #include <ostream>
 #include <string>
-#include <utility>
 
 #include "gel/allocator.h"
 #include "gel/common.h"
@@ -102,7 +103,8 @@ class LocalVariable : public HeapObject {
   DECLARE_HEAP_ALLOC_TYPE(LocalVariable);
 
  public:
-  static inline auto New(LocalScope* owner, const uint64_t index, Symbol* symbol, Object* value = nullptr) -> LocalVariable* {
+  static inline auto New(LocalScope* owner, const uint64_t index, Symbol* symbol, Object* value = nullptr)
+      -> LocalVariable* {
     ASSERT(owner);
     ASSERT(index >= 0);
     ASSERT(symbol);

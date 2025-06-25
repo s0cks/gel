@@ -1,5 +1,6 @@
 #include "gel/type.h"
 
+#include "gel/common.h"
 #include "gel/types.h"
 
 namespace gel {

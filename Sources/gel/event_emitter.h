@@ -1,9 +1,13 @@
 #ifndef GEL_EVENT_EMITTER_H
 #define GEL_EVENT_EMITTER_H
 
+#include <string>
+
 #include "gel/common.h"
 #include "gel/native_procedure.h"
 #include "gel/object.h"
+#include "gel/procedure.h"
+#include "gel/trie.h"
 
 namespace gel {
 class EventEmitter : public Object {
@@ -32,7 +36,8 @@ class EventEmitter : public Object {
       }
 
       auto last = (*head);
-      while (last->next != nullptr) last = last->next;
+      while (last->next != nullptr)
+        last = last->next;
       last->next = listener;
     }
   };

@@ -1,6 +1,7 @@
 #include "gel/allocator.h"
 
 #include "gel/common.h"
+#include "gel/platform.h"
 #include "gel/pointer.h"
 
 namespace gel {

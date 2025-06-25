@@ -1,18 +1,23 @@
 #ifndef GEL_FLOW_GRAPH_BUILDER_H
 #define GEL_FLOW_GRAPH_BUILDER_H
 
+#include <cstdint>
+#include <string>
 #include <type_traits>
+#include <vector>
 
 #include "gel/common.h"
 #include "gel/constructor.h"
 #include "gel/expression.h"
+#include "gel/flags.h"
 #include "gel/flow_graph.h"
 #include "gel/instruction.h"
 #include "gel/lambda.h"
 #include "gel/local.h"
 #include "gel/local_scope.h"
 #include "gel/object.h"
-#include "gel/runtime.h"
+#include "gel/platform.h"
+#include "gel/type.h"
 #include "gel/type_traits.h"
 
 namespace gel {

@@ -2,16 +2,18 @@
 #define GEL_LAMBDA_H
 
 #include <fmt/base.h>
-
-#include <set>
+#include <string>
 
 #include "gel/argument.h"
 #include "gel/common.h"
 #include "gel/compiled_code.h"
 #include "gel/expression.h"
+#include "gel/local_scope.h"
+#include "gel/native_procedure.h"
 #include "gel/object.h"
 #include "gel/pointer.h"
 #include "gel/procedure.h"
+#include "gel/type.h"
 
 namespace gel {
 class Parser;
@@ -35,7 +37,7 @@ class Lambda : public Procedure {
  private:
   LocalScope* scope_ = nullptr;
   expr::SeqExpr* body_ = nullptr;
-  CompiledCode code_{};
+  CompiledCode* code_ = nullptr;
 
   void SetBody(expr::SeqExpr* body) {
     body_ = body;
@@ -46,7 +48,8 @@ class Lambda : public Procedure {
     scope_ = scope;
   }
 
-  void SetCode(const CompiledCode& rhs) {
+  void SetCode(CompiledCode* rhs) {
+    ASSERT(rhs);
     code_ = rhs;
   }
 
@@ -93,7 +96,7 @@ class Lambda : public Procedure {
     return !HasBody() || GetBody()->IsEmpty();
   }
 
-  auto GetCode() const -> const CompiledCode& {
+  auto GetCode() const -> CompiledCode* {
     return code_;
   }
 

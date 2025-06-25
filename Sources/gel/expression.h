@@ -193,7 +193,7 @@ class Expression : public Object {  // TODO: should Expression inherit from Obje
   }
   FOR_EACH_EXPRESSION_NODE(DEFINE_TYPE_CHECK)
 #undef DEFINE_TYPE_CHECK
- private:
+ protected:
   static Class* kClass;
 
  public:
@@ -205,7 +205,7 @@ class Expression : public Object {  // TODO: should Expression inherit from Obje
   }
 };
 
-template <const int NumInputs>
+template <const uint64_t NumInputs>
 class TemplateExpression : public Expression {
  private:
   std::array<Expression*, NumInputs> children_{};
@@ -1647,7 +1647,8 @@ class LetExpr : public Expression {
   DECLARE_EXPRESSION(LetExpr);
 
  public:
-  static inline auto New(LocalScope* scope, const BindingList& bindings = {}, SeqExpr* body = SeqExpr::New()) -> LetExpr* {
+  static inline auto New(LocalScope* scope, const BindingList& bindings = {}, SeqExpr* body = SeqExpr::New())
+      -> LetExpr* {
     ASSERT(scope);
     return new LetExpr(scope, bindings, body);
   }

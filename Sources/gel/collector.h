@@ -1,6 +1,8 @@
 #ifndef GEL_COLLECTOR_H
 #define GEL_COLLECTOR_H
 
+#include <functional>
+
 #include "gel/common.h"
 #include "gel/platform.h"
 #include "gel/pointer.h"

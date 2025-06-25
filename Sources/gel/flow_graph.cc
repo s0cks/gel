@@ -2,10 +2,13 @@
 
 #include <fmt/format.h>
 #include <glog/logging.h>
+#include <ostream>
+#include <vector>
 
 #include "gel/bitvector.h"
 #include "gel/common.h"
 #include "gel/instruction.h"
+#include "gel/platform.h"
 #include "gel/to_string_helper.h"
 
 namespace gel {
@@ -159,5 +162,6 @@ void FlowGraph::ComputeDominators(std::vector<BitVector*>& dominators) {
   }
 }
 
-void FlowGraph::InsertPhis(std::vector<BitVector*>& assigned, std::vector<BitVector*>& df, std::vector<PhiInstr*>& live_phis) {}
+void FlowGraph::InsertPhis(std::vector<BitVector*>& assigned, std::vector<BitVector*>& df,
+                           std::vector<PhiInstr*>& live_phis) {}
 }  // namespace gel

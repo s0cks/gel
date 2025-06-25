@@ -1,13 +1,12 @@
 #include "gel/runtime.h"
 
-#include <glog/logging.h>
-#include <units.h>
-
 #include <filesystem>
 #include <fstream>
+#include <glog/logging.h>
 #include <iostream>
 #include <ranges>
 #include <type_traits>
+#include <units.h>
 #include <unordered_set>
 
 #include "gel/common.h"
@@ -419,7 +418,8 @@ void Runtime::Call(NativeProcedure* native, const ObjectList& args) {
 #endif  // GEL_DEBUG
       StackFrameGuard<NativeProcedure> guard(native);
       CallStackFrame stack_frame(native, locals);
-      LOG_IF(FATAL, !native->GetEntry()->Apply(args)) << "failed to apply: " << native->ToString() << " with args: " << args;
+      LOG_IF(FATAL, !native->GetEntry()->Apply(args))
+          << "failed to apply: " << native->ToString() << " with args: " << args;
     }
   }
 

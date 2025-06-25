@@ -55,12 +55,21 @@ target_include_directories(gelle
   PRIVATE ${TERMCOLOR_INCLUDE_DIRS})
 target_link_libraries(gelle
   PUBLIC ${GEL_LIBRARIES} gflags::gflags)
+target_enable_iwyu(gelle)
 
-list(APPEND GEL_BINDINGS env math os process fs rx test)
+list(APPEND GEL_BINDINGS
+  env
+  math
+  os
+  process
+  fs
+  rx
+  test)
 
 function(add_gel_binding target_name target_sources)
   add_library(${target_name} SHARED ${target_sources})
   target_link_libraries(${target_name} PUBLIC gelle)
+  target_enable_iwyu(${target_name})
 endfunction()
 
 foreach(binding IN LISTS GEL_BINDINGS)
@@ -72,3 +81,4 @@ add_executable(gelrt
   main.cc)
 target_link_libraries(gelrt
   PUBLIC gelle)
+target_enable_iwyu(gelrt)

@@ -1,7 +1,12 @@
 #include "gel/local_scope.h"
 
+#include <algorithm>
+#include <cstddef>
 #include <glog/logging.h>
+#include <string>
+#include <vector>
 
+#include "gel/array.h"
 #include "gel/common.h"
 #include "gel/heap.h"
 #include "gel/local.h"

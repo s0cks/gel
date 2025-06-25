@@ -1,6 +1,7 @@
-#include "gel/gel.h"
-
 #include <sstream>
+#include <string>
+
+#include "gel/gel.h"
 
 namespace gel {
 auto GetVersion() -> std::string {

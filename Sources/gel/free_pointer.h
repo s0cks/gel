@@ -1,8 +1,11 @@
 #ifndef GEL_FREE_POINTER_H
 #define GEL_FREE_POINTER_H
 
+#include <ostream>
+#include <string>
+
 #include "gel/common.h"
-#include "gel/pointer.h"
+#include "gel/platform.h"
 #include "gel/region.h"
 #include "gel/tag.h"
 

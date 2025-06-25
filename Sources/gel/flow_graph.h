@@ -1,8 +1,13 @@
 #ifndef GEL_FLOW_GRAPH_H
 #define GEL_FLOW_GRAPH_H
 
+#include <vector>
+
 #include "gel/bitvector.h"
+#include "gel/common.h"
 #include "gel/instruction.h"
+#include "gel/object.h"
+#include "gel/platform.h"
 
 namespace gel {
 class FlowGraph {

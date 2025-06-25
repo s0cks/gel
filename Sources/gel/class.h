@@ -1,3 +1,7 @@
+#include <cstdint>
+#include <functional>
+#include <string>
+
 #ifndef GEL_OBJECT_H
 #error "Please #include <gel/object.h> instead."
 #endif  // GEL_OBJECT_H
@@ -5,12 +9,11 @@
 #ifndef GEL_CLASS_H
 #define GEL_CLASS_H
 
-#include <set>
-#include <variant>
 #include <vector>
 
 #include "gel/common.h"
-#include "gel/object.h"
+#include "gel/platform.h"
+#include "gel/type.h"
 
 namespace gel {
 using ClassId = uword;

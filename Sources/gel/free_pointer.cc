@@ -1,5 +1,9 @@
 #include "gel/free_pointer.h"
 
+#include <string>
+
+#include "gel/common.h"
+#include "gel/region.h"
 #include "gel/to_string_helper.h"
 
 namespace gel {
@@ -17,6 +21,7 @@ auto FreePointer::Equals(const Region& rhs) const -> bool {
 
 auto FreePointer::Equals(FreePointer* rhs) const -> bool {
   ASSERT(rhs);
-  return GetStartingAddress() == rhs->GetStartingAddress() && GetTotalSize() == rhs->GetTotalSize();  // TODO: check tag()
+  return GetStartingAddress() == rhs->GetStartingAddress() &&
+         GetTotalSize() == rhs->GetTotalSize();  // TODO: check tag()
 }
 }  // namespace gel

@@ -1,14 +1,20 @@
 #ifndef GEL_EVENT_LOOP_H
 #define GEL_EVENT_LOOP_H
 
+#include <deque>
+#include <functional>
+#include <ostream>
 #include <string>
+#include <uv.h>
+#include <vector>
 
-#include "gel/async.h"
 #include "gel/async_task.h"
 #include "gel/common.h"
-#include "gel/natives.h"
 #include "gel/object.h"
+#include "gel/platform.h"
 #include "gel/pointer.h"
+#include "gel/rx.h"
+#include "gel/type.h"
 
 namespace gel {
 // TODO: move to async namespace
@@ -84,7 +90,8 @@ class EventLoop : public Object {
 
   auto Mkdir(const std::string& path, const int mode, const OnSuccessCallback& on_success = {},
              const OnErrorCallback& on_error = {}, const OnFinishedCallback& on_finished = {}) -> bool;
-  auto Mkdir(const std::string& path, const int mode, Procedure* on_success, Procedure* on_error, Procedure* on_finished) -> bool;
+  auto Mkdir(const std::string& path, const int mode, Procedure* on_success, Procedure* on_error,
+             Procedure* on_finished) -> bool;
 
   auto Rmdir(const std::string& path, const OnSuccessCallback& on_success = {}, const OnErrorCallback& on_error = {},
              const OnFinishedCallback& on_finished = {}) -> bool;
@@ -117,8 +124,8 @@ void RunCurrentThreadEventLoop(const uv_run_mode mode);
 
 using FileOpenedCallback = std::function<void(Long*)>;
 
-auto OpenFileAsync(std::string path, const int flags, const int mode, FileOpenedCallback on_success, OnErrorCallback on_error,
-                   OnFinishedCallback on_finished) -> bool;
+auto OpenFileAsync(std::string path, const int flags, const int mode, FileOpenedCallback on_success,
+                   OnErrorCallback on_error, OnFinishedCallback on_finished) -> bool;
 
 namespace fs {
 class RequestBase {
@@ -132,7 +139,8 @@ class RequestBase {
   OnFinishedCallback on_finished_;
 
  protected:
-  explicit RequestBase(const std::string& path, const OnErrorCallback& on_error, const OnFinishedCallback& on_finished) :
+  explicit RequestBase(const std::string& path, const OnErrorCallback& on_error,
+                       const OnFinishedCallback& on_finished) :
     path_(path),
     handle_(),
     on_error_(on_error),
@@ -257,8 +265,8 @@ class MkdirRequest : public SimpleRequest {
  private:
   int mode_;
 
-  MkdirRequest(const std::string& path, const int mode, const OnSuccessCallback& on_success, const OnErrorCallback& on_error,
-               const OnFinishedCallback& on_finished) :
+  MkdirRequest(const std::string& path, const int mode, const OnSuccessCallback& on_success,
+               const OnErrorCallback& on_error, const OnFinishedCallback& on_finished) :
     SimpleRequest(path, on_success, on_error, on_finished),
     mode_(mode) {}
 

@@ -1,9 +1,8 @@
 #ifndef GEL_OBJECT_H
 #define GEL_OBJECT_H
 
-#include <fmt/format.h>
-
 #include <exception>
+#include <fmt/format.h>
 #include <functional>
 #include <numeric>
 #include <ostream>
@@ -494,6 +493,10 @@ class StringObject : public Object {
     return value_;
   }
 
+  constexpr auto GetLength() const -> uword {
+    return value_.length();
+  }
+
   inline auto IsEmpty() const -> bool {
     return value_.empty();
   }
@@ -516,6 +519,11 @@ class String : public StringObject {
 
   auto ToBuffer() const -> Buffer*;
   DECLARE_TYPE(String);
+
+ public:
+  inline friend auto operator<<(std::ostream& stream, const String& rhs) -> std::ostream& {
+    return stream << rhs.ToString();
+  }
 
  public:
   static auto New() -> String*;

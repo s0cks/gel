@@ -1,5 +1,9 @@
 #include "gel/local.h"
 
+#include <cstddef>
+#include <functional>
+#include <string>
+
 #include "gel/common.h"
 #include "gel/heap.h"
 #include "gel/local_scope.h"

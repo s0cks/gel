@@ -1,9 +1,8 @@
 #ifndef GEL_MEMORY_REGION_H
 #define GEL_MEMORY_REGION_H
 
-#include <units.h>
-
 #include <ostream>
+#include <units.h>
 
 #include "gel/common.h"
 #include "gel/platform.h"

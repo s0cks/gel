@@ -1,6 +1,7 @@
 #ifndef GEL_UV_H
 #define GEL_UV_H
 
+#include <string>
 #include <uv.h>
 
 #include "gel/common.h"

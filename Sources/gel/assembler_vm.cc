@@ -1,6 +1,10 @@
 #include "gel/assembler.h"
+#include "gel/assembler_base.h"
 #include "gel/bytecode.h"
+#include "gel/common.h"
 #include "gel/memory_region.h"
+#include "gel/platform.h"
+#include "gel/region.h"
 
 namespace gel {
 void Assembler::EmitLabel(Label* label) {

@@ -24,26 +24,6 @@ void Expression::Init() {
   ASSERT(kClass);
 }
 
-#ifdef GEL_DISABLE_HEAP
-
-#define DEFINE_NEW_OPERATOR(Name)                     \
-  auto Name::operator new(const size_t sz) -> void* { \
-    return malloc(sz);                                \
-  }
-
-#else
-
-#define DEFINE_NEW_OPERATOR(Name)                     \
-  auto Name::operator new(const size_t sz) -> void* { \
-    const auto heap = GetCurrentThreadHeap();         \
-    ASSERT(heap);                                     \
-    const auto address = heap->TryAllocate(sz);       \
-    ASSERT(address != UNALLOCATED);                   \
-    return reinterpret_cast<void*>(address);          \
-  }
-
-#endif  // GEL_DISABLE_HEAP
-
 FOR_EACH_EXPRESSION_NODE(DEFINE_NEW_OPERATOR)  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 #undef DEFINE_NEW_OPERATOR
 

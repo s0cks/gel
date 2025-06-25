@@ -1,15 +1,24 @@
 #include "gel/event_loop.h"
 
+#include <algorithm>
+#include <fmt/format.h>
+#include <functional>
+#include <iterator>
+#include <string>
+#include <utility>
 #include <uv.h>
 
 #include "gel/common.h"
 #include "gel/error.h"
+#include "gel/object.h"
+#include "gel/platform.h"
 #include "gel/pointer.h"
 #include "gel/procedure.h"
 #include "gel/runtime.h"
 #include "gel/thread_local.h"
 #include "gel/timer.h"
 #include "gel/to_string_helper.h"
+#include "gel/type.h"
 
 namespace gel {
 auto WrapOnError(Procedure* on_error) -> OnErrorCallback {
@@ -69,8 +78,8 @@ auto EventLoop::Stat(const std::string& path, Procedure* on_next, Procedure* on_
       WrapOnError(on_error), WrapOnFinished(on_finished));
 }
 
-auto EventLoop::Stat(const std::string& path, const std::function<void(uword)>& on_next, const OnErrorCallback& on_error,
-                     const OnFinishedCallback& on_finished) -> bool {
+auto EventLoop::Stat(const std::string& path, const std::function<void(uword)>& on_next,
+                     const OnErrorCallback& on_error, const OnFinishedCallback& on_finished) -> bool {
   ASSERT(!path.empty());
   const auto request = new fs::StatRequest(path, on_next, on_error, on_finished);
   ASSERT(request);
@@ -86,8 +95,8 @@ auto EventLoop::Rename(const std::string& old_path, const std::string& new_path,
   return request->Execute(this) == 0;
 }
 
-auto EventLoop::Rename(const std::string& old_path, const std::string& new_path, Procedure* on_success, Procedure* on_error,
-                       Procedure* on_finished) -> bool {
+auto EventLoop::Rename(const std::string& old_path, const std::string& new_path, Procedure* on_success,
+                       Procedure* on_error, Procedure* on_finished) -> bool {
   ASSERT(!old_path.empty());
   ASSERT(!new_path.empty());
   return Rename(old_path, new_path, WrapOnSuccess(on_success), WrapOnError(on_error), WrapOnFinished(on_finished));
@@ -101,8 +110,8 @@ auto EventLoop::Mkdir(const std::string& path, const int mode, const OnSuccessCa
   return request->Execute(this) == 0;
 }
 
-auto EventLoop::Mkdir(const std::string& path, const int mode, Procedure* on_success, Procedure* on_error, Procedure* on_finished)
-    -> bool {
+auto EventLoop::Mkdir(const std::string& path, const int mode, Procedure* on_success, Procedure* on_error,
+                      Procedure* on_finished) -> bool {
   ASSERT(!path.empty());
   return Mkdir(path, mode, WrapOnSuccess(on_success), WrapOnError(on_error), WrapOnFinished(on_finished));
 }
@@ -115,7 +124,8 @@ auto EventLoop::Rmdir(const std::string& path, const OnSuccessCallback& on_succe
   return request->Execute(this) == 0;
 }
 
-auto EventLoop::Rmdir(const std::string& path, Procedure* on_success, Procedure* on_error, Procedure* on_finished) -> bool {
+auto EventLoop::Rmdir(const std::string& path, Procedure* on_success, Procedure* on_error, Procedure* on_finished)
+    -> bool {
   ASSERT(!path.empty());
   return Rmdir(path, WrapOnSuccess(on_success), WrapOnError(on_error), WrapOnFinished(on_finished));
 }
@@ -200,20 +210,22 @@ auto GetThreadEventLoop() -> EventLoop* {
 void RunCurrentThreadEventLoop(const uv_run_mode mode) {
   const auto event_loop = GetThreadEventLoop();
   ASSERT(event_loop);
-  while (event_loop->Run(UV_RUN_NOWAIT) != 0);  // do nothing
+  while (event_loop->Run(UV_RUN_NOWAIT) != 0)
+    ;  // do nothing
 }
 
-auto OpenFileAsync(std::string path, const int flags, const int mode, FileOpenedCallback on_success, OnErrorCallback on_error,
-                   OnFinishedCallback on_finished) -> bool {
+auto OpenFileAsync(std::string path, const int flags, const int mode, FileOpenedCallback on_success,
+                   OnErrorCallback on_error, OnFinishedCallback on_finished) -> bool {
   ASSERT(!path.empty());
-  auto request =
-      new fs::OpenFileRequest(std::move(path), flags, mode, std::move(on_success), std::move(on_error), std::move(on_finished));
+  auto request = new fs::OpenFileRequest(std::move(path), flags, mode, std::move(on_success), std::move(on_error),
+                                         std::move(on_finished));
   ASSERT(request);
   return GetThreadEventLoop()->Submit(request) == 0;
 }
 
 namespace fs {
-#define FS_REQUEST_CALL_UV(Name, Func, ...) Func(loop->Get(), handle(), GetPath().c_str() __VA_OPT__(, ) __VA_ARGS__, &On##Name)
+#define FS_REQUEST_CALL_UV(Name, Func, ...) \
+  Func(loop->Get(), handle(), GetPath().c_str() __VA_OPT__(, ) __VA_ARGS__, &On##Name)
 
 #define FS_REQUEST_CALL_F(Name, Func, ...)              \
   auto Name::GetRequestName() const -> const char* {    \
@@ -270,7 +282,8 @@ FS_REQUEST_CALLBACK_F(StatRequest) {
 FS_REQUEST_CALL_F(OpenFileRequest, uv_fs_open, GetFlags(), GetMode());
 FS_REQUEST_CALLBACK_F(OpenFileRequest) {
   ASSERT(handle);
-  const auto request = From<OpenFileRequest>(handle);  // TODO: *urgent* *memory leak* request is allocated but never freed
+  const auto request =
+      From<OpenFileRequest>(handle);  // TODO: *urgent* *memory leak* request is allocated but never freed
   ASSERT(request);
   const auto result = request->handle()->result;
   if (result < 0) {

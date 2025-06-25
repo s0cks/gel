@@ -1,8 +1,11 @@
 #ifndef GEL_FS_H
 #define GEL_FS_H
 
+#include <string>
+#include <utility>
+#include <uv.h>
+
 #include "gel/common.h"
-#include "gel/event_loop.h"
 
 namespace gel {
 class OpenFileRequest {

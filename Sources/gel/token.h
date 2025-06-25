@@ -1,11 +1,23 @@
 #ifndef GEL_TOKEN_H
 #define GEL_TOKEN_H
 
+#include <algorithm>
+#include <array>
+#include <bitset>
+#include <cmath>
 #include <cstdint>
+#include <cstdlib>
+#include <optional>
 #include <ostream>
+#include <string>
+#include <vector>
 
+#include "gel/binary_op.h"
 #include "gel/common.h"
 #include "gel/expression.h"
+#include "gel/object.h"
+#include "gel/platform.h"
+#include "gel/unary_op.h"
 
 namespace gel {
 struct Position {
@@ -25,7 +37,8 @@ struct Position {
   }
 
   auto operator-(const Position& rhs) const -> word {
-    return floor(sqrt(pow(rhs.row - row, 2.0) + pow(rhs.column - column, 2.0)));  // NOLINT(cppcoreguidelines-avoid-magic-numbers)
+    return floor(sqrt(pow(rhs.row - row, 2.0) +
+                      pow(rhs.column - column, 2.0)));  // NOLINT(cppcoreguidelines-avoid-magic-numbers)
   }
 };
 

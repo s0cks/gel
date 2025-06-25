@@ -1,11 +1,16 @@
 #ifndef GEL_EXPRESSION_DOT_H
 #define GEL_EXPRESSION_DOT_H
 
+#include <cstdint>
+#include <filesystem>
+#include <fmt/format.h>
 #include <glog/logging.h>
+#include <string>
 
 #include "gel/common.h"
 #include "gel/expression.h"
 #include "gel/gv.h"
+#include "gel/symbol.h"
 
 namespace gel {
 namespace expr {

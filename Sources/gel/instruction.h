@@ -1,17 +1,23 @@
 #ifndef GEL_INSTRUCTION_H
 #define GEL_INSTRUCTION_H
 
+#include <cstdint>
+#include <functional>
 #include <string>
 #include <type_traits>
+#include <vector>
 
+#include "gel/binary_op.h"
 #include "gel/bitvector.h"
 #include "gel/common.h"
 #include "gel/expression.h"
 #include "gel/lambda.h"
 #include "gel/local.h"
+#include "gel/object.h"
+#include "gel/platform.h"
 #include "gel/procedure.h"
 #include "gel/type_traits.h"
-#include "gel/variable.h"
+#include "gel/unary_op.h"
 
 #define FOR_EACH_INSTRUCTION(V) \
   V(Constant)                   \
@@ -1075,7 +1081,8 @@ class BranchInstr : public Instruction {
     return New(condition, true_target, nullptr, join);
   }
 
-  static inline auto BranchTrue(EntryInstr* true_target, EntryInstr* false_target, JoinEntryInstr* join) -> BranchInstr* {
+  static inline auto BranchTrue(EntryInstr* true_target, EntryInstr* false_target, JoinEntryInstr* join)
+      -> BranchInstr* {
     ASSERT(true_target);
     ASSERT(join);
     return New(Condition::kTrue, true_target, false_target, join);
@@ -1087,7 +1094,8 @@ class BranchInstr : public Instruction {
     return BranchTrue(true_target, nullptr, join);
   }
 
-  static inline auto BranchFalse(EntryInstr* true_target, EntryInstr* false_target, JoinEntryInstr* join) -> BranchInstr* {
+  static inline auto BranchFalse(EntryInstr* true_target, EntryInstr* false_target, JoinEntryInstr* join)
+      -> BranchInstr* {
     ASSERT(true_target);
     ASSERT(join);
     return New(Condition::kNotTrue, true_target, false_target, join);
@@ -1099,13 +1107,15 @@ class BranchInstr : public Instruction {
     return New(Condition::kNotTrue, true_target, nullptr, join);
   }
 
-  static inline auto BranchEqual(EntryInstr* true_target, EntryInstr* false_target, JoinEntryInstr* join) -> BranchInstr* {
+  static inline auto BranchEqual(EntryInstr* true_target, EntryInstr* false_target, JoinEntryInstr* join)
+      -> BranchInstr* {
     ASSERT(true_target);
     ASSERT(join);
     return New(Condition::kEqual, true_target, false_target, join);
   }
 
-  static inline auto BranchNotEqual(EntryInstr* true_target, EntryInstr* false_target, JoinEntryInstr* join) -> BranchInstr* {
+  static inline auto BranchNotEqual(EntryInstr* true_target, EntryInstr* false_target, JoinEntryInstr* join)
+      -> BranchInstr* {
     ASSERT(true_target);
     ASSERT(join);
     return New(Condition::kNotEqual, true_target, false_target, join);

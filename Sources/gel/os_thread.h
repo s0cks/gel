@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include "gel/common.h"
+#include "gel/platform.h"
 #ifdef OS_IS_LINUX
 #include "gel/os_thread_linux.h"
 #elif OS_IS_OSX

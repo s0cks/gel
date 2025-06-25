@@ -72,13 +72,13 @@ auto FlowGraphCompiler::CompileTarget(E* exec, std::enable_if_t<gel::is_executab
 
   AssembleFlowGraph(flow_graph);
   TIMER_STOP(total_ns);
-  CompiledCode code(assembler_.Assemble());
-  if (!code.IsCompiled()) {
+  const auto code = CompiledCode::New(assembler_.Assemble());
+  if (!code->IsCompiled()) {
     LOG(ERROR) << "failed to compile: " << exec;
     return false;
   }
   DVLOG(10) << "compiled in " << units::time::nanosecond_t(static_cast<double>(total_ns));
-  code.SetCompileTime(total_ns);
+  code->SetCompileTime(total_ns);
   exec->SetCode(code);
   if (VLOG_IS_ON(1) || FLAGS_print_bytecode) {
     std::stringstream ss;

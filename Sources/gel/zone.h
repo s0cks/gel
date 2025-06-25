@@ -1,13 +1,20 @@
 #ifndef GEL_ZONE_H
 #define GEL_ZONE_H
 
+#include <functional>
+#include <ostream>
+#include <units.h>
+#include <utility>
+
 #include "gel/common.h"
 #include "gel/flags.h"
 #include "gel/free_list.h"
 #include "gel/memory_region.h"
+#include "gel/platform.h"
 #include "gel/pointer.h"
 #include "gel/region.h"
 #include "gel/semispace.h"
+#include "gel/tag.h"
 
 namespace gel {
 class Zone : public AllocationRegion {
@@ -70,7 +77,8 @@ class NewZone : public Zone {
     explicit Iterator(const NewZone& new_zone) :
       PointerIterator(),
       new_zone_(new_zone),
-      current_(new_zone.GetStartingAddress()) {}  // TODO: this causes issues when semispaces get flipped from initial positions
+      current_(new_zone.GetStartingAddress()) {
+    }  // TODO: this causes issues when semispaces get flipped from initial positions
     ~Iterator() override = default;
 
     auto HasNext() const -> bool override {

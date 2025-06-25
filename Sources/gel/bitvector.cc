@@ -1,5 +1,7 @@
 #include "gel/bitvector.h"
 
+#include "gel/platform.h"
+
 namespace gel {
 void BitVector::Intersect(BitVector* rhs) {
   for (int i = 0; i < asize_; i++) {

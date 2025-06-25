@@ -1,5 +1,7 @@
 #include "gel/flags.h"
 
+#include <gflags/gflags.h>
+
 namespace gel {
 DEFINE_string(reports_dir, "", "Set the reports directory.");
 DEFINE_string(expr, "", "Evaluate an expression.");

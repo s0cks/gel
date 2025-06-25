@@ -1,8 +1,10 @@
 #include "gel/instruction.h"
 
-#include <sstream>
 #include <string>
+#include <vector>
 
+#include "gel/common.h"
+#include "gel/platform.h"
 #include "gel/to_string_helper.h"
 
 namespace gel::ir {
@@ -37,7 +39,8 @@ static inline auto IsMarked(EntryInstr* blk, std::vector<EntryInstr*>& preorder)
   return index >= 0 && index < preorder.size() && preorder[index] == blk;
 }
 
-auto EntryInstr::DiscoverBlocks(EntryInstr* predecessor, std::vector<EntryInstr*>& preorder, std::vector<word>& parent) -> bool {
+auto EntryInstr::DiscoverBlocks(EntryInstr* predecessor, std::vector<EntryInstr*>& preorder, std::vector<word>& parent)
+    -> bool {
   if (IsMarked(this, preorder)) {
     AddPredecessor(predecessor);
     return false;

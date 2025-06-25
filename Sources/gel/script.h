@@ -24,7 +24,7 @@ class Script : public Object {
   LambdaList lambdas_{};
   NamespaceList namespaces_{};
   expr::SeqExpr* body_ = nullptr;
-  CompiledCode code_;
+  CompiledCode* code_ = nullptr;
 
  protected:
   explicit Script(LocalScope* scope) :
@@ -67,7 +67,8 @@ class Script : public Object {
     body_ = rhs;
   }
 
-  void SetCode(const CompiledCode& rhs) {
+  void SetCode(CompiledCode* rhs) {
+    ASSERT(rhs);
     code_ = rhs;
   }
 
@@ -110,7 +111,7 @@ class Script : public Object {
     return !HasBody() || GetBody()->IsEmpty();
   }
 
-  auto GetCode() const -> const CompiledCode& {
+  auto GetCode() const -> CompiledCode* {
     return code_;
   }
 

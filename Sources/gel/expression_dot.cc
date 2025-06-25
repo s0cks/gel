@@ -1,8 +1,11 @@
 #include "gel/expression_dot.h"
 
+#include <cstdio>
+#include <filesystem>
 #include <glog/logging.h>
-
-#include <algorithm>
+#include <ostream>
+#include <sstream>
+#include <string>
 
 #include "gel/common.h"
 #include "gel/expression.h"

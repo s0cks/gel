@@ -1,3 +1,5 @@
+#ifdef OS_IS_OSX
+
 #ifndef GEL_OS_THREAD_OSX_H
 #define GEL_OS_THREAD_OSX_H
 
@@ -55,3 +57,5 @@ class pthread_status {
 }  // namespace gel
 
 #endif  // GEL_OS_THREAD_OSX_H
+
+#endif  // OS_IS_OSX

@@ -1,10 +1,18 @@
 #ifndef GEL_OPERATION_STACK_H
 #define GEL_OPERATION_STACK_H
 
+#include <algorithm>
+#include <cstdint>
+#include <iterator>
+#include <optional>
 #include <stack>
+#include <vector>
 
 #include "gel/common.h"
 #include "gel/object.h"
+#include "gel/platform.h"
+#include "gel/rx.h"
+#include "gel/type.h"
 
 namespace gel {
 
@@ -104,9 +112,8 @@ class OperationStack {
   }
 
   inline void PopN(std::vector<Value>& result, const uword num, const bool reverse = false) {
-    for (auto idx = 0; idx < num; idx++) {
+    for (uword idx = 0; idx < num; idx++)
       result.push_back(PopOr(Null()));
-    }
     if (reverse)
       std::ranges::reverse(std::begin(result), std::end(result));
   }

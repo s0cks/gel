@@ -1,9 +1,15 @@
 #ifndef GEL_BUFFER_H
 #define GEL_BUFFER_H
 
+#include <cstdint>
+#include <cstring>
+#include <string>
+#include <units.h>
+
 #include "gel/common.h"
 #include "gel/native_procedure.h"
 #include "gel/object.h"
+#include "gel/platform.h"
 
 namespace gel {
 #define FOR_EACH_BUFFER_ELEMENT_SIZE(V) \
@@ -16,46 +22,6 @@ namespace gel {
   V(Default)                        \
   V(Hex)                            \
   V(Base64)
-
-class BufferEncoding {
-  DEFINE_NON_COPYABLE_TYPE(BufferEncoding);
-
- public:
-  BufferEncoding() = default;
-  virtual ~BufferEncoding() = default;
-  virtual auto Decode(const String* value) const -> Buffer* = 0;
-  virtual auto Encode(const Buffer* value) const -> String* = 0;
-};
-
-class DefaultBufferEncoding : public BufferEncoding {
- public:
-  auto Decode(const String* value) const -> Buffer* override;
-  auto Encode(const Buffer* value) const -> String* override;
-
-  static inline auto Matches(String* rhs) -> bool {
-    return rhs == nullptr || (rhs && (rhs->Equals("default") || rhs->Equals("none")));
-  }
-};
-
-class Base64BufferEncoding : public BufferEncoding {
- public:
-  auto Decode(const String* value) const -> Buffer* override;
-  auto Encode(const Buffer* value) const -> String* override;
-
-  static inline auto Matches(String* rhs) -> bool {
-    return rhs != nullptr && (rhs->Equals("b64") || rhs->Equals("base64"));
-  }
-};
-
-class HexBufferEncoding : public BufferEncoding {
- public:
-  auto Decode(const String* rhs) const -> Buffer* override;
-  auto Encode(const Buffer* rhs) const -> String* override;
-
-  static inline auto Matches(String* rhs) -> bool {
-    return rhs != nullptr && rhs->Equals("hex");
-  }
-};
 
 class Buffer : public Object {
   static constexpr const auto kDefaultBufferSize = 4096;
@@ -123,7 +89,7 @@ class Buffer : public Object {
     return (uint8_t*)GetDataAddress();  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   }
 
-  auto wpos() const -> uword {
+  constexpr auto wpos() const -> uword {
     return wpos_;
   }
 
@@ -133,6 +99,10 @@ class Buffer : public Object {
 
   auto GetCapacity() const -> uword {
     return capacity_;
+  }
+
+  inline auto GetAsString() const -> std::string {
+    return {(const char*)data(), wpos()};  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   }
 
 #define DEFINE_READ_SIZE(Sz)                                                                                       \
@@ -155,13 +125,18 @@ class Buffer : public Object {
   DECLARE_TYPE(Buffer);
 
  public:
+  friend auto operator<<(std::ostream& stream, const Buffer& rhs) -> std::ostream& {
+    return stream << rhs.ToString();
+  }
+
+ public:
   static void Init();
-  static auto operator new(const size_t sz, const uword capacity) -> void*;
+
   static inline auto New(const uword init_cap) -> Buffer* {
     ASSERT(init_cap >= 1 && init_cap <= kMaxBufferSize);
     const auto capacity = RoundUpPow2(static_cast<word>(init_cap));
     ASSERT(capacity <= kMaxBufferSize);
-    return new (capacity) Buffer(capacity);
+    return new Buffer(capacity);
   }
 
   static inline auto Copy(const uint8_t* data, const uword num_bytes) -> Buffer* {
@@ -180,6 +155,73 @@ class Buffer : public Object {
   }
 
   static auto Copy(String* src) -> Buffer*;
+};
+
+class BufferEncoding {
+  DEFINE_NON_COPYABLE_TYPE(BufferEncoding);
+
+ public:
+  BufferEncoding() = default;
+  virtual ~BufferEncoding() = default;
+  virtual auto Decode(const String& value) const -> Buffer* = 0;
+  virtual auto Encode(const Buffer& value) const -> String* = 0;
+};
+
+class DefaultBufferEncoding : public BufferEncoding {
+ public:
+  auto Decode(const String& value) const -> Buffer* override;
+  auto Encode(const Buffer& value) const -> String* override;
+
+  static inline auto Matches(String* rhs) -> bool {
+    return rhs == nullptr || (rhs && (rhs->Equals("default") || rhs->Equals("none")));
+  }
+};
+
+class Base64BufferEncoding : public BufferEncoding {
+ private:
+  auto EncodeBlockData(std::string& out, const uint8_t* data, const uint64_t num_bytes) const -> uword;
+
+  inline auto EncodeBlock(std::string& encoded, const Buffer& buff) const -> bool {
+    return EncodeBlockData(encoded, buff.data(), buff.wpos()) == (encoded.capacity() - 2);
+  }
+
+  auto DecodeBlockData(std::string& decoded, const uint8_t* data, const uint64_t num_bytes) const -> uword;
+
+  inline auto DecodeBlockData(std::string& decoded, const std::string& in) const -> uword {
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
+    return DecodeBlockData(decoded, (const uint8_t*)in.data(), in.size());
+  }
+
+  inline auto DecodeBlock(std::string& decoded, const String& data) const -> bool {
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
+    return DecodeBlockData(decoded, data.Get()) == (decoded.capacity() - 2);
+  }
+
+ public:
+  auto Decode(const String& value) const -> Buffer* override;
+  auto Encode(const Buffer& value) const -> String* override;
+
+  static inline auto Matches(String* rhs) -> bool {
+    return rhs != nullptr && (rhs->Equals("b64") || rhs->Equals("base64"));
+  }
+
+  static inline constexpr auto CalcEncodedLength(const Buffer& rhs) -> uword {
+    return 4 * ((rhs.wpos() + 2) / 3);
+  }
+
+  static inline constexpr auto CalcDecodedLength(const String& rhs) -> uword {
+    return 3 * rhs.GetLength() / 4;
+  }
+};
+
+class HexBufferEncoding : public BufferEncoding {
+ public:
+  auto Decode(const String& rhs) const -> Buffer* override;
+  auto Encode(const Buffer& rhs) const -> String* override;
+
+  static inline auto Matches(String* rhs) -> bool {
+    return rhs != nullptr && rhs->Equals("hex");
+  }
 };
 
 namespace proc {

@@ -1,17 +1,24 @@
 #ifndef GEL_TO_STRING_HELPER_H
 #define GEL_TO_STRING_HELPER_H
 
+#include <cstdlib>
 #include <glog/logging.h>
-
+#include <ostream>
 #include <set>
+#include <sstream>
 #include <string>
 #include <type_traits>
+#include <utility>
+#include <vector>
 
 #include "gel/common.h"
+#include "gel/compiled_code.h"
 #include "gel/expression.h"
 #include "gel/instruction.h"
-#include "gel/macro.h"
+#include "gel/local_scope.h"
 #include "gel/object.h"
+#include "gel/platform.h"
+#include "gel/type.h"
 
 #if defined(__clang__)
 #include <cxxabi.h>
@@ -35,6 +42,7 @@ DECLARE_HAS_TO_STRING(LocalScope);
 DECLARE_HAS_TO_STRING(ir::Definition);
 DECLARE_HAS_TO_STRING(ir::EntryInstr);
 DECLARE_HAS_TO_STRING(ir::Instruction);
+DECLARE_HAS_TO_STRING(CompiledCode);
 
 #undef DECLARE_HAS_TO_STRING
 #define DECLARE_HAS_TO_STRING(Name)            \
@@ -229,8 +237,9 @@ class ToStringHelper : public ToStringHelperBase {
   }
 
   template <typename V>
-  void AddField(const std::string& name, const V& value,
-                std::enable_if_t<std::is_pointer_v<V> && std::has_to_string<std::remove_pointer_t<V>>::value>* = nullptr) {
+  void AddField(
+      const std::string& name, const V& value,
+      std::enable_if_t<std::is_pointer_v<V> && std::has_to_string<std::remove_pointer_t<V>>::value>* = nullptr) {
     ASSERT(!name.empty());
     if (!value)
       return ToStringHelperBase::AddField(name, "");

@@ -1,9 +1,9 @@
 #ifndef GEL_TYPE_TRAITS_H
 #define GEL_TYPE_TRAITS_H
 
+#include <string>
 #include <type_traits>
 
-#include "gel/common.h"
 #include "gel/type.h"
 
 namespace gel {

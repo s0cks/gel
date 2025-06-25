@@ -1,8 +1,11 @@
 #include "gel/free_list.h"
 
+#include <string>
+
 #include "gel/common.h"
 #include "gel/free_pointer.h"
 #include "gel/platform.h"
+#include "gel/region.h"
 #include "gel/to_string_helper.h"
 
 namespace gel {

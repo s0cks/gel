@@ -1,5 +1,8 @@
 #include "gel/collector.h"
 
+#include <cstring>
+#include <functional>
+
 #include "gel/buffer.h"
 #include "gel/common.h"
 #include "gel/event_emitter.h"

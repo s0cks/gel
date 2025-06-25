@@ -1,9 +1,14 @@
 #ifndef GEL_BYTECODE_H
 #define GEL_BYTECODE_H
 
+#include <cstdint>
+#include <ostream>
+
+#include "gel/binary_op.h"
 #include "gel/common.h"
-#include "gel/expression.h"  //TODO: remove include
+#include "gel/expression.h"  // IWYU pragma: keep
 #include "gel/platform.h"
+#include "gel/unary_op.h"
 
 #define FOR_EACH_BYTECODE(V) \
   V(Nop)                     \

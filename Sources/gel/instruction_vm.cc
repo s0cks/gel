@@ -1,9 +1,10 @@
 #include "gel/assembler.h"
+#include "gel/assembler_base.h"
+#include "gel/bytecode.h"
 #include "gel/common.h"
 #include "gel/expression.h"
 #include "gel/flow_graph_compiler.h"
 #include "gel/instruction.h"
-#include "gel/native_procedure.h"
 // TODO: add platform guard
 
 namespace gel::ir {

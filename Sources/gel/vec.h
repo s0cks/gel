@@ -1,6 +1,9 @@
 #ifndef GEL_VEC_H
 #define GEL_VEC_H
 
+#include <utility>
+
+#include "gel/common.h"
 #ifdef GEL_ENABLE_GLM
 
 #include <glm/glm.hpp>

@@ -1,15 +1,15 @@
 #ifndef GEL_INTERPRETER_H
 #define GEL_INTERPRETER_H
 
+#include <sstream>
 #include <type_traits>
 
 #include "gel/bytecode.h"
 #include "gel/common.h"
-#include "gel/instruction.h"
 #include "gel/local_scope.h"
+#include "gel/operation_stack.h"
 #include "gel/platform.h"
 #include "gel/region.h"
-#include "gel/stack_frame.h"
 #include "gel/type.h"
 #include "gel/type_traits.h"
 
@@ -25,9 +25,9 @@ class Interpreter {
 
   auto GetOperationStack() -> OperationStack*;
 
-  inline auto NextBytecode() -> Bytecode {
-    const auto next = *((RawBytecode*)current_);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-    current_ += sizeof(RawBytecode);
+  inline auto NextBytecode() -> vm::Bytecode {
+    const auto next = *((vm::RawBytecode*)current_);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+    current_ += sizeof(vm::RawBytecode);
     return next;
   }
 
@@ -77,31 +77,31 @@ class Interpreter {
   void PopLookup();
   void LoadField(Field* field);
   void StoreField(Field* field);
-  void Invoke(const Bytecode::Op op);
-  void Push(const Bytecode code);
+  void Invoke(const vm::Bytecode::Op op);
+  void Push(const vm::Bytecode code);
   void LoadLocal(const uword idx);
   void StoreLocal(const uword idx);
-  void ExecUnaryOp(const Bytecode code);
-  void ExecBinaryOp(const Bytecode code);
+  void ExecUnaryOp(const vm::Bytecode code);
+  void ExecBinaryOp(const vm::Bytecode code);
   void New(Class* cls, const uword num_args);
   void NewList(const uword length);
   void Cast(Class* cls);
   void CheckInstance(Class* cls);
   void Jump(const uword address);
 
-  inline void Branch(const BranchCondition cond, const uword target) {
+  inline void Branch(const vm::BranchCondition cond, const uword target) {
     switch (cond) {
-      case BranchCondition::kIsTrue:
+      case vm::BranchCondition::kIsTrue:
         return BranchTrue(target);
-      case BranchCondition::kIsFalse:
+      case vm::BranchCondition::kIsFalse:
         return BranchFalse(target);
-      case BranchCondition::kEquals:
+      case vm::BranchCondition::kEquals:
         return BranchEq(target);
-      case BranchCondition::kNotEquals:
+      case vm::BranchCondition::kNotEquals:
         return BranchNe(target);
-      case BranchCondition::kGreaterThan:
+      case vm::BranchCondition::kGreaterThan:
         return BranchGt(target);
-      case BranchCondition::kLessThan:
+      case vm::BranchCondition::kLessThan:
         return BranchLt(target);
       default:
         LOG(FATAL) << "invalid BranchCondition: " << static_cast<word>(cond);
@@ -145,11 +145,11 @@ class Interpreter {
   inline void Run(T* target, std::enable_if_t<gel::has_code<T>::value>* = nullptr) {
     ASSERT(target);
     const auto& code = target->GetCode();
-    if (!code.IsCompiled()) {
+    if (!code->IsCompiled()) {
       DLOG(ERROR) << "cannot run " << target << ", target is not compiled.";
       return;
     }
-    return Run(code.GetStartingAddress());
+    return Run(code->GetStartingAddress());
   }
 };
 }  // namespace gel

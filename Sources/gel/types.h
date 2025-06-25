@@ -1,3 +1,4 @@
+// IWYU pragma: begin_exports
 #include "gel/array.h"
 #include "gel/buffer.h"
 #include "gel/class.h"
@@ -18,3 +19,4 @@
 #include "gel/symbol.h"
 #include "gel/timer.h"
 #include "gel/vec.h"
+// IWYU pragma: end_exports

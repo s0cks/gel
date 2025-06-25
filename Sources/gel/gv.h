@@ -1,20 +1,18 @@
 #ifndef GEL_GV_H
 #define GEL_GV_H
 
+#include <cstdio>
 #include <fmt/format.h>
 #include <glog/logging.h>
 #include <graphviz/cgraph.h>
 #include <graphviz/gvc.h>
 #include <graphviz/gvcext.h>
-
 #include <sstream>
 #include <string>
 #include <type_traits>
-#include <utility>
 #include <vector>
 
 #include "gel/common.h"
-#include "gel/type_traits.h"
 
 namespace gel::dot {
 using Symbol = Agsym_t;
@@ -83,14 +81,16 @@ auto NewNode(Graph* graph, const char* name) -> Node*;
 auto GetNode(Graph* graph, const char* name) -> Node*;
 
 template <typename V>
-static inline auto SetNodeLabel(Node* node, const V& value, std::enable_if_t<is_attr_value<V>::value>* = nullptr) -> int {
+static inline auto SetNodeLabel(Node* node, const V& value, std::enable_if_t<is_attr_value<V>::value>* = nullptr)
+    -> int {
   ASSERT(node);
   ASSERT(value);
   return SetProperty(node, "label", value);
 }
 
 template <typename V>
-static inline auto SetNodeXLabel(Node* node, const V& value, std::enable_if_t<is_attr_value<V>::value>* = nullptr) -> int {
+static inline auto SetNodeXLabel(Node* node, const V& value, std::enable_if_t<is_attr_value<V>::value>* = nullptr)
+    -> int {
   return SetProperty(node, "xlabel", value);
 }
 
@@ -98,14 +98,16 @@ auto NewEdge(Graph* graph, const char* name, Node* from, Node* to) -> Edge*;
 auto GetEdge(Graph* graph, const char* name) -> Edge*;
 
 template <typename V>
-static inline auto SetEdgeLabel(Edge* edge, const V& value, std::enable_if_t<is_attr_value<V>::value>* = nullptr) -> int {
+static inline auto SetEdgeLabel(Edge* edge, const V& value, std::enable_if_t<is_attr_value<V>::value>* = nullptr)
+    -> int {
   ASSERT(edge);
   ASSERT(value);
   return SetProperty(edge, "label", value);
 }
 
 template <typename V>
-static inline auto SetEdgeHeadlabel(Edge* edge, const V& value, std::enable_if_t<is_attr_value<V>::value>* = nullptr) -> int {
+static inline auto SetEdgeHeadlabel(Edge* edge, const V& value, std::enable_if_t<is_attr_value<V>::value>* = nullptr)
+    -> int {
   return SetProperty(edge, "headlabel", value);
 }
 

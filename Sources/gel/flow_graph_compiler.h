@@ -78,10 +78,11 @@ class FlowGraphCompiler {
 
  public:
   template <class E>
-  static inline auto Compile(E* exec, LocalScope* scope, std::enable_if_t<gel::is_executable<E>::value>* = nullptr) -> bool {
+  static inline auto Compile(E* exec, LocalScope* scope, std::enable_if_t<gel::is_executable<E>::value>* = nullptr)
+      -> bool {
     ASSERT(exec);
     const auto& code = exec->GetCode();
-    if (code.IsCompiled())
+    if (code && code->IsCompiled())
       return true;
     ASSERT(scope);
     FlowGraphCompiler compiler(scope);

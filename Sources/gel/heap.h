@@ -1,9 +1,11 @@
 #ifndef GEL_HEAP_H
 #define GEL_HEAP_H
 
+#include <ostream>
 #include <units.h>
 
 #include "gel/common.h"
+#include "gel/platform.h"
 #include "gel/region.h"
 #include "gel/zone.h"
 

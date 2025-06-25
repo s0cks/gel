@@ -1,12 +1,17 @@
-#include <gel/plugin.h>
-#include <glog/logging.h>
-
+#include <array>
 #include <cstdlib>
+#include <glog/logging.h>
+#include <string>
+#include <units.h>
+#include <uv.h>
 
 #include "gel/native_procedure.h"
-#include "gel/uv.h"
+#include "gel/object.h"
+#include "gel/plugin.h"
+#include "gel/uv.h"  // IWYU pragma: keep
 
 #if defined(OS_IS_OSX) || defined(OS_IS_LINUX)
+#include <sys/syslimits.h>
 #include <sys/types.h>
 #include <unistd.h>
 #elif defined(OS_IS_WINDOWS)

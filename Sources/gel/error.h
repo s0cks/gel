@@ -2,6 +2,9 @@
 #define GEL_ERROR_H
 
 #include <exception>
+#include <fmt/base.h>
+#include <fmt/format.h>
+#include <sstream>
 #include <string>
 
 #include "gel/common.h"

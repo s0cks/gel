@@ -1,9 +1,14 @@
 #ifndef GEL_TIMER_H
 #define GEL_TIMER_H
 
-#include "gel/async.h"
+#include <ostream>
+#include <uv.h>
+
+#include "gel/common.h"
 #include "gel/natives.h"
 #include "gel/object.h"
+#include "gel/platform.h"
+#include "gel/type.h"
 
 namespace gel {
 class Timer : public Object {

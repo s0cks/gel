@@ -1,6 +1,9 @@
 #ifndef GEL_ASSEMBLER_BASE_H
 #define GEL_ASSEMBLER_BASE_H
 
+#include <cstring>
+#include <ostream>
+
 #include "gel/common.h"
 #include "gel/platform.h"
 

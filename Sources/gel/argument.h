@@ -1,10 +1,14 @@
 #ifndef GEL_ARGUMENT_H
 #define GEL_ARGUMENT_H
 
-#include <set>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <string>
 
 #include "gel/common.h"
 #include "gel/object.h"
+#include "gel/platform.h"
 #include "gel/pointer.h"
 
 namespace gel {
@@ -85,7 +89,8 @@ class Argument : public Object {
     return new Argument(idx, name, optional, vararg);
   }
 
-  static inline auto New(const uint64_t idx, const std::string& name, const bool optional, const bool vararg) -> Argument* {
+  static inline auto New(const uint64_t idx, const std::string& name, const bool optional, const bool vararg)
+      -> Argument* {
     ASSERT(idx >= 0);
     ASSERT(!name.empty());
     return new Argument(idx, String::New(name), optional, vararg);

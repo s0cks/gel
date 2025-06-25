@@ -1,6 +1,8 @@
 #ifndef GEL_TYPE_H
 #define GEL_TYPE_H
 
+#include <vector>
+
 #include "gel/rx.h"
 
 namespace gel {

@@ -1,30 +1,21 @@
 #include "gel/interpreter.h"
 
-#include <algorithm>
-#include <exception>
-#include <ranges>
-#include <stdexcept>
+#include <sstream>
 
-#include "gel/array.h"
 #include "gel/binary_op.h"
 #include "gel/bytecode.h"
 #include "gel/common.h"
-#include "gel/disassembler.h"
 #include "gel/error.h"
-#include "gel/event_loop.h"
-#include "gel/expression.h"
-#include "gel/instruction.h"
-#include "gel/lambda.h"
 #include "gel/local.h"
 #include "gel/local_scope.h"
-#include "gel/macro.h"
-#include "gel/module.h"
 #include "gel/namespace.h"
 #include "gel/native_procedure.h"
 #include "gel/object.h"
+#include "gel/operation_stack.h"
 #include "gel/platform.h"
 #include "gel/runtime.h"
-#include "gel/script.h"
+#include "gel/type.h"
+#include "gel/unary_op.h"
 
 namespace gel {
 #define TOP             (GetOperationStack()->GetTop())
@@ -319,7 +310,8 @@ void Interpreter::CheckInstance(Class* cls) {
   ASSERT(cls);
   const auto top = TOP;
   LOG_IF(FATAL, !top) << "expected " << Null() << " to be an instanceof " << cls;
-  LOG_IF(FATAL, !(*top)->GetType()->IsInstanceOf(cls->AsClass())) << "expected " << (*top) << " to be an instanceof " << cls;
+  LOG_IF(FATAL, !(*top)->GetType()->IsInstanceOf(cls->AsClass()))
+      << "expected " << (*top) << " to be an instanceof " << cls;
 }
 
 void Interpreter::Cast(Class* cls) {

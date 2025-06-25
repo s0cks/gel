@@ -1,6 +1,9 @@
 #ifndef GEL_ARRAY_H
 #define GEL_ARRAY_H
 
+#include <cstddef>
+#include <functional>
+#include <ostream>
 #include <string>
 
 #include "gel/common.h"

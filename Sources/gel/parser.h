@@ -1,9 +1,8 @@
 #ifndef GEL_PARSER_H
 #define GEL_PARSER_H
 
-#include <glog/logging.h>
-
 #include <fstream>
+#include <glog/logging.h>
 #include <istream>
 #include <ostream>
 #include <termcolor/termcolor.hpp>
@@ -121,7 +120,8 @@ class Parser {
   };
 
  private:
-  static inline auto NewParseError(const std::string& message, const Position& start, const Position& stop) -> ParseResult {
+  static inline auto NewParseError(const std::string& message, const Position& start, const Position& stop)
+      -> ParseResult {
     ASSERT(!message.empty());
     return ParseResult(ParseError(message, start, stop));
   }
@@ -351,7 +351,8 @@ class Parser {
   }
 
   inline void SkipWhitespace() {
-    while (IsWhitespaceChar(PeekChar())) NextChar();
+    while (IsWhitespaceChar(PeekChar()))
+      NextChar();
   }
 
   inline auto NextChar() -> char {
@@ -426,7 +427,8 @@ class Parser {
   }
 
   inline void Advance(uint64_t n = 1) {
-    while (n-- > 0) NextChar();
+    while (n-- > 0)
+      NextChar();
   }
 
   inline auto AdvanceUntil(const char expected) -> uint64_t {
@@ -572,16 +574,16 @@ class Parser {
     return lambda;
   }
 
-  static inline auto ParseExpr(const std::string& expr, LocalScope* scope = LocalScope::New(GetRuntime()->GetInitScope()))
-      -> Lambda* {
+  static inline auto ParseExpr(const std::string& expr,
+                               LocalScope* scope = LocalScope::New(GetRuntime()->GetInitScope())) -> Lambda* {
     ASSERT(!expr.empty());
     ASSERT(scope);
     std::istringstream ss(expr);
     return ParseExpr(ss, scope);
   }
 
-  static inline auto ParseScript(std::istream& stream, LocalScope* scope = LocalScope::New(GetRuntime()->GetInitScope()))
-      -> Script* {
+  static inline auto ParseScript(std::istream& stream,
+                                 LocalScope* scope = LocalScope::New(GetRuntime()->GetInitScope())) -> Script* {
     ASSERT(stream.good());
     ASSERT(scope);
     Parser parser(stream, scope, GetThreadModuleLoader());

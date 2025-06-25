@@ -1,7 +1,7 @@
 #ifndef GEL_ASYNC_H
 #define GEL_ASYNC_H
 
-#include <uv.h>
+#include <uv.h>  // IWYU pragma: export
 
 namespace gel {}
 

@@ -1,21 +1,26 @@
 #include "gel/flow_graph_builder.h"
 
+#include <cstdint>
+#include <fmt/format.h>
 #include <glog/logging.h>
-
-#include <algorithm>
+#include <utility>
 
 #include "gel/common.h"
 #include "gel/constructor.h"
 #include "gel/expression.h"
 #include "gel/flags.h"
-#include "gel/gel.h"
+#include "gel/flow_graph.h"
 #include "gel/instruction.h"
 #include "gel/iterator.h"
+#include "gel/lambda.h"
 #include "gel/local.h"
 #include "gel/local_scope.h"
+#include "gel/map.h"
 #include "gel/natives.h"
+#include "gel/object.h"
+#include "gel/platform.h"
 #include "gel/rx.h"
-#include "gel/set.h"
+#include "gel/script.h"
 #include "gel/types.h"
 
 namespace gel {

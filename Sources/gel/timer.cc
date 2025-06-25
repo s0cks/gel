@@ -1,8 +1,16 @@
 #include "gel/timer.h"
 
+#include <string>
+#include <uv.h>
+
+#include "gel/common.h"
 #include "gel/event_loop.h"
+#include "gel/object.h"
+#include "gel/platform.h"
+#include "gel/procedure.h"
 #include "gel/runtime.h"
 #include "gel/to_string_helper.h"
+#include "gel/type.h"
 
 namespace gel {
 Timer::Timer(uword id, Procedure* on_tick) :
@@ -48,7 +56,8 @@ auto Timer::New(const ObjectList& args) -> Timer* {
 }
 
 void Timer::OnTick(uv_timer_t* handle) {
-  const auto timer = ((Timer*)uv_handle_get_data((uv_handle_t*)handle));  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+  const auto timer =
+      ((Timer*)uv_handle_get_data((uv_handle_t*)handle));  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   ASSERT(timer);
   const auto on_tick = timer->GetCallback();
   ASSERT(on_tick);

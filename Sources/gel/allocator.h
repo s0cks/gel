@@ -1,7 +1,10 @@
 #ifndef GEL_ALLOCATOR_H
 #define GEL_ALLOCATOR_H
 
+#include <string>
+
 #include "gel/common.h"
+#include "gel/platform.h"
 #include "gel/pointer.h"
 
 namespace gel {

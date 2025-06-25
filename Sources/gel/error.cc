@@ -1,11 +1,14 @@
 #include "gel/error.h"
 
-#include <sstream>
+#include <glog/logging.h>
+#include <string>
 
 #include "gel/common.h"
 #include "gel/object.h"
+#include "gel/platform.h"
 #include "gel/pointer.h"
 #include "gel/to_string_helper.h"
+#include "gel/type.h"
 
 namespace gel {
 auto Error::CreateClass() -> Class* {

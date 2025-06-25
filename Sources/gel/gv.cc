@@ -1,18 +1,26 @@
 #include "gel/gv.h"
 
+#include <cstdio>
 #include <glog/logging.h>
+#include <graphviz/cgraph.h>
+#include <graphviz/gvc.h>
+#include <string>
+
+#include "gel/common.h"
 
 namespace gel::dot {
 void SetGraphAttr(Graph* graph, const int kind, const char* name, const char* value) {
   ASSERT(name);
   ASSERT(value);
-  agattr(graph, kind, const_cast<char*>(name), const_cast<char*>(value));  // NOLINT(cppcoreguidelines-pro-type-const-cast)
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
+  agattr(graph, kind, const_cast<char*>(name), const_cast<char*>(value));
 }
 
 static inline auto N(Graph* graph, const char* name, const bool create) -> Node* {
   ASSERT(graph);
   ASSERT(name);
-  return agnode(graph, const_cast<char*>(name), create);  // NOLINT(cppcoreguidelines-pro-type-const-cast)
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
+  return agnode(graph, const_cast<char*>(name), create);
 }
 
 auto NewNode(Graph* graph, const char* name) -> Node* {
@@ -28,7 +36,8 @@ static inline auto E(Graph* graph, const char* name, Node* from, Node* to, const
   ASSERT(from);
   ASSERT(to);
   ASSERT(name);
-  return agedge(graph, from, to, const_cast<char*>(name), create);  // NOLINT(cppcoreguidelines-pro-type-const-cast)
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
+  return agedge(graph, from, to, const_cast<char*>(name), create);
 }
 
 auto NewEdge(Graph* graph, const char* name, Node* from, Node* to) -> Edge* {

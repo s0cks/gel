@@ -108,7 +108,7 @@ NATIVE_PROCEDURE_F(gel_get_natives) {
 NATIVE_PROCEDURE_F(gel_get_compile_time) {
   REQUIRED_NATIVE_ARG(0, Lambda, target);
   const auto& code = target->GetCode();
-  return ReturnLong(code.GetCompileTime());
+  return ReturnLong(code->GetCompileTime());
 }
 }  // namespace gel::proc
 
