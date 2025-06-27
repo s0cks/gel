@@ -84,9 +84,10 @@ void Disassembler::Disassemble(const Region& region, const char* label) {
     const auto ipos = decoder.GetPos();
     WritePrefix(decoder.GetCurrentAddress(), ipos);
     instr_startp_ = stream().tellp();
-    const auto op = decoder.NextBytecode();
+    const auto op = decoder.NextOp();
+    Bytecode::PrintRaw(DLOG(INFO) << "op: ", op);
     Mnemonic(op);
-    switch (op.op()) {
+    switch (op) {
       case Bytecode::kPushQ: {
         const auto value = decoder.NextObjectPointer();
         ASSERT(value);
@@ -125,7 +126,7 @@ void Disassembler::Disassemble(const Region& region, const char* label) {
       case Bytecode::kLoadLocal1:
       case Bytecode::kLoadLocal2:
       case Bytecode::kLoadLocal3: {
-        const auto index = (op.op() - Bytecode::kLoadLocal0);
+        const auto index = (op - Bytecode::kLoadLocal0);
         if (GetScope()->IsEmpty() || index > GetScope()->GetNumberOfLocals())
           break;
         const auto local = GetScope()->GetLocalAt(index);
@@ -152,7 +153,7 @@ void Disassembler::Disassemble(const Region& region, const char* label) {
       case Bytecode::kStoreLocal1:
       case Bytecode::kStoreLocal2:
       case Bytecode::kStoreLocal3: {
-        const auto index = (op.op() - Bytecode::kStoreLocal0);
+        const auto index = (op - Bytecode::kStoreLocal0);
         if (GetScope()->IsEmpty() || index > GetScope()->GetNumberOfLocals())
           break;
         const auto local = GetScope()->GetLocalAt(index);
@@ -202,7 +203,7 @@ void Disassembler::Disassemble(const Region& region, const char* label) {
       case Bytecode::kInvoke:
       case Bytecode::kInvokeNative:
       case Bytecode::kInvokeDynamic:
-        Invoke(decoder, op.op());
+        Invoke(decoder, op);
         break;
       default:
         break;

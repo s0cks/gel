@@ -40,12 +40,12 @@ class BytecodeDecoder {
   }
 
   auto HasNext() const -> bool {
-    return (GetCurrentAddress() + sizeof(RawBytecode)) <= region_.GetEndingAddress();
+    return (GetCurrentAddress() + sizeof(Bytecode::Op)) <= region_.GetEndingAddress();
   }
 
-  auto NextBytecode() -> Bytecode {
-    const auto next = *((RawBytecode*)GetCurrentAddress());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-    current_ += sizeof(RawBytecode);
+  auto NextOp() -> Bytecode::Op {
+    const auto next = *((vm::Bytecode::Op*)GetCurrentAddress());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+    current_ += sizeof(Bytecode::Op);
     return next;
   }
 

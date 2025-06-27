@@ -25,9 +25,9 @@ class Interpreter {
 
   auto GetOperationStack() -> OperationStack*;
 
-  inline auto NextBytecode() -> vm::Bytecode {
-    const auto next = *((vm::RawBytecode*)current_);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-    current_ += sizeof(vm::RawBytecode);
+  inline auto NextOp() -> vm::Bytecode::Op {
+    const auto next = *((vm::Bytecode::Op*)GetCurrentAddress());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+    current_ += sizeof(vm::Bytecode::Op);
     return next;
   }
 
@@ -149,7 +149,7 @@ class Interpreter {
       DLOG(ERROR) << "cannot run " << target << ", target is not compiled.";
       return;
     }
-    return Run(code->GetStartingAddress());
+    return Run(code->GetCodeStartingAddress());
   }
 };
 }  // namespace gel

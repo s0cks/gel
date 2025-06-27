@@ -77,9 +77,9 @@ auto FlowGraphCompiler::CompileTarget(E* exec, std::enable_if_t<gel::is_executab
     LOG(ERROR) << "failed to compile: " << exec;
     return false;
   }
-  DVLOG(10) << "compiled in " << units::time::nanosecond_t(static_cast<double>(total_ns));
   code->SetCompileTime(total_ns);
   exec->SetCode(code);
+  DVLOG(10) << (*code) << " compiled in " << units::time::nanosecond_t(static_cast<double>(total_ns));
   if (VLOG_IS_ON(1) || FLAGS_print_bytecode) {
     std::stringstream ss;
     ss << std::endl;

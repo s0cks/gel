@@ -32,7 +32,7 @@ auto Assembler::Assemble() const -> Region {
 
 void Assembler::Bind(Label* label) {
   ASSERT(label);
-  const auto bound = static_cast<word>(cbuffer().GetSize() + sizeof(RawBytecode));
+  const auto bound = static_cast<word>(cbuffer().GetSize() + sizeof(Bytecode::Op));
   while (label->IsLinked()) {
     const auto pos = label->GetLinkPos();
     const auto dest = bound - pos;

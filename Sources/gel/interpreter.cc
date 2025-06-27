@@ -392,7 +392,7 @@ void Interpreter::New(Class* cls, const uword num_args) {
 void Interpreter::NewList(const uword length) {
   ASSERT(length >= 0);
   auto result = Null();
-  for (auto idx = 0; idx < length; idx++) {
+  for (uword idx = 0; idx < length; idx++) {
     const auto next = POP;
     LOG_IF(ERROR, !next) << "failed to pop " << length << "nth value for list.";
     result = Cons(next.value_or(Null()), result);
@@ -407,8 +407,9 @@ void Interpreter::Run(const uword start_address) {
   while (true) {
     const auto current = GetCurrentAddress();
     const auto pos = (current - start_address);
-    const auto op = NextBytecode();
-    switch (op.op()) {
+    const auto op = NextOp();
+    Bytecode::PrintRaw(DLOG(INFO) << "executing: ", op);
+    switch (op) {
       case Bytecode::kPushN:
       case Bytecode::kPushT:
       case Bytecode::kPushF:
@@ -448,7 +449,7 @@ void Interpreter::Run(const uword start_address) {
       case Bytecode::kInvoke:
       case Bytecode::kInvokeNative:
       case Bytecode::kInvokeDynamic:
-        Invoke(op.op());
+        Invoke(op);
         continue;
       case Bytecode::kThrow:
         return Throw();

@@ -55,7 +55,9 @@ target_include_directories(gelle
   PRIVATE ${TERMCOLOR_INCLUDE_DIRS})
 target_link_libraries(gelle
   PUBLIC ${GEL_LIBRARIES} gflags::gflags)
-target_enable_iwyu(gelle)
+if(CMAKE_BUILD_TYPE MATCHES "^[rR]elease")
+  target_enable_iwyu(gelle)
+endif()
 
 list(APPEND GEL_BINDINGS
   env
@@ -69,7 +71,9 @@ list(APPEND GEL_BINDINGS
 function(add_gel_binding target_name target_sources)
   add_library(${target_name} SHARED ${target_sources})
   target_link_libraries(${target_name} PUBLIC gelle)
-  target_enable_iwyu(${target_name})
+  if(CMAKE_BUILD_TYPE MATCHES "^[rR]elease")
+    target_enable_iwyu(${target_name})
+  endif()
 endfunction()
 
 foreach(binding IN LISTS GEL_BINDINGS)
@@ -81,4 +85,6 @@ add_executable(gelrt
   main.cc)
 target_link_libraries(gelrt
   PUBLIC gelle)
-target_enable_iwyu(gelrt)
+if(CMAKE_BUILD_TYPE MATCHES "^[rR]elease")
+  target_enable_iwyu(gelrt)
+endif()

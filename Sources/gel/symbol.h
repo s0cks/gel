@@ -129,6 +129,37 @@ static inline auto ShouldPoolSymbols() -> bool {
 
 auto GetCurrentThreadSymbolPoolSize() -> uword;
 auto GetCurrentThreadSymbolPoolRoot() -> Symbol::PoolNode*;
+
+#ifndef GEL_NUM_SYMTABLE_BUCKETS
+#define GEL_NUM_SYMTABLE_BUCKETS 10
+#endif  // GEL_NUM_SYMTABLE_BUCKETS
+
+class SymbolTable {
+  DEFINE_NON_COPYABLE_TYPE(SymbolTable);
+
+ public:
+  static constexpr const auto kTotalNumberOfBuckets = GEL_NUM_SYMTABLE_BUCKETS;
+
+  struct Entry {
+    Entry* next;
+    Symbol* value;
+  };
+
+  using Entries = std::array<Entry*, kTotalNumberOfBuckets>;
+
+ private:
+  Entries entries_{};
+
+ public:
+  SymbolTable() = default;
+  ~SymbolTable() = default;
+
+  auto GetEntries() const -> const Entries& {
+    return entries_;
+  }
+
+  auto ToString() const -> std::string;
+};
 }  // namespace gel
 
 namespace fmt {

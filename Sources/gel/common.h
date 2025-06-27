@@ -354,6 +354,44 @@ static inline auto PrettyPrintBytes(const uword num_bytes) -> std::string {
   }
   return ss.str();
 }
+
+class ostream_guard {
+  DEFINE_NON_COPYABLE_TYPE(ostream_guard);
+
+ private:
+  std::ostream& stream_;  // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
+  std::ostream::fmtflags flags_;
+  std::streamsize precision_;
+  char fill_;
+
+ public:
+  explicit ostream_guard(std::ostream& stream) :
+    stream_(stream),
+    flags_(stream.flags()),
+    precision_(stream.precision()),
+    fill_(stream.fill()) {}
+  ~ostream_guard() {
+    stream().flags(flags_);
+    stream().fill(fill_);
+    stream().precision(precision_);
+  }
+
+  inline auto stream() const -> std::ostream& {
+    return stream_;
+  }
+
+  inline constexpr auto flags() const -> std::ostream::fmtflags {
+    return flags_;
+  }
+
+  inline constexpr auto fill() const -> char {
+    return fill_;
+  }
+
+  inline constexpr auto precsion() const -> std::streamsize {
+    return precision_;
+  }
+};
 }  // namespace gel
 
 #endif  // GEL_COMMON_H

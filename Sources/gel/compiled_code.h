@@ -1,6 +1,7 @@
 #ifndef GEL_COMPILED_CODE_H
 #define GEL_COMPILED_CODE_H
 
+#include <ostream>
 #include <string>
 
 #include "gel/allocator.h"
@@ -57,6 +58,10 @@ class CompiledCode : public HeapObject {
 #endif  // GEL_DEBUG
 
   auto ToString() const -> std::string override;
+
+  inline friend auto operator<<(std::ostream& stream, const CompiledCode& rhs) -> std::ostream& {
+    return stream << rhs.ToString();
+  }
 
  public:
   static inline auto New(const Region& region) -> CompiledCode* {

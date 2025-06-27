@@ -29,7 +29,7 @@ ArrayBase::~ArrayBase() {
 }
 
 void ArrayBase::Resize(const word new_length) {
-  if (new_length > capacity_) {
+  if (std::cmp_greater(new_length, capacity_)) {
     const auto new_cap = RoundUpPow2(new_length);
     const auto new_data = sys::realloc((uword)data_, sizeof(uword) * new_cap);  // TODO: convert to gel heap allocation
     LOG_IF(FATAL, new_data == UNALLOCATED) << "failed to resize GrowableArray to: " << bytes(new_cap);

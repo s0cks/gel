@@ -1,3 +1,4 @@
+#include <__ostream/basic_ostream.h>
 #include <sstream>
 #include <string>
 

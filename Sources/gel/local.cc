@@ -8,7 +8,6 @@
 #include "gel/heap.h"
 #include "gel/local_scope.h"
 #include "gel/platform.h"
-#include "gel/pointer.h"
 #include "gel/symbol.h"
 #include "gel/to_string_helper.h"
 

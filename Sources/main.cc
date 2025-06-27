@@ -126,6 +126,9 @@ auto main(int argc, char** argv) -> int {
   Parser::Init();
   Heap::Init();
   Runtime::Init();
+#ifdef GEL_DEBUG
+  Bytecode::PrintAllOps();
+#endif  // GEL_DEBUG
   int result = EXIT_FAILURE;
   const auto expr = GetExpressionFlag();
   if (expr) {

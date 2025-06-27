@@ -1,8 +1,11 @@
 #ifndef GEL_BYTECODE_H
 #define GEL_BYTECODE_H
 
+#include <concepts>
 #include <cstdint>
+#include <ios>
 #include <ostream>
+#include <type_traits>
 
 #include "gel/binary_op.h"
 #include "gel/common.h"
@@ -90,11 +93,11 @@ class Bytecode {
     raw_(value) {}
   ~Bytecode() = default;
 
-  constexpr auto raw() const -> RawBytecode {
+  inline constexpr auto raw() const -> RawBytecode {
     return raw_;
   }
 
-  constexpr auto op() const -> Op {
+  inline constexpr auto op() const -> Op {
     return static_cast<Op>(raw());
   }
 
@@ -133,7 +136,7 @@ class Bytecode {
     }
   }
 
-  constexpr auto mnemonic() const -> const char* {
+  inline constexpr auto mnemonic() const -> const char* {
     switch (op()) {
       case kNop:
         return "nop";
@@ -268,19 +271,19 @@ class Bytecode {
     return *this;
   }
 
-  auto operator==(const Bytecode& rhs) const -> bool {
+  constexpr auto operator==(const Bytecode& rhs) const -> bool {
     return raw() == rhs.raw();
   }
 
-  auto operator==(const RawBytecode& rhs) const -> bool {
+  constexpr auto operator==(const RawBytecode& rhs) const -> bool {
     return raw() == rhs;
   }
 
-  auto operator!=(const Bytecode& rhs) const -> bool {
+  constexpr auto operator!=(const Bytecode& rhs) const -> bool {
     return raw() != rhs.raw();
   }
 
-  auto operator!=(const RawBytecode& rhs) const -> bool {
+  constexpr auto operator!=(const RawBytecode& rhs) const -> bool {
     return raw() != rhs;
   }
 
@@ -296,10 +299,43 @@ class Bytecode {
       FOR_EACH_BYTECODE(DEFINE_TO_STRING)
 #undef DEFINE_TO_STRING
       case kInvalid:
-      default:
-        return stream << "Unknown gel::Bytecode(" << static_cast<word>(rhs.raw()) << ")";
+      default: {
+        stream << "Unknwon gel::Bytecode(";
+        PrintHex(stream, rhs.raw());
+        stream << ")";
+        return stream;
+      }
     }
   }
+
+ private:
+  template <typename T>
+  static inline void PrintHex(std::ostream& stream, const T rhs)
+    requires(std::is_integral_v<T> || std::same_as<T, Bytecode::Op>)
+  {
+    ostream_guard guard(stream);
+    stream << "0x" << std::hex << std::nouppercase << static_cast<uword>(rhs);
+  }
+
+ public:
+  static inline void PrintRaw(std::ostream& stream, const Bytecode bc) {
+    return PrintHex(stream, bc.raw());
+  }
+
+  static inline void PrintRaw(std::ostream& stream, const Bytecode::Op op) {
+    return PrintHex(stream, op);
+  }
+
+#ifdef GEL_DEBUG
+
+  static inline void PrintAllOps() {
+    LOG(INFO) << "Bytecode Ops:";
+    for (auto idx = 0; idx < Bytecode::kTotalNumberOfOps; idx++) {
+      PrintHex(LOG(INFO) << " - ", static_cast<RawBytecode>(idx));
+    }
+  }
+
+#endif  // GEL_DEBUG
 };
 static_assert(sizeof(Bytecode) == sizeof(uint8_t), "expected sizeof(Bytecode) to equal sizeof(uint8_t).");
 }  // namespace gel::vm

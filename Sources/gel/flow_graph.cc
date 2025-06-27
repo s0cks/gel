@@ -82,7 +82,7 @@ void FlowGraph::DiscoverBlocks() {
   ASSERT(postorder_.size() == preorder_.size());
 
   const auto count = postorder_.size();
-  for (auto idx = 0; idx < count; idx++) {
+  for (uword idx = 0; idx < count; idx++) {
     const auto blk = postorder_[count - idx - 1];
     reverse_postorder_.push_back(blk);
   }
@@ -138,7 +138,7 @@ void FlowGraph::ComputeDominators(std::vector<BitVector*>& dominators) {
     label[idx] = semi[idx];
   }
 
-  for (word idx = 1; idx < size; idx++) {
+  for (auto idx = 1; idx < size; idx++) {
     auto dom_index = idom[idx];
     while (dom_index > semi[idx]) {
       dom_index = idom[dom_index];
@@ -152,7 +152,7 @@ void FlowGraph::ComputeDominators(std::vector<BitVector*>& dominators) {
     const auto count = blk->GetNumberOfPredecessors();
     if (count <= 1)
       continue;
-    for (word i = 0; i < count; i++) {
+    for (word i = 0; std::cmp_less(i, count); i++) {
       auto runner = blk->GetPredecessorAt(i);
       while (runner != blk->GetDominator()) {
         dominators[runner->GetPreorderNum()]->Add(i);
