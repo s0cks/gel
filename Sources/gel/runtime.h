@@ -24,87 +24,15 @@
 
 namespace gel {
 DECLARE_bool(log_script_instrs);
+using ShutdownCallback = std::function<void()>;
+using ShutdownCallbackList = std::vector<ShutdownCallback>;
 
-class ShutdownListener {
-  friend class Runtime;
-  DEFINE_NON_COPYABLE_TYPE(ShutdownListener);
-
- public:
-  using Callback = std::function<void()>;
-
-  class Iterator {
-    DEFINE_NON_COPYABLE_TYPE(Iterator);
-
-   private:
-    ShutdownListener* current_;
-
-   public:
-    explicit Iterator(ShutdownListener* head) :
-      current_(head) {}
-    ~Iterator() = default;
-
-    auto HasNext() const -> bool {
-      return current_ != nullptr;
-    }
-
-    auto Next() -> ShutdownListener* {
-      const auto next = current_;
-      current_ = current_->GetNext();
-      return next;
-    }
-  };
-
- private:
-  ShutdownListener* next_ = nullptr;
-  Callback callback_;
-
- protected:
-  void SetNext(ShutdownListener* rhs) {
-    ASSERT(rhs);
-    next_ = rhs;
-  }
-
-  void OnShutdown() {
-    return callback_();
-  }
-
- public:
-  ShutdownListener(Callback callback) :
-    callback_(callback) {}
-  ~ShutdownListener() = default;
-
-  auto GetNext() const -> ShutdownListener* {
-    return next_;
-  }
-
-  inline auto HasNext() const -> bool {
-    return GetNext() != nullptr;
-  }
-
-  auto Last() -> ShutdownListener* {
-    ShutdownListener* current = this;
-    while (current->HasNext())
-      current = current->GetNext();
-    return current;
-  }
-
- public:
-  static inline auto New(const Callback& rhs) -> ShutdownListener* {
-    return new ShutdownListener(rhs);
-  }
-
-  static auto New(Procedure* rhs) -> ShutdownListener*;
-
-  static inline void Append(ShutdownListener** list, ShutdownListener* listener) {
-    auto current = (*list);
-    if (!current) {
-      (*list) = listener;
-      return;
-    }
-    current = current->Last();
-    current->SetNext(listener);
-  }
-};
+template <typename F, typename... Args>
+static inline void invoke_all(const std::vector<F>& funcs, Args... args) {
+  std::ranges::for_each(funcs, [=](const ShutdownCallback& cb) {
+    cb(args...);
+  });
+}
 
 class Module;
 class Runtime {
@@ -138,8 +66,7 @@ class Runtime {
   std::stack<StackFrame*> stack_{};
   bool executing_ = false;
   Object* result_ = nullptr;
-  ShutdownListener* shutdown_listeners_ = nullptr;
-  uint64_t num_shutdown_listeners_ = 0;
+  ShutdownCallbackList shutdown_listeners_{};
   bool emptying_task_queue_ = false;
 
   inline void SetExecuting(const bool value = true) {
@@ -306,16 +233,11 @@ class Runtime {
     return result_ ? result_ : (result_ = Null());
   }
 
-  void AddShutdownListener(ShutdownListener* rhs);
-
-  inline void AddShutdownListener(const ShutdownListener::Callback& rhs) {
-    return AddShutdownListener(ShutdownListener::New(rhs));
+  void AddShutdownCallback(const ShutdownCallback& rhs) {
+    return shutdown_listeners_.push_back(rhs);
   }
 
-  inline void AddShutdownListener(Procedure* rhs) {
-    ASSERT(rhs);
-    return AddShutdownListener(ShutdownListener::New(rhs));
-  }
+  void AddShutdownListener(Procedure* rhs);
 
   void Shutdown();
 

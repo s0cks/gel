@@ -10,6 +10,7 @@ list(APPEND GEL_LIBRARIES
   fmt::fmt
   units::units
   elfio::elfio
+  FunctionalPlus::fplus
   $<IF:$<TARGET_EXISTS:libuv::uv_a>,libuv::uv_a,libuv::uv>
   graphviz::gvc graphviz::cgraph
   OpenSSL::SSL OpenSSL::Crypto

@@ -38,6 +38,7 @@ find_package(libuv CONFIG REQUIRED)
 find_package(RapidJSON CONFIG REQUIRED)
 find_package(Backward CONFIG REQUIRED)
 find_package(Bzip2 REQUIRED)
+find_package(FunctionalPlus CONFIG REQUIRED)
 find_package(elfio CONFIG REQUIRED)
 
 if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")

@@ -9,6 +9,7 @@
     "tracy",
     "units",
     "libuv",
+    "functionalplus",
     {
       "name": "ncurses",
       "platform": "!windows | mingw"

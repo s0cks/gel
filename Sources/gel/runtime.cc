@@ -41,13 +41,6 @@ static const ThreadLocal<Runtime> runtime_;
 static const EnvironmentVariable kHomeVar("GEL_HOME");
 static const EnvironmentVariable kPathVar("GEL_PATH");
 
-auto ShutdownListener::New(Procedure* rhs) -> ShutdownListener* {
-  ASSERT(rhs);
-  return New([rhs]() {
-    GetRuntime()->Call(rhs);
-  });
-}
-
 auto GetHomeEnvVar() -> const EnvironmentVariable& {
   return kHomeVar;
 }
@@ -544,18 +537,14 @@ auto Runtime::PopStackFrame() -> StackFrame* {
   return frame;
 }
 
-void Runtime::AddShutdownListener(ShutdownListener* rhs) {
-  ASSERT(rhs);
-  ShutdownListener::Append(&shutdown_listeners_, rhs);
-  num_shutdown_listeners_ += 1;
+void Runtime::Shutdown() {
+  invoke_all(shutdown_listeners_);
 }
 
-void Runtime::Shutdown() {
-  ShutdownListener::Iterator iter(shutdown_listeners_);
-  while (iter.HasNext()) {
-    const auto next = iter.Next();
-    ASSERT(next);
-    next->OnShutdown();
-  }
+void Runtime::AddShutdownListener(Procedure* rhs) {
+  ASSERT(rhs);
+  return AddShutdownCallback([this, rhs]() {
+    CallPop(rhs);
+  });
 }
 }  // namespace gel

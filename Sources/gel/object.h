@@ -40,6 +40,7 @@ class Object : public HeapObject {
   friend class Parser;
   friend class Module;
   friend class Pointer;
+  friend class RefBase;
   friend class Procedure;
   friend class Namespace;
   DEFINE_NON_COPYABLE_TYPE(Object)
