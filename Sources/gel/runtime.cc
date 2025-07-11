@@ -9,10 +9,13 @@
 #include <units.h>
 #include <unordered_set>
 
+#include "gel/call_stack.h"
 #include "gel/common.h"
+#include "gel/constructor.h"
 #include "gel/error.h"
 #include "gel/event_loop.h"
-#include "gel/expression.h"
+#include "gel/exception.h"
+#include "gel/expr/expression.h"
 #include "gel/flow_graph_compiler.h"
 #include "gel/instruction.h"
 #include "gel/interpreter.h"
@@ -28,6 +31,7 @@
 #include "gel/parser.h"
 #include "gel/pointer.h"
 #include "gel/procedure.h"
+#include "gel/profiling.h"
 #include "gel/script.h"
 #include "gel/stack_frame.h"
 #include "gel/thread_local.h"
@@ -121,7 +125,7 @@ class KernelModuleImporter : public BaseModuleImporter {
     const auto default_ns = m->GetDefaultNamespace();
     ASSERT(default_ns);
     ImportScope(default_ns->GetScope());
-    if (default_ns->GetName() != "gel") {
+    if (!default_ns->GetSymbol()->Equals("gel")) {
       const auto gel_ns = m->FindNamespace("gel");
       if (gel_ns) {
         ImportScope(gel_ns->GetScope());
@@ -157,7 +161,7 @@ class DefaultModuleImporter : public BaseModuleImporter {
     const auto default_ns = m->GetDefaultNamespace();
     ASSERT(default_ns);
     ImportScope(default_ns->GetScope());
-    if (default_ns->GetName() != "gel") {
+    if (!default_ns->GetSymbol()->Equals("gel")) {
       const auto gel_ns = m->FindNamespace("gel");
       if (gel_ns) {
         ImportScope(gel_ns->GetScope());
@@ -258,35 +262,42 @@ class CallScope {
 class CallStackFrame {
   DEFINE_NON_COPYABLE_TYPE(CallStackFrame);
 
+ private:
+  CallStack& stack_;
+
+  inline auto stack() const -> CallStack& {
+    return stack_;
+  }
+
  public:
-  template <class T>
-  CallStackFrame(T* target, LocalScope* locals, std::enable_if_t<gel::is_stack_frame_target<T>::value>* = nullptr) {
-    ASSERT(runtime_);
+  template <StackFrameTarget Target>
+  CallStackFrame(CallStack& call_stack, Target* target, LocalScope* locals) :
+    stack_(call_stack) {
     ASSERT(target);
     ASSERT(locals);
-    GetRuntime()->PushStackFrame(target, locals);
+    stack().PushStackFrame(target, locals);
   }
   ~CallStackFrame() {
-    const auto frame = GetRuntime()->PopStackFrame();
+    const auto frame = stack().Pop();
     ASSERT(frame);
-    const auto result = frame->HasReturnAddress() ? frame->GetReturnObjectPointer() : Null();
+    const auto result = frame->HasReturnAddress() ? frame->GetReturnObjectPointer() : Nil::Get();
     ASSERT(result);
-    if (GetRuntime()->HasStackFrame()) {
-      GetRuntime()->GetCurrentStackFrame()->GetOperationStack()->Push(result);
+    if (!stack().IsEmpty()) {
+      stack().GetTop()->GetOperationStack()->Push(result);
     } else {
       GetRuntime()->result_ = result;
     }
   }
 };
 
-void Runtime::Call(Constructor* init, const ObjectList& args) {
-  ASSERT(init);
+template <>
+void Runtime::Call(Constructor& init, const ObjectList args) {
   {
     CallScope locals(this);
-    if (init->HasScope())
-      locals->AddAll(init->GetScope());
-    if (init->HasArgs()) {
-      const auto& lambda_args = init->GetArgs();
+    if (init.HasScope())
+      locals->AddAll(init.GetScope());
+    if (init.HasArgs()) {
+      const auto& lambda_args = init.GetArgs();
       ASSERT(lambda_args);
       for (int idx = static_cast<int>(args.size()); idx > 0; idx--) {
         const auto arg = lambda_args->Get(static_cast<uword>(idx) - 1);
@@ -301,46 +312,29 @@ void Runtime::Call(Constructor* init, const ObjectList& args) {
         LOG_IF(FATAL, !locals->Add(local)) << "failed to add parameter: " << (*local);
       }
     }
+    DLOG(INFO) << init << " scope:";
+    PRINT_SCOPE(INFO, locals);
     LOG_IF(FATAL, !FlowGraphCompiler::Compile(init, locals)) << "failed to compile: " << init;
     {
-#ifdef GEL_DEBUG
-
-      if (VLOG_IS_ON(10)) {
-        DLOG(INFO) << init->ToString() << " execution scope:";
-        PRINT_SCOPE(INFO, locals);
-      }
-
-#endif  // GEL_DEBUG
-      StackFrameGuard<Constructor> stack_guard(init);
-      CallStackFrame call_frame(init, locals);
+      StackFrameGuard<Constructor> stack_guard(&init);
+      CallStackFrame call_frame(GetCallStack(), &init, locals);
       Interpreter interpreter(this);
-      interpreter.Run<Constructor>(init);
+      interpreter(init);
     }
   }
 
-  if (!HasStackFrame() && !emptying_task_queue_) {
-    const auto loop = GetThreadEventLoop();
-    ASSERT(loop);
-    auto& tasks = loop->GetTaskQueue();
-    emptying_task_queue_ = true;
-    while (!tasks.empty()) {
-      auto next = tasks.front();
-      tasks.pop_front();
-      next.Execute();
-    }
-    emptying_task_queue_ = false;
-    loop->Run(UV_RUN_NOWAIT);
-  }
+  if (ShouldEmptyTaskQueue())
+    EmptyTaskQueue();
 }
 
-void Runtime::Call(Lambda* lambda, const ObjectList& args) {
-  ASSERT(lambda);
+template <>
+void Runtime::Call(Lambda& lambda, const ObjectList args) {
   {
     CallScope locals(this);
-    if (lambda->HasScope())
-      locals->AddAll(lambda->GetScope());
-    if (lambda->HasArgs()) {
-      const auto& lambda_args = lambda->GetArgs();
+    if (lambda.HasScope())
+      locals->AddAll(lambda.GetScope());
+    if (lambda.HasArgs()) {
+      const auto& lambda_args = lambda.GetArgs();
       ASSERT(lambda_args);
       for (int idx = static_cast<int>(args.size()); idx > 0; idx--) {
         const auto arg = lambda_args->Get(static_cast<uword>(idx) - 1);
@@ -355,117 +349,83 @@ void Runtime::Call(Lambda* lambda, const ObjectList& args) {
         LOG_IF(FATAL, !locals->Add(local)) << "failed to add parameter: " << (*local);
       }
     }
+    DLOG(INFO) << lambda << " scope:";
+    PRINT_SCOPE(INFO, locals);
     LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, locals)) << "failed to compile: " << lambda;
     {
-#ifdef GEL_DEBUG
-
-      if (VLOG_IS_ON(10)) {
-        DLOG(INFO) << lambda->ToString() << " execution scope:";
-        PRINT_SCOPE(INFO, locals);
-      }
-
-#endif  // GEL_DEBUG
-      StackFrameGuard<Lambda> stack_guard(lambda);
-      CallStackFrame call_frame(lambda, locals);
+      StackFrameGuard<Lambda> stack_guard(&lambda);
+      CallStackFrame call_frame(GetCallStack(), &lambda, locals);
       Interpreter interpreter(this);
-      interpreter.Run(lambda);
+      interpreter(lambda);
     }
   }
 
-  if (!HasStackFrame() && !emptying_task_queue_) {
-    const auto loop = GetThreadEventLoop();
-    ASSERT(loop);
-    auto& tasks = loop->GetTaskQueue();
-    emptying_task_queue_ = true;
-    while (!tasks.empty()) {
-      auto next = tasks.front();
-      tasks.pop_front();
-      next.Execute();
-    }
-    emptying_task_queue_ = false;
-    loop->Run(UV_RUN_NOWAIT);
-  }
+  if (ShouldEmptyTaskQueue())
+    EmptyTaskQueue();
 }
 
-void Runtime::Call(NativeProcedure* native, const ObjectList& args) {
-  ASSERT(native);
-  if (!native->HasEntry()) {
-    std::stringstream ss;
-    ss << "NativeProcedure `" << native->GetSymbol()->GetFullyQualifiedName() << "` is not linked.";
-    throw Exception(ss.str());
-    return;
-  }
+template <>
+void Runtime::Call(NativeProcedure& native, const ObjectList args) {
+  if (!native.IsLinked())
+    throw IllegalArgumentException(fmt::format("`{}` is not linked", native));
   {
     CallScope locals(this);
     for (auto idx = 0; idx < args.size(); idx++) {
       locals->Add(Symbol::New(fmt::format("arg{}", idx)), args[idx]);
     }
     {
-#ifdef GEL_DEBUG
-
-      if (VLOG_IS_ON(10)) {
-        DLOG(INFO) << native->ToString() << " execution scope:";
-        PRINT_SCOPE(INFO, locals);
-      }
-
-#endif  // GEL_DEBUG
-      StackFrameGuard<NativeProcedure> guard(native);
-      CallStackFrame stack_frame(native, locals);
-      LOG_IF(FATAL, !native->GetEntry()->Apply(args))
-          << "failed to apply: " << native->ToString() << " with args: " << args;
+      StackFrameGuard<NativeProcedure> guard(&native);
+      CallStackFrame stack_frame(GetCallStack(), &native, locals);
+      LOG_IF(FATAL, !native(args)) << "failed to apply `" << native << "` with args: " << args;
     }
   }
 
-  if (!HasStackFrame() && !emptying_task_queue_) {
-    const auto loop = GetThreadEventLoop();
-    ASSERT(loop);
-    auto& tasks = loop->GetTaskQueue();
-    emptying_task_queue_ = true;
-    while (!tasks.empty()) {
-      auto next = tasks.front();
-      tasks.pop_front();
-      next.Execute();
-    }
-    emptying_task_queue_ = false;
-    loop->Run(UV_RUN_NOWAIT);
-  }
+  if (ShouldEmptyTaskQueue())
+    EmptyTaskQueue();
 }
 
-void Runtime::Call(Script* script, const ObjectList& args) {
-  ASSERT(script);
+template <>
+void Runtime::Call(Script& script, const ObjectList args) {
   {
     CallScope locals(this);
-    if (script->HasScope())
-      locals->AddAll(script->GetScope());
+    if (script.HasScope())
+      locals->AddAll(script.GetScope());
     {
-#ifdef GEL_DEBUG
-
-      if (VLOG_IS_ON(10)) {
-        DLOG(INFO) << script->ToString() << " execution scope:";
-        PRINT_SCOPE(INFO, locals);
-      }
-
-#endif  // GEL_DEBUG
-      StackFrameGuard<Script> stack_guard(script);
-      CallStackFrame stack_frame(script, locals);
+      StackFrameGuard<Script> stack_guard(&script);
+      CallStackFrame stack_frame(GetCallStack(), &script, locals);
       Interpreter interpreter(this);
-      interpreter.Run(script);
+      interpreter(script);
     }
   }
 
-  if (!HasStackFrame() && !emptying_task_queue_) {
-    const auto loop = GetThreadEventLoop();
-    ASSERT(loop);
-    auto& tasks = loop->GetTaskQueue();
-    emptying_task_queue_ = true;
-    while (!tasks.empty()) {
-      auto next = tasks.front();
-      tasks.pop_front();
-      next.Execute();
-    }
-    emptying_task_queue_ = false;
-    loop->Run(UV_RUN_NOWAIT);
+  if (ShouldEmptyTaskQueue())
+    EmptyTaskQueue();
+}
+
+void Runtime::Call(Procedure& target, const ObjectList args) {
+  if (target.IsConstructor())
+    return Call(reinterpret_cast<Constructor&>(target), std::move(args));
+  else if (target.IsNative())
+    return Call(dynamic_cast<NativeProcedure&>(target), std::move(args));
+  else if (target.IsScript())
+    return Call(reinterpret_cast<Script&>(target), std::move(args));
+  else if (target.IsLambda())
+    return Call(reinterpret_cast<Lambda&>(target), std::move(args));
+  LOG(FATAL) << "invalid call to " << target << " with args: " << args;
+}
+
+void Runtime::EmptyTaskQueue() {
+  const auto loop = GetThreadEventLoop();
+  ASSERT(loop);
+  auto& tasks = loop->GetTaskQueue();
+  emptying_task_queue_ = true;
+  while (!tasks.empty()) {
+    auto next = tasks.front();
+    tasks.pop_front();
+    next.Execute();
   }
+  emptying_task_queue_ = false;
+  loop->Run(UV_RUN_NOWAIT);
 }
 
 auto Runtime::VisitPointers(PointerVisitor* vis) -> bool {
@@ -487,28 +447,24 @@ auto Runtime::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
 
 auto Runtime::Eval(const std::string& expr) -> Object* {
   ASSERT(!expr.empty());
-  DVLOG(10) << "evaluating expression:" << std::endl << expr;
   const auto runtime = GetRuntime();
   const auto lambda = Parser::ParseExpr(expr);
   ASSERT(lambda);
-  LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, runtime->GetInitScope())) << "failed to compile: " << expr;
-  const auto result = runtime->CallPop(lambda);
+  LOG_IF(FATAL, !FlowGraphCompiler::Compile(*lambda, runtime->GetInitScope())) << "failed to compile: " << expr;
+  const auto result = runtime->CallPop(*lambda);
   runtime->PopScope();
-  return result ? result : Null();
+  return result ? result : Nil::Get();
 }
 
 auto Runtime::Exec(Script* script) -> Object* {
   ASSERT(script);
   const auto runtime = GetRuntime();
   ASSERT(runtime);
-  return GetRuntime()->CallPop(script);
+  return GetRuntime()->CallPop(*script);
 }
 
 void Runtime::Init(const bool load_kernel) {
-#ifdef GEL_DEBUG
-  const auto start_ts = Clock::now();
-#endif  // GEL_DEBUG
-
+  GEL_PROFILE;
   const auto runtime = new Runtime();
   runtime_.Set(runtime);
   Object::Init();
@@ -517,34 +473,10 @@ void Runtime::Init(const bool load_kernel) {
     runtime->LoadKernel();
   }
   ThreadModuleLoader::Init();
-
-#ifdef GEL_DEBUG
-  const auto stop_ts = Clock::now();
-  const auto total_ms = std::chrono::duration_cast<std::chrono::milliseconds>((stop_ts - start_ts)).count();
-  DVLOG(1) << "runtime initialized in " << units::time::millisecond_t(static_cast<double>(total_ms));
-#endif  // GEL_DEBUG
-}
-
-auto Runtime::PopStackFrame() -> StackFrame* {
-  if (stack_.empty()) {
-    DLOG(ERROR) << "stack empty";
-    return nullptr;
-  }
-  ASSERT(!stack_.empty());
-  const auto frame = stack_.top();
-  stack_.pop();
-  DVLOG(1000) << "popped: " << frame->ToString();
-  return frame;
 }
 
 void Runtime::Shutdown() {
   invoke_all(shutdown_listeners_);
 }
 
-void Runtime::AddShutdownListener(Procedure* rhs) {
-  ASSERT(rhs);
-  return AddShutdownCallback([this, rhs]() {
-    CallPop(rhs);
-  });
-}
 }  // namespace gel

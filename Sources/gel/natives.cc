@@ -1,12 +1,11 @@
 #include "gel/natives.h"
 
-#include <fmt/args.h>
-#include <fmt/base.h>
-#include <fmt/format.h>
-
 #include <cstdlib>
 #include <exception>
 #include <filesystem>
+#include <fmt/args.h>
+#include <fmt/base.h>
+#include <fmt/format.h>
 #include <iostream>
 #include <random>
 #include <ranges>
@@ -54,8 +53,6 @@ void NativeProcedure::InitNatives() {
   INIT_GEL_NATIVE(type);
   InitNative<import>();
   InitNative<exit>();
-  InitNative<set_car>();
-  InitNative<set_cdr>();
   InitNative<random>();
   InitNative<rand_range>();
   INIT_GEL_NATIVE(bit_str);
@@ -105,13 +102,11 @@ void NativeProcedure::InitNatives() {
   InitNative<gel_print_roots>();
   InitNative<gel_minor_gc>();
   InitNative<gel_major_gc>();
-  InitNative<gel_get_frame>();
   InitNative<gel_get_debug>();
   InitNative<gel_get_target_triple>();
   InitNative<gel_get_locals>();
   InitNative<gel_get_natives>();
   InitNative<gel_get_compile_time>();
-  InitNative<gel_print_st>();
 #endif  // GEL_DEBUG
 }
 
@@ -129,7 +124,7 @@ GEL_NATIVE_PROCEDURE_F(sizeof) {
 
 GEL_NATIVE_PROCEDURE_F(on_shutdown) {
   REQUIRED_NATIVE_ARG(0, Procedure, callback);
-  GetRuntime()->AddShutdownListener(callback);
+  GetRuntime()->AddShutdownListener(*callback.GetValue());
   return ReturnNull();
 }
 
@@ -173,10 +168,10 @@ GEL_NATIVE_PROCEDURE_F(docs) {
     ss << "])";
     ss << std::endl;
     ss << "  ";
-    if (lambda->HasDocs())
-      ss << lambda->GetDocs()->Get();
+    if (lambda->HasDocstring())
+      ss << lambda->GetDocstring()->Get();
     return ReturnNew<String>(ss.str());
-  } else if (func->IsNativeProcedure()) {
+  } else if (func->IsNative()) {
     const auto native = func->AsNativeProcedure();
     std::stringstream ss;
     ss << native->GetSymbol()->GetFullyQualifiedName() << std::endl;
@@ -193,10 +188,9 @@ GEL_NATIVE_PROCEDURE_F(docs) {
     ss << "])";
     ss << std::endl;
     ss << "  ";
-    if (native->HasDocs())
-      ss << native->GetDocs()->Get();
+    if (native->HasDocstring())
+      ss << native->GetDocstring()->Get();
     return ReturnNew<String>(ss.str());
-    return Return(func->AsNativeProcedure()->GetDocs());
   }
   return ThrowError(fmt::format("`{}` is not a Procedure", func->ToString()));
 }
@@ -217,21 +211,16 @@ GEL_NATIVE_PROCEDURE_F(print) {
   if (VLOG_IS_ON(100))
     PrintValue(google::LogMessage(__FILE__, __LINE__, google::LogSeverity::INFO).stream(), args[0]);
 #endif  // GEL_DEBUG
-  if (IsReplInitializedForCurrentThread()) {
-    const auto repl = GetReplForCurrentThread();
-    ASSERT(repl);
-    repl->Print(args[0]);
-    return ReturnNull();
-  }
   PrintValue(std::cout, args[0]) << std::endl;
   return ReturnNull();
 }
 
 GEL_NATIVE_PROCEDURE_F(load_bindings) {
   REQUIRED_NATIVE_ARG(0, String, filename);
-  NativeBindings::Load(filename->Get()) | rx::operators::as_blocking() | rx::operators::subscribe([&filename](const int status) {
-    LOG_IF(ERROR, status != EXIT_SUCCESS) << "failed to load bindings from " << filename->Get() << ": " << status;
-  });
+  NativeBindings::Load(filename->Get()) | rx::operators::as_blocking() |
+      rx::operators::subscribe([&filename](const int status) {
+        LOG_IF(ERROR, status != EXIT_SUCCESS) << "failed to load bindings from " << filename->Get() << ": " << status;
+      });
   return ReturnNull();
 }
 
@@ -255,7 +244,7 @@ NATIVE_PROCEDURE_F(rand_range) {
 GEL_NATIVE_PROCEDURE_F(type) {
   ASSERT(!args.empty());
   NativeArgument<0> value(args);
-  if (gel::IsNull(value))
+  if (value->IsNil())
     return ReturnNew<String>("Null");
   return Return(value->GetType()->GetName());
 }
@@ -278,21 +267,6 @@ GEL_NATIVE_PROCEDURE_F(format) {
   return ReturnNew<String>(result);
 }
 
-// (set-car! <seq> <value>)
-NATIVE_PROCEDURE_F(set_car) {
-  REQUIRED_NATIVE_ARG(0, Pair, seq);
-  REQUIRED_NATIVE_ARG(1, Object, value);
-  SetCar(seq, value);
-  return DoNothing();
-}
-
-NATIVE_PROCEDURE_F(set_cdr) {
-  REQUIRED_NATIVE_ARG(0, Pair, seq);
-  REQUIRED_NATIVE_ARG(1, Object, value);
-  SetCdr(seq, value);
-  return DoNothing();
-}
-
 GEL_NATIVE_PROCEDURE_F(get_event_loop) {
   return Return(GetThreadEventLoop());
 }
@@ -301,7 +275,7 @@ GEL_NATIVE_PROCEDURE_F(get_event_loop) {
 
 OBJECT_PROCEDURE_F(hashcode) {
   REQUIRED_NATIVE_ARG(0, Object, value);
-  return ReturnLong(value->HashCode());
+  return ReturnLong(value->GetHashCode());
 }
 
 #undef OBJECT_PROCEDURE_F

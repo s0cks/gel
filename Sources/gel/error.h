@@ -11,6 +11,7 @@
 #include "gel/object.h"
 #include "gel/platform.h"
 #include "gel/pointer.h"
+#include "gel/str.h"
 
 namespace gel {
 class Error : public Object {

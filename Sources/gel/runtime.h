@@ -1,6 +1,7 @@
 #ifndef GEL_RUNTIME_H
 #define GEL_RUNTIME_H
 
+#include <concepts>
 #include <gflags/gflags_declare.h>
 #include <rpp/observers/dynamic_observer.hpp>
 #include <rpp/sources/fwd.hpp>
@@ -8,7 +9,10 @@
 #include <type_traits>
 #include <utility>
 
+#include "gel/call_stack.h"
 #include "gel/common.h"
+#include "gel/constructor.h"
+#include "gel/environment.h"
 #include "gel/error.h"
 #include "gel/flags.h"
 #include "gel/flow_graph.h"
@@ -34,6 +38,18 @@ static inline void invoke_all(const std::vector<F>& funcs, Args... args) {
   });
 }
 
+template <class T>
+concept HasArgs = requires(const T value) {
+  { value.GetNumberOfArgs() } -> std::convertible_to<uword>;
+  { value.HasArgs() } -> std::convertible_to<bool>;
+  { value.GetArgAt((const uint64_t)0) } -> std::convertible_to<Argument*>;
+  { value.GetArgs() } -> std::convertible_to<Array<Argument*>*>;
+};
+
+template <class T>
+concept RuntimeTarget = std::same_as<T, Constructor> || std::same_as<T, Lambda> || std::same_as<T, NativeProcedure> ||
+                        std::same_as<T, Script>;
+
 class Module;
 class Runtime {
   friend class CallScope;
@@ -43,11 +59,8 @@ class Runtime {
   friend class proc::exit;
   friend class proc::gel_format;  // TODO: remove
   friend class proc::rx_take_while;
-#ifdef GEL_DEBUG
-  friend class proc::gel_get_frame;
-  friend class proc::gel_print_st;
-#endif  // GEL_DEBUG
   friend class Repl;
+  friend class StackFrameGuardBase;
   friend class Lambda;
   friend class Module;
   friend class Interpreter;
@@ -56,39 +69,34 @@ class Runtime {
   friend class ModuleLoader;
   friend class NativeProcedure;
   friend class RuntimeScopeScope;
-  friend class StackFrameIterator;
   friend class NativeProcedureEntry;
   DEFINE_NON_COPYABLE_TYPE(Runtime);
 
  private:
   LocalScope* init_scope_;
   LocalScope* curr_scope_;
-  std::stack<StackFrame*> stack_{};
   bool executing_ = false;
   Object* result_ = nullptr;
   ShutdownCallbackList shutdown_listeners_{};
   bool emptying_task_queue_ = false;
+  CallStack call_stack_{};
 
   inline void SetExecuting(const bool value = true) {
     executing_ = value;
   }
 
-  inline auto GetOperationStack() -> OperationStack* {
-    ASSERT(!stack_.empty());
-    return stack_.top()->GetOperationStack();
-  }
-
-  template <class E>
-  inline void CallWithNArgs(E* exec, const uword num_args, std::enable_if_t<gel::is_executable<E>::value>* = nullptr) {
-    ASSERT(exec);
+  template <RuntimeTarget Target>
+  inline void CallWithNArgs(Target& exec, const uword num_args)
+    requires(HasArgs<Target>)
+  {
     ASSERT(num_args >= 0);
-    const auto stack = GetOperationStack();
+    const auto stack = GetCallStack()->GetOperationStack();
     ASSERT(stack);
     std::vector<Object*> args{};
     word remaining = static_cast<word>(num_args);
-    if (exec->HasArgs()) {
-      for (auto idx = 0; idx < exec->GetNumberOfArgs(); idx++) {
-        const auto arg = exec->GetArgAt(idx);
+    if (exec.HasArgs()) {
+      for (auto idx = 0; idx < exec.GetNumberOfArgs(); idx++) {
+        const auto arg = exec.GetArgAt(idx);
         if (arg->IsVararg()) {
           while (remaining > 0) {
             const auto value = stack->Pop();
@@ -114,16 +122,11 @@ class Runtime {
     }
     std::ranges::reverse(std::begin(args), std::end(args));
     while (remaining < 0) {
-      args.push_back(Null());
+      args.push_back(Nil::Get());
       remaining++;
     }
     return Call(exec, args);
   }
-
-  void Call(NativeProcedure* native, const ObjectList& args = {});
-  void Call(Lambda* lambda, const ObjectList& args = {});
-  void Call(Script* script, const ObjectList& args = {});
-  void Call(Constructor* constructor, const ObjectList& args);
 
   inline auto PushScope() -> LocalScope* {
     const auto new_scope = LocalScope::New(curr_scope_);
@@ -137,33 +140,28 @@ class Runtime {
     curr_scope_ = curr_scope_->GetParent();
   }
 
-  auto PopStackFrame() -> StackFrame*;
+  inline auto ShouldEmptyTaskQueue() const -> bool {
+    return call_stack_.IsEmpty() && !emptying_task_queue_;
+  }
 
-  template <class T>
-  auto PushStackFrame(T* target, LocalScope* locals, std::enable_if_t<gel::is_stack_frame_target<T>::value>* = nullptr)
-      -> const StackFrame* {
-    ASSERT(target);
-    ASSERT(locals);
-    const auto frame_id = HasStackFrame() ? GetCurrentStackFrame()->GetId() + 1 : 1;
-    const auto new_frame = new StackFrame(frame_id, target, locals);
-    stack_.push(new_frame);
-    DVLOG(1000) << "pushed: " << stack_.top()->ToString();
-    return stack_.top();
+  void EmptyTaskQueue();
+
+  auto PopOr(Object* default_value = Nil::Get()) -> Object* {
+    ASSERT(default_value);
+    if (!GetCallStack().IsEmpty())
+      return result_ = GetCallStack()->GetOperationStack()->PopOr(default_value);
+    return result_ ? result_ : (result_ = default_value);
   }
 
  public:  // TODO: reduce visibility
   void LoadKernel();
-  inline void Call(Procedure* procedure, const ObjectList& args = {}) {
-    if (procedure->IsLambda()) {
-      return Call(procedure->AsLambda(), args);
-    } else if (procedure->IsNativeProcedure()) {
-      return Call(procedure->AsNativeProcedure(), args);
-    }
-    LOG(FATAL) << "invalid Call to " << procedure << " w/ args: " << args.size();  // TODO: fix printing args
-  }
 
-  template <class T>
-  inline void InvokeConstructor(T* this_value, const ObjectList& args = {}) {
+  template <RuntimeTarget T>
+  void Call(T& target, const ObjectList args = {});
+  void Call(Procedure& target, const ObjectList args = {});
+
+  template <WithInit I>
+  inline void InvokeConstructor(I* this_value, const ObjectList& args = {}) {
     ASSERT(this_value);
     if (!this_value->HasInit())
       return;
@@ -171,7 +169,7 @@ class Runtime {
         this_value,
     };
     invoke_args.insert(std::end(invoke_args), std::begin(args), std::end(args));
-    return Call(this_value->GetInit(), args);
+    return Call(*(this_value->GetInit()), invoke_args);
   }
 
  protected:
@@ -180,14 +178,17 @@ class Runtime {
   auto Import(Symbol* symbol, LocalScope* scope) -> bool;
   auto ImportModule(const std::string& name) -> bool;
 
+  inline auto GetCallStack() -> CallStack& {
+    return call_stack_;
+  }
+
   inline auto Import(const std::string& name, LocalScope* scope) -> bool {
     return Import(Symbol::New(name), scope);
   }
 
-  // Stack
   inline void PushError(Error* error) {
     ASSERT(error);
-    const auto stack = GetOperationStack();
+    const auto stack = GetCallStack()->GetOperationStack();
     ASSERT(stack);
     return stack->Push(error);
   }
@@ -215,29 +216,37 @@ class Runtime {
     return executing_;
   }
 
-  auto HasStackFrame() const -> bool {
-    return !stack_.empty();
+  template <RuntimeTarget Target>
+  inline auto CallPop(Target& target, const ObjectList& args = {}) -> Object* {
+    Call(target, args);
+    return PopOr();
   }
 
-  auto GetCurrentStackFrame() const -> StackFrame* {
-    return stack_.top();
-  }
-
-  template <class E>
-  inline auto CallPop(E* exec, const ObjectList& args = {}, std::enable_if_t<gel::is_executable<E>::value>* = nullptr)
-      -> Object* {
-    ASSERT(exec);
-    Call(exec, args);
-    if (!stack_.empty())
-      return result_ = GetOperationStack()->PopOr(Null());
-    return result_ ? result_ : (result_ = Null());
+  inline auto CallPop(Procedure& target, const ObjectList& args = {}) -> Object* {
+    Call(target, args);
+    return PopOr();
   }
 
   void AddShutdownCallback(const ShutdownCallback& rhs) {
     return shutdown_listeners_.push_back(rhs);
   }
 
-  void AddShutdownListener(Procedure* rhs);
+  template <RuntimeTarget Target>
+  void AddShutdownListener(Target& rhs) {
+    return AddShutdownCallback([this, &rhs]() {
+      CallPop(rhs);
+    });
+  }
+
+  inline void AddShutdownListener(Procedure& target) {
+    if (target.IsNative())
+      return AddShutdownListener(dynamic_cast<NativeProcedure&>(target));
+    else if (target.IsScript())
+      return AddShutdownListener(reinterpret_cast<Script&>(target));
+    else if (target.IsLambda())
+      return AddShutdownListener(reinterpret_cast<Lambda&>(target));
+    LOG(FATAL) << "cannot add shutdown listener: " << target;
+  }
 
   void Shutdown();
 

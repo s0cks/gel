@@ -183,11 +183,11 @@ auto LocalScope::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
 }
 
 auto LocalScope::ToString() const -> std::string {
-  ToStringHelper<LocalScope> helper;
-  if (!IsEmpty())
-    helper.AddField("locals", locals_);
+  ToStringHelper<LocalScope> helper{};
   if (HasParent())
-    helper.AddField("parent", (void*)GetParent());
+    helper.AddField("parent", (const void*)GetParent());
+  if (!IsEmpty())
+    helper.AddField("locals", (const void*)locals_);
   return helper;
 }
 
@@ -207,7 +207,7 @@ auto LocalScopePrinter::PrintLocalScope(LocalScope* scope) -> bool {
       LOG(FATAL) << "failed to visit local scope: " << scope->ToString();
       return false;
     }
-    Deindent();
+    DeIndent();
     if (!IsRecursive() || !scope->HasParent())
       break;
     scope = scope->GetParent();

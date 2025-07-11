@@ -2,83 +2,73 @@
 #define GEL_REPL_H
 
 #include <iostream>
-#include <string>
 
 #include "gel/error.h"
 #include "gel/local_scope.h"
-#include "gel/object.h"
-#include "gel/parser.h"
 
 namespace gel {
-#if defined(OS_IS_OSX) || defined(OS_IS_LINUX)
-
-#include <ncurses.h>
-
-#else
-#error "Unsupported Operating System"
-#endif
-
 class Repl {
-  static constexpr const auto kDefaultReplHistoryLength = 50;
-  static constexpr const auto kDefaultReplBufferLength = Parser::kDefaultChunkSize;
-
   DEFINE_NON_COPYABLE_TYPE(Repl);
 
  private:
-#if defined(OS_IS_OSX) || defined(OS_IS_LINUX)
-
-  WINDOW* window_ = nullptr;
-
-#else
-#error "Unsupported Operating System"
-#endif
+  std::istream& in_;
+  std::ostream& out_;
   LocalScope* scope_;
   std::string expression_{};
   bool running_ = false;
-  std::vector<std::string> history_{};
-  int history_index_ = -1;
 
-  void IncHistoryIndex() {
-    history_index_ += 1;
-    if (history_index_ >= history_.size())
-      history_index_ = -1;
-  }
-
-  void DecHistoryIndex() {
-    history_index_ -= 1;
-    if (history_index_ < -1)
-      history_index_ = static_cast<int>(history_.size() - 1);
-  }
-
-  auto NextHistoryItem(int ch) -> std::string;
-
-  auto Prompt(const std::string& prompt) -> std::string&;
+  auto Prompt() -> bool;
 
   void SetRunning(const bool rhs = true) {
     running_ = rhs;
   }
 
-  void PrintCR();
-  void ClearScreen();
-  void PrintBanner();
-  void PrintHelp();
-  void RefreshLine(const std::string& line, const std::string& prompt);
-
-  void EvalExpr();
-
- public:
-  explicit Repl(LocalScope* scope);
-  ~Repl() = default;
-
-#if defined(OS_IS_OSX) || defined(OS_IS_LINUX)
-
-  auto GetWindowHandle() const -> WINDOW* {
-    return window_;
+  inline void Respond(Error* rhs) {
+    out() << std::endl;
+    out() << "Error: " << rhs->AsError()->GetMessage()->Get() << std::endl;
   }
 
+  inline void Respond(const Exception& rhs) {
+    out() << std::endl;
+    out() << "Error: " << rhs.what() << std::endl;
+  }
+
+  inline void Respond(Object* rhs) {
+    ASSERT(rhs);
+    if (rhs->IsError())
+      return Respond(rhs->AsError());
+    out() << std::endl;
+    if (VLOG_IS_ON(10))
+      out() << "Result: ";
+    PrintValue(out(), rhs) << std::endl;
+  }
+
+  inline void Respond(const std::string& rhs) {
+    ASSERT(!rhs.empty());
+    out() << std::endl << rhs << std::endl;
+  }
+
+  inline void ClearOut() {
+#if defined(OS_IS_OSX) || defined(OS_IS_LINUX)
+    system("clear");
+#elif defined(OS_IS_WINDOWS)
+    system("cls");
 #else
 #error "Unsupported Operating System"
 #endif
+  }
+
+  inline auto in() const -> std::istream& {
+    return in_;
+  }
+
+  inline auto out() const -> std::ostream& {
+    return out_;
+  }
+
+ public:
+  explicit Repl(std::istream& in, std::ostream& out, LocalScope* scope);
+  ~Repl() = default;
 
   auto GetScope() const -> LocalScope* {
     return scope_;
@@ -88,26 +78,17 @@ class Repl {
     return running_;
   }
 
-  auto Run() -> int;
-  void Print(std::string value);
-  void Print(Object* value);
-  void Terminate();
-
-  inline void Print(const std::stringstream& ss) {
-    return Print(std::move(ss.str()));
-  }
+  auto RunRepl() -> int;
 
  public:
-  static void Init(LocalScope* scope = LocalScope::New());
+  // TODO: clean this function up
+  static inline auto Run(std::istream& is = std::cin, std::ostream& os = std::cout,
+                         LocalScope* scope = LocalScope::New()) -> int {
+    ASSERT(scope);
+    Repl repl(is, os, scope);
+    return repl.RunRepl();
+  }
 };
-
-auto IsReplInitializedForCurrentThread() -> bool;
-auto GetReplForCurrentThread() -> Repl*;
-
-static inline auto RunReplInCurrentThread() -> int {
-  ASSERT(IsReplInitializedForCurrentThread());
-  return GetReplForCurrentThread()->Run();
-}
 }  // namespace gel
 
 #endif  // GEL_REPL_H

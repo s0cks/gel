@@ -1,7 +1,7 @@
 (defmacro if [test body...]
   (cond test (do body)))
 (defmacro debug-only [exprs...]
-  (when (debug?)
+  (cond (debug?)
     exprs))
 (defmacro printf [fmt args...]
   (print (format fmt args)))
@@ -28,7 +28,7 @@
 
 (defn any? [x]
   "Returns true for any Object [x]."
-  #t)
+  true)
 (defn pos? [n]
   "Returns true if Number [n] is positive."
   (> n 0))
@@ -57,8 +57,8 @@
   (defnative emit [emitter event data?]))
 
 (printf "gel v{}" (get-version))
-(debug-only
-  (print "debug mode enabled."))
+; (debug-only
+;   (print "debug mode enabled."))
 
 (import "object.cl")
 (import "events.cl")
@@ -73,10 +73,12 @@
 (import "iterator.cl")
 
 (defn apply [f seq]
-  (cond (null? seq) seq
-    (do
-      (f (car seq))
-      (apply f (cdr seq)))))
+  ; (cond (null? seq) seq
+  ;   (do
+  ;     (f (car seq))
+  ;     (apply f (cdr seq))))
+  (print (get-locals))
+      )
 
 ;; Random
 (defnative random []

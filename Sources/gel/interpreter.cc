@@ -21,10 +21,10 @@ namespace gel {
 #define TOP             (GetOperationStack()->GetTop())
 #define POP             (GetOperationStack()->Pop())
 #define POPN(N, Result) (GetOperationStack()->PopN((Result), (N), true));
-#define PUSH(Value)     (GetOperationStack()->Push(gel::IsNull((Value)) ? Null() : (Value)))
+#define PUSH(Value)     (GetOperationStack()->Push((Value)->IsNil() ? (Object*)Nil::Get() : (Value)))
 
-auto Interpreter::GetOperationStack() -> OperationStack* {
-  return runtime_->GetOperationStack();
+auto Interpreter::GetCallStack() -> CallStack& {
+  return runtime_->GetCallStack();
 }
 
 auto Interpreter::GetScope() const -> LocalScope* {
@@ -40,8 +40,8 @@ void Interpreter::LoadLocal(const uword idx) {
       const auto local = GetScope()->GetLocalAt(i);
       ASSERT(local);
       if (local->GetIndex() == idx) {
-        ASSERT(local && local->HasValue());
-        return PUSH(local->GetValue());
+        const auto value = local->HasValue() ? local->GetValue() : gel::Nil::Get();
+        return PUSH(value);
       }
     }
     scope = scope->GetParent();
@@ -79,7 +79,7 @@ void Interpreter::Push(const Bytecode code) {
       return;
     }
     case Bytecode::kPushN: {
-      const auto value = Null();
+      const auto value = Nil::Get();
       ASSERT(value);
       PUSH(value);
       return;
@@ -169,7 +169,7 @@ void Interpreter::bt() {
 
 void Interpreter::PopLookup() {
   const auto symbol = (*POP);
-  LOG_IF(FATAL, !symbol || !symbol->IsSymbol()) << "expected " << (symbol ? symbol : Null()) << " to be a Symbol.";
+  LOG_IF(FATAL, !symbol || !symbol->IsSymbol()) << "expected " << (symbol ? symbol : Nil::Get()) << " to be a Symbol.";
   return Lookup(symbol->AsSymbol());
 }
 
@@ -214,12 +214,12 @@ void Interpreter::Invoke(const Bytecode::Op op) {
   }
   ASSERT(func);
   const auto num_args = NextUWord();
-  if (func->IsNativeProcedure()) {
+  if (func->IsNative()) {
     ASSERT(op == Bytecode::kInvokeNative || op == Bytecode::kInvokeDynamic);
-    return GetRuntime()->CallWithNArgs(func->AsNativeProcedure(), num_args);
+    return GetRuntime()->CallWithNArgs(*(func->AsNativeProcedure()), num_args);
   } else if (func->IsLambda()) {
     ASSERT(op == Bytecode::kInvoke || op == Bytecode::kInvokeDynamic);
-    return GetRuntime()->CallWithNArgs(func->AsLambda(), num_args);
+    return GetRuntime()->CallWithNArgs(*(func->AsLambda()), num_args);
   }
   std::stringstream ss;
   ss << "cannot invoke: " << func->ToString();
@@ -282,13 +282,13 @@ void Interpreter::ExecUnaryOp(const Bytecode code) {
       return;
     }
     case Bytecode::kNull: {
-      const auto new_value = Bool::Box(gel::IsNull(value));
+      const auto new_value = Bool::Box(value->IsNil());
       ASSERT(new_value);
       PUSH(new_value);
       return;
     }
     case Bytecode::kNonnull: {
-      const auto new_value = Bool::Box(!gel::IsNull(value));
+      const auto new_value = Bool::Box(!value->IsNil());
       ASSERT(new_value);
       PUSH(new_value);
       return;
@@ -309,7 +309,7 @@ void Interpreter::ExecUnaryOp(const Bytecode code) {
 void Interpreter::CheckInstance(Class* cls) {
   ASSERT(cls);
   const auto top = TOP;
-  LOG_IF(FATAL, !top) << "expected " << Null() << " to be an instanceof " << cls;
+  LOG_IF(FATAL, !top) << "expected " << Nil::Get() << " to be an instanceof " << cls;
   LOG_IF(FATAL, !(*top)->GetType()->IsInstanceOf(cls->AsClass()))
       << "expected " << (*top) << " to be an instanceof " << cls;
 }
@@ -336,7 +336,7 @@ void Interpreter::Lookup(Symbol* rhs) {
       const auto gel_symbol = Symbol::New("gel", rhs->GetSymbolName());
       if (scope->Lookup(gel_symbol, &local)) {  // TODO: remove this double lookup?
         ASSERT(local);
-        const auto value = local->HasValue() ? local->GetValue() : Null();
+        const auto value = local->HasValue() ? local->GetValue() : Nil::Get();
         PUSH(value);
         return;
       }
@@ -346,7 +346,7 @@ void Interpreter::Lookup(Symbol* rhs) {
     return Throw(ss);
   }
   ASSERT(local);
-  const auto value = local->HasValue() ? local->GetValue() : Null();
+  const auto value = local->HasValue() ? local->GetValue() : Nil::Get();
   PUSH(value);
 }
 
@@ -356,7 +356,11 @@ void Interpreter::Pop() {
 }
 
 void Interpreter::Dup() {
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
+  return GetOperationStack()->Dup();
+}
+
+void Interpreter::Dup2() {
+  return GetOperationStack()->Dup2();
 }
 
 void Interpreter::LoadField(Field* field) {
@@ -365,7 +369,7 @@ void Interpreter::LoadField(Field* field) {
   ASSERT(instance);
   const auto value = (*instance)->GetField(field);
   if (!value) {
-    PUSH(Null());
+    PUSH(Nil::Get());
     return;
   }
   PUSH(value);
@@ -391,11 +395,11 @@ void Interpreter::New(Class* cls, const uword num_args) {
 
 void Interpreter::NewList(const uword length) {
   ASSERT(length >= 0);
-  auto result = Null();
+  Object* result = Nil::Get();
   for (uword idx = 0; idx < length; idx++) {
     const auto next = POP;
     LOG_IF(ERROR, !next) << "failed to pop " << length << "nth value for list.";
-    result = Cons(next.value_or(Null()), result);
+    result = Cons(next.value_or(Nil::Get()), result);
   }
   ASSERT(result);
   PUSH(result);
@@ -408,7 +412,6 @@ void Interpreter::Run(const uword start_address) {
     const auto current = GetCurrentAddress();
     const auto pos = (current - start_address);
     const auto op = NextOp();
-    Bytecode::PrintRaw(DLOG(INFO) << "executing: ", op);
     switch (op) {
       case Bytecode::kPushN:
       case Bytecode::kPushT:
@@ -422,6 +425,9 @@ void Interpreter::Run(const uword start_address) {
         continue;
       case Bytecode::kDup:
         Dup();
+        continue;
+      case Bytecode::kDup2:
+        Dup2();
         continue;
       case Bytecode::kLookup:
         PopLookup();
@@ -482,9 +488,7 @@ void Interpreter::Run(const uword start_address) {
         continue;
 #undef DECLARE_CASE
       case Bytecode::kRet: {
-        const auto frame = GetRuntime()->GetCurrentStackFrame();
-        ASSERT(frame);
-        frame->SetReturnAddress(TOP.value_or(Null())->GetStartingAddress());
+        GetCallStack()->SetReturnAddress(TOP.value_or(Nil::Get())->GetStartingAddress());
         return;
       }
       case Bytecode::kJump: {

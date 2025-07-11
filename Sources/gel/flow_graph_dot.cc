@@ -1,15 +1,14 @@
 #include "gel/flow_graph_dot.h"
 #ifdef GEL_ENABLE_GV
 
-#include <fmt/format.h>
-#include <glog/logging.h>
-
 #include <cmath>
 #include <cstdint>
+#include <fmt/format.h>
+#include <glog/logging.h>
 #include <sstream>
 
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/flow_graph.h"
 #include "gel/flow_graph_builder.h"
 #include "gel/gv.h"
@@ -76,7 +75,8 @@ auto EffectVisitor::VisitBranchInstr(ir::BranchInstr* instr) -> bool {
     join = for_join.GetEntry();
   }
   ASSERT(join);
-  SetExit(node);  // TODO: fix, the Append above for the Join sets the exit to itself and we want the BranchInstr in this case
+  SetExit(node);  // TODO: fix, the Append above for the Join sets the exit to itself and we want the BranchInstr in
+                  // this case
 
   {
     // true

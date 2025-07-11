@@ -2,7 +2,7 @@
 #include "gel/assembler_base.h"
 #include "gel/bytecode.h"
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/flow_graph_compiler.h"
 #include "gel/instruction.h"
 // TODO: add platform guard
@@ -58,55 +58,55 @@ COMPILE(LoadLocalInstr) {
 COMPILE(BinaryOpInstr) {
   ASSERT(compiler);
   switch (GetOp()) {
-    case expr::kAdd:
+    case BinaryOp::kAdd:
       __ add();
       break;
-    case expr::kSubtract:
+    case BinaryOp::kSubtract:
       __ sub();
       break;
-    case expr::kMultiply:
+    case BinaryOp::kMultiply:
       __ mul();
       break;
-    case expr::kDivide:
+    case BinaryOp::kDivide:
       __ div();
       break;
-    case expr::kModulus:
+    case BinaryOp::kModulus:
       __ mod();
       break;
-    case expr::kEq:
+    case BinaryOp::kEq:
       __ eq();
       break;
-    case expr::kBitAnd:
+    case BinaryOp::kBitAnd:
       __ band();
       break;
-    case expr::kBitOr:
+    case BinaryOp::kBitOr:
       __ bor();
       break;
-    case expr::kBitXor:
+    case BinaryOp::kBitXor:
       __ bxor();
       break;
-    case expr::kGreaterThan:
+    case BinaryOp::kGreaterThan:
       __ gt();
       break;
-    case expr::kGreaterThanEqual:
+    case BinaryOp::kGreaterThanEqual:
       __ gte();
       break;
-    case expr::kLessThan:
+    case BinaryOp::kLessThan:
       __ lt();
       break;
-    case expr::kLessThanEqual:
+    case BinaryOp::kLessThanEqual:
       __ lte();
       break;
-    case expr::kCons:
+    case BinaryOp::kCons:
       __ cons();
       break;
-    case expr::kInstanceOf:
+    case BinaryOp::kInstanceOf:
       __ instanceof();
       break;
-    case expr::kShiftLeft:
+    case BinaryOp::kShiftLeft:
       __ shl();
       break;
-    case expr::kShiftRight:
+    case BinaryOp::kShiftRight:
       __ shr();
       break;
     default:
@@ -117,22 +117,22 @@ COMPILE(BinaryOpInstr) {
 COMPILE(UnaryOpInstr) {
   ASSERT(compiler);
   switch (GetOp()) {
-    case expr::kNot:
+    case UnaryOp::kNot:
       __ negate();
       break;
-    case expr::kCar:
+    case UnaryOp::kCar:
       __ car();
       break;
-    case expr::kCdr:
+    case UnaryOp::kCdr:
       __ cdr();
       break;
-    case expr::kNonnull:
+    case UnaryOp::kNonnull:
       __ isnonnull();
       break;
-    case expr::kNull:
+    case UnaryOp::kNull:
       __ isnull();
       break;
-    case expr::kBitNot:
+    case UnaryOp::kBitNot:
       __ bnot();
       break;
     default:
@@ -173,24 +173,25 @@ COMPILE(LoadFieldInstr) {
 
 COMPILE(StoreFieldInstr) {
   ASSERT(compiler);
+  __ dup2();
   __ stfield(GetField());
 }
 
 COMPILE(BranchInstr) {
   ASSERT(compiler);
-  Label* tbranch = compiler->GetBlockLabel(GetTrueTarget());
+  Label* branch = compiler->GetBlockLabel(GetTrueTarget());
   switch (condition_) {
     case kTrue:
-      __ Branch(BranchCondition::kIsTrue, tbranch);
+      __ Branch(BranchCondition::kIsTrue, branch);
       break;
     case kNotTrue:
-      __ Branch(BranchCondition::kIsFalse, tbranch);
+      __ Branch(BranchCondition::kIsFalse, branch);
       break;
     case kEqual:
-      __ Branch(BranchCondition::kEquals, tbranch);
+      __ Branch(BranchCondition::kEquals, branch);
       break;
     case kNotEqual:
-      __ Branch(BranchCondition::kNotEquals, tbranch);
+      __ Branch(BranchCondition::kNotEquals, branch);
       break;
     default:
       LOG(FATAL) << "invalid condition: " << condition_;

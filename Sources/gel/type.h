@@ -28,6 +28,7 @@ class Definition;
 #endif  // GEL_ENABLE_GLM
 
 #define FOR_EACH_PRIMITIVE_TYPE(V) \
+  V(Nil)                           \
   V(Seq)                           \
   V(Iterator)                      \
   V(Class)                         \

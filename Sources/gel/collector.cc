@@ -49,7 +49,7 @@ auto Collector::VisitRoots(PointerPointerVisitor* vis) -> bool {
   if (!runtime->VisitPointerPointers(vis))
     return false;
 
-  StackFrameIterator iter(runtime);
+  CallStack::Iterator iter(runtime->GetCallStack());
   while (iter.HasNext()) {
     auto next = iter.Next();
     ASSERT(next);

@@ -5,7 +5,7 @@
 #include <filesystem>
 
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/macro.h"
 #include "gel/namespace.h"
 #include "gel/object.h"
@@ -35,6 +35,9 @@ class Module : public Object {
   friend class BaseModuleLoader;
   friend class KernelModuleLoader;
 
+ public:
+  using Predicate = std::function<bool(Module*)>;
+
  private:
   LocalScope* scope_;
   Constructor* init_ = nullptr;
@@ -42,10 +45,8 @@ class Module : public Object {
   ModuleLoader* loader_ = nullptr;
 
   static inline auto CreateDefaultNamespace(Module* m) -> Namespace* {
-    ASSERT(m);
-    const auto name = m->GetName();
-    ASSERT(name);
-    const auto ns = Namespace::New(Symbol::New(name), LocalScope::New());
+    ASSERT(m && m->HasSymbol());
+    const auto ns = Namespace::New(m->GetSymbol(), LocalScope::New());
     ASSERT(ns);
     ns->SetOwner(m);
     return ns;
@@ -59,11 +60,11 @@ class Module : public Object {
   }
 
  protected:
-  explicit Module(String* name, LocalScope* scope) :
+  explicit Module(Symbol* sym, LocalScope* scope) :
     Object(),
     scope_(scope) {
     ASSERT(scope_);
-    SetName(name);
+    SetSymbol(sym);
     SetInitialized(false);
     SetKernel(false);
     SetNamespaces(CreateDefaultNamespaces(this));
@@ -90,10 +91,10 @@ class Module : public Object {
     return SetInitialized(Bool::Box(rhs));
   }
 
-  void SetName(String* rhs) {
+  void SetSymbol(Symbol* rhs) {
     ASSERT(rhs);
-    ASSERT(kNameField);
-    SetField(kNameField, rhs);
+    ASSERT(kSymbolField);
+    SetField(kSymbolField, rhs);
   }
 
   void SetNamespaces(Array<Namespace*>* rhs) {
@@ -105,7 +106,6 @@ class Module : public Object {
     return SetInitialized(false);
   }
 
-  auto Init(Runtime* runtime) -> bool;
   auto VisitPointers(PointerVisitor* vis) -> bool override;
   auto VisitPointerPointers(PointerPointerVisitor* vis) -> bool override;
 
@@ -147,9 +147,9 @@ class Module : public Object {
     return GetInitialized()->Get();
   }
 
-  auto GetName() const -> String* {
-    ASSERT(kNameField);
-    return GetField(kNameField)->AsString();
+  auto GetSymbol() const -> Symbol* {
+    ASSERT(kSymbolField);
+    return GetField(kSymbolField)->AsSymbol();
   }
 
   auto GetScope() const -> LocalScope* {
@@ -157,7 +157,7 @@ class Module : public Object {
   }
 
   auto FindNamespace(const std::string& name) const -> Namespace* {
-    return namespaces_ ? namespaces_->FindIf(Namespace::IsNamed(name)) : nullptr;
+    return namespaces_ ? namespaces_->FindIf(IsNamed<Namespace>(name)) : nullptr;
   }
 
   auto GetNamespaces() const -> Array<Namespace*>* {
@@ -181,9 +181,10 @@ class Module : public Object {
     return GetInit() != nullptr;
   }
 
-  inline auto HasName() const -> bool {
-    ASSERT(kNameField);
-    return GetName() != nullptr;
+  auto Init(Runtime* runtime) -> bool;
+
+  inline auto HasSymbol() const -> bool {
+    return GetSymbol() != nullptr;
   }
 
   auto IsKernel() const -> bool {
@@ -195,19 +196,13 @@ class Module : public Object {
  private:
   static Field* kKernelField;
   static Field* kFieldInitialized;
-  static Field* kNameField;
-  static inline auto IsNamed(std::string name) -> std::function<bool(Module*)> {
-    return [name](Module* m) {
-      ASSERT(m);
-      return m && name == m->GetName()->Get();
-    };
-  }
+  static Field* kSymbolField;
 
  public:
   static void Init();
   static void GetAllLoadedModules(std::vector<Module*>& modules);
   static auto Find(const std::string& name) -> Module*;
-  static auto New(String* name, LocalScope* scope) -> Module*;
+  static auto New(Symbol* name, LocalScope* scope) -> Module*;
   static auto CreateConstructor(Module* rhs, expr::SeqExpr* body = nullptr) -> Constructor*;
   static auto FindOrLoad(const std::string& name) -> Module*;
   static auto LoadFrom(const std::filesystem::path& abs_path) -> Module*;
@@ -219,6 +214,8 @@ class Module : public Object {
     return Find(name) != nullptr;
   }
 };
+static_assert(WithSymbol<Module>);
+static_assert(WithInit<Module>);
 
 namespace proc {
 _DECLARE_NATIVE_PROCEDURE(gel_get_modules, "gel/get-modules");

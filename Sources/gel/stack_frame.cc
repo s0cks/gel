@@ -79,15 +79,15 @@ StackFrameGuardBase::StackFrameGuardBase(TargetInfoCallback target_info) :
   target_info_(target_info) {
   const auto runtime = GetRuntime();
   ASSERT(runtime);
-  if (runtime->HasStackFrame())
-    enter_ = runtime->GetCurrentStackFrame();
+  if (!runtime->GetCallStack().IsEmpty())
+    enter_ = runtime->GetCallStack().GetTop();
 }
 
 StackFrameGuardBase::~StackFrameGuardBase() {
   const auto runtime = GetRuntime();
   ASSERT(runtime);
-  if (runtime->HasStackFrame())
-    exit_ = runtime->GetCurrentStackFrame();
+  if (!runtime->GetCallStack().IsEmpty())
+    exit_ = runtime->GetCallStack().GetTop();
   if ((!enter_ && !exit_) || (enter_ == exit_) || std::uncaught_exceptions() > 0)
     return;
   LOG(ERROR) << "Error: Invalid frame state after executing target";
@@ -124,10 +124,4 @@ void StackFrameLogger::Visit(const StackFrame& frame) {
   LocalScopePrinter::Print<google::INFO, false>(frame.GetLocals(), file(), line(), indent());
 }
 #undef __
-
-StackFrameIterator::StackFrameIterator(Runtime* runtime) :
-  stack_() {
-  ASSERT(runtime);
-  stack_ = runtime->stack_;
-}
 }  // namespace gel

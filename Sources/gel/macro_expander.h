@@ -2,9 +2,12 @@
 #define GEL_MACRO_EXPANDER_H
 
 #include "gel/common.h"
-#include "gel/expression.h"
-#include "gel/expression_dot.h"
+#include "gel/expr/expression.h"
+#include "gel/expr/expression_dot.h"
+#include "gel/expr/invoke_macro_expr.h"
+#include "gel/expr/seq_expr.h"
 #include "gel/flags.h"
+#include "gel/flow_graph_builder.h"
 #include "gel/local.h"
 #include "gel/local_scope.h"
 
@@ -71,23 +74,25 @@ class MacroExpander {
     return scope_;
   }
 
-  template <class T>
-  auto ExpandAll(T* target, std::enable_if_t<gel::has_code<T>::value>* = nullptr) -> bool;
+  template <HasBodyExpr T>
+  auto ExpandAll(T* target) -> bool;
 
  public:
-  template <class T>
-  static inline void ExpandAll(T* target, LocalScope* locals, std::enable_if_t<gel::has_code<T>::value>* = nullptr) {
+  template <HasBodyExpr T>
+  static inline void ExpandAll(T* target, LocalScope* locals) {
     ASSERT(target);
     ASSERT(locals);
     const auto target_name = target->GetTargetName();
     if (FLAGS_dump_ast) {
-      expr::GenerateExprDotPng(fmt::format("reports/{}-pre-expansion.png", target_name), target_name, target->GetBody());
+      expr::GenerateExprDotPng(fmt::format("reports/{}-pre-expansion.png", target_name), target_name,
+                               target->GetBody());
     }
     MacroExpander expander(locals);
     LOG_IF(FATAL, !expander.ExpandAll(target)) << "failed to expand macros in " << target->ToString();
     if (FLAGS_dump_ast) {
       if (FLAGS_dump_ast) {
-        expr::GenerateExprDotPng(fmt::format("reports/{}-post-expansion.png", target_name), target_name, target->GetBody());
+        expr::GenerateExprDotPng(fmt::format("reports/{}-post-expansion.png", target_name), target_name,
+                                 target->GetBody());
       }
     }
   }
@@ -118,7 +123,8 @@ class MacroEffectVisitor : public ExpressionVisitor {
     return false;
   }
 
-  virtual auto VisitExpressionList(const expr::ExpressionList& source, expr::ExpressionList& dest, bool* changed) -> bool;
+  virtual auto VisitExpressionList(const expr::ExpressionList& source, expr::ExpressionList& dest, bool* changed)
+      -> bool;
 
  public:
   explicit MacroEffectVisitor(MacroExpander* owner) :
@@ -169,12 +175,16 @@ class MacroEffectVisitor : public ExpressionVisitor {
 
   auto operator()(expr::Expression* expr) -> bool {
     ASSERT(expr);
-    return expr->Accept(this);
+    return expr->Accept(*this);
   }
 
 #define DECLARE_VISIT(Name) auto Visit##Name(expr::Name* expr)->bool override;
   FOR_EACH_EXPRESSION_NODE(DECLARE_VISIT)
 #undef DECLARE_VISIT
+
+  operator expr::Expression*() const {
+    return GetResult();
+  }
 };
 
 class MacroExpansionSiteEffectVisitor : public MacroEffectVisitor {
@@ -185,7 +195,8 @@ class MacroExpansionSiteEffectVisitor : public MacroEffectVisitor {
 
  protected:
   auto Expand(expr::LiteralExpr* expr, expr::ExpressionList& results) -> bool override;
-  auto VisitExpressionList(const expr::ExpressionList& source, expr::ExpressionList& dest, bool* changed) -> bool override;
+  auto VisitExpressionList(const expr::ExpressionList& source, expr::ExpressionList& dest, bool* changed)
+      -> bool override;
 
  public:
   MacroExpansionSiteEffectVisitor(MacroExpander* owner, const expr::MacroExpansionSite& site) :
@@ -198,18 +209,17 @@ class MacroExpansionSiteEffectVisitor : public MacroEffectVisitor {
   }
 
   auto VisitInvokeExpr(expr::InvokeExpr* expr) -> bool override;
-  auto VisitWhenExpr(expr::WhenExpr* expr) -> bool override;
   auto VisitLiteralExpr(expr::LiteralExpr* expr) -> bool override;
 };
 
-template <class T>
-auto MacroExpander::ExpandAll(T* target, std::enable_if_t<gel::has_code<T>::value>*) -> bool {
+template <HasBodyExpr T>
+auto MacroExpander::ExpandAll(T* target) -> bool {
   ASSERT(target);
   ExpanderScope scope(this);
   if (target->HasScope())
     scope->AddAll(target->GetScope());
   MacroEffectVisitor for_effect(this);
-  if (!target->GetBody()->Accept(&for_effect)) {
+  if (!target->GetBody()->Accept(for_effect)) {
     LOG(ERROR) << "failed to visit " << target->ToString() << " body.";
     return false;
   }

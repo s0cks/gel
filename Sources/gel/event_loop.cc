@@ -10,6 +10,7 @@
 
 #include "gel/common.h"
 #include "gel/error.h"
+#include "gel/hashcode.h"
 #include "gel/object.h"
 #include "gel/platform.h"
 #include "gel/pointer.h"
@@ -22,20 +23,20 @@
 
 namespace gel {
 auto WrapOnError(Procedure* on_error) -> OnErrorCallback {
-  return gel::IsNull(on_error) ? OnErrorCallback{} : [on_error](Error* error) {
-    return GetRuntime()->Call(on_error, ObjectList{error});
+  return on_error->IsError() ? OnErrorCallback{} : [on_error](Error* error) {
+    return GetRuntime()->Call(*on_error, ObjectList{error});
   };
 }
 
 auto WrapOnSuccess(Procedure* on_success) -> OnSuccessCallback {
-  return gel::IsNull(on_success) ? OnSuccessCallback{} : [on_success]() {
-    return GetRuntime()->Call(on_success);
+  return on_success->IsNil() ? OnSuccessCallback{} : [on_success]() {
+    return GetRuntime()->Call(*on_success);
   };
 }
 
 auto WrapOnFinished(Procedure* on_finished) -> OnFinishedCallback {
-  return gel::IsNull(on_finished) ? OnFinishedCallback{} : [on_finished]() {
-    return GetRuntime()->Call(on_finished);
+  return on_finished->IsNil() ? OnFinishedCallback{} : [on_finished]() {
+    return GetRuntime()->Call(*on_finished);
   };
 }
 
@@ -67,13 +68,14 @@ auto EventLoop::GetTimer(const uword idx) const -> Timer* {
   });
   return pos != std::end(timers()) ? (*pos) : nullptr;
 }
+
 auto EventLoop::Stat(const std::string& path, Procedure* on_next, Procedure* on_error, Procedure* on_finished) -> bool {
   ASSERT(!path.empty());
   ASSERT(on_next);
   return Stat(
       path,
       [on_next](int stat) {
-        return GetRuntime()->Call(on_next, {Long::New(stat)});
+        return GetRuntime()->Call(*on_next, {Long::New(stat)});
       },
       WrapOnError(on_error), WrapOnFinished(on_finished));
 }
@@ -136,9 +138,9 @@ auto EventLoop::ToString() const -> std::string {
   return helper;
 }
 
-auto EventLoop::HashCode() const -> uword {
+auto EventLoop::GetHashCode() const -> HashCode {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return 0;
+  return kInvalidHashCode;
 }
 
 auto EventLoop::Equals(Object* rhs) const -> bool {

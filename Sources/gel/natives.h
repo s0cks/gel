@@ -20,8 +20,6 @@ DECLARE_NATIVE_PROCEDURE(exit);
 DECLARE_NATIVE_PROCEDURE(random);
 
 _DECLARE_NATIVE_PROCEDURE(rand_range, "random:range");
-_DECLARE_NATIVE_PROCEDURE(set_car, "set-car!");
-_DECLARE_NATIVE_PROCEDURE(set_cdr, "set-cdr!");
 _DECLARE_GEL_NATIVE_PROCEDURE(on_shutdown, "on-shutdown");
 _DECLARE_GEL_NATIVE_PROCEDURE(queue_utask, "queue-utask");
 
@@ -155,9 +153,8 @@ _DECLARE_NATIVE_PROCEDURE(gel_major_gc, "gel/major-gc!");
 _DECLARE_NATIVE_PROCEDURE(gel_print_heap, "gel/print-heap");
 _DECLARE_NATIVE_PROCEDURE(gel_print_new_zone, "gel/print-new-zone");
 _DECLARE_NATIVE_PROCEDURE(gel_print_old_zone, "gel/print-old-zone");
-_DECLARE_NATIVE_PROCEDURE(gel_get_frame, "gel/get-frame");
+_DECLARE_NATIVE_PROCEDURE(gel_numrefs, "gel/numrefs");
 
-_DECLARE_NATIVE_PROCEDURE(gel_print_st, "gel/print-st");
 _DECLARE_NATIVE_PROCEDURE(gel_get_locals, "gel/get-locals");
 _DECLARE_NATIVE_PROCEDURE(gel_get_target_triple, "gel/get-target-triple");
 _DECLARE_NATIVE_PROCEDURE(gel_get_natives, "gel/get-natives");

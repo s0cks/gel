@@ -7,7 +7,8 @@
 #include "gel/argument.h"
 #include "gel/common.h"
 #include "gel/compiled_code.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
+#include "gel/expr/seq_expr.h"
 #include "gel/local_scope.h"
 #include "gel/native_procedure.h"
 #include "gel/object.h"
@@ -100,6 +101,14 @@ class Lambda : public Procedure {
     return code_;
   }
 
+  inline auto IsCompiled() const -> bool {
+    return GetCode() != nullptr;
+  }
+
+  friend auto operator<<(std::ostream& stream, const Lambda& rhs) -> std::ostream& {
+    return stream << rhs.ToString();
+  }
+
   DECLARE_TYPE(Lambda);
 
  public:
@@ -111,6 +120,9 @@ class Lambda : public Procedure {
     return new Lambda(nullptr, args, body);
   }
 };
+static_assert(WithSymbol<Lambda>);
+static_assert(HasMutableSymbol<Lambda>);
+static_assert(HasDocstring<Lambda>);
 }  // namespace gel
 
 #endif  // GEL_LAMBDA_H

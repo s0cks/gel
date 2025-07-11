@@ -1,5 +1,7 @@
+#include "gel/common.h"
 #include "gel/native_procedure.h"
 #include "gel/natives.h"
+#include "gel/object.h"
 #ifdef GEL_DEBUG
 
 #include "gel/collector.h"
@@ -33,6 +35,12 @@ NATIVE_PROCEDURE_F(gel_print_old_zone) {
   return Return();
 }
 
+NATIVE_PROCEDURE_F(gel_numrefs) {
+  REQUIRED_NATIVE_ARG(0, Object, value);
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return ReturnLong();
+}
+
 NATIVE_PROCEDURE_F(gel_print_roots) {
   PrintRoots();
   return ReturnNull();
@@ -56,36 +64,13 @@ NATIVE_PROCEDURE_F(gel_get_debug) {
 #endif  // GEL_DEBUG
 }
 
-NATIVE_PROCEDURE_F(gel_get_frame) {
-  const auto runtime = GetRuntime();
-  ASSERT(runtime);
-  DLOG(INFO) << "stack frames:";
-  StackFrameIterator iter(runtime->stack_);
-  while (iter.HasNext()) {
-    DLOG(INFO) << "- " << iter.Next();
-  }
-  return DoNothing();
-}
-
-NATIVE_PROCEDURE_F(gel_print_st) {
-  const auto runtime = GetRuntime();
-  ASSERT(runtime);
-  LOG(INFO) << "Stack Trace:";
-  StackFrameIterator iter(runtime->stack_);
-  while (iter.HasNext()) {
-    const auto& next = iter.Next();
-    LOG(INFO) << "  " << next->GetId() << ": " << next->GetTargetName();
-  }
-  return DoNothing();
-}
-
 NATIVE_PROCEDURE_F(gel_get_locals) {
   ASSERT(HasRuntime());
   ASSERT(args.empty());
   LocalScope::Iterator iter(GetRuntime()->GetScope());
   return Return(gel::ToList<LocalScope::Iterator, LocalVariable*>(iter, [](LocalVariable* local) -> Object* {
     return gel::ToList(ObjectList{
-        local->HasValue() ? local->GetValue() : Null(),
+        local->HasValue() ? local->GetValue() : Nil::Get(),
         String::New(local->GetSymbol()),
     });
   }));
@@ -98,7 +83,7 @@ NATIVE_PROCEDURE_F(gel_get_target_triple) {
 NATIVE_PROCEDURE_F(gel_get_natives) {
   ASSERT(args.empty());
   const auto& natives = NativeProcedure::GetAll();
-  Object* result = Null();
+  Object* result = Nil::Get();
   for (const auto& native : natives) {
     result = Pair::New(String::ValueOf(native->GetSymbol()), result);
   }

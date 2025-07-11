@@ -6,6 +6,7 @@
 #include "gel/common.h"
 #include "gel/native_procedure.h"
 #include "gel/object.h"
+#include "gel/pair.h"
 #include "gel/procedure.h"
 #include "gel/trie.h"
 
@@ -87,7 +88,7 @@ class EventEmitter : public Object {
   ~EventEmitter() override = default;
 
   void On(String* event, Procedure* callback);
-  void Emit(String* event, Object* data = Null());
+  void Emit(String* event, Object* data = Nil::Get());
 
   DECLARE_TYPE(EventEmitter);
 

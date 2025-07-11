@@ -10,7 +10,7 @@
 #include "gel/binary_op.h"
 #include "gel/bitvector.h"
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/lambda.h"
 #include "gel/local.h"
 #include "gel/object.h"
@@ -68,7 +68,7 @@ class InstructionVisitor {
 
  public:
   virtual ~InstructionVisitor() = default;
-#define DECLARE_VISIT(Name) virtual auto Visit##Name##Instr(Name##Instr* instr)->bool = 0;
+#define DECLARE_VISIT(Name) virtual auto Visit##Name##Instr(Name##Instr* instr) -> bool = 0;
   FOR_EACH_INSTRUCTION(DECLARE_VISIT)
 #undef DECLARE_VISIT
 };
@@ -145,12 +145,12 @@ class Instruction {
     return AsDefinition() != nullptr;
   }
 
-#define DEFINE_TYPE_CHECK(Name)                  \
-  virtual auto As##Name##Instr()->Name##Instr* { \
-    return nullptr;                              \
-  }                                              \
-  auto Is##Name##Instr()->bool {                 \
-    return As##Name##Instr() != nullptr;         \
+#define DEFINE_TYPE_CHECK(Name)                    \
+  virtual auto As##Name##Instr() -> Name##Instr* { \
+    return nullptr;                                \
+  }                                                \
+  auto Is##Name##Instr() -> bool {                 \
+    return As##Name##Instr() != nullptr;           \
   }
   FOR_EACH_INSTRUCTION(DEFINE_TYPE_CHECK)
 #undef DEFINE_TYPE_CHECK
@@ -164,6 +164,14 @@ class Instruction {
   }
 };
 
+template <class T>
+concept IsEntryInstr = std::convertible_to<T, ir::EntryInstr>;
+
+template <class T>
+concept HasEntryInstr = requires(T value) {
+  { value.GetEntry() } -> IsEntryInstr;
+};
+
 class InstructionIterator {
   DEFINE_NON_COPYABLE_TYPE(InstructionIterator);
 
@@ -173,8 +181,8 @@ class InstructionIterator {
  public:
   explicit InstructionIterator(Instruction* start) :
     current_(start) {}
-  template <class E>
-  explicit InstructionIterator(E* executable, std::enable_if_t<gel::is_executable<E>::value>* = nullptr) :
+  template <HasEntryInstr E>
+  explicit InstructionIterator(E* executable) :
     current_(nullptr) {
     ASSERT(executable);
     current_ = executable->GetEntry();
@@ -204,7 +212,7 @@ class InstructionIterator {
   auto GetName() const -> const char* override {         \
     return #Name;                                        \
   }                                                      \
-  auto As##Name()->Name* override {                      \
+  auto As##Name() -> Name* override {                    \
     return this;                                         \
   }
 
@@ -815,7 +823,7 @@ class InvokeNativeInstr : public InvokeInstr {
   ~InvokeNativeInstr() override = default;
 
   auto GetNativeProcedure() const -> NativeProcedure* {
-    ASSERT(GetProcedure()->IsNativeProcedure());
+    ASSERT(GetProcedure()->IsNative());
     return GetProcedure()->AsNativeProcedure();
   }
 
@@ -906,14 +914,14 @@ class TemplateOpInstr : public Definition {
   }
 };
 
-class BinaryOpInstr : public TemplateOpInstr<expr::BinaryOp> {
+class BinaryOpInstr : public TemplateOpInstr<BinaryOp> {
  private:
   Definition* left_ = nullptr;
   Definition* right_ = nullptr;
 
  protected:
-  explicit BinaryOpInstr(const expr::BinaryOp op, Definition* left, Definition* right) :
-    TemplateOpInstr<expr::BinaryOp>(op) {
+  explicit BinaryOpInstr(const BinaryOp op, Definition* left, Definition* right) :
+    TemplateOpInstr<BinaryOp>(op) {
     SetLeft(left);
     SetRight(right);
   }
@@ -939,9 +947,9 @@ class BinaryOpInstr : public TemplateOpInstr<expr::BinaryOp> {
     return right_;
   }
 
-#define DEFINE_OP_CHECK(Name)                  \
-  inline auto Is##Name##Op() const->bool {     \
-    return GetOp() == expr::BinaryOp::k##Name; \
+#define DEFINE_OP_CHECK(Name)                \
+  inline auto Is##Name##Op() const -> bool { \
+    return GetOp() == BinaryOp::k##Name;     \
   }
   FOR_EACH_BINARY_OP(DEFINE_OP_CHECK)
 #undef DEFINE_OP_CHECK
@@ -949,25 +957,25 @@ class BinaryOpInstr : public TemplateOpInstr<expr::BinaryOp> {
   DECLARE_INSTRUCTION(BinaryOpInstr);
 
  public:
-  static inline auto New(const expr::BinaryOp op, Definition* left, Definition* right) -> BinaryOpInstr* {
+  static inline auto New(const BinaryOp op, Definition* left, Definition* right) -> BinaryOpInstr* {
     return new BinaryOpInstr(op, left, right);
   }
 
-#define DEFINE_NEW_OP(Name)                                                           \
-  static inline auto New##Name(Definition* left, Definition* right)->BinaryOpInstr* { \
-    return New(expr::BinaryOp::k##Name, left, right);                                 \
+#define DEFINE_NEW_OP(Name)                                                             \
+  static inline auto New##Name(Definition* left, Definition* right) -> BinaryOpInstr* { \
+    return New(BinaryOp::k##Name, left, right);                                         \
   }
   FOR_EACH_BINARY_OP(DEFINE_NEW_OP)
 #undef DEFINE_NEW_OP
 };
 
-class UnaryOpInstr : public TemplateOpInstr<expr::UnaryOp> {
+class UnaryOpInstr : public TemplateOpInstr<UnaryOp> {
  private:
   Definition* value_ = nullptr;
 
  protected:
-  explicit UnaryOpInstr(const expr::UnaryOp op, Definition* value) :
-    TemplateOpInstr<expr::UnaryOp>(op) {
+  explicit UnaryOpInstr(const UnaryOp op, Definition* value) :
+    TemplateOpInstr<UnaryOp>(op) {
     SetValue(value);
   }
 
@@ -983,9 +991,9 @@ class UnaryOpInstr : public TemplateOpInstr<expr::UnaryOp> {
     return value_;
   }
 
-#define DEFINE_OP_CHECK(Name)                 \
-  inline auto Is##Name##Op() const->bool {    \
-    return GetOp() == expr::UnaryOp::k##Name; \
+#define DEFINE_OP_CHECK(Name)                \
+  inline auto Is##Name##Op() const -> bool { \
+    return GetOp() == UnaryOp::k##Name;      \
   }
   FOR_EACH_UNARY_OP(DEFINE_OP_CHECK)
 #undef DEFINE_OP_CHECK
@@ -993,13 +1001,13 @@ class UnaryOpInstr : public TemplateOpInstr<expr::UnaryOp> {
   DECLARE_INSTRUCTION(UnaryOpInstr);
 
  public:
-  static inline auto New(const expr::UnaryOp op, Definition* value) -> UnaryOpInstr* {
+  static inline auto New(const UnaryOp op, Definition* value) -> UnaryOpInstr* {
     return new UnaryOpInstr(op, value);
   }
 
-#define DEFINE_NEW_OP(Name)                                        \
-  static inline auto New##Name(Definition* value)->UnaryOpInstr* { \
-    return New(expr::UnaryOp::k##Name, value);                     \
+#define DEFINE_NEW_OP(Name)                                          \
+  static inline auto New##Name(Definition* value) -> UnaryOpInstr* { \
+    return New(UnaryOp::k##Name, value);                             \
   }
   FOR_EACH_UNARY_OP(DEFINE_NEW_OP)
 #undef DEFINE_NEW_OP
@@ -1465,8 +1473,8 @@ class InstructionLogger {
     }
   }
 
-  template <class E, const Severity S = google::INFO, const bool OnlyOne = false>
-  static inline void Log(E* executable, std::enable_if_t<gel::is_executable<E>::value>* = nullptr) {
+  template <ir::HasEntryInstr E, const Severity S = google::INFO, const bool OnlyOne = false>
+  static inline void Log(E* executable) {
     ASSERT(executable);
     return Log<S, OnlyOne>(executable->GetEntry());
   }

@@ -15,7 +15,7 @@ auto Constructor::Equals(Object* rhs) const -> bool {
   return false;
 }
 
-auto Constructor::HashCode() const -> uword {
+auto Constructor::GetHashCode() const -> HashCode {
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return 0;
 }

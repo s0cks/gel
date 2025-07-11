@@ -1,12 +1,14 @@
 #ifndef GEL_STACK_FRAME_H
 #define GEL_STACK_FRAME_H
 
+#include <concepts>
 #include <ostream>
 #include <stack>
 #include <type_traits>
 #include <variant>
 
 #include "gel/common.h"
+#include "gel/compiled_code.h"
 #include "gel/disassembler.h"
 #include "gel/instruction.h"
 #include "gel/native_procedure.h"
@@ -18,39 +20,26 @@
 #include "gel/util.h"
 
 namespace gel {
-template <typename T>
-struct is_stack_frame_target {
-  static constexpr const auto value = false;
-};
 
-#define DECLARE_IS_STACK_FRAME_TARGET(Name)   \
-  template <>                                 \
-  struct is_stack_frame_target<gel::Name> {   \
-    static constexpr const auto value = true; \
-  };
-DECLARE_IS_STACK_FRAME_TARGET(Script);
-DECLARE_IS_STACK_FRAME_TARGET(Lambda);
-DECLARE_IS_STACK_FRAME_TARGET(Constructor);
-DECLARE_IS_STACK_FRAME_TARGET(NativeProcedure);
-#undef DECLARE_IS_STACK_FRAME_TARGET
+template <class T>
+concept StackFrameTarget = HasCompiledCode<T> || std::same_as<T, NativeProcedure>;
 
 class StackFrame {  // TODO: extend Object
   friend class Runtime;
+  friend class CallStack;
   friend class Collector;
   friend class Interpreter;
   friend class NativeProcedureEntry;
   DEFINE_DEFAULT_COPYABLE_TYPE(StackFrame);
 
  private:
-  uint64_t id_;
-  Object* target_;
-  LocalScope* locals_;
-  uword return_address_;
+  uint64_t id_ = 0;
+  Object* target_ = UNALLOCATED;
+  LocalScope* locals_ = UNALLOCATED;
+  uword return_address_ = UNALLOCATED;
   OperationStack stack_{};
 
-  template <typename T>
-  StackFrame(const uword id, T* target, LocalScope* locals, const uword return_address = UNALLOCATED,
-             std::enable_if_t<gel::is_stack_frame_target<T>::value>* = nullptr) :
+  StackFrame(const uword id, Object* target, LocalScope* locals, const uword return_address = UNALLOCATED) :
     id_(id),
     target_(target),
     locals_(locals),
@@ -65,11 +54,16 @@ class StackFrame {  // TODO: extend Object
   }
 
  public:
-  StackFrame() :
-    id_(0),
-    target_(nullptr),
-    locals_(nullptr),
-    return_address_(UNALLOCATED) {}
+  StackFrame() = default;
+  template <StackFrameTarget Target>
+  StackFrame(const uword id, Target* target, LocalScope* locals, const uword return_address = UNALLOCATED) :
+    id_(id),
+    target_(target),
+    locals_(locals),
+    return_address_(return_address) {
+    ASSERT(target_);
+    ASSERT(locals);
+  }
   ~StackFrame() = default;
 
   auto stack() const -> const OperationStack& {
@@ -81,7 +75,7 @@ class StackFrame {  // TODO: extend Object
   }
 
   auto GetStackTop() -> Object* {
-    return !stack_.IsEmpty() ? stack_.top() : Null();
+    return !stack_.IsEmpty() ? stack_.top() : Nil::Get();
   }
 
   auto GetId() const -> uword {
@@ -143,29 +137,6 @@ class StackFrame {  // TODO: extend Object
   }
 };
 
-class StackFrameIterator {
-  DEFINE_NON_COPYABLE_TYPE(StackFrameIterator);
-
- private:
-  std::stack<StackFrame*> stack_;
-
- public:
-  explicit StackFrameIterator(const std::stack<StackFrame*>& stack) :
-    stack_(stack) {}
-  explicit StackFrameIterator(Runtime* runtime);
-  ~StackFrameIterator() = default;
-
-  auto HasNext() const -> bool {
-    return !stack_.empty();
-  }
-
-  auto Next() -> StackFrame* {
-    const auto next = stack_.top();
-    stack_.pop();
-    return next;
-  }
-};
-
 class StackFrameLogger : public PrettyLogger {
   using Severity = google::LogSeverity;
   DEFINE_NON_COPYABLE_TYPE(StackFrameLogger);
@@ -174,7 +145,8 @@ class StackFrameLogger : public PrettyLogger {
   bool recursive_;
 
  public:
-  explicit StackFrameLogger(const char* file, const int line, const Severity severity, const int indent, const bool recursive) :
+  explicit StackFrameLogger(const char* file, const int line, const Severity severity, const int indent,
+                            const bool recursive) :
     PrettyLogger(file, line, severity, indent),
     recursive_(recursive) {}
   ~StackFrameLogger() override = default;
@@ -209,15 +181,14 @@ class StackFrameGuardBase {
   virtual ~StackFrameGuardBase();
 };
 
-template <typename T, typename = typename std::enable_if_t<gel::is_executable<T>::value && gel::has_to_string<T>::value &&
-                                                           gel::is_stack_frame_target<T>::value>>
+template <StackFrameTarget Target>
 class StackFrameGuard : public StackFrameGuardBase {
   DEFINE_NON_COPYABLE_TYPE(StackFrameGuard);
 
  private:
-  T* target_;
+  Target* target_;
 
-  static inline auto PrintTargetInfo(T* target) -> TargetInfoCallback {
+  static inline auto PrintTargetInfo(Target* target) -> TargetInfoCallback {
     ASSERT(target);
     return [target]() {
       ASSERT(target);
@@ -232,14 +203,14 @@ class StackFrameGuard : public StackFrameGuardBase {
   }
 
  public:
-  explicit StackFrameGuard(T* target) :
+  explicit StackFrameGuard(Target* target) :
     StackFrameGuardBase(PrintTargetInfo(target)),
     target_(target) {
     ASSERT(target_);
   }
   ~StackFrameGuard() override = default;
 
-  auto GetTarget() const -> T* {
+  auto GetTarget() const -> Target* {
     return target_;
   }
 };

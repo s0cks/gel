@@ -8,7 +8,9 @@
 
 #include "gel/argument.h"
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
+#include "gel/expr/exprs.h"
+#include "gel/expr/seq_expr.h"
 #include "gel/lambda.h"
 #include "gel/local.h"
 #include "gel/local_scope.h"
@@ -178,23 +180,26 @@ void Parser::PopTopLevel() {
   }
 }
 
-template <class T>
-auto Parser::TryParseDocstring(T* owner, std::enable_if_t<gel::has_docs<T>::value>*) -> ParseResult {
+template <HasDocstring T>
+auto Parser::TryParseDocstring(T* owner) -> ParseResult {
   ASSERT(owner);
   if (PeekEq(Token::kLiteralString)) {
     String* docstring = nullptr;
     CHECK_RESULT(ParseLiteralString(&docstring));
     ASSERT(docstring);
-    owner->SetDocs(docstring);
+    owner->SetDocstring(docstring);
   }
   return true;
 }
 
-template auto Parser::TryParseDocstring(Lambda*, void*) -> ParseResult;
-template auto Parser::TryParseDocstring(Namespace*, void*) -> ParseResult;
+template auto Parser::TryParseDocstring(Macro*) -> ParseResult;
+template auto Parser::TryParseDocstring(Lambda*) -> ParseResult;
+template auto Parser::TryParseDocstring(Namespace*) -> ParseResult;
 
-template <class T>
-auto Parser::TryParseSymbol(T* owner, std::enable_if_t<gel::has_symbol<T>::value>*) -> ParseResult {
+template <WithSymbol T>
+auto Parser::TryParseSymbol(T* owner) -> ParseResult
+  requires(HasMutableSymbol<T>)
+{
   ASSERT(owner);
   Symbol* symbol = nullptr;
   if (PeekEq(Token::kIdentifier)) {
@@ -379,6 +384,10 @@ auto Parser::ParseLiteralValue(Object** result) -> ParseResult {
       return ParseLiteralString((String**)result);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
     case Token::kIdentifier:
       return ParseLiteralSymbol((Symbol**)result);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+    case Token::kLiteralNil:
+      NextToken();
+      (*result) = Nil::Get();
+      return true;
     default:
       return UnexpectedError(NextToken());
   }
@@ -404,18 +413,12 @@ auto Parser::ParseLiteralExpr(expr::Expression** result) -> ParseResult {
 }
 
 auto Parser::ParseDoExpr(expr::Expression** result) -> ParseResult {
-  DLOG(INFO) << "parsing do-expr....";
   // ParseScope scope(this);
   EXPECT_NEXT(Token::kDoExpr);
-  expr::ExpressionList body{};
-  expr::Expression* expr = nullptr;
-  while (!PeekEq(Token::kRParen)) {
-    CHECK_RESULT(ParseExpression(&expr));
-    if (expr)
-      body.push_back(expr);
-  }
-  ASSERT(PeekEq(Token::kRParen));  // TODO: convert to ParseSeqExpr
-  (*result) = expr::DoExpr::New(expr::SeqExpr::New(body));
+  expr::SeqExpr* body = nullptr;
+  ParseScope scope(this);
+  CHECK_RESULT(ParseSeqExpr(&body));
+  (*result) = expr::DoExpr::New(body);
   return true;
 }
 
@@ -671,82 +674,16 @@ auto Parser::ParseCondExpr(expr::Expression** result) -> ParseResult {
   return true;
 }
 
-auto Parser::ParseRxOpExpr(expr::Expression** result) -> ParseResult {
-  EXPECT_NEXT(Token::kLParen);
-  Symbol* symbol = nullptr;
-  CHECK_RESULT(ParseLiteralSymbol(&symbol));
-  ASSERT(symbol);
-  expr::ExpressionList args{};
-  CHECK_RESULT(ParseExpressionList(args));
-  EXPECT_NEXT(Token::kRParen);
-  (*result) = expr::RxOpExpr::New(symbol, args);
-  return true;
-}
-
-auto Parser::ParseRxOpList(expr::RxOpList& operators) -> ParseResult {  // TODO: refactor & better error handling
-  expr::Expression* expr = nullptr;
-  auto peek = PeekToken();
-  while (peek.kind != Token::kRParen && peek.kind != Token::kEndOfStream) {
-    CHECK_RESULT(ParseRxOpExpr(&expr));
-    ASSERT(expr);
-    operators.push_back(expr->AsRxOpExpr());  // TODO: this is an unchecked cast
-    peek = PeekToken();
-    expr = nullptr;
-  }
-  return true;
-}
-
-auto Parser::ParseLetRxExpr(expr::Expression** result) -> ParseResult {
-  EXPECT_NEXT(Token::kLetRxExpr);
-  ParseScope scope(this);
-  expr::Expression* observable = nullptr;
-  CHECK_RESULT(ParseExpression(&observable));
-  ASSERT(observable);
-  expr::RxOpList operators{};
-  if (PeekEq(Token::kRParen)) {
-    (*result) = LetRxExpr::New(scope, observable, operators);
-    return true;
-  }
-  CHECK_RESULT(ParseRxOpList(operators));
-  (*result) = LetRxExpr::New(scope, observable, operators);
-  return true;
-}
-
 auto Parser::ParseLetExpr(expr::Expression** result) -> ParseResult {
+  const auto start_pos = GetPos();
   EXPECT_NEXT(Token::kLetExpr);
-  const auto scope = PushScope();
-  // parse bindings
-  expr::Expression* value = nullptr;
-  expr::BindingList bindings;
-  EXPECT_NEXT(Token::kLParen);
-  while (!PeekEq(Token::kRParen)) {
-    EXPECT_NEXT(Token::kLParen);
-    Symbol* symbol = nullptr;
-    CHECK_RESULT(ParseLiteralSymbol(&symbol));
-    ASSERT(symbol);
-    if (scope->Has(symbol)) {
-      std::stringstream ss;
-      ss << "cannot redefine binding for: " << symbol;
-      return ReturnError(ss, pos_);
-    }
-    CHECK_RESULT(ParseExpression(&value));
-    ASSERT(value);
-    const auto local = LocalVariable::New(scope, symbol);
-    ASSERT(local);
-    if (!scope->Add(local)) {
-      std::stringstream ss;
-      ss << "failed to add " << (*local) << " to current scope.";
-      return ReturnError(ss, pos_);
-    }
-    bindings.emplace_back(BindingExpr::New(local, value));
-    EXPECT_NEXT(Token::kRParen);
-  }
-  EXPECT_NEXT(Token::kRParen);
-  // parse body
-  ExpressionList body{};
-  CHECK_RESULT(ParseExpressionList(body));
-  PopScope();
-  (*result) = LetExpr::New(scope, bindings, expr::SeqExpr::New(body));
+  expr::BindingList bindings{};
+  expr::SeqExpr* body = nullptr;
+  ParseScope let_scope(this);
+  if (!ParseBindingList(bindings))
+    return ReturnError("failed to parse let-expr bindings", start_pos);
+  CHECK_RESULT(ParseSeqExpr(&body));
+  (*result) = LetExpr::New(let_scope, bindings, body);
   return true;
 }
 
@@ -809,10 +746,6 @@ auto Parser::ParseBinding(expr::BindingExpr** result) -> ParseResult {
   Symbol* symbol = nullptr;
   CHECK_RESULT(ParseLiteralSymbol(&symbol));
   const auto scope = GetScope();
-  {
-    LocalVariable* it_local = LocalVariable::New(scope, "$");
-    LOG_IF(FATAL, !scope->Add(it_local)) << "failed to add " << (*it_local) << " to current scope.";
-  }
   LocalVariable* local = LocalVariable::New(scope, symbol);
   LOG_IF(FATAL, !scope->Add(local)) << "failed to add " << (*local) << " to current scope.";
   expr::Expression* value = nullptr;
@@ -825,12 +758,14 @@ auto Parser::ParseBindingList(expr::BindingList& bindings, const bool push_scope
   if (push_scope)
     PushScope();
 
+  EXPECT_NEXT(Token::kLBracket);
   expr::BindingExpr* binding = nullptr;
   while (!PeekEq(Token::kRBracket)) {
     CHECK_RESULT(ParseBinding(&binding));
     if (binding)
       bindings.push_back(binding);
   }
+  EXPECT_NEXT(Token::kRBracket);
 
   if (push_scope)
     PopScope();
@@ -921,9 +856,6 @@ auto Parser::ParseExpression(expr::Expression** result, const int depth) -> Pars
     } else if (next.kind == Token::kLBrace) {
       CHECK_RESULT(ParseMap(result));
       return true;
-    } else if (next.kind == Token::kQuote) {
-      CHECK_RESULT(ParseQuotedExpr(result));
-      return true;
     }
   }
 
@@ -1001,41 +933,17 @@ auto Parser::ParseExpression(expr::Expression** result, const int depth) -> Pars
         CHECK_RESULT(ParseCallExpr(result));
         break;
       }
-      case Token::kQuote: {
-        CHECK_RESULT(ParseQuotedExpr(result));
-        break;
-      }
-      case Token::kWhenExpr: {
-        CHECK_RESULT(ParseWhenExpr(result));
-        break;
-      }
       case Token::kWhileExpr: {
         CHECK_RESULT(ParseWhileExpr(result));
-        break;
-      }
-      case Token::kLetRxExpr: {
-        CHECK_RESULT(ParseLetRxExpr(result));
-        break;
-      }
-      case Token::kCastExpr: {
-        CHECK_RESULT(ParseCastExpr(result));
         break;
       }
       case Token::kForeachExpr: {
         CHECK_RESULT(ParseForeachExpr(result));
         break;
       }
-      case Token::kInstanceOfExpr: {
-        CHECK_RESULT(ParseInstanceOfExpr(result));
-        break;
-      }
       case Token::kLetExpr: {
         CHECK_RESULT(ParseLetExpr(result));
         break;
-      }
-      case Token::kRParen: {
-        NextToken();
-        return expr::ListExpr::New();
       }
       case Token::kImportExpr: {
         CHECK_RESULT(ParseImportExpr(result));
@@ -1051,32 +959,6 @@ auto Parser::ParseExpression(expr::Expression** result, const int depth) -> Pars
     }
   }
   EXPECT_NEXT(Token::kRParen);
-  return true;
-}
-
-auto Parser::ParseQuotedExpr(expr::Expression** result) -> ParseResult {
-  const auto depth = GetDepth();
-  EXPECT_NEXT(Token::kQuote);
-  SkipWhitespace();
-  token_len_ = 0;
-  do {
-    buffer_[token_len_++] = NextChar();
-    if (PeekChar() == ')') {
-      if (GetDepth() > depth)
-        continue;
-      break;
-    } else if (IsWhitespaceChar(PeekChar())) {
-      if (GetDepth() <= depth)
-        break;
-    }
-  } while (true);
-  ASSERT(depth == GetDepth());
-  const auto text = GetBufferedText();
-  if (text == "()") {
-    (*result) = expr::LiteralExpr::New(Pair::Empty());
-    return true;
-  }
-  (*result) = expr::QuotedExpr::New(GetBufferedText());
   return true;
 }
 
@@ -1096,17 +978,6 @@ auto Parser::ParseImportExpr(expr::Expression** result) -> ParseResult {
   }
   GetScope()->AddAll(target_module->GetScope());
   (*result) = expr::ImportExpr::New(target_module);
-  return true;
-}
-
-auto Parser::ParseWhenExpr(expr::Expression** result) -> ParseResult {
-  EXPECT_NEXT(Token::kWhenExpr);
-  expr::Expression* test = nullptr;
-  CHECK_RESULT(ParseExpression(&test));
-  ASSERT(test);
-  ExpressionList actions{};
-  CHECK_RESULT(ParseExpressionList(actions));
-  (*result) = expr::WhenExpr::New(test, actions);
   return true;
 }
 
@@ -1131,9 +1002,9 @@ auto Parser::ParseWhileExpr(expr::Expression** result) -> ParseResult {
   expr::Expression* test = nullptr;
   CHECK_RESULT(ParseExpression(&test));
   ASSERT(test);
-  ExpressionList body{};
-  CHECK_RESULT(ParseExpressionList(body));
-  (*result) = expr::WhileExpr::New(test, expr::SeqExpr::New(body));
+  expr::SeqExpr* body = nullptr;
+  CHECK_RESULT(ParseSeqExpr(&body));
+  (*result) = expr::WhileExpr::New(test, body);
   return true;
 }
 
@@ -1264,25 +1135,9 @@ auto Parser::NextToken() -> const Token& {
       return NextToken(Token::kRBrace);
     case '#': {
       switch (tolower(PeekChar(1))) {
-        case 'f':
-          Advance(2);
-          return NextToken(Token::kLiteralFalse);
-        case 't':
-          Advance(2);
-          return NextToken(Token::kLiteralTrue);
         case '{':
           Advance(2);
           return NextToken(Token::kBeginSet);
-      }
-      if (IsValidIdentifierChar(PeekChar(1))) {  // TODO: remove
-        Advance();
-        token_len_ = 0;
-        while (IsValidIdentifierChar(PeekChar(), token_len_ == 0) && PeekChar() != '?') {
-          buffer_[token_len_++] = NextChar();
-        }
-        LOG_IF(FATAL, PeekChar() != '?') << "expected `?` not: " << NextToken();
-        Advance();
-        return NextToken(Token::kInstanceOfExpr, GetBufferedText());
       }
       Advance();
       return NextToken(Token::kHash, '#');
@@ -1345,14 +1200,6 @@ auto Parser::NextToken() -> const Token& {
     case EOF:
       return NextToken(Token::kEndOfStream);
     case ':':
-      if (PeekChar(1) == '-' && PeekChar(2) == '>') {
-        Advance(3);
-        token_len_ = 0;
-        while (IsValidIdentifierChar(PeekChar(), token_len_ == 0)) {
-          buffer_[token_len_++] = NextChar();
-        }
-        return NextToken(Token::kCastExpr, GetBufferedText());
-      }
       Advance();
       return NextToken(Token::kColon);
     case 'n': {
@@ -1396,14 +1243,7 @@ auto Parser::NextToken() -> const Token& {
     auto ckw = keywords_;
     while (IsValidIdentifierChar(PeekChar(), token_len_ == 0)) {
       if (PeekChar() == '?') {
-        if (!IsValidIdentifierChar(PeekChar(1))) {
-          const auto ident = GetBufferedText();
-          const auto cls = Class::FindClass(ident);
-          if (cls) {
-            NextChar();
-            return NextToken(Token::kInstanceOfExpr, ident);
-          }
-        } else if (IsParsingArgs()) {
+        if (IsParsingArgs()) {
           break;
         }
       } else if ((PeekChar() == '.' && PeekChar(1) == '.') || (PeekChar() == ':' && IsParsingLiteralMap())) {
@@ -1431,46 +1271,6 @@ auto Parser::NextToken() -> const Token& {
   }
 
   return NextToken(Token::kInvalid, GetRemaining());
-}
-
-auto Parser::ParseCastExpr(expr::Expression** result) -> ParseResult {
-  const auto start_pos = GetPos();
-  const auto token = NextToken();
-  EXPECT(token, Token::kCastExpr);
-  ASSERT(!token.text.empty());
-  const auto symbol = Symbol::New(token.text);
-  const auto cls = Class::FindClass(symbol);
-  if (!cls) {
-    std::stringstream ss;
-    ss << "cannot create cast, failed to find type: " << symbol;
-    return ReturnError(ss, start_pos);
-  }
-  ASSERT(cls);
-  expr::Expression* value = nullptr;
-  CHECK_RESULT(ParseExpression(&value));
-  ASSERT(value);
-  (*result) = expr::CastExpr::New(cls, value);
-  return true;
-}
-
-auto Parser::ParseInstanceOfExpr(expr::Expression** result) -> ParseResult {
-  const auto start_pos = GetPos();
-  const auto token = NextToken();
-  EXPECT(token, Token::kInstanceOfExpr);
-  ASSERT(!token.text.empty());
-  const auto symbol = Symbol::New(token.text);
-  const auto cls = Class::FindClass(symbol);
-  if (!cls) {
-    std::stringstream ss;
-    ss << "cannot create instanceof expr, failed to find type: " << symbol;
-    return ReturnError(ss, start_pos);
-  }
-  ASSERT(cls);
-  expr::Expression* value = nullptr;
-  CHECK_RESULT(ParseExpression(&value));
-  ASSERT(value);
-  (*result) = expr::InstanceOfExpr::New(cls, value);
-  return true;
 }
 
 auto Parser::ParseLambda(const Token::Kind kind, Lambda** result) -> ParseResult {
@@ -1569,8 +1369,15 @@ auto Parser::ParseListExpr(expr::Expression** result) -> ParseResult {
     const auto to = end->AsLiteralExpr()->GetValue()->AsLong()->Get();
     (*result) = expr::LiteralExpr::New(gel::ListFromRange(from, to));
     return true;
+  } else if (PeekEq(Token::kDot)) {
+    NextToken();
+    expr::Expression* second = nullptr;
+    CHECK_RESULT(ParseExpression(&second));
+    ASSERT(second);
+    (*result) = expr::BinaryOpExpr::New(BinaryOp::kCons, first, second);
+    return true;
   }
-  const auto list = expr::ListExpr::New();
+  const auto list = expr::SeqExpr::New();
   list->Append(first);
   while (!PeekEq(Token::kRParen)) {
     expr::Expression* value = nullptr;
@@ -1584,7 +1391,7 @@ auto Parser::ParseListExpr(expr::Expression** result) -> ParseResult {
 
 auto Parser::ParseModule(const std::string& name, Module** result) -> ParseResult {
   ParseScope scope(this);
-  const auto new_module = Module::New(String::New(name), scope);
+  const auto new_module = Module::New(Symbol::New(name), scope);
   ASSERT(new_module);
   TopLevelScope toplevel(this, new_module);
   scope->AddThisValue(new_module);
@@ -1621,9 +1428,6 @@ auto Parser::ParseScript(Script** result) -> ParseResult {
 }
 
 auto Parser::ParseSetPairField(const Token& token, expr::Expression** result) -> ParseResult {
-  TokenKindBitSet expected{};
-  expected.set(Token::kSetFirst);
-  expected.set(Token::kSetSecond);
   Field* field = nullptr;
   switch (token.kind) {
     case Token::kSetFirst: {
@@ -1635,6 +1439,9 @@ auto Parser::ParseSetPairField(const Token& token, expr::Expression** result) ->
       break;
     }
     default:
+      TokenKindBitSet expected{};
+      expected.set(Token::kSetFirst);
+      expected.set(Token::kSetSecond);
       return UnexpectedError(token, expected);
   }
   ASSERT(field);
@@ -1756,7 +1563,8 @@ auto Parser::ParseDefMacro(LocalVariable** result) -> ParseResult {
   return true;
 }
 
-auto Parser::ParseSeqExpr(expr::SeqExpr** result, const Token::Kind end) -> ParseResult {
+auto Parser::ParseSeqExpr(expr::SeqExpr** result, const bool allow_empty, const Token::Kind end) -> ParseResult {
+  const auto start_pos = GetPos();
   expr::SeqExpr* seq = expr::SeqExpr::New();
   while (!PeekEq(end)) {
     expr::Expression* expr = nullptr;
@@ -1764,6 +1572,8 @@ auto Parser::ParseSeqExpr(expr::SeqExpr** result, const Token::Kind end) -> Pars
     if (expr)
       seq->Append(expr);
   }
+  if (seq->IsEmpty() && !allow_empty)
+    return ReturnError("", start_pos);  // @s0cks TODO: add message
   (*result) = seq;
   return true;
 }
@@ -1812,15 +1622,12 @@ auto Parser::ParseDefNamespace(LocalVariable** result) -> ParseResult {
 auto Parser::ParseForeachExpr(expr::Expression** result) -> ParseResult {
   EXPECT_NEXT(Token::kForeachExpr);
 
-  expr::BindingExpr* binding = nullptr;
-  EXPECT_NEXT(Token::kLBracket);
-  CHECK_RESULT(ParseBinding(&binding));
-  EXPECT_NEXT(Token::kRBracket);
+  expr::BindingList bindings{};
+  CHECK_RESULT(ParseBindingList(bindings));
 
-  expr::ExpressionList body{};
-  CHECK_RESULT(ParseExpressionList(body));
-
-  (*result) = expr::ForeachExpr::New(binding, expr::SeqExpr::New(body));
+  expr::SeqExpr* body = nullptr;
+  CHECK_RESULT(ParseSeqExpr(&body));
+  (*result) = expr::ForeachExpr::New(bindings, body);
   return true;
 }
 
@@ -1898,13 +1705,14 @@ void Parser::Init() {
   DEF_TOKEN("set-first!", Token::kSetFirst);
   DEF_TOKEN("set-second!", Token::kSetSecond);
   DEF_TOKEN("cond", Token::kCond);
-  DEF_TOKEN("when", Token::kWhenExpr);
   DEF_TOKEN("while", Token::kWhileExpr);
   DEF_TOKEN("defn", Token::kDefn);
   DEF_TOKEN("let", Token::kLetExpr);
-  DEF_TOKEN("let:rx", Token::kLetRxExpr);
   DEF_TOKEN("defnative", Token::kDefNative);
   DEF_TOKEN("deftype", Token::kDefType);
   DEF_TOKEN("foreach", Token::kForeachExpr);
+  DEF_TOKEN("true", Token::kLiteralTrue);
+  DEF_TOKEN("false", Token::kLiteralFalse);
+  DEF_TOKEN("nil", Token::kLiteralNil);
 }
 }  // namespace gel

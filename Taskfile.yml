@@ -1,0 +1,16 @@
+---
+version: '3'
+tasks:
+  configure:*:
+    dir: build/
+    vars:
+      PRESET: "{{index .MATCH 0 }}"
+    cmds:
+    - echo "configuring using {{.PRESET}} preset..."
+    - cmake --preset={{.PRESET}} ..
+    silent: true
+  build:
+    dir: build/
+    cmds:
+    - cmake --build .
+    silent: true

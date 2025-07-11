@@ -3,6 +3,7 @@
 
 #include "gel/argument.h"
 #include "gel/common.h"
+#include "gel/hashcode.h"
 #include "gel/local_scope.h"
 #include "gel/object.h"
 #include "gel/pointer.h"
@@ -23,9 +24,9 @@ class Procedure : public Object {
  public:
   using Predicate = std::function<bool(Procedure*)>;
 
-  template <typename T>
-  static inline auto IsNamed(T value, std::enable_if_t<gel::is_string_like<T>::value>* = nullptr) -> Predicate {
-    return [value](Procedure* procedure) {
+  template <StringLike Str>
+  static inline auto IsNamed(const Str& value) -> Predicate {
+    return [&](Procedure* procedure) {
       ASSERT(procedure);
       return procedure->HasSymbol() && procedure->GetSymbol()->Equals(value);
     };
@@ -41,31 +42,13 @@ class Procedure : public Object {
   explicit Procedure(Symbol* symbol) :
     symbol_(symbol) {}
 
-  void SetSymbol(Symbol* rhs) {
-    ASSERT(rhs);
-    symbol_ = rhs;
-  }
-
   void SetOwner(Object* rhs) {
     ASSERT(rhs);
     owner_ = rhs;
   }
 
-  void RemoveSymbol() {
-    symbol_ = nullptr;
-  }
-
   void RemoveOwner() {
     owner_ = nullptr;
-  }
-
-  void SetDocs(String* rhs) {
-    ASSERT(rhs);
-    docs_ = rhs;
-  }
-
-  void RemoveDocs() {
-    docs_ = nullptr;
   }
 
   void SetArgs(Array<Argument*>* rhs) {
@@ -79,10 +62,14 @@ class Procedure : public Object {
 
   auto VisitPointers(PointerVisitor* vis) -> bool override {
     ASSERT(vis);
-    if (HasSymbol()) {
-      if (!vis->Visit(GetSymbol()))
-        return false;
-    }
+    if (!Visit(symbol_, *vis))
+      return false;
+    if (!Visit(owner_, *vis))
+      return false;
+    if (!Visit(docs_, *vis))
+      return false;
+    if (!Visit(args_, *vis))
+      return false;
     return true;
   }
 
@@ -116,10 +103,19 @@ class Procedure : public Object {
     return GetSymbol() != nullptr;
   }
 
-  auto HashCode() const -> uword override {
-    uword hash = 0;
+  void SetSymbol(Symbol* rhs) {
+    ASSERT(rhs);
+    symbol_ = rhs;
+  }
+
+  void RemoveSymbol() {
+    symbol_ = nullptr;
+  }
+
+  auto GetHashCode() const -> HashCode override {
+    HashCode hash{};
     if (HasSymbol())
-      CombineHash(hash, GetSymbol()->HashCode());
+      hash ^= (*symbol_);
     return hash;
   }
 
@@ -147,12 +143,21 @@ class Procedure : public Object {
     return GetOwner() != nullptr;
   }
 
-  auto GetDocs() const -> String* {
+  auto GetDocstring() const -> String* {
     return docs_;
   }
 
-  inline auto HasDocs() const -> bool {
-    return GetDocs() != nullptr;
+  inline auto HasDocstring() const -> bool {
+    return GetDocstring() != nullptr;
+  }
+
+  void SetDocstring(String* rhs) {
+    ASSERT(rhs);
+    docs_ = rhs;
+  }
+
+  void RemoveDocstring() {
+    docs_ = nullptr;
   }
 
   auto GetArgs() const -> Array<Argument*>* {
@@ -174,6 +179,10 @@ class Procedure : public Object {
 
   auto HasArgAt(const uint64_t idx) const -> bool {
     return args_ && (idx >= 0 && idx <= GetNumberOfArgs()) && (args_->Get(idx) != nullptr);
+  }
+
+  inline friend auto operator<<(std::ostream& stream, const Procedure& rhs) -> std::ostream& {
+    return stream << rhs.ToString();
   }
 
  private:
@@ -198,7 +207,18 @@ class Procedure : public Object {
     ASSERT(kClass);
     return kClass;
   }
+
+ public:
+  static inline auto IsLambdaProc(Procedure* p) -> bool {
+    return p && p->IsLambda();
+  }
+
+  static inline auto IsNativeProc(Procedure* p) -> bool {
+    return p && p->IsNative();
+  }
 };
+static_assert(WithSymbol<Procedure>);
+static_assert(HasDocstring<Procedure>);
 }  // namespace gel
 
 #endif  // GEL_PROCEDURE_H

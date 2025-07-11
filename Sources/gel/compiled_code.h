@@ -1,6 +1,7 @@
 #ifndef GEL_COMPILED_CODE_H
 #define GEL_COMPILED_CODE_H
 
+#include <concepts>
 #include <ostream>
 #include <string>
 
@@ -63,10 +64,20 @@ class CompiledCode : public HeapObject {
     return stream << rhs.ToString();
   }
 
+  inline operator Region() const {
+    return GetRegion();
+  }
+
  public:
   static inline auto New(const Region& region) -> CompiledCode* {
     return new CompiledCode(region);
   }
+};
+
+template <class T>
+concept HasCompiledCode = requires(T value) {
+  { value.IsCompiled() } -> std::convertible_to<bool>;
+  { value.GetCode() } -> std::convertible_to<CompiledCode*>;
 };
 }  // namespace gel
 

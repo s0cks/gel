@@ -3,7 +3,7 @@
 #include "gel/array.h"
 #include "gel/common.h"
 #include "gel/constructor.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/macro.h"
 #include "gel/native_procedure.h"
 #include "gel/parser.h"
@@ -37,7 +37,7 @@ auto Module::Compare(Object* rhs) const -> bool {
 
 auto Module::CreateConstructor(Module* rhs, expr::SeqExpr* body) -> Constructor* {
   ASSERT(rhs);
-  const auto init = Constructor::New(Symbol::New(rhs->GetName()), body);
+  const auto init = Constructor::New(rhs->GetSymbol(), body);
   init->SetArgs(Array<Argument*>::New(1));
   init->SetScope(LocalScope::NewWithThis(rhs));
   return init;
@@ -50,14 +50,14 @@ auto Module::Init(Runtime* runtime) -> bool {
   for (auto idx = 0; idx < namespaces_->GetLength(); idx++) {
     const auto ns = namespaces_->Get(idx);
     ASSERT(ns);
-    runtime->InvokeConstructor(ns);
+    ns->Init(runtime);
   }
   SetInitialized(true);
   return IsInitialized();
 }
 
 auto Module::Find(const std::string& name) -> Module* {
-  return modules_->FindIf(IsNamed(name));
+  return modules_->FindIf(IsNamed<Module>(name));
 }
 
 void Module::AddChild(Object* rhs) {
@@ -68,7 +68,7 @@ void Module::AddChild(Object* rhs) {
 }
 
 auto Module::FindOrLoad(const std::string& name) -> Module* {
-  const auto m = modules_->FindIf(IsNamed(name));
+  const auto m = modules_->FindIf(IsNamed<Module>(name));
   if (m == nullptr) {
     const auto home = GetHomeEnvVar();
     if (!home)
@@ -83,11 +83,10 @@ auto Module::FindOrLoad(const std::string& name) -> Module* {
   return m;
 }
 
-auto Module::New(String* name, LocalScope* scope) -> Module* {
+auto Module::New(Symbol* name, LocalScope* scope) -> Module* {
   ASSERT(name);
   ASSERT(scope);
-  const auto m = new Module(name, scope);
-  return Register(m);
+  return Register(new Module(name, scope));
 }
 
 auto Module::LoadFrom(const std::filesystem::path& abs_path) -> Module* {
@@ -96,14 +95,14 @@ auto Module::LoadFrom(const std::filesystem::path& abs_path) -> Module* {
 }
 
 auto Module::ToString() const -> std::string {
-  ToStringHelper<Module> helper;
-  helper.AddField("name", GetName()->Get());
+  ToStringHelper<Module> helper{};
+  helper.AddField("symbol", GetSymbol()->GetFullyQualifiedName());
   return helper;
 }
 
-auto Module::HashCode() const -> uword {
-  uword hash = 0;
-  CombineHash(hash, GetName()->Get());
+auto Module::GetHashCode() const -> HashCode {
+  HashCode hash{};
+  hash ^= *(GetSymbol());
   return hash;
 }
 
@@ -112,16 +111,20 @@ auto Module::Equals(Object* rhs) const -> bool {
     return false;
   const auto other = rhs->AsModule();
   ASSERT(other);
-  return GetName()->Equals(other->GetName());
+  return GetSymbol()->Equals(other->GetSymbol());
 }
 
 auto Module::VisitPointers(PointerVisitor* vis) -> bool {
   ASSERT(vis);
-  if (!vis->Visit(GetName()))
+  if (!Visit(init_, *vis))
     return false;
-  if (!vis->Visit(GetInitialized()))
+  if (!Visit(namespaces_, *vis))
     return false;
-  if (!vis->Visit(GetInit()))
+  if (!Visit(GetSymbol(), *vis))
+    return false;
+  if (!Visit(GetInitialized(), *vis))
+    return false;
+  if (!Visit(GetInit(), *vis))
     return false;
   return true;
 }
@@ -135,11 +138,11 @@ auto Module::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
   if (!VisitPointerPointer(vis, &scope_))
     return false;
 
-  auto name = GetName()->raw_ptr();
+  auto name = GetSymbol()->raw_ptr();
   if (!vis->Visit(&name))
     return false;
-  if (!GetName()->raw_ptr()->Equals(name))
-    SetName(name->As<String>());
+  if (!GetSymbol()->raw_ptr()->Equals(name))
+    SetSymbol(name->As<Symbol>());
 
   auto kernel = GetKernelField()->raw_ptr();
   if (!vis->Visit(&kernel))
@@ -157,13 +160,13 @@ auto Module::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
 
 Field* Module::kKernelField = nullptr;
 Field* Module::kFieldInitialized = nullptr;
-Field* Module::kNameField = nullptr;
+Field* Module::kSymbolField = nullptr;
 auto Module::CreateClass() -> Class* {
   ASSERT(kClass == nullptr);
   const auto cls = Class::New(Object::GetClass(), "Module");
   ASSERT(cls);
-  kNameField = cls->AddField("name");
-  ASSERT(kNameField);
+  kSymbolField = cls->AddField("symbol");
+  ASSERT(kSymbolField);
   kKernelField = cls->AddField("kernel");
   ASSERT(kKernelField);
   kFieldInitialized = cls->AddField("initialized");
@@ -197,7 +200,7 @@ auto Module::VisitAllModulePointerPointers(PointerPointerVisitor* vis) -> bool {
     return false;
   if (!VisitPointerPointer(vis, &modules_))
     return false;
-  if (!VisitPointerPointer(vis, &kNameField))
+  if (!VisitPointerPointer(vis, &kSymbolField))
     return false;
   if (!VisitPointerPointer(vis, &kKernelField))
     return false;
@@ -269,7 +272,7 @@ MODULE_PROCEDURE_F(get_namespaces) {
   const auto namespaces = m->GetNamespaces();
   ASSERT(namespaces);
 
-  Object* result = Null();
+  Object* result = Nil::Get();
   ASSERT(result);
   for (auto idx = 0; idx < namespaces->GetLength(); idx++) {
     const auto ns = namespaces->Get(idx);

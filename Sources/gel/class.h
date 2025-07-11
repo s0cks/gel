@@ -106,6 +106,10 @@ class Class : public Object {
     return name_;
   }
 
+  inline auto HasName() const -> bool {
+    return GetName() != nullptr;
+  }
+
   template <class T>
   inline auto Is() const -> bool {
     return Equals(T::GetClass());
@@ -204,6 +208,10 @@ class Field : public Object {
 
   auto GetName() const -> String* {
     return name_;
+  }
+
+  inline auto HasName() const -> bool {
+    return GetName() != nullptr;
   }
 
   auto GetOffset() const -> uword {

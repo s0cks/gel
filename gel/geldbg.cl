@@ -19,9 +19,9 @@
     "Returns the compilation time of a function [f] in nanoseconds.")
   (defnative print-roots []
     "Prints the roots for the GC.")
-  (defn inspect [o]
-    (when (#Procedure? o)
-      (print (format "compiled in {}ns." (gel:compile-time? o)))))
+  ; (defn inspect [o]
+  ;   (when (#Procedure? o)
+  ;     (print (format "compiled in {}ns." (gel:compile-time? o)))))
   (defnative print-heap []
     "Prints the heap information to the terminal.")
   (defnative print-new-zone []

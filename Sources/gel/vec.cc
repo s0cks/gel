@@ -55,7 +55,7 @@ auto Vec2::Equals(Object* rhs) const -> bool {
   return GetX() == vec2->GetX() && GetY() == vec2->GetY();
 }
 
-auto Vec2::HashCode() const -> uword {
+auto Vec2::GetHashCode() const -> HashCode {
   uword hash = 0;
   CombineHash(hash, GetX());
   CombineHash(hash, GetY());
@@ -121,7 +121,7 @@ auto Vec3::Equals(Object* rhs) const -> bool {
   return GetX() == vec3->GetX() && GetY() == vec3->GetY() && GetZ() == vec3->GetZ();
 }
 
-auto Vec3::HashCode() const -> uword {
+auto Vec3::GetHashCode() const -> HashCode {
   uword hash = 0;
   CombineHash(hash, GetX());
   CombineHash(hash, GetY());

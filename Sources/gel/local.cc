@@ -53,7 +53,7 @@ auto LocalVariable::IsGlobal() const -> bool {
 }
 
 auto LocalVariable::ToString() const -> std::string {
-  ToStringHelper<LocalVariable> helper;
+  ToStringHelper<LocalVariable> helper{};
   helper.AddField("owner", GetOwner());
   helper.AddField("index", GetIndex());
   helper.AddField("symbol", GetSymbol());

@@ -16,6 +16,7 @@
 #include "gel/rx.h"
 #include "gel/script.h"
 #include "gel/set.h"
+#include "gel/subject.h"
 #include "gel/symbol.h"
 #include "gel/timer.h"
 #include "gel/vec.h"

@@ -22,8 +22,8 @@ auto Lambda::Equals(Object* rhs) const -> bool {
   return false;
 }
 
-auto Lambda::HashCode() const -> uword {
-  return Procedure::HashCode();
+auto Lambda::GetHashCode() const -> HashCode {
+  return Procedure::GetHashCode();
 }
 
 auto Lambda::Compare(Object* rhs) const -> bool {
@@ -36,14 +36,9 @@ auto Lambda::VisitPointers(PointerVisitor* vis) -> bool {
   ASSERT(vis);
   if (!Procedure::VisitPointers(vis))
     return false;
-  if (HasOwner()) {
-    if (!vis->Visit(GetOwner()))
-      return false;
-  }
-  if (HasDocs()) {
-    if (!vis->Visit(GetDocs()))
-      return false;
-  }
+  if (!Visit(body_, *vis))
+    return false;
+  // TODO: visit code_
   return true;
 }
 
@@ -60,15 +55,13 @@ auto Lambda::New(const ObjectList& args) -> Lambda* {
 }
 
 auto Lambda::ToString() const -> std::string {
-  ToStringHelper<Lambda> helper;
+  ToStringHelper<Lambda> helper{};
   if (HasSymbol())
     helper.AddField("symbol", GetSymbol()->GetFullyQualifiedName());
-  if (HasOwner())
-    helper.AddField("owner", GetOwner());
+  helper.AddField("owner", GetOwner());
   helper.AddField("args", GetArgs());
   helper.AddField("empty", IsEmpty());
-  if (HasDocs())
-    helper.AddField("docs", GetDocs());
+  helper.AddField("docs", GetDocstring());
   return helper;
 }
 }  // namespace gel

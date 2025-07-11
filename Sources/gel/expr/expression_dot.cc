@@ -1,4 +1,4 @@
-#include "gel/expression_dot.h"
+#include "gel/expr/expression_dot.h"
 
 #include <cstdio>
 #include <filesystem>
@@ -8,7 +8,7 @@
 #include <string>
 
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/exprs.h"
 #include "gel/gv.h"
 #include "gel/types.h"
 
@@ -73,24 +73,6 @@ auto ExpressionToDot::VisitSeqExpr(SeqExpr* expr) -> bool {
   return ProcessChildren(expr, node);
 }
 
-auto ExpressionToDot::VisitCastExpr(CastExpr* expr) -> bool {
-  ASSERT(expr);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return false;
-}
-
-auto ExpressionToDot::VisitRxOpExpr(RxOpExpr* expr) -> bool {
-  ASSERT(expr);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return false;
-}
-
-auto ExpressionToDot::VisitLetRxExpr(LetRxExpr* expr) -> bool {
-  ASSERT(expr);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return false;
-}
-
 auto ExpressionToDot::VisitImportExpr(ImportExpr* expr) -> bool {  // TODO: add import target
   ASSERT(expr);
   // create new node
@@ -108,12 +90,6 @@ auto ExpressionToDot::VisitImportExpr(ImportExpr* expr) -> bool {  // TODO: add 
 }
 
 auto ExpressionToDot::VisitNewMapExpr(NewMapExpr* expr) -> bool {
-  ASSERT(expr);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return false;
-}
-
-auto ExpressionToDot::VisitInstanceOfExpr(InstanceOfExpr* expr) -> bool {
   ASSERT(expr);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return false;
@@ -147,7 +123,7 @@ auto ExpressionToDot::VisitInvokeMacroExpr(InvokeMacroExpr* expr) -> bool {
   for (auto idx = 0; idx < expr->GetNumberOfArgs(); idx++) {
     const auto arg = expr->GetArgAt(idx);
     ASSERT(arg);
-    if (!arg->Accept(this)) {
+    if (!arg->Accept(*this)) {
       LOG(ERROR) << "failed to visit arg #" << idx << ": " << arg->ToString();
       return false;
     }
@@ -218,12 +194,6 @@ auto ExpressionToDot::VisitDoExpr(DoExpr* expr) -> bool {
   return ProcessChildren(expr, node);
 }
 
-auto ExpressionToDot::VisitListExpr(expr::ListExpr* expr) -> bool {
-  ASSERT(expr);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return false;
-}
-
 auto ExpressionToDot::VisitClauseExpr(expr::ClauseExpr* expr) -> bool {
   ASSERT(expr);
   const auto node = NewNode();
@@ -239,20 +209,6 @@ auto ExpressionToDot::VisitClauseExpr(expr::ClauseExpr* expr) -> bool {
 }
 
 auto ExpressionToDot::VisitWhileExpr(expr::WhileExpr* expr) -> bool {
-  ASSERT(expr);
-  const auto node = NewNode();
-  ASSERT(node);
-  {
-    // create node labels
-    std::stringstream label;
-    label << expr->GetName() << std::endl;
-    dot::SetNodeLabel(node, label);
-  }
-  CreateEdgeFromParent(node);
-  return ProcessChildren(expr, node);
-}
-
-auto ExpressionToDot::VisitWhenExpr(expr::WhenExpr* expr) -> bool {
   ASSERT(expr);
   const auto node = NewNode();
   ASSERT(node);
@@ -295,14 +251,14 @@ auto ExpressionToDot::VisitInvokeExpr(InvokeExpr* expr) -> bool {
   {
     // target
     NodeScope scope(this, node);
-    if (!expr->VisitTarget(this)) {
+    if (!expr->VisitTarget(*this)) {
       LOG(ERROR) << "failed to visit target: " << expr->GetTarget();
     }
   }
   {
     // args
     NodeScope scope(this, node);
-    if (!expr->VisitArgs(this)) {
+    if (!expr->VisitArgs(*this)) {
       LOG(ERROR) << "failed to visit children of: " << expr->ToString();
       return false;
     }
@@ -329,7 +285,7 @@ auto ExpressionToDot::VisitLiteralExpr(LiteralExpr* expr) -> bool {
 auto ExpressionToDot::ProcessChildren(Expression* expr, dot::Node* node) -> bool {
   ASSERT(node);
   NodeScope scope(this, node);
-  if (!expr->VisitChildren(this)) {
+  if (!expr->VisitChildren(*this)) {
     LOG(ERROR) << "failed to visit children of: " << expr->ToString();
     return false;
   }
@@ -350,21 +306,6 @@ auto ExpressionToDot::VisitUnaryOpExpr(UnaryOpExpr* expr) -> bool {
   }
   CreateEdgeFromParent(node);
   return ProcessChildren(expr, node);
-}
-
-auto ExpressionToDot::VisitQuotedExpr(QuotedExpr* expr) -> bool {
-  ASSERT(expr);
-  const auto node = NewNode();
-  ASSERT(node);
-  {
-    // create node labels
-    // label
-    std::stringstream label;
-    label << expr->GetName() << std::endl;
-    dot::SetNodeLabel(node, label);
-  }
-  CreateEdgeFromParent(node);
-  return true;
 }
 
 auto ExpressionToDot::VisitThrowExpr(ThrowExpr* expr) -> bool {

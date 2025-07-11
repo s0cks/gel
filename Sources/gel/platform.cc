@@ -5,7 +5,7 @@
 namespace gel::sys {
 auto malloc(const uword sz) -> uword {
   ASSERT(sz > 0);
-  return (uword)std::malloc(sz);  // NOLINT(cppcoreguidelines-no-malloc,cppcoreguidelines-pro-type-cstyle-cast)
+  return (uword)std::malloc(sz);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast,cppcoreguidelines-no-malloc)
 }
 
 auto realloc(const uword ptr, const uword sz) -> uword {

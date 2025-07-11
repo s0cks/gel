@@ -5,6 +5,7 @@
 
 #include "gel/common.h"
 #include "gel/event_loop.h"
+#include "gel/hashcode.h"
 #include "gel/object.h"
 #include "gel/platform.h"
 #include "gel/procedure.h"
@@ -33,9 +34,9 @@ auto Timer::ToString() const -> std::string {
   return helper;
 }
 
-auto Timer::HashCode() const -> uword {
+auto Timer::GetHashCode() const -> HashCode {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return 0;
+  return kInvalidHashCode;
 }
 
 auto Timer::Equals(Object* rhs) const -> bool {
@@ -63,7 +64,7 @@ void Timer::OnTick(uv_timer_t* handle) {
   ASSERT(on_tick);
   const auto runtime = GetRuntime();
   ASSERT(runtime);
-  return runtime->Call(on_tick);
+  return runtime->Call(*on_tick);
 }
 
 auto Timer::Compare(Object* rhs) const -> bool {

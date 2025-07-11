@@ -3,12 +3,13 @@
 #include <sstream>
 #include <string>
 
+#include "gel/to_string_helper.h"
+
 namespace gel {
 auto Variable::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "Variable(";
-  ss << "name=" << GetName();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<Variable> helper{};
+  helper.AddField("name", GetName());
+  helper.AddField("value", GetValue());
+  return helper;
 }
 }  // namespace gel

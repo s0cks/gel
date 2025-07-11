@@ -17,7 +17,7 @@ void EventEmitter::EventListener::Call(Object* data) {
   ObjectList args{};
   if (data)
     args.push_back(data);
-  return GetRuntime()->Call(callback, args);
+  return GetRuntime()->Call(*callback, args);
 }
 
 auto EventEmitter::ToString() const -> std::string {
@@ -35,7 +35,7 @@ auto EventEmitter::Equals(Object* rhs) const -> bool {
   return false;
 }
 
-auto EventEmitter::HashCode() const -> uword {
+auto EventEmitter::GetHashCode() const -> HashCode {
   uword hash = 0;
   NOT_IMPLEMENTED(WARNING);  // TODO: implement
   return hash;
@@ -106,7 +106,7 @@ EVENT_EMITTER_PROCEEDURE_F(emit) {
   REQUIRED_NATIVE_ARG(1, String, event);
   OptionalNativeArgument<2> data(args);
   CHECK_NATIVE_ARG(data);
-  emitter->Emit(event, data ? data : Null());
+  emitter->Emit(event, data ? data : Nil::Get());
   return ReturnNull();
 }
 

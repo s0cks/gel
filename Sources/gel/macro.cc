@@ -3,7 +3,8 @@
 #include <sstream>
 
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
+#include "gel/hashcode.h"
 #include "gel/local.h"
 #include "gel/local_scope.h"
 #include "gel/namespace.h"
@@ -21,24 +22,23 @@ auto Macro::CreateClass() -> Class* {
   return Class::New(Object::GetClass(), "Macro");
 }
 
-auto Macro::HashCode() const -> uword {
+auto Macro::GetHashCode() const -> HashCode {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return 0;
+  return kInvalidHashCode;
 }
 
 auto Macro::VisitPointers(PointerVisitor* vis) -> bool {
   ASSERT(vis);
-  if (HasOwner()) {
-    if (!vis->Visit(GetOwner()))
-      return false;
-  }
-  if (!vis->Visit(GetSymbol()))
+  if (!Visit(owner_, *vis))
     return false;
-  if (HasDocstring()) {
-    if (!vis->Visit(GetDocstring()))
-      return false;
-  }
-  // TODO: visit body
+  if (!Visit(symbol_, *vis))
+    return false;
+  if (!Visit(docstring_, *vis))
+    return false;
+  if (!Visit(args_, *vis))
+    return false;
+  if (!VisitAll(body_, *vis))
+    return false;
   return true;
 }
 
@@ -51,13 +51,11 @@ auto Macro::Equals(Object* rhs) const -> bool {
 }
 
 auto Macro::ToString() const -> std::string {
-  ToStringHelper<Macro> helper;
+  ToStringHelper<Macro> helper{};
   helper.AddField("symbol", GetSymbol()->GetFullyQualifiedName());
   helper.AddField("args", GetArgs());
-  if (HasDocstring())
-    helper.AddField("docs", GetDocstring()->Get());
-  if (IsEmpty())
-    helper.AddField("empty", IsEmpty());
+  helper.AddField("docs", GetDocstring()->Get());
+  helper.AddField("empty", IsEmpty());
   return helper;
 }
 

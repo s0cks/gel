@@ -9,7 +9,7 @@
 #include "gel/assembler_base.h"
 #include "gel/bytecode.h"
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/to_string_helper.h"
 
 namespace gel {
@@ -75,6 +75,10 @@ class Assembler {
     return EmitOp(Bytecode::kDup);
   }
 
+  inline void dup2() {
+    return EmitOp(Bytecode::kDup2);
+  }
+
   inline void nop() {
     return EmitOp(Bytecode::kNop);
   }
@@ -129,7 +133,7 @@ class Assembler {
   template <class T>
   inline void Push(T* value) {
     ASSERT(value);
-    if (gel::IsNull(value))
+    if (value->IsNil())
       return pushn();
     if (value->IsLong())
       return pushl(value->AsLong()->Get());

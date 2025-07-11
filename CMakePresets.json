@@ -33,12 +33,8 @@
       "name": "darwin-arm64",
       "hidden": true,
       "environment": {
-        "LLVM_HOME": "/opt/homebrew/opt/llvm",
-        "PATH": "$env{LLVM_HOME}/bin:$penv{PATH}",
         "CC": "clang",
-        "CXX": "clang++",
-        "LDFLAGS": "$penv{LDFLAGS} -L$env{LLVM_HOME}/lib",
-        "CPPFLAGS": "$penv{CPPFLAGS} -I$env{LLVM_HOME}/include"
+        "CXX": "clang++"
       },
       "cacheVariables": {
         "VCPKG_TARGET_TRIPLET": "arm64-osx-dynamic",

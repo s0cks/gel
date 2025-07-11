@@ -1,6 +1,7 @@
 #ifndef GEL_TO_STRING_HELPER_H
 #define GEL_TO_STRING_HELPER_H
 
+#include <concepts>
 #include <cstdlib>
 #include <glog/logging.h>
 #include <ostream>
@@ -13,7 +14,7 @@
 
 #include "gel/common.h"
 #include "gel/compiled_code.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/instruction.h"
 #include "gel/local_scope.h"
 #include "gel/object.h"
@@ -25,35 +26,6 @@
 #endif
 
 namespace std {
-template <typename T>
-struct has_to_string {
-  static constexpr const auto value = false;
-};
-
-#define DECLARE_HAS_TO_STRING(Name)           \
-  template <>                                 \
-  struct has_to_string<gel::Name> {           \
-    static constexpr const auto value = true; \
-  };
-FOR_EACH_TYPE(DECLARE_HAS_TO_STRING)
-DECLARE_HAS_TO_STRING(Expression);
-DECLARE_HAS_TO_STRING(Object);
-DECLARE_HAS_TO_STRING(LocalScope);
-DECLARE_HAS_TO_STRING(ir::Definition);
-DECLARE_HAS_TO_STRING(ir::EntryInstr);
-DECLARE_HAS_TO_STRING(ir::Instruction);
-DECLARE_HAS_TO_STRING(CompiledCode);
-
-#undef DECLARE_HAS_TO_STRING
-#define DECLARE_HAS_TO_STRING(Name)            \
-  template <>                                  \
-  struct has_to_string<gel::ir::Name##Instr> { \
-    static constexpr const auto value = true;  \
-  };
-
-FOR_EACH_INSTRUCTION(DECLARE_HAS_TO_STRING);
-#undef DECLARE_HAS_TO_STRING
-
 template <typename T>
 struct is_container {
   static constexpr const auto value = false;
@@ -71,6 +43,11 @@ struct is_container<std::set<T, Compare, Alloc>> {
 }  // namespace std
 
 namespace gel {
+
+template <class T>
+concept HasToString = requires(T value) {
+  { value.ToString() } -> std::convertible_to<std::string>;
+};
 
 class Object;
 namespace tostring {
@@ -112,6 +89,10 @@ static inline constexpr auto GetChar(const ValueSeparatorStyle rhs) -> char {
   }
 }
 
+static inline auto operator<<(std::ostream& stream, const ValueSeparatorStyle& rhs) -> std::ostream& {
+  return stream << GetChar(rhs);
+}
+
 enum FieldSeparatorStyle {
   kSpace,
   kComma,
@@ -146,9 +127,9 @@ class ToStringHelperBase {
     std::string value_;
 
    public:
-    explicit Field(const std::string& name, const std::string& value = "") :
-      name_(name),
-      value_(value) {}
+    explicit Field(const std::string_view name, const std::string value = "") :
+      name_(std::move(name)),
+      value_(std::move(value)) {}
     ~Field() = default;
 
     auto name() const -> const std::string& {
@@ -168,7 +149,7 @@ class ToStringHelperBase {
  protected:
   ToStringHelperBase() = default;
   virtual auto GetTypename() const -> std::string = 0;
-  virtual auto GetEncosingStyle() const -> EnclosingStyle = 0;
+  virtual auto GetEnclosingStyle() const -> EnclosingStyle = 0;
   virtual auto GetValueSeparatorStyle() const -> ValueSeparatorStyle = 0;
   virtual auto GetFieldSeparatorStyle() const -> FieldSeparatorStyle = 0;
 
@@ -179,13 +160,60 @@ class ToStringHelperBase {
     return fields_;
   }
 
-  virtual void AddField(std::string name, std::string value) {
-    ASSERT(!name.empty());
-    fields_.emplace_back(std::move(name), std::move(value));
+  template <typename V>
+  inline void AddField(const std::string_view name, V value) {
+    std::stringstream ss;
+    ss << value;
+    return AddField(std::move(name), ss.str());
   }
 
-  void AddBytesField(const std::string& name, const uword num_bytes);
-  void AddField(const std::string& name, const gel::Object* value);
+  template <HasToString V>
+  inline void AddField(const std::string_view name, V* value) {
+    return value ? AddField(std::move(name), value->ToString()) : AddField(std::move(name), "null");
+  }
+
+  template <HasToString V>
+  inline void AddField(const std::string_view name, const V& value) {
+    return AddField(std::move(name), value.ToString());
+  }
+
+  template <HasToString V>
+  inline void AddField(const std::string_view name, const std::vector<V>& value) {
+    std::stringstream ss;
+    ss << "[";
+    for (auto idx = 0; idx < value.size(); idx++) {
+      ss << value[idx]->ToString();
+      if (idx < (value.size() - 1))
+        ss << ", ";
+    }
+    ss << "]";
+    return AddField(std::move(name), value.ToString());
+  }
+
+  template <std::ranges::range R>
+  inline void AddArrayField(const std::string_view name, const R& range,
+                            const ValueSeparatorStyle separator = ValueSeparatorStyle::kValueSepColon) {
+    uword num_remaining = range.size();
+    std::stringstream ss{};
+    ss << "[";
+    for (const auto& v : range) {
+      ss << v;
+      if (--num_remaining > 0)
+        ss << separator << " ";
+    }
+    ss << "]";
+  }
+
+  template <typename V>
+  inline void AddField(const std::string_view name, const V value)
+    requires(std::is_integral_v<V>)
+  {
+    std::stringstream ss;
+    ss << value;
+    return AddField(std::move(name), ss.str());
+  }
+
+  void AddBytesField(const std::string_view name, const uword num_bytes);
   auto ToString() const -> std::string;
 };
 
@@ -208,7 +236,7 @@ class ToStringHelper : public ToStringHelperBase {
 #endif
   }
 
-  auto GetEncosingStyle() const -> EnclosingStyle override {
+  auto GetEnclosingStyle() const -> EnclosingStyle override {
     return ES;
   }
 
@@ -224,50 +252,6 @@ class ToStringHelper : public ToStringHelperBase {
   ToStringHelper() = default;
   ~ToStringHelper() override = default;
 
-  void AddField(std::string name, std::string value) override {
-    return ToStringHelperBase::AddField(std::move(name), std::move(value));
-  }
-
-  template <typename V>
-  void AddField(const std::string& name, const V& value, std::enable_if_t<std::is_container<V>::value, V>) {
-    ASSERT(!name.empty());
-    std::stringstream ss;
-    ss << value;
-    return ToStringHelperBase::AddField(name, ss.str());
-  }
-
-  template <typename V>
-  void AddField(
-      const std::string& name, const V& value,
-      std::enable_if_t<std::is_pointer_v<V> && std::has_to_string<std::remove_pointer_t<V>>::value>* = nullptr) {
-    ASSERT(!name.empty());
-    if (!value)
-      return ToStringHelperBase::AddField(name, "");
-    std::stringstream ss;
-    ss << value->ToString();
-    return ToStringHelperBase::AddField(name, ss.str());
-  }
-
-  template <typename V>
-  void AddField(const std::string& name, const V& value, std::enable_if_t<!std::is_pointer_v<V>>* = nullptr) {
-    ASSERT(!name.empty());
-    std::stringstream ss;
-    ss << value;
-    return ToStringHelperBase::AddField(name, ss.str());
-  }
-
-  void AddField(const std::string& name, const bool value) {
-    ASSERT(!name.empty());
-    return value ? AddField(name, "true") : AddField(name, "false");
-  }
-
-  void AddField(const std::string& name, const void* value) {
-    ASSERT(!name.empty());
-    std::stringstream ss;
-    ss << value;
-    return AddField(name, ss.str());
-  }
-
   operator std::string() const {
     return ToStringHelperBase::ToString();
   }
@@ -276,6 +260,67 @@ class ToStringHelper : public ToStringHelperBase {
     return stream << rhs.ToString();
   }
 };
+
+template <>
+inline void ToStringHelperBase::AddField<std::string>(const std::string_view name, const std::string value) {
+  ASSERT(!name.empty());
+  ASSERT(!value.empty());
+  fields_.emplace_back(std::move(name), std::move(value));
+}
+
+template <>
+inline void ToStringHelperBase::AddField<std::string_view>(const std::string_view name, const std::string_view value) {
+  return AddField(name, std::string(value));
+}
+
+template <>
+inline void ToStringHelperBase::AddField<const char*>(const std::string_view name, const char* value) {
+  return AddField(name, std::string(value));
+}
+
+template <>
+inline void ToStringHelperBase::AddField<const void*>(const std::string_view name, const void* value) {
+  ASSERT(!name.empty());
+  std::stringstream ss;
+  ss << value;
+  return AddField(name, ss.str());
+}
+
+template <>
+inline void ToStringHelperBase::AddField<bool>(const std::string_view name, const bool value) {
+  return AddField<std::string_view>(name, value ? "true" : "false");
+}
+
+// template <HasToString V>
+// void AddField(const std::string& name, const V& value) {
+//   ASSERT(!name.empty());
+//   std::stringstream ss;
+//   ss << value;
+//   return ToStringHelperBase::AddField(name, ss.str());
+// }
+
+// void AddField(const std::string& name, const bool value) {
+//   ASSERT(!name.empty());
+//   return value ? AddField(name, "true") : AddField(name, "false");
+// }
+
+// template <typename V>
+// void AddField(const std::string& name, const V& value) {
+//   ASSERT(!name.empty());
+//   std::stringstream ss;
+//   ss << value;
+//   return ToStringHelperBase::AddField(name, ss.str());
+// }
+
+// template <HasToString V>
+// void AddField(const std::string& name, const V* value) {
+//   ASSERT(!name.empty());
+//   if (!value)
+//     return ToStringHelperBase::AddField(name, "");
+//   std::stringstream ss;
+//   ss << value->ToString();
+//   return ToStringHelperBase::AddField(name, ss.str());
+// }
 }  // namespace tostring
 
 using tostring::ToStringHelper;

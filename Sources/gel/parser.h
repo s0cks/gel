@@ -11,7 +11,9 @@
 #include <variant>
 
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/binding_expr.h"
+#include "gel/expr/clause_expr.h"
+#include "gel/expr/expression.h"
 #include "gel/instruction.h"
 #include "gel/lambda.h"
 #include "gel/local.h"
@@ -474,11 +476,12 @@ class Parser {
   auto PushScope() -> LocalScope*;
   auto IsValidIdentifierChar(const char c, const bool initial = false) const -> bool;
 
-  template <class T>
-  auto TryParseDocstring(T* owner, std::enable_if_t<gel::has_docs<T>::value>* = nullptr) -> ParseResult;
+  template <HasDocstring T>
+  auto TryParseDocstring(T* owner) -> ParseResult;
 
-  template <class T>
-  auto TryParseSymbol(T* owner, std::enable_if_t<gel::has_symbol<T>::value>* = nullptr) -> ParseResult;
+  template <WithSymbol T>
+  auto TryParseSymbol(T* owner) -> ParseResult
+    requires(HasMutableSymbol<T>);
 
  protected:
   auto ParseLambda(const Token::Kind kind, Lambda** result) -> ParseResult;
@@ -490,7 +493,6 @@ class Parser {
   auto ParseBinding(expr::BindingExpr** result) -> ParseResult;
   auto ParseBindingList(expr::BindingList& bindings, const bool push_scope = true) -> ParseResult;
   auto ParseExpressionList(expr::ExpressionList& expressions, const bool push_scope = true) -> ParseResult;
-  auto ParseRxOpList(expr::RxOpList& operators) -> ParseResult;
   auto ParseClauseList(expr::ClauseList& clauses) -> ParseResult;
 
   auto ParseLiteralBool(Bool** result) -> ParseResult;
@@ -504,7 +506,8 @@ class Parser {
   auto ParseLiteralLambda(const Token::Kind kind, expr::LiteralExpr** result) -> ParseResult;
   auto ParseLambdaExpr() -> expr::LambdaExpr*;
 
-  auto ParseSeqExpr(expr::SeqExpr** result, const Token::Kind end = Token::kRParen) -> ParseResult;
+  auto ParseSeqExpr(expr::SeqExpr** result, const bool allow_empty = true, const Token::Kind end = Token::kRParen)
+      -> ParseResult;
   auto ParseDefNamespace(LocalVariable** local) -> ParseResult;
   auto ParseMap(expr::Expression**) -> ParseResult;
   auto ParseSetExpr(expr::Expression**) -> ParseResult;
@@ -514,16 +517,12 @@ class Parser {
   auto ParseUnaryOpExpr(expr::Expression**) -> ParseResult;
   auto ParseBinaryExpr(expr::Expression**) -> ParseResult;
   auto ParseThrowExpr(expr::Expression**) -> ParseResult;
-  auto ParseQuotedExpr(expr::Expression**) -> ParseResult;
-  auto ParseWhenExpr(expr::Expression**) -> ParseResult;
   auto ParseWhileExpr(expr::Expression**) -> ParseResult;
   auto ParseCondExpr(expr::Expression**) -> ParseResult;
   auto ParseLetExpr(expr::Expression**) -> ParseResult;
-  auto ParseRxOpExpr(expr::Expression**) -> ParseResult;
-  auto ParseLetRxExpr(expr::Expression**) -> ParseResult;
   auto ParseForeachExpr(expr::Expression**) -> ParseResult;
   auto ParseForeachBindingExpr(LocalVariable** local, expr::Expression** value) -> ParseResult;
-  auto ParseListExpr(expr::Expression**) -> ParseResult;
+  auto ParseListExpr(expr::Expression** value) -> ParseResult;
   auto ParseInstanceOfExpr(expr::Expression**) -> ParseResult;
   auto ParseCastExpr(expr::Expression**) -> ParseResult;
   auto ParseNewExpr(expr::Expression**) -> ParseResult;

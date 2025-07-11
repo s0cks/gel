@@ -6,6 +6,6 @@
 namespace gel {
 void Task::Execute() {
   ASSERT(callback_);
-  GetRuntime()->Call(callback_);
+  GetRuntime()->Call(*callback_);
 }
 }  // namespace gel

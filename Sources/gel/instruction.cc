@@ -91,13 +91,13 @@ auto NewInstr::ToString() const -> std::string {
 
 auto LoadLocalInstr::ToString() const -> std::string {
   ToStringHelper<LoadLocalInstr> helper;
-  helper.AddField("local", *(GetLocal()));
+  helper.AddField("local", GetLocal());
   return helper;
 }
 
 auto StoreLocalInstr::ToString() const -> std::string {
   ToStringHelper<StoreLocalInstr> helper;
-  helper.AddField("local", *(GetLocal()));
+  helper.AddField("local", GetLocal());
   helper.AddField("value", GetValue());
   return helper;
 }

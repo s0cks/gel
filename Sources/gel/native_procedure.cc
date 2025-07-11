@@ -12,9 +12,7 @@
 namespace gel {
 auto NativeProcedureEntry::Return(Object* rhs) const -> bool {
   ASSERT(rhs);
-  const auto frame = GetRuntime()->GetCurrentStackFrame();
-  ASSERT(frame);
-  frame->SetReturnAddress(rhs->GetStartingAddress());
+  GetRuntime()->GetCallStack()->SetReturnAddress(rhs->GetStartingAddress());
   return DoNothing();
 }
 
@@ -72,14 +70,7 @@ auto NativeProcedure::VisitPointers(PointerVisitor* vis) -> bool {
   ASSERT(vis);
   if (!Procedure::VisitPointers(vis))
     return false;
-  if (HasDocs()) {
-    if (!vis->Visit(GetDocs()->raw_ptr()))
-      return false;
-  }
-  if (HasArgs()) {
-    if (!vis->Visit(GetArgs()->raw_ptr()))
-      return false;
-  }
+  // TODO: visit entry_?
   return true;
 }
 
@@ -87,25 +78,25 @@ auto NativeProcedure::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
   ASSERT(vis);
   if (!Procedure::VisitPointerPointers(vis))
     return false;
-  if (HasDocs()) {
-    auto docs = GetDocs()->raw_ptr();
+  if (HasDocstring()) {
+    auto docs = GetDocstring()->raw_ptr();
     if (!vis->Visit(&docs))
       return false;
-    if (!GetDocs()->raw_ptr()->Equals(docs))
-      SetDocs(docs->As<String>());
+    if (!GetDocstring()->raw_ptr()->Equals(docs))
+      SetDocstring(docs->As<String>());
   }
   if (HasArgs()) {
     auto args = GetArgs()->raw_ptr();
     if (!vis->Visit(&args))
       return false;
-    if (!GetDocs()->raw_ptr()->Equals(args))
+    if (!GetDocstring()->raw_ptr()->Equals(args))
       SetArgs(args->As<Array<Argument*>>());
   }
   return true;
 }
 
-auto NativeProcedure::HashCode() const -> uword {
-  return Procedure::HashCode();
+auto NativeProcedure::GetHashCode() const -> HashCode {
+  return Procedure::GetHashCode();
 }
 
 auto NativeProcedure::Find(Symbol* symbol) -> NativeProcedure* {
@@ -160,8 +151,7 @@ auto NativeProcedure::ToString() const -> std::string {
   ToStringHelper<NativeProcedure> helper;
   helper.AddField("symbol", GetSymbol()->GetFullyQualifiedName());
   helper.AddField("args", GetArgs());
-  if (HasDocs())
-    helper.AddField("docs", GetDocs());
+  helper.AddField("docs", GetDocstring());
   return helper;
 }
 }  // namespace gel

@@ -9,7 +9,7 @@
 #include "gel/argument.h"
 #include "gel/array.h"
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/native_procedure.h"
 #include "gel/object.h"
 #include "gel/symbol.h"
@@ -28,14 +28,6 @@ class Macro : public Object {
  public:
   using Predicate = std::function<bool(Macro*)>;
 
-  template <typename T>
-  static inline auto IsNamed(T value, std::enable_if_t<gel::is_string_like<T>::value>* = nullptr) -> Predicate {
-    return [value](Macro* macro) {
-      ASSERT(macro);
-      return macro->GetSymbol()->Equals(value);
-    };
-  }
-
  private:
   Object* owner_ = nullptr;
   Symbol* symbol_ = nullptr;
@@ -51,11 +43,6 @@ class Macro : public Object {
     args_(args),
     body_(body) {
     ASSERT(symbol);
-  }
-
-  void SetSymbol(Symbol* rhs) {
-    ASSERT(rhs);
-    symbol_ = rhs;
   }
 
   void SetOwner(Object* rhs) {
@@ -77,11 +64,6 @@ class Macro : public Object {
     body_ = rhs;
   }
 
-  void SetDocs(String* rhs) {
-    ASSERT(rhs);
-    docstring_ = rhs;
-  }
-
   auto VisitPointers(PointerVisitor* vis) -> bool override;
 
  public:
@@ -99,12 +81,34 @@ class Macro : public Object {
     return symbol_;
   }
 
+  inline auto HasSymbol() const -> bool {
+    return GetSymbol() != nullptr;
+  }
+
+  void SetSymbol(Symbol* rhs) {
+    ASSERT(rhs);
+    symbol_ = rhs;
+  }
+
+  void RemoveSymbol() {
+    symbol_ = nullptr;
+  }
+
   auto GetDocstring() const -> String* {
     return docstring_;
   }
 
   inline auto HasDocstring() const -> bool {
     return GetDocstring() != nullptr;
+  }
+
+  void SetDocstring(String* rhs) {
+    ASSERT(rhs);
+    docstring_ = rhs;
+  }
+
+  void RemoveDocstring() {
+    docstring_ = nullptr;
   }
 
   auto GetArgs() const -> Array<Argument*>* {
@@ -134,7 +138,7 @@ class Macro : public Object {
   }
 
   inline auto GetArg(const std::string& name) const -> Argument* {
-    return args_ ? args_->FindIf(Argument::IsNamed(name)) : nullptr;
+    return args_ ? args_->FindIf(IsNamed<Argument>(name)) : nullptr;
   }
 
   inline auto GetArg(String* name) const -> Argument* {
@@ -161,6 +165,8 @@ class Macro : public Object {
     return new Macro(symbol, args, body);
   }
 };
+static_assert(WithSymbol<Macro>);
+static_assert(HasDocstring<Macro>);
 
 namespace proc {
 #define _DECLARE_MACRO_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(macro_##Name, "Macro:" Sym)

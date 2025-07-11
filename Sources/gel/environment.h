@@ -10,7 +10,7 @@ namespace gel {
 class Environment {
   struct Hash {
     auto operator()(const Symbol* rhs) const -> size_t {
-      return rhs->HashCode();
+      return rhs->GetHashCode();
     }
   };
 

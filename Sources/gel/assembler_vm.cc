@@ -59,22 +59,22 @@ void Assembler::Jump(Bytecode::Op op, Label* label) {
 void Assembler::Branch(BranchCondition cond, Label* label) {
   ASSERT(label);
   switch (cond) {
-    case kEquals:
+    case BranchCondition::kEquals:
       EmitOp(Bytecode::kBranchEq);
       break;
-    case kNotEquals:
+    case BranchCondition::kNotEquals:
       EmitOp(Bytecode::kBranchNeq);
       break;
-    case kGreaterThan:
+    case BranchCondition::kGreaterThan:
       EmitOp(Bytecode::kBranchGreaterThan);
       break;
-    case kLessThan:
+    case BranchCondition::kLessThan:
       EmitOp(Bytecode::kBranchLessThan);
       break;
-    case kIsTrue:
+    case BranchCondition::kIsTrue:
       EmitOp(Bytecode::kBranchTrue);
       break;
-    case kIsFalse:
+    case BranchCondition::kIsFalse:
       EmitOp(Bytecode::kBranchFalse);
       break;
   }

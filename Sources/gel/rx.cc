@@ -23,7 +23,7 @@ auto CallPredicate(Runtime* runtime, Procedure* predicate) -> Predicate {
   ASSERT(runtime);
   ASSERT(predicate);
   return [runtime, predicate](gel::Object* value) {
-    return gel::Truth(runtime->CallPop(predicate, {value}));
+    return gel::Truth(runtime->CallPop(*predicate, {value}));
   };
 }
 
@@ -50,18 +50,18 @@ auto DoNothingOnComplete() -> OnCompleteFunc {
 
 auto CallOnNext(Runtime* runtime, Procedure* proc) -> OnNextFunc {
   ASSERT(runtime);
-  if (gel::IsNull(proc))
+  if (proc->IsNil())
     return DoNothingOnNext();
   ASSERT(proc);
   return [runtime, proc](gel::Object* next) {
     ASSERT(next);
-    return runtime->Call(proc, {next});
+    return runtime->Call(*proc, {next});
   };
 }
 
 auto CallOnError(Runtime* runtime, Procedure* proc) -> OnErrorFunc {
   ASSERT(runtime);
-  if (gel::IsNull(proc))
+  if (proc->IsNil())
     return DoNothingOnError();
   ASSERT(proc);
   return [runtime, proc](std::exception_ptr error) -> void {
@@ -69,24 +69,24 @@ auto CallOnError(Runtime* runtime, Procedure* proc) -> OnErrorFunc {
       std::rethrow_exception(error);
     } catch (const Exception& exc) {
       const auto error = Error::New(exc.what());
-      return runtime->Call(proc, {error});
+      return runtime->Call(*proc, {error});
     }
   };
 }
 
 auto CallOnComplete(Runtime* runtime, Procedure* proc) -> OnCompleteFunc {
   ASSERT(runtime);
-  if (gel::IsNull(proc))
+  if (proc->IsNil())
     return DoNothingOnComplete();
   ASSERT(proc);
   return [runtime, proc]() {
-    return runtime->Call(proc);
+    return runtime->Call(*proc);
   };
 }
 
 auto map(Runtime* runtime, Procedure* proc) -> rpp::operators::details::map_t<std::decay_t<MapFunc>> {
   const MapFunc func = [runtime, proc](Object* value) {
-    return runtime->CallPop(proc, {value});
+    return runtime->CallPop(*proc, {value});
   };
   return rpp::operators::map(func);
 }

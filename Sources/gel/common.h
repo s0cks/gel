@@ -2,6 +2,7 @@
 #define GEL_COMMON_H
 
 #include <chrono>
+#include <concepts>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -11,8 +12,10 @@
 #include <glog/logging.h>
 #include <optional>
 #include <ostream>
+#include <ranges>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <units.h>
 #include <unordered_set>
 #include <utility>
@@ -61,17 +64,18 @@
   Name() = delete;                         \
   ~Name() = delete;
 
-#ifdef _MSC_VER
-#define NOT_IMPLEMENTED(Level) LOG(Level) << __FUNCSIG__ << " is not implemented!"
+#if defined(_MSC_VER)
+#define GEL_PRETTY_FUNC_NAME __FUNCSIG__
 #elif defined(__clang__) || defined(__GNUC__)
-#define NOT_IMPLEMENTED(Level) LOG(Level) << __PRETTY_FUNCTION__ << " is not implemented!"
+#define GEL_PRETTY_FUNC_NAME __PRETTY_FUNCTION__
 #else
-#define NOT_IMPLEMENTED(Level) LOG(Level) << __FUNCTION__ << " is not implemented!"
+#define GEL_PRETTY_FUNC_NAME __FUNCTION__
 #endif  // NOT_IMPLEMENTED
 
-#define GEL_VLEVEL_1 1
-#define GEL_VLEVEL_2 2
-#define GEL_VLEVEL_3 3
+#define NOT_IMPLEMENTED(Level) LOG(Level) << GEL_PRETTY_FUNC_NAME << " is not implemented!"
+#define GEL_VLEVEL_1           1
+#define GEL_VLEVEL_2           2
+#define GEL_VLEVEL_3           3
 
 namespace gel {
 class Exception : public std::exception {
@@ -143,8 +147,11 @@ static inline auto IsPow2(T x) -> bool {
       Name##Visitor(),                                \
       delegate_(std::move(delegate)) {}               \
     ~Name##VisitorWrapper() override = default;       \
-    auto Visit(Type* ptr) -> bool override {          \
+    inline auto Visit(Type* ptr) -> bool override {   \
       return delegate_(ptr);                          \
+    }                                                 \
+    inline auto operator()(Type* ptr) -> bool {       \
+      return Visit(ptr);                              \
     }                                                 \
   };
 #define DECLARE_VISITOR(Type)                    \
@@ -392,6 +399,42 @@ class ostream_guard {
     return precision_;
   }
 };
+
+template <class V, typename T>
+concept Visitor = requires(V vis, T value) {
+  { vis.Visit(value) } -> std::convertible_to<bool>;
+};
+
+template <typename V, Visitor<V> Visitor>
+static inline auto Visit(V value, Visitor& vis) -> bool {
+  return value && vis.Visit(value);
+}
+
+template <typename V, std::predicate<V> Visitor>
+static inline auto Visit(V value, Visitor& vis) -> bool {
+  return value && vis(value);
+}
+
+template <std::ranges::range R, std::predicate<std::ranges::range_value_t<R>> Visitor>
+static inline auto VisitAll(const R& range, Visitor& vis) -> bool {
+  for (const auto& v : range) {
+    if (!vis(v))
+      return false;
+  }
+  return true;
+}
+
+template <std::ranges::range R, Visitor<std::ranges::range_value_t<R>> Visitor>
+static inline auto VisitAll(const R& range, Visitor& vis) -> bool {
+  for (const auto& v : range) {
+    if (!vis.Visit(v))
+      return false;
+  }
+  return true;
+}
+
+template <typename T, typename V>
+concept VisitorLike = Visitor<T, V> || std::predicate<V>;
 }  // namespace gel
 
 #endif  // GEL_COMMON_H

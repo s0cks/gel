@@ -10,6 +10,7 @@
 #include "gel/common.h"
 #include "gel/object.h"
 #include "gel/pointer.h"
+#include "gel/type_traits.h"
 
 namespace gel {
 class LocalVariable;
@@ -86,6 +87,10 @@ class LocalVariable : public HeapObject {
     return symbol_;
   }
 
+  inline auto HasSymbol() const -> bool {
+    return GetSymbol() != nullptr;
+  }
+
   auto GetValue() const -> Object*;
   void SetValue(Object* rhs);
 
@@ -116,6 +121,7 @@ class LocalVariable : public HeapObject {
 
   static auto New(LocalScope* owner, const std::string& name, Object* value = nullptr) -> LocalVariable*;
 };
+static_assert(WithSymbol<LocalVariable>);
 }  // namespace gel
 
 #endif  // GEL_LOCAL_H

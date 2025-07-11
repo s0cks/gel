@@ -14,7 +14,7 @@
 
 #include "gel/binary_op.h"
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/object.h"
 #include "gel/platform.h"
 #include "gel/unary_op.h"
@@ -82,7 +82,8 @@ struct Position {
   V(LiteralLong)              \
   V(LiteralTrue)              \
   V(LiteralFalse)             \
-  V(LiteralString)
+  V(LiteralString)            \
+  V(LiteralNil)
 
 struct Token {
  public:
@@ -159,14 +160,14 @@ struct Token {
 
   using KindSet = std::bitset<kTotalNumberOfTokens>;
 
-  static inline constexpr auto SetOf(const Token::Kind a, const Token::Kind b) -> KindSet {
+  static inline constexpr auto AnyOf(const Token::Kind a, const Token::Kind b) -> KindSet {
     KindSet data;
     data.set(a);
     data.set(b);
     return data;
   }
 
-  static inline constexpr auto SetOf(const std::vector<Token::Kind>& kinds) -> KindSet {
+  static inline constexpr auto AnyOf(const std::vector<Token::Kind>& kinds) -> KindSet {
     KindSet data;
     std::ranges::for_each(kinds, [&data](Token::Kind kind) {
       data.set(kind);
@@ -175,11 +176,11 @@ struct Token {
   }
 
   static inline constexpr auto AnyBool() -> KindSet {
-    return SetOf(Token::kLiteralTrue, Token::kLiteralFalse);
+    return AnyOf(Token::kLiteralTrue, Token::kLiteralFalse);
   }
 
   static inline constexpr auto AnyNumber() -> KindSet {
-    return SetOf(Token::kLiteralDouble, Token::kLiteralLong);
+    return AnyOf(Token::kLiteralDouble, Token::kLiteralLong);
   }
 
  public:
@@ -210,7 +211,7 @@ struct Token {
   auto IsLiteral() const -> bool {
     return IsFunctionLiteral() || IsSymbol() || kind == Token::kLiteralTrue || kind == Token::kLiteralFalse ||
            kind == Token::kLiteralLong || kind == Token::kLiteralDouble || kind == Token::kLiteralString ||
-           kind == Token::kBeginSet;
+           kind == Token::kBeginSet || kind == Token::kLiteralNil;
   }
 
   auto IsIdentifier() const -> bool {
@@ -232,7 +233,7 @@ struct Token {
     }
   }
 
-  auto ToBinaryOp() const -> std::optional<expr::BinaryOp> {
+  auto ToBinaryOp() const -> std::optional<BinaryOp> {
     ASSERT(IsBinaryOp());
     switch (kind) {
 #define DEFINE_TO_BINARY_OP(Name) \
@@ -256,12 +257,12 @@ struct Token {
     }
   }
 
-  auto ToUnaryOp() const -> std::optional<expr::UnaryOp> {
+  auto ToUnaryOp() const -> std::optional<UnaryOp> {
     ASSERT(IsUnaryOp());
     switch (kind) {
 #define TO_UNARY_OP(Name) \
   case Token::k##Name:    \
-    return {expr::UnaryOp::k##Name};
+    return {UnaryOp::k##Name};
       FOR_EACH_UNARY_OP(TO_UNARY_OP)
 #undef TO_UNARY_OP
       default:

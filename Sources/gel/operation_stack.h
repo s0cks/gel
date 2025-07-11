@@ -10,6 +10,7 @@
 
 #include "gel/common.h"
 #include "gel/object.h"
+#include "gel/pair.h"
 #include "gel/platform.h"
 #include "gel/rx.h"
 #include "gel/type.h"
@@ -111,9 +112,31 @@ class OperationStack {
     stack_.push(value);
   }
 
+  inline void Push(const OptionalValue& rhs, const bool allow_null = false) {
+    if (!allow_null)
+      ASSERT(rhs);
+    Push(allow_null ? rhs.value_or(Nil::Get()) : rhs.value());
+  }
+
+  void Dup() {
+    ASSERT(!IsEmpty());
+    Push(top());
+  }
+
+  void Dup2() {
+    ASSERT(GetStackSize() >= 2);
+    const auto t = Pop();
+    ASSERT(t);
+    const auto new_top = top();
+    ASSERT(new_top);
+    Push(t);
+    Push(new_top);
+    Push(t);
+  }
+
   inline void PopN(std::vector<Value>& result, const uword num, const bool reverse = false) {
     for (uword idx = 0; idx < num; idx++)
-      result.push_back(PopOr(Null()));
+      result.push_back(PopOr(Nil::Get()));
     if (reverse)
       std::ranges::reverse(std::begin(result), std::end(result));
   }

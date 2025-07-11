@@ -9,6 +9,14 @@
 #include "gel/type_traits.h"
 
 namespace gel {
+template <class T>
+concept HasSetCode = requires(T value) {
+  { value.SetCode((CompiledCode*)nullptr) };
+};
+
+template <class T>
+concept CompilerTarget = HasCompiledCode<T> && HasSetCode<T>;
+
 class Lambda;
 class Script;
 class FlowGraph;
@@ -36,8 +44,8 @@ class FlowGraphCompiler {
   Assembler assembler_{};
   std::vector<BlockInfo> info_{};
 
-  template <class E>  // TODO: use/create gel::is_compilable template predicate
-  auto BuildFlowGraph(E* exec, std::enable_if_t<gel::is_executable<E>::value>* = nullptr) -> FlowGraph*;
+  template <CompilerTarget Target>
+  auto BuildFlowGraph(Target& target) -> FlowGraph*;
   void AssembleFlowGraph(FlowGraph* graph);
 
  public:
@@ -73,20 +81,18 @@ class FlowGraphCompiler {
   auto GetBlockInfo(ir::EntryInstr* blk) -> BlockInfo&;
   auto GetBlockLabel(ir::EntryInstr* blk) -> Label*;
 
-  template <class E>  // TODO: use/create gel::is_compilable template predicate
-  auto CompileTarget(E* exec, std::enable_if_t<gel::is_executable<E>::value>* = nullptr) -> bool;
+  template <CompilerTarget Target>
+  auto CompileTarget(Target& exec) -> bool;
 
  public:
-  template <class E>
-  static inline auto Compile(E* exec, LocalScope* scope, std::enable_if_t<gel::is_executable<E>::value>* = nullptr)
-      -> bool {
-    ASSERT(exec);
-    const auto& code = exec->GetCode();
+  template <CompilerTarget Target>
+  static inline auto Compile(Target& target, LocalScope* scope) -> bool {
+    const auto& code = target.GetCode();
     if (code && code->IsCompiled())
       return true;
     ASSERT(scope);
     FlowGraphCompiler compiler(scope);
-    return compiler.CompileTarget<E>(exec);
+    return compiler.CompileTarget(target);
   }
 };
 }  // namespace gel

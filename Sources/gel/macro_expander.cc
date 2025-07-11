@@ -1,7 +1,8 @@
 #include "gel/macro_expander.h"
 
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
+#include "gel/expr/exprs.h"
 #include "gel/local.h"
 #include "gel/local_scope.h"
 #include "gel/macro.h"
@@ -46,13 +47,13 @@ auto MacroEffectVisitor::VisitBindingExpr(expr::BindingExpr* expr) -> bool {
 auto MacroEffectVisitor::VisitForeachExpr(expr::ForeachExpr* expr) -> bool {
   ASSERT(expr);
   MacroEffectVisitor for_binding(GetOwner());
-  VISIT(for_binding, expr->GetBinding());
+  VISIT(for_binding, expr->GetBindingAt(0));
 
   MacroEffectVisitor for_body(GetOwner());
   VISIT(for_body, expr->GetBody());
 
   if (for_binding || for_body) {
-    const auto new_binding = for_binding ? for_binding.GetResult()->AsBindingExpr() : expr->GetBinding();
+    const auto new_binding = for_binding ? for_binding.GetResult()->AsBindingExpr() : expr->GetBindingAt(0);
     const auto new_body = for_body ? for_body.GetResultAsSeq() : expr->GetBody();
     SetResult(expr::ForeachExpr::New(new_binding, new_body));
   }
@@ -66,7 +67,7 @@ auto MacroEffectVisitor::VisitSeqExpr(expr::SeqExpr* expr) -> bool {
       const auto child = expr->GetChildAt(idx);
       ASSERT(child);
       MacroEffectVisitor for_effect(GetOwner());
-      if (!child->Accept(&for_effect) || !for_effect)
+      if (!child->Accept(for_effect) || !for_effect)
         break;
       expr->ReplaceChildAt(idx, for_effect.GetResults());
     } while (true);
@@ -187,26 +188,33 @@ auto MacroEffectVisitor::VisitInvokeExpr(expr::InvokeExpr* expr) -> bool {
   return true;
 }
 
-auto MacroEffectVisitor::VisitCastExpr(expr::CastExpr* expr) -> bool {
-  ASSERT(expr);
-  MacroEffectVisitor for_value(GetOwner());
-  VISIT(for_value, expr->GetValue());
-  if (for_value) {
-    ASSERT(for_value.GetNumberOfResults() == 1);
-    SetResult(expr::CastExpr::New(expr->GetTargetType(), for_value.GetResult()));
-  }
-  return true;
-}
-
 auto MacroEffectVisitor::VisitClauseExpr(expr::ClauseExpr* expr) -> bool {
   ASSERT(expr);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return false;
+  MacroEffectVisitor for_test(GetOwner());
+  VISIT(for_test, expr->GetKey());
+  MacroEffectVisitor for_body(GetOwner());
+  VISIT(for_body, expr->GetBody());
+  if (for_test || for_body)
+    SetResult(expr::ClauseExpr::New(for_test, for_body));
+  return true;
 }
 
 auto MacroEffectVisitor::VisitCondExpr(expr::CondExpr* expr) -> bool {
   ASSERT(expr);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  bool changed = false;
+  ClauseList clauses{};
+  for (const auto& clause : expr->GetClauses()) {
+    MacroEffectVisitor for_effect(GetOwner());
+    VISIT(for_effect, clause);
+    if (!for_effect) {
+      clauses.push_back(clause);
+      continue;
+    }
+    changed = true;
+    clauses.push_back(for_effect.GetResult()->AsClauseExpr());
+  }
+  if (changed)
+    SetResult(expr::CondExpr::New(clauses));
   return true;
 }
 
@@ -214,12 +222,6 @@ auto MacroEffectVisitor::VisitImportExpr(expr::ImportExpr* expr) -> bool {
   ASSERT(expr);
   // do nothing
   return true;
-}
-
-auto MacroEffectVisitor::VisitInstanceOfExpr(expr::InstanceOfExpr* expr) -> bool {
-  ASSERT(expr);
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return false;
 }
 
 auto MacroEffectVisitor::VisitLetExpr(expr::LetExpr* expr) -> bool {
@@ -251,36 +253,6 @@ auto MacroEffectVisitor::VisitLetExpr(expr::LetExpr* expr) -> bool {
   //   const auto body = body_changed ? new_body : expr->GetBody();
   //   SetResult(expr::LetExpr::New(expr->GetScope(), bindings, body));
   // }
-  return true;
-}
-
-auto MacroEffectVisitor::VisitLetRxExpr(expr::LetRxExpr* expr) -> bool {
-  ASSERT(expr);
-  MacroEffectVisitor for_source(GetOwner());
-  VISIT(for_source, expr->GetSource());
-
-  bool body_changed = false;
-  expr::ExpressionList new_body{};
-  if (!VisitExpressionList(expr->GetBody(), new_body, &body_changed))
-    return false;
-
-  if (for_source || body_changed) {
-    const auto source = for_source ? for_source.GetResult() : expr->GetSource();
-    const auto body = body_changed ? new_body : expr->GetBody();
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
-    SetResult(expr::LetRxExpr::New(expr->GetScope(), source, (const expr::RxOpList&)body));
-  }
-  return true;
-}
-
-auto MacroEffectVisitor::VisitListExpr(expr::ListExpr* expr) -> bool {
-  ASSERT(expr);
-  bool changed = false;
-  expr::ExpressionList new_body{};
-  if (!VisitExpressionList(expr->GetBody(), new_body, &changed))
-    return false;
-  if (changed)
-    SetResult(expr::ListExpr::New(new_body));
   return true;
 }
 
@@ -317,23 +289,6 @@ auto MacroEffectVisitor::VisitNewMapExpr(expr::NewMapExpr* expr) -> bool {
   return false;
 }
 
-auto MacroEffectVisitor::VisitQuotedExpr(expr::QuotedExpr* expr) -> bool {
-  ASSERT(expr);
-  // do nothing
-  return true;
-}
-
-auto MacroEffectVisitor::VisitRxOpExpr(expr::RxOpExpr* expr) -> bool {
-  ASSERT(expr);
-  bool body_changed = false;
-  expr::ExpressionList new_body{};
-  if (!VisitExpressionList(expr->GetBody(), new_body, &body_changed))
-    return false;
-  if (body_changed)
-    SetResult(expr::RxOpExpr::New(expr->GetSymbol(), new_body));
-  return true;
-}
-
 auto MacroEffectVisitor::VisitStoreLocalExpr(expr::StoreLocalExpr* expr) -> bool {
   ASSERT(expr);
   MacroEffectVisitor for_value(GetOwner());
@@ -368,23 +323,6 @@ auto MacroEffectVisitor::VisitThrowExpr(expr::ThrowExpr* expr) -> bool {
   return true;
 }
 
-auto MacroEffectVisitor::VisitWhenExpr(expr::WhenExpr* expr) -> bool {
-  ASSERT(expr);
-  MacroEffectVisitor for_test(GetOwner());
-  VISIT(for_test, expr->GetTest());
-
-  bool changed = false;
-  expr::ExpressionList new_actions{};
-  if (!VisitExpressionList(expr->GetActions(), new_actions, &changed))
-    return false;
-  if (for_test || changed) {
-    const auto test = for_test ? for_test.GetResult() : expr->GetTest();
-    const auto& actions = changed ? new_actions : expr->GetActions();
-    SetResult(expr::WhenExpr::New(test, actions));
-  }
-  return true;
-}
-
 auto MacroEffectVisitor::VisitWhileExpr(expr::WhileExpr* expr) -> bool {
   ASSERT(expr);
   bool changed = false;
@@ -394,7 +332,7 @@ auto MacroEffectVisitor::VisitWhileExpr(expr::WhileExpr* expr) -> bool {
     changed = true;
 
   MacroEffectVisitor for_body(GetOwner());
-  if (!expr->GetBody()->Accept(&for_body)) {
+  if (!expr->GetBody()->Accept(for_body)) {
     LOG(ERROR) << "failed to visit while-expr body.";
     return false;
   }
@@ -460,33 +398,6 @@ auto MacroExpansionSiteEffectVisitor::VisitInvokeExpr(expr::InvokeExpr* expr) ->
     const auto new_target = for_target ? for_target.GetResult() : expr->GetTarget();
     ASSERT(new_target);
     SetResult(expr::InvokeExpr::New(new_target, changed ? new_args : expr->GetArgs()));
-  }
-  return true;
-}
-
-auto MacroExpansionSiteEffectVisitor::VisitWhenExpr(expr::WhenExpr* expr) -> bool {
-  ASSERT(expr);
-  MacroExpansionSiteEffectVisitor for_test(GetOwner(), GetSite());
-  LOG_IF(WARNING, !expr->GetTest()->Accept(&for_test)) << "failed to visit when test: " << expr->GetTest()->ToString();
-
-  bool changed = for_test.HasResult();
-  expr::ExpressionList new_actions{};
-  for (auto idx = 0; idx < expr->GetNumberOfActions(); idx++) {
-    const auto action = expr->GetActionAt(idx);
-    ASSERT(action);
-    MacroExpansionSiteEffectVisitor for_action(GetOwner(), GetSite());
-    LOG_IF(ERROR, !action->Accept(&for_action)) << "failed to visit when action #" << idx << " " << action->ToString();
-    if (!for_action) {
-      new_actions.push_back(action);
-      continue;
-    }
-    changed = true;
-    new_actions.insert(std::end(new_actions), for_action.begin(), for_action.end());
-  }
-  if (changed) {
-    const auto test = for_test ? for_test.GetResult() : expr->GetTest();
-    const auto& actions = changed ? new_actions : expr->GetActions();
-    SetResult(expr::WhenExpr::New(test, actions));
   }
   return true;
 }

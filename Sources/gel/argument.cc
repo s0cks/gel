@@ -4,6 +4,7 @@
 #include <string>
 
 #include "gel/common.h"
+#include "gel/hashcode.h"
 #include "gel/heap.h"
 #include "gel/object.h"
 #include "gel/platform.h"
@@ -40,9 +41,9 @@ auto Argument::operator new(const size_t sz) -> void* {
 
 #endif  // GEL_DISABLE_HEAP
 
-auto Argument::HashCode() const -> uword {
+auto Argument::GetHashCode() const -> HashCode {
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return 0;
+  return kInvalidHashCode;
 }
 
 auto Argument::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {

@@ -3,6 +3,7 @@
 #include <type_traits>
 
 #include "gel/object.h"
+#include "gel/str.h"
 
 namespace gel {
 template <class T>

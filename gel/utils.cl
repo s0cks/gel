@@ -76,12 +76,12 @@
   (defmacro odd? [x]
     "Returns true if x is even."
     (not (zero? (% x 2))))
-  (defmacro false? [x]
-    "Returns true if [x] is an instanceof false."
-    (and (#Bool? x) (not x)))
-  (defmacro true? [x]
-    "Returns true if [x] is an instanceof true."
-    (and (#Bool? x) x))
+  ; (defmacro false? [x]
+  ;   "Returns true if [x] is an instanceof false."
+  ;   (and (#Bool? x) (not x)))
+  ; (defmacro true? [x]
+  ;   "Returns true if [x] is an instanceof true."
+  ;   (and (#Bool? x) x))
   (defn min [seq]
     "Returns the min value in Seq [seq]."
     ((fn [candidate tail]

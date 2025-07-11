@@ -8,7 +8,7 @@
 #include <string>
 
 #include "gel/common.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/gv.h"
 #include "gel/symbol.h"
 
@@ -125,7 +125,7 @@ class ExpressionToDot : public dot::GraphBuilder, public ExpressionVisitor {
     ASSERT(name);
     ASSERT(expr);
     ExpressionToDot builder(name);
-    if (!expr->Accept(&builder)) {
+    if (!expr->Accept(builder)) {
       DLOG(ERROR) << "failed to visit: " << expr->ToString();
       return nullptr;
     }

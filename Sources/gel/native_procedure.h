@@ -6,8 +6,12 @@
 
 #include "gel/argument.h"
 #include "gel/array.h"
+#include "gel/boolean.h"
 #include "gel/common.h"
 #include "gel/error.h"
+#include "gel/fmt.h"
+#include "gel/nil.h"
+#include "gel/number.h"
 #include "gel/pointer.h"
 #include "gel/procedure.h"
 
@@ -47,8 +51,8 @@ class NativeArgument {
     }
     ASSERT(value);
     if (!value->GetType()->IsInstanceOf(T::GetClass())) {
-      SetError(
-          fmt::format("arg #{} `{}` is expected to be an instance of: `{}`", Index, (*value), T::GetClass()->GetName()->Get()));
+      SetError(fmt::format("arg #{} `{}` is expected to be an instance of: `{}`", Index, (*value),
+                           T::GetClass()->GetName()->Get()));
     }
     SetValue((T*)value);
   }
@@ -101,6 +105,11 @@ class NativeArgument {
   auto operator->() -> T* {
     return GetValue();
   }
+
+  operator T&() const {
+    ASSERT(HasValue());
+    return *GetValue();
+  }
 };
 
 template <const uword Index, class T = Object>
@@ -131,9 +140,9 @@ class NativeProcedureEntry {
   NativeProcedureEntry() = default;
   virtual auto Apply(const ObjectList& args) const -> bool = 0;
 
-  auto Return(Object* rhs = Null()) const -> bool;
+  auto Return(Object* rhs = Nil::Get()) const -> bool;
   inline auto ReturnNull() const -> bool {
-    return Return(Null());
+    return Return(Nil::Get());
   }
 
   template <class T, typename... Args>
@@ -161,7 +170,7 @@ class NativeProcedureEntry {
     return Return(Bool::False());
   }
 
-  inline auto ReturnLong(const RawLong rhs) const -> bool {
+  inline auto ReturnLong(const RawLong rhs = 0) const -> bool {
     return ReturnNew<Long>(rhs);
   }
 
@@ -257,8 +266,25 @@ class NativeProcedure : public Procedure {
     return entry_;
   }
 
-  auto HasEntry() const -> bool {
+  inline auto HasEntry() const -> bool {
     return GetEntry() != nullptr;
+  }
+
+  inline auto IsLinked() const -> bool {
+    return HasEntry();
+  }
+
+  inline auto Apply(const ObjectList args) const -> bool {
+    ASSERT(IsLinked());
+    return entry_->Apply(std::move(args));
+  }
+
+  auto operator()(const ObjectList args) const -> bool {
+    return Apply(std::move(args));
+  }
+
+  friend auto operator<<(std::ostream& stream, const NativeProcedure& rhs) -> std::ostream& {
+    return stream << rhs.ToString();
   }
 
   DECLARE_TYPE(NativeProcedure);
@@ -450,7 +476,7 @@ class VariantNativeArgument : public NativeArgumentBase {
 
   auto GetError() const -> Error* override {
     if (!value_)
-      return Error::New(fmt::format("Argument #{} is {}", GetIndex(), *Null()));
+      return Error::New(fmt::format("Argument #{} is {}", GetIndex(), *Nil::Get()));
     ASSERT(HasError());
     return (*value_)->AsError();
   }
@@ -477,5 +503,15 @@ using OptionalVariadicNativeArgument = VariantNativeArgument<Index, false, Types
   CHECK_NATIVE_ARG(Name);
 
 }  // namespace gel
+
+namespace fmt {
+template <>
+struct formatter<gel::NativeProcedure> : public formatter<std::string> {
+  template <typename FormatContext>
+  constexpr auto format(const gel::NativeProcedure& value, FormatContext& ctx) const -> decltype(ctx.out()) {
+    return format_to(ctx.out(), "{}", value.ToString());
+  }
+};
+}  // namespace fmt
 
 #endif  // GEL_NATIVE_PROCEDURE_H

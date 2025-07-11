@@ -10,6 +10,7 @@
 #include "gel/object.h"
 #include "gel/platform.h"
 #include "gel/pointer.h"
+#include "gel/str.h"
 
 namespace gel {
 class Argument : public Object {
@@ -48,6 +49,10 @@ class Argument : public Object {
     return name_;
   }
 
+  inline auto HasName() const -> bool {
+    return GetName() != nullptr;
+  }
+
   auto IsOptional() const -> bool {
     return optional_;
   }
@@ -57,7 +62,7 @@ class Argument : public Object {
   }
 
   auto Compare(Object* rhs) const -> bool override;
-  auto HashCode() const -> uword override;
+  auto GetHashCode() const -> HashCode override;
   auto Equals(Object* rhs) const -> bool override;
   auto ToString() const -> std::string override;
 
@@ -75,12 +80,6 @@ class Argument : public Object {
   static auto operator new(const size_t sz) -> void*;
   static inline void operator delete(void* ptr) {
     ASSERT(ptr);
-  }
-
-  static inline auto IsNamed(const std::string& name) -> std::function<bool(Argument*)> {
-    return [name](Argument* arg) {
-      return arg && arg->GetName()->Equals(name);
-    };
   }
 
   static inline auto New(const uint64_t idx, String* name, const bool optional, const bool vararg) -> Argument* {

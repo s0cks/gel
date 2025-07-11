@@ -8,7 +8,8 @@
 
 #include "gel/common.h"
 #include "gel/constructor.h"
-#include "gel/expression.h"
+#include "gel/expr/clause_expr.h"
+#include "gel/expr/expression.h"
 #include "gel/flags.h"
 #include "gel/flow_graph.h"
 #include "gel/instruction.h"
@@ -21,6 +22,16 @@
 #include "gel/type_traits.h"
 
 namespace gel {
+template <class I>
+concept IsEntryInstr = requires(const uword idx) {
+  { I::New(idx) } -> std::convertible_to<EntryInstr*>;
+};
+
+template <class T>
+concept HasBodyExpr = requires(T value) {
+  { value.GetBody() } -> std::convertible_to<expr::Expression*>;
+};
+
 class FlowGraphBuilder {
   friend class ValueVisitor;
   friend class EffectVisitor;
@@ -100,9 +111,8 @@ class FlowGraphBuilder {
   }
 
  public:
-  static auto Build(Script* script, LocalScope* scope = LocalScope::New()) -> FlowGraph*;
-  static auto Build(Lambda* lambda, LocalScope* scope = LocalScope::New()) -> FlowGraph*;
-  static auto Build(Constructor* init, LocalScope* scope = LocalScope::New()) -> FlowGraph*;
+  template <HasBodyExpr Target>
+  static auto Build(Target& target, LocalScope* scope = LocalScope::New()) -> FlowGraph*;
 };
 
 class ValueVisitor;
@@ -217,10 +227,10 @@ class EffectVisitor : public ExpressionVisitor {
     return defn;
   }
 
-  template <class E>
-  inline auto NewBlock(std::enable_if_t<ir::is_entry<E>::value>* = nullptr) -> E* {
+  template <IsEntryInstr I>
+  inline auto NewBlock() -> I* {
     const auto parent = GetCurrentBlock();
-    const auto blk = E::New(GetOwner()->GetNextBlockId());
+    const auto blk = I::New(GetOwner()->GetNextBlockId());
     if (parent)
       parent->AddDominated(blk);
     SetCurrentBlock(blk);
@@ -240,7 +250,7 @@ class EffectVisitor : public ExpressionVisitor {
     ASSERT(IsOpen());
     if (GetExitInstr()->IsDefinition())
       return AddReturnExit(GetExitInstr()->AsDefinition());
-    return AddReturnExit(Bind(gel::ConstantInstr::New(gel::Null())));
+    return AddReturnExit(Bind(gel::ConstantInstr::New(gel::Nil::Get())));
   }
 
   virtual void ReturnValue(ir::Definition* defn) {}
@@ -276,31 +286,20 @@ class EffectVisitor : public ExpressionVisitor {
     return !IsOpen();
   }
 
-  virtual auto VisitScript(Script* script) -> bool;
-  virtual auto VisitLambda(Lambda* lambda) -> bool;
-  virtual auto VisitConstructor(Constructor* init) -> bool;
-#define DECLARE_VISIT(Name) virtual auto Visit##Name(Name* name)->bool override;
+  template <HasBodyExpr T>
+  auto Visit(T& rhs) -> bool;
+#define DECLARE_VISIT(Name) virtual auto Visit##Name(Name* name) -> bool override;
   FOR_EACH_EXPRESSION_NODE(DECLARE_VISIT)
 #undef DECLARE_VISIT
 
   auto operator()(expr::Expression* expr) -> bool {
     ASSERT(expr);
-    return expr->Accept(this);
+    return expr->Accept(*this);
   }
 
-  auto operator()(Script* rhs) -> bool {
-    ASSERT(rhs);
-    return VisitScript(rhs);
-  }
-
-  auto operator()(Lambda* rhs) -> bool {
-    ASSERT(rhs);
-    return VisitLambda(rhs);
-  }
-
-  auto operator()(Constructor* rhs) -> bool {
-    ASSERT(rhs);
-    return VisitConstructor(rhs);
+  template <HasBodyExpr T>
+  inline auto operator()(T& rhs) -> bool {
+    return Visit(rhs);
   }
 };
 
@@ -321,7 +320,7 @@ class ValueVisitor : public EffectVisitor {
   }
 
   inline void ReturnNull() {
-    return ReturnDefinition(ir::ConstantInstr::New(gel::Null()));
+    return ReturnDefinition(ir::ConstantInstr::New(Nil::Get()));
   }
 
  public:
@@ -343,33 +342,8 @@ class ValueVisitor : public EffectVisitor {
 
   auto operator()(expr::Expression* rhs) -> bool {
     ASSERT(rhs);
-    return rhs->Accept(this);
+    return rhs->Accept(*this);
   }
-};
-
-class RxEffectVisitor : public EffectVisitor {
-  DEFINE_NON_COPYABLE_TYPE(RxEffectVisitor);
-
- private:
-  LocalVariable* local_;
-
- public:
-  RxEffectVisitor(FlowGraphBuilder* owner, LocalVariable* local) :
-    EffectVisitor(owner),
-    local_(local) {
-    ASSERT(local_);
-  }
-  ~RxEffectVisitor() override = default;
-
-  auto GetSource() const -> LocalVariable* {
-    return local_;
-  }
-
-  auto CreateLoadSource() const -> ir::Definition* {
-    return ir::LoadLocalInstr::New(GetSource());
-  }
-
-  auto VisitRxOpExpr(expr::RxOpExpr* expr) -> bool override;
 };
 
 class CondClauseEffectVisitor : public EffectVisitor {
@@ -401,7 +375,7 @@ class CondClauseEffectVisitor : public EffectVisitor {
 
   auto operator()(expr::ClauseExpr* expr) -> bool {
     ASSERT(expr);
-    return expr->Accept(this);
+    return expr->Accept(*this);
   }
 };
 }  // namespace gel

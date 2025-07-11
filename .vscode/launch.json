@@ -77,7 +77,7 @@
     },
     {
       "id": "test-suite",
-      "type":"pickString",
+      "type": "pickString",
       "description": "The test suite to run",
       "options": [
         "Lexer",
@@ -196,8 +196,10 @@
       "args": [
         "-logtostdout",
         "-colorlogtostdout",
-        "--reports-dir", "${workspaceFolder}/reports",
-        "--module-dir", "${workspaceFolder}/gel",
+        "--reports-dir",
+        "${workspaceFolder}/reports",
+        "--module-dir",
+        "${workspaceFolder}/gel",
         "--dump-ast",
         "--dump-flow-graph",
         "--nokernel",
@@ -219,12 +221,15 @@
       "args": [
         "-logtostdout",
         "-colorlogtostdout",
-        "--expr", "${input:expression}",
-        "--reports-dir", "${workspaceFolder}/reports",
+        "--expr",
+        "${input:expression}",
+        "--reports-dir",
+        "${workspaceFolder}/reports",
         "--dump-ast",
         "--dump-flow-graph",
-        "--module-dir", "${workspaceFolder}/gel",
-         "-v=${input:verbose-level}"
+        "--module-dir",
+        "${workspaceFolder}/gel",
+        "-v=${input:verbose-level}"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [
@@ -239,12 +244,15 @@
       "args": [
         "-logtostdout",
         "-colorlogtostdout",
-        "--module-dir", "${workspaceFolder}/gel",
-        "--expr", "(foreach (lambda (x) (print x)) (list 1 2 3))",
-        "--reports-dir", "${workspaceFolder}/reports",
+        "--module-dir",
+        "${workspaceFolder}/gel",
+        "--expr",
+        "(foreach (lambda (x) (print x)) (list 1 2 3))",
+        "--reports-dir",
+        "${workspaceFolder}/reports",
         "--dump-ast",
         "--dump-flow-graph",
-         "-v=${input:verbose-level}"
+        "-v=${input:verbose-level}"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [
@@ -259,11 +267,14 @@
       "args": [
         "-logtostdout",
         "-colorlogtostdout",
-        "--expr", "${input:expression}",
-        "--reports-dir", "${workspaceFolder}/reports",
+        "--expr",
+        "${input:expression}",
+        "--reports-dir",
+        "${workspaceFolder}/reports",
         "--dump-ast",
         "--dump-flow-graph",
-        "--module-dir", "${workspaceFolder}/gel",
+        "--module-dir",
+        "${workspaceFolder}/gel",
         "--noeval"
       ],
       "cwd": "${workspaceFolder}",
@@ -279,9 +290,12 @@
       "args": [
         "-logtostdout",
         "-colorlogtostdout",
-        "--expr", "${input:expression}",
-        "--reports-dir", "${workspaceFolder}/reports",
-        "--module-dir", "${workspaceFolder}/gel",
+        "--expr",
+        "${input:expression}",
+        "--reports-dir",
+        "${workspaceFolder}/reports",
+        "--module-dir",
+        "${workspaceFolder}/gel",
         "--dump-ast",
         "--dump-flow-graph",
         "--nokernel",
@@ -300,13 +314,16 @@
       "args": [
         "-logtostdout",
         "-colorlogtostdout",
-        "--reports-dir", "${workspaceFolder}/reports",
-        "--module-dir", "${workspaceFolder}/gel",
+        "--reports-dir",
+        "${workspaceFolder}/reports",
+        "--module-dir",
+        "${workspaceFolder}/gel",
         "--nokernel",
         "--dump-ast",
         "--dump-flow-graph",
         "-v=${input:verbose-level}",
-        "--expr", "(cond #t (print \"true\") (print \"false\"))"
+        "--expr",
+        "(cond #t (print \"true\") (print \"false\"))"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [
@@ -321,8 +338,10 @@
       "args": [
         "-logtostdout",
         "-colorlogtostdout",
-        "--expr", "(begin (define sq (lambda (x) (* x x))) (sq 10))",
-        "--reports-dir", "${workspaceFolder}/reports",
+        "--expr",
+        "(begin (define sq (lambda (x) (* x x))) (sq 10))",
+        "--reports-dir",
+        "${workspaceFolder}/reports",
         "--dump-ast",
         "--dump-flow-graph"
       ],
@@ -339,8 +358,10 @@
       "args": [
         "-logtostdout",
         "-colorlogtostdout",
-        "--module", "(defmodule test)",
-        "--reports-dir", "${workspaceFolder}/reports",
+        "--module",
+        "(defmodule test)",
+        "--reports-dir",
+        "${workspaceFolder}/reports",
         "--dump-ast",
         "--dump-flow-graph"
       ],
@@ -357,9 +378,12 @@
       "args": [
         "-logtostdout",
         "-colorlogtostdout",
-        "--module", "(defmodule test (define test #t))",
-        "--reports-dir", "${workspaceFolder}/reports",
-        "--expr", "(print test)",
+        "--module",
+        "(defmodule test (define test #t))",
+        "--reports-dir",
+        "${workspaceFolder}/reports",
+        "--expr",
+        "(print test)",
         "--dump-ast",
         "--dump-flow-graph"
       ],
@@ -376,12 +400,15 @@
       "args": [
         "-logtostdout",
         "-colorlogtostdout",
-        "--reports-dir", "${workspaceFolder}/reports",
+        "--reports-dir",
+        "${workspaceFolder}/reports",
         "--dump-ast",
         "--dump-flow-graph",
-        "--module-dir", "${workspaceFolder}/gel",
+        "--module-dir",
+        "${workspaceFolder}/gel",
         "-v=${input:verbose-level}",
-        "--expr", "(begin (define x ${input:even-value}) (cond (even? x) (format \"{} is even\" x) (throw (format \"{} is not even\" x))))"
+        "--expr",
+        "(begin (define x ${input:even-value}) (cond (even? x) (format \"{} is even\" x) (throw (format \"{} is not even\" x))))"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [
@@ -396,13 +423,16 @@
       "args": [
         "-logtostdout",
         "-colorlogtostdout",
-        "--reports-dir", "${workspaceFolder}/reports",
-        "--module-dir", "${workspaceFolder}/gel",
+        "--reports-dir",
+        "${workspaceFolder}/reports",
+        "--module-dir",
+        "${workspaceFolder}/gel",
         "--nokernel",
         "--dump-ast",
         "--dump-flow-graph",
         "-v=${input:verbose-level}",
-        "--expr", "(when (> 1 0) (print \"Hello World\") (print \"Test\")))"
+        "--expr",
+        "(when (> 1 0) (print \"Hello World\") (print \"Test\")))"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [
@@ -417,13 +447,16 @@
       "args": [
         "-logtostdout",
         "-colorlogtostdout",
-        "--reports-dir", "${workspaceFolder}/reports",
-        "--module-dir", "${workspaceFolder}/gel",
+        "--reports-dir",
+        "${workspaceFolder}/reports",
+        "--module-dir",
+        "${workspaceFolder}/gel",
         "--nokernel",
         "--dump-ast",
         "--dump-flow-graph",
         "-v=${input:verbose-level}",
-        "--expr", "(begin (define x ${input:even-value}) (case x (10 (print \"Hello World\")) (11 (print \"Failed\"))))"
+        "--expr",
+        "(begin (define x ${input:even-value}) (case x (10 (print \"Hello World\")) (11 (print \"Failed\"))))"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [
@@ -438,8 +471,10 @@
       "args": [
         "-logtostdout",
         "-colorlogtostdout",
-        "--reports-dir", "${workspaceFolder}/reports",
-        "--module-dir", "${workspaceFolder}/gel",
+        "--reports-dir",
+        "${workspaceFolder}/reports",
+        "--module-dir",
+        "${workspaceFolder}/gel",
         "-v=${input:verbose-level}"
       ],
       "cwd": "${workspaceFolder}",
@@ -455,7 +490,8 @@
       "args": [
         "-logtostdout",
         "-colorlogtostdout",
-        "--reports-dir", "${workspaceFolder}/reports",
+        "--reports-dir",
+        "${workspaceFolder}/reports",
         "-v=${input:verbose-level}",
         "--benchmark_filter=${input:bm-filter}"
       ],
@@ -480,7 +516,8 @@
         "-colorlogtostdout",
         "-v=${input:verbose-level}",
         "${workspaceFolder}/scripts/${input:target-script}",
-        "--print-bytecode"
+        "--print-bytecode",
+        "--dump-ast"
       ],
       "cwd": "${workspaceFolder}",
       "initCommands": [

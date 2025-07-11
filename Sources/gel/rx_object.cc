@@ -2,8 +2,10 @@
 #include <rpp/observers/fwd.hpp>
 
 #include "gel/common.h"
+#include "gel/hashcode.h"
 #include "gel/object.h"
 #include "gel/rx.h"
+#include "gel/subject.h"
 
 #ifdef GEL_ENABLE_RX
 #include "gel/error.h"
@@ -25,16 +27,16 @@ auto Observable::Equals(Object* rhs) const -> bool {
   return false;
 }
 
-auto Observable::HashCode() const -> uword {
+auto Observable::GetHashCode() const -> HashCode {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return 0;
+  return kInvalidHashCode;
 }
 
 auto Observable::ToObservable(Pair* list) -> rx::DynamicObjectObservable {
   ASSERT(list);
   return rx::source::create<Object*>([list](const auto& s) {
     Object* cell = list;
-    while (!gel::IsNull(cell) && gel::IsPair(cell)) {
+    while (!cell->IsNil() && gel::IsPair(cell)) {
       const auto head = gel::Car(cell);
       ASSERT(head);
       s.on_next(head);
@@ -49,7 +51,7 @@ auto Observable::Empty() -> Observable* {
 }
 
 auto Observable::New(Object* value) -> Observable* {
-  if (gel::IsNull(value))
+  if (value->IsNil())
     return Empty();
   else if (gel::IsPair(value))
     return New(ToObservable(ToPair(value)));
@@ -64,7 +66,7 @@ auto Observable::Compare(Object* rhs) const -> bool {
 }
 
 auto Observable::New(const ObjectList& args) -> Observable* {
-  if (args.empty() || gel::IsNull(args[0]))
+  if (args.empty() || args[0]->IsNil())
     return Empty();
   return New(args[0]);
 }
@@ -94,9 +96,9 @@ auto Observer::Equals(Object* rhs) const -> bool {
   return false;
 }
 
-auto Observer::HashCode() const -> uword {
+auto Observer::GetHashCode() const -> HashCode {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return 0;
+  return kInvalidHashCode;
 }
 
 auto Observer::New() -> Observer* {
@@ -123,81 +125,6 @@ auto Observer::New(const ObjectList& args) -> Observer* {
     throw Exception(fmt::format("cannot create observer with on_complete value of: {}", (*on_complete)));
   return New(on_next, on_error, on_complete);
 }
-
-auto Subject::to_exception_ptr(Error* error) -> std::exception_ptr {
-  ASSERT(error && !error->GetMessage()->Get().empty());
-  return std::make_exception_ptr(Exception(String::Unbox(error->GetMessage())));
-}
-
-auto Subject::CreateClass() -> Class* {
-  ASSERT(kClass == nullptr);
-  return Class::New(Object::GetClass(), kClassName);
-}
-
-auto Subject::ToString() const -> std::string {
-  return ToStringHelper<Subject>{};
-}
-
-auto Subject::New(const ObjectList& args) -> Subject* {
-  NOT_IMPLEMENTED(FATAL);
-}
-
-auto PublishSubject::New(const ObjectList& args) -> PublishSubject* {
-  ASSERT(args.empty());
-  return New();
-}
-
-auto PublishSubject::ToString() const -> std::string {
-  return ToStringHelper<PublishSubject>{};
-}
-
-auto PublishSubject::Equals(Object* rhs) const -> bool {
-  ASSERT(rhs);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return false;
-}
-
-auto PublishSubject::HashCode() const -> uword {
-  return Subject::HashCode();
-}
-
-auto PublishSubject::Compare(Object* rhs) const -> bool {
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return false;
-}
-
-auto PublishSubject::CreateClass() -> Class* {
-  return Class::New(Subject::GetClass(), "PublishSubject");
-}
-
-auto ReplaySubject::New(const ObjectList& args) -> ReplaySubject* {
-  ASSERT(args.empty());
-  return New();
-}
-
-auto ReplaySubject::ToString() const -> std::string {
-  return ToStringHelper<ReplaySubject>{};
-}
-
-auto ReplaySubject::HashCode() const -> uword {
-  return Subject::HashCode();
-}
-
-auto ReplaySubject::Compare(Object* rhs) const -> bool {
-  NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return false;
-}
-
-auto ReplaySubject::Equals(Object* rhs) const -> bool {
-  ASSERT(rhs);
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return false;
-}
-
-auto ReplaySubject::CreateClass() -> Class* {
-  return Class::New(Subject::GetClass(), "ReplaySubject");
-}
-
 namespace proc {
 #define NATIVE_RX_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(rx_##Name)
 
@@ -284,7 +211,9 @@ NATIVE_RX_PROCEDURE_F(subscribe) {
   const auto on_error = rx::CallOnError(runtime, on_error_arg);
   const auto on_completed = rx::CallOnComplete(runtime, on_completed_arg);
   if (source.GetValue()->IsSubject()) {
-    (source.GetValue())->AsSubject()->Subscribe(rx::CallOnNext(runtime, on_next->AsProcedure()), on_error, on_completed);
+    (source.GetValue())
+        ->AsSubject()
+        ->Subscribe(rx::CallOnNext(runtime, on_next->AsProcedure()), on_error, on_completed);
     return DoNothing();
   } else if (source.GetValue()->IsObservable()) {
     (source.GetValue()->AsObservable())
@@ -298,7 +227,8 @@ NATIVE_RX_PROCEDURE_F(subscribe) {
 #define CHECK_ARG_TYPE(Index, Name, Type)                  \
   const auto Name = args[Index];                           \
   if (!(Name) || !(Name->GetType()->IsInstanceOf((Type)))) \
-    return ThrowError(fmt::format("expected arg #{} ({}) `{}` to be a `{}`", Index, #Name, (*Name), ((Type)->GetName())->Get()));
+    return ThrowError(                                     \
+        fmt::format("expected arg #{} ({}) `{}` to be a `{}`", Index, #Name, (*Name), ((Type)->GetName())->Get()));
 
 // (rx:map <func>)
 NATIVE_RX_PROCEDURE_F(map) {
@@ -344,7 +274,7 @@ NATIVE_RX_PROCEDURE_F(take_while) {
   CHECK_ARG_TYPE(0, source, Observable::GetClass());
   CHECK_ARG_TYPE(1, predicate, Procedure::GetClass());
   source->AsObservable()->Apply(rx::operators::take_while([predicate, runtime](Object* value) {
-    return gel::Truth(runtime->CallPop(predicate->AsProcedure(), {value}));
+    return gel::Truth(runtime->CallPop(*(predicate->AsProcedure()), {value}));
   }));
   return DoNothing();
 }

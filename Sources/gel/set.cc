@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "gel/common.h"
+#include "gel/hashcode.h"
 #include "gel/native_procedure.h"
 #include "gel/object.h"
 #include "gel/to_string_helper.h"
@@ -28,9 +29,9 @@ auto Set::Intersection(Set* lhs, Set* rhs) -> Set* {
   return Of(results);
 }
 
-auto Set::HashCode() const -> uword {
+auto Set::GetHashCode() const -> HashCode {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return 0;
+  return kInvalidHashCode;
 }
 
 auto Set::Equals(Object* rhs) const -> bool {
@@ -51,7 +52,7 @@ auto Set::Compare(Object* rhs) const -> bool {
 }
 
 auto Set::Of(Object* value) -> Set* {
-  if (gel::IsNull(value))
+  if (value->IsNil())
     return Set::Of();
   else if (value->IsSet())
     return value->AsSet();
@@ -65,7 +66,7 @@ auto Set::Of(Object* value) -> Set* {
       });
     ObjectList values;
     auto v = value;
-    while (!gel::IsNull(v)) {
+    while (!v->IsNil()) {
       values.push_back(gel::Car(v));
       v = gel::Cdr(v);
     }

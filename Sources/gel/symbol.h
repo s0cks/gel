@@ -79,6 +79,11 @@ class Symbol : public Object {
   }
 
   auto Equals(const std::string& rhs) const -> bool;
+
+  operator std::string() const {
+    return GetFullyQualifiedName();
+  }
+  
   DECLARE_TYPE(Symbol);
 
  private:

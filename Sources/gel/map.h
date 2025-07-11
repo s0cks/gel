@@ -8,7 +8,7 @@
 namespace gel {
 class Map : public Object {
  public:
-  using StorageType = std::unordered_map<Object*, Object*, ObjectHasher, ObjectComparator>;
+  using StorageType = std::unordered_map<Symbol*, Object*, ObjectHasher, ObjectComparator>;
   using Iter = StorageType::iterator;
   using ConstIter = StorageType::const_iterator;
 
@@ -19,15 +19,31 @@ class Map : public Object {
     Object(),
     data_(data) {}
 
-  inline auto Find(Object* rhs) const -> ConstIter {
+  inline auto Find(Symbol* rhs) const -> ConstIter {
     return data().find(rhs);
   }
 
  public:
   ~Map() override = default;
 
-  auto data() const -> const StorageType& {
+  inline auto data() const -> const StorageType& {
     return data_;
+  }
+
+  inline auto begin() -> StorageType::iterator {
+    return std::begin(data_);
+  }
+
+  inline auto begin() const -> StorageType::const_iterator {
+    return std::begin(data());
+  }
+
+  inline auto end() -> StorageType::iterator {
+    return std::end(data_);
+  }
+
+  inline auto end() const -> StorageType::const_iterator {
+    return std::end(data());
   }
 
   auto GetSize() const -> uword {
@@ -38,11 +54,11 @@ class Map : public Object {
     return data_.empty();
   }
 
-  auto Contains(Object* rhs) const -> bool {
+  auto Contains(Symbol* rhs) const -> bool {
     return Find(rhs) != std::end(data());
   }
 
-  auto Get(Object* key) const -> Object*;
+  auto Get(Symbol* key) const -> Object*;
   DECLARE_TYPE(Map);
 
  public:
@@ -53,7 +69,7 @@ class Map : public Object {
 };
 
 namespace proc {
-#define _DECLARE_MAP_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(map_##Name, "Map:" Sym)
+#define _DECLARE_MAP_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(map_##Name, "map:" Sym)
 #define DECLARE_MAP_PROCEDURE(Name)       _DECLARE_MAP_PROCEDURE(Name, #Name);
 
 DECLARE_MAP_PROCEDURE(contains);

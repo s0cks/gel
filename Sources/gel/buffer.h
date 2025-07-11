@@ -28,8 +28,8 @@ class Buffer : public Object {
   static constexpr const auto kMaxBufferSize = 4 * 1024 * 1024;
 
  private:
-  uword wpos_ = 0;
-  uword rpos_ = 0;
+  uword write_pos_ = 0;
+  uword read_pos_ = 0;
   uword capacity_;
 
   Buffer(const uword capacity) :
@@ -39,9 +39,9 @@ class Buffer : public Object {
 
   void CopyFrom(const uint8_t* src, const uword num_bytes) {
     ASSERT(src);
-    ASSERT((wpos() + num_bytes) <= GetCapacity());  // TODO: resize
-    memcpy(&data()[wpos()], &src[0], num_bytes);
-    wpos_ += num_bytes;
+    ASSERT((write_pos() + num_bytes) <= GetCapacity());  // TODO: resize
+    memcpy(&data()[write_pos()], &src[0], num_bytes);
+    write_pos_ += num_bytes;
   }
 
   template <typename T>
@@ -51,14 +51,14 @@ class Buffer : public Object {
       LOG(ERROR) << "cannot read " << units::data::byte_t(kValueSize) << " from " << ToString();
       return false;
     }
-    rpos_ = pos + kValueSize;
+    read_pos_ = pos + kValueSize;
     (*result) = *((T*)(data() + pos));
     return true;
   }
 
   template <typename T>
   inline auto Read(T* result) -> bool {
-    return ReadAt<T>(rpos_, result);
+    return ReadAt<T>(read_pos_, result);
   }
 
   template <typename T>
@@ -69,13 +69,13 @@ class Buffer : public Object {
       return false;
     }
     *((T*)(data() + pos)) = value;
-    wpos_ = pos + kValueSize;
+    write_pos_ = pos + kValueSize;
     return true;
   }
 
   template <typename T>
   inline auto Put(const T value) -> bool {
-    return PutAt<T>(wpos(), value);
+    return PutAt<T>(write_pos(), value);
   }
 
  public:
@@ -89,12 +89,12 @@ class Buffer : public Object {
     return (uint8_t*)GetDataAddress();  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   }
 
-  constexpr auto wpos() const -> uword {
-    return wpos_;
+  constexpr auto write_pos() const -> uword {
+    return write_pos_;
   }
 
   auto rpos() const -> uword {
-    return rpos_;
+    return read_pos_;
   }
 
   auto GetCapacity() const -> uword {
@@ -102,7 +102,7 @@ class Buffer : public Object {
   }
 
   inline auto GetAsString() const -> std::string {
-    return {(const char*)data(), wpos()};  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+    return {(const char*)data(), write_pos()};  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   }
 
 #define DEFINE_READ_SIZE(Sz)                                                                                       \
@@ -182,7 +182,7 @@ class Base64BufferEncoding : public BufferEncoding {
   auto EncodeBlockData(std::string& out, const uint8_t* data, const uint64_t num_bytes) const -> uword;
 
   inline auto EncodeBlock(std::string& encoded, const Buffer& buff) const -> bool {
-    return EncodeBlockData(encoded, buff.data(), buff.wpos()) == (encoded.capacity() - 2);
+    return EncodeBlockData(encoded, buff.data(), buff.write_pos()) == (encoded.capacity() - 2);
   }
 
   auto DecodeBlockData(std::string& decoded, const uint8_t* data, const uint64_t num_bytes) const -> uword;
@@ -206,7 +206,7 @@ class Base64BufferEncoding : public BufferEncoding {
   }
 
   static inline constexpr auto CalcEncodedLength(const Buffer& rhs) -> uword {
-    return 4 * ((rhs.wpos() + 2) / 3);
+    return 4 * ((rhs.write_pos() + 2) / 3);
   }
 
   static inline constexpr auto CalcDecodedLength(const String& rhs) -> uword {

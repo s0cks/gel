@@ -5,6 +5,7 @@
 #include <type_traits>
 
 #include "gel/bytecode.h"
+#include "gel/call_stack.h"
 #include "gel/common.h"
 #include "gel/local_scope.h"
 #include "gel/operation_stack.h"
@@ -14,6 +15,9 @@
 #include "gel/type_traits.h"
 
 namespace gel {
+template <class T>
+concept InterpreterTarget = HasCompiledCode<T>;
+
 class Runtime;
 class Interpreter {
   friend class Runtime;
@@ -23,7 +27,11 @@ class Interpreter {
   Runtime* runtime_;
   uword current_ = 0;
 
-  auto GetOperationStack() -> OperationStack*;
+  auto GetCallStack() -> CallStack&;
+
+  inline auto GetOperationStack() -> OperationStack* {
+    return GetCallStack()->GetOperationStack();
+  }
 
   inline auto NextOp() -> vm::Bytecode::Op {
     const auto next = *((vm::Bytecode::Op*)GetCurrentAddress());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
@@ -72,6 +80,7 @@ class Interpreter {
   void bt();
   void Pop();
   void Dup();
+  void Dup2();
   void Throw();
   void Lookup(Symbol* rhs);
   void PopLookup();
@@ -141,15 +150,19 @@ class Interpreter {
   virtual ~Interpreter() = default;
   void Run(const uword address);
 
-  template <class T>
-  inline void Run(T* target, std::enable_if_t<gel::has_code<T>::value>* = nullptr) {
-    ASSERT(target);
-    const auto& code = target->GetCode();
+  template <InterpreterTarget Target>
+  inline void Run(Target& target) {
+    const auto& code = target.GetCode();
     if (!code->IsCompiled()) {
       DLOG(ERROR) << "cannot run " << target << ", target is not compiled.";
       return;
     }
     return Run(code->GetCodeStartingAddress());
+  }
+
+  template <InterpreterTarget Target>
+  inline void operator()(Target& rhs) {
+    return Run(rhs);
   }
 };
 }  // namespace gel

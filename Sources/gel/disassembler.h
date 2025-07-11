@@ -1,15 +1,27 @@
 #ifndef GEL_DISASSEMBLER_H
 #define GEL_DISASSEMBLER_H
 
+#include <concepts>
+#include <string_view>
 #include <type_traits>
 
 #include "gel/common.h"
+#include "gel/compiled_code.h"
 #include "gel/disassembler_vm.h"
+#include "gel/hashcode.h"
 #include "gel/local.h"
 #include "gel/local_scope.h"
 #include "gel/type_traits.h"
 
 namespace gel {
+template <class T>
+concept HasFullyQualifiedName = requires(T value) {
+  { value.GetFullyQualifiedName() } -> std::convertible_to<std::string>;
+};
+
+template <class T>
+concept DisassemblerTarget = HasCompiledCode<T> && HasFullyQualifiedName<T>;
+
 class CompiledCode;
 class Disassembler {
   DEFINE_NON_COPYABLE_TYPE(Disassembler);
@@ -39,7 +51,7 @@ class Disassembler {
     return stream_;
   }
 
-  void WriteLabel(const char* label);
+  void WriteLabel(const std::string_view label);
   void WritePrefix(const uword address, const uword pos);
 
   inline void WriteOffset(int32_t rhs) {
@@ -66,7 +78,7 @@ class Disassembler {
     return PrintValue(Comment(), rhs);
   }
 
-  inline auto Comment(const std::string& rhs) -> std::ostream& {
+  inline auto Comment(const std::string rhs) -> std::ostream& {
     return Comment() << rhs;
   }
 
@@ -128,35 +140,42 @@ class Disassembler {
     return stream().str();
   }
 
-  void Disassemble(const Region& region, const char* label = nullptr);
-
-  inline void Disassemble(const Region& region, const std::string& label) {
-    return Disassemble(region, label.c_str());
-  }
-
-  void Disassemble(CompiledCode* code, const std::string& label);
+  void Disassemble(const Region region, const std::string_view label);
 
   friend auto operator<<(std::ostream& stream, const Disassembler& rhs) -> std::ostream& {
     return stream << rhs.stream().rdbuf();
   }
 
+ private:
+  template <DisassemblerTarget Target>
+  static inline void CreateLabel(const Target& target, std::string& label) {
+    std::stringstream ss{};
+    ss << target.GetFullyQualifiedName();
+#ifdef GEL_DEBUG
+    ss << " " << target.GetType()->GetName()->Get();
+#endif  // GEL_DEBUG
+    label = ss.str();
+  }
+
  public:
-  template <class E>
-  static inline void Disassemble(std::ostream& stream, const E* exec, LocalScope* parent_scope = nullptr,
-                                 std::enable_if_t<gel::has_code<E>::value>* = nullptr) {
-    ASSERT(exec);
+  template <DisassemblerTarget Target>
+  static inline void Disassemble(std::ostream& stream, const Target& target, LocalScope* parent_scope = nullptr,
+                                 const std::string_view prefix = "", const std::string_view suffix = "") {
+    if (!target.IsCompiled()) {
+      stream << target << " is not compiled.";
+      return;
+    }
     const auto scope = LocalScope::New(parent_scope);
     ASSERT(scope);
-    if (exec->HasScope())
-      scope->AddAll(exec->GetScope());
+    if (target.HasScope())
+      scope->AddAll(target.GetScope());
     Disassembler disassembler(scope);
-    std::stringstream label{};
-    label << exec->GetFullyQualifiedName();
-#ifdef GEL_DEBUG
-    label << " " << exec->GetType()->GetName()->Get();
-#endif  // GEL_DEBUG
-    disassembler.Disassemble(exec->GetCode(), label.str().c_str());
+    std::string label{};
+    CreateLabel(target, label);
+    disassembler.Disassemble(*target.GetCode(), label);
+    stream << std::endl << prefix << std::endl;
     stream << disassembler;
+    stream << std::endl << suffix << std::endl;
   }
 };
 }  // namespace gel

@@ -30,13 +30,12 @@ void Disassembler::WritePrefix(const uword address, const uword pos) {
     stream() << ":";
 }
 
-void Disassembler::WriteLabel(const char* label) {
+void Disassembler::WriteLabel(const std::string_view label) {
   static constexpr const auto kPrefixLength = 17;
   ASSERT(ShouldShowLabels());
-  const auto len = strlen(label);
-  ASSERT(label && len > 0);
-  if (len <= kPrefixLength)  // left-pad
-    stream() << std::string(kPrefixLength - len, ' ');
+  ASSERT(!label.empty());
+  if (label.length() <= kPrefixLength)  // left-pad
+    stream() << std::string(kPrefixLength - label.length(), ' ');
   stream() << label << ":" << std::endl;
 }
 
@@ -75,9 +74,9 @@ void Disassembler::Invoke(BytecodeDecoder& decoder, const Bytecode::Op op) {
   }
 }
 
-void Disassembler::Disassemble(const Region& region, const char* label) {
+void Disassembler::Disassemble(const Region region, const std::string_view label) {
   stream() << std::endl;
-  if (ShouldShowLabels() && label && (strlen(label) > 0))
+  if (ShouldShowLabels() && (label.length() > 0))
     WriteLabel(label);
   BytecodeDecoder decoder(region);
   while (decoder.HasNext()) {
@@ -85,7 +84,6 @@ void Disassembler::Disassemble(const Region& region, const char* label) {
     WritePrefix(decoder.GetCurrentAddress(), ipos);
     instr_startp_ = stream().tellp();
     const auto op = decoder.NextOp();
-    Bytecode::PrintRaw(DLOG(INFO) << "op: ", op);
     Mnemonic(op);
     switch (op) {
       case Bytecode::kPushQ: {

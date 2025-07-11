@@ -6,6 +6,7 @@
 #include <string>
 
 #include "gel/common.h"
+#include "gel/hashcode.h"
 #include "gel/heap.h"
 #include "gel/object.h"
 #include "gel/platform.h"
@@ -64,9 +65,9 @@ void ArrayBase::InitClass() {
   ASSERT(kClass);
 }
 
-auto ArrayBase::HashCode() const -> uword {
+auto ArrayBase::GetHashCode() const -> HashCode {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return 0;
+  return kInvalidHashCode;
 }
 
 auto ArrayBase::Compare(Object* rhs) const -> bool {

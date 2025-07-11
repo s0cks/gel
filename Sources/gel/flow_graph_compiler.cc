@@ -32,15 +32,11 @@ void FlowGraphCompiler::AssembleFlowGraph(FlowGraph* flow_graph) {
   }
 }
 
-template <class E>
-auto FlowGraphCompiler::BuildFlowGraph(E* exec, std::enable_if_t<gel::is_executable<E>::value>*) -> FlowGraph* {
+template <CompilerTarget Target>
+auto FlowGraphCompiler::BuildFlowGraph(Target& target) -> FlowGraph* {
   TRACE_ZONE_NAMED("FlowGraphCompiler::BuildFlowGraph");
-  ASSERT(exec);
-  const auto flow_graph = FlowGraphBuilder::Build(exec);
-  LOG_IF(FATAL, !(flow_graph && flow_graph->HasEntry())) << "failed to build FlowGraph for: " << exec;
-  if (FLAGS_print_ir) {
-    DLOG(INFO) << exec->ToString() << " flow graph:";
-  }
+  const auto flow_graph = FlowGraphBuilder::Build(target);
+  LOG_IF(FATAL, !(flow_graph && flow_graph->HasEntry())) << "failed to build FlowGraph for: " << target;
   return flow_graph;
 }
 
@@ -54,40 +50,34 @@ auto FlowGraphCompiler::GetBlockLabel(ir::EntryInstr* blk) -> Label* {
   return GetBlockLabel(blk->GetBlockId());
 }
 
-template auto FlowGraphCompiler::CompileTarget(Lambda* lambda, void*) -> bool;
-template auto FlowGraphCompiler::CompileTarget(Script* script, void*) -> bool;
-template auto FlowGraphCompiler::CompileTarget(Constructor* script, void*) -> bool;
+template auto FlowGraphCompiler::CompileTarget(Lambda& lambda) -> bool;
+template auto FlowGraphCompiler::CompileTarget(Script& script) -> bool;
+template auto FlowGraphCompiler::CompileTarget(Constructor& script) -> bool;
 
-template <class E>
-auto FlowGraphCompiler::CompileTarget(E* exec, std::enable_if_t<gel::is_executable<E>::value>*) -> bool {
+template <CompilerTarget Target>
+auto FlowGraphCompiler::CompileTarget(Target& target) -> bool {
   TRACE_ZONE_NAMED("FlowGraphCompiler::CompileTarget");
-  ASSERT(exec);
   TIMER_START;
-  MacroExpander::ExpandAll(exec, GetScope());
-  auto flow_graph = BuildFlowGraph(exec);
+  MacroExpander::ExpandAll(&target, GetScope());
+  auto flow_graph = BuildFlowGraph(target);
   ASSERT(flow_graph && flow_graph->HasEntry());
 
   flow_graph->DiscoverBlocks();
-  flow_graph->ComputeSSA(0);
+  flow_graph->ComputeSSA(16);
 
   AssembleFlowGraph(flow_graph);
   TIMER_STOP(total_ns);
   const auto code = CompiledCode::New(assembler_.Assemble());
   if (!code->IsCompiled()) {
-    LOG(ERROR) << "failed to compile: " << exec;
+    LOG(ERROR) << "failed to compile: " << target;
     return false;
   }
   code->SetCompileTime(total_ns);
-  exec->SetCode(code);
+  target.SetCode(code);
   DVLOG(10) << (*code) << " compiled in " << units::time::nanosecond_t(static_cast<double>(total_ns));
-  if (VLOG_IS_ON(1) || FLAGS_print_bytecode) {
-    std::stringstream ss;
-    ss << std::endl;
-    Disassembler::Disassemble(ss, exec, GetScope());
-    ss << std::endl;
-    LOG(INFO) << ss.rdbuf();
-  }
-  TRACE_TAG_STR(exec->GetFullyQualifiedName());
+  if (VLOG_IS_ON(1) || FLAGS_print_bytecode)
+    Disassembler::Disassemble(std::cout, target, GetScope());
+  TRACE_TAG_STR(target.GetFullyQualifiedName());
   TRACE_MARK;
   return true;
 }

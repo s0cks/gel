@@ -8,6 +8,7 @@
 
 #include <glm/glm.hpp>
 
+#include "gel/number.h"
 #include "gel/object.h"
 
 namespace gel {

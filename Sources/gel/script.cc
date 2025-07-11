@@ -1,19 +1,21 @@
 #include "gel/script.h"
 
+#include <fstream>
 #include <units.h>
 
-#include <fstream>
-
 #include "gel/common.h"
-#include "gel/expression_dot.h"
+#include "gel/expr/expression_dot.h"
 #include "gel/flags.h"
 #include "gel/flow_graph_builder.h"
 #include "gel/flow_graph_compiler.h"
 #include "gel/flow_graph_dot.h"
+#include "gel/hashcode.h"
 #include "gel/lambda.h"
 #include "gel/macro.h"
 #include "gel/namespace.h"
 #include "gel/parser.h"
+#include "gel/to_string_helper.h"
+#include "gel/type.h"
 
 namespace gel {
 auto Script::New(const ObjectList& args) -> Script* {
@@ -22,26 +24,6 @@ auto Script::New(const ObjectList& args) -> Script* {
 
 auto Script::CreateClass() -> Class* {
   return Class::New(Object::GetClass(), "Script");
-}
-
-void Script::Append(Macro* macro) {
-  ASSERT(macro);
-  macros_.push_back(macro);
-  macro->SetOwner(this);
-}
-
-void Script::Append(Lambda* lambda) {
-  ASSERT(lambda);
-  lambdas_.push_back(lambda);
-  lambda->SetOwner(this);
-}
-
-void Script::Append(Namespace* ns) {
-  ASSERT(ns);
-  namespaces_.push_back(ns);
-  ns->SetOwner(this);
-  if (scope_)
-    LOG_IF(FATAL, !scope_->Add(ns)) << "failed to add " << ns << " to scope.";
 }
 
 auto Script::Compare(Object* rhs) const -> bool {
@@ -59,41 +41,38 @@ auto Script::Equals(Object* rhs) const -> bool {
   return true;
 }
 
-auto Script::HashCode() const -> uword {
-  NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return 0;
+auto Script::GetHashCode() const -> HashCode {
+  NOT_IMPLEMENTED(ERROR);  // TODO: implement
+  return kInvalidHashCode;
 }
 
 auto Script::ToString() const -> std::string {
-  std::stringstream ss;
-  ss << "Script(";
-  ss << "scope=" << GetScope();
-  ss << ")";
-  return ss.str();
+  ToStringHelper<Script> helper{};
+  helper.AddField("scope", scope_);
+  helper.AddField("name", name_);
+  // helper.AddField("macros", macros_);
+  // helper.AddField("lambdas", lambdas_);
+  // helper.AddField("namespaces", namespaces_);
+  helper.AddField("body", body_);
+  helper.AddField("code", code_);
+  return helper;
 }
 
 auto Script::VisitPointers(PointerVisitor* vis) -> bool {
   ASSERT(vis);
-  if (HasName()) {
-    if (!vis->Visit(GetName()))
-      return false;
-  }
-  for (const auto& macro : macros_) {
-    ASSERT(macro);
-    if (!vis->Visit(macro))
-      return false;
-  }
-  for (const auto& lambda : lambdas_) {
-    ASSERT(lambda);
-    if (!vis->Visit(lambda))
-      return false;
-  }
-  for (const auto& ns : namespaces_) {
-    ASSERT(ns);
-    if (!vis->Visit(ns))
-      return false;
-  }
-  // TODO: visit body
+  if (!Visit(name_, *vis))
+    return false;
+  if (!Visit(body_, *vis))
+    return false;
+  // TODO: visit code_
+  if (!VisitAll(macros_, *vis))
+    return false;
+  if (!VisitAll(macros_, *vis))
+    return false;
+  if (!VisitAll(lambdas_, *vis))
+    return false;
+  if (!VisitAll(namespaces_, *vis))
+    return false;
   return true;
 }
 
@@ -111,7 +90,7 @@ auto Script::FromFile(const std::string& filename, const bool compile) -> Script
   const auto scope = GetRuntime()->GetScope();
   ASSERT(scope);
   if (compile)
-    LOG_IF(FATAL, !FlowGraphCompiler::Compile(script, scope)) << "failed to compile: " << script;
+    LOG_IF(FATAL, !FlowGraphCompiler::Compile(*script, scope)) << "failed to compile: " << script;
   return script;
 }
 }  // namespace gel

@@ -3,6 +3,7 @@
 #include <string>
 
 #include "gel/common.h"
+#include "gel/hashcode.h"
 #include "gel/native_procedure.h"
 #include "gel/object.h"
 #include "gel/platform.h"
@@ -20,9 +21,9 @@ auto Iterator::Equals(Object* rhs) const -> bool {
   return false;
 }
 
-auto Iterator::HashCode() const -> uword {
+auto Iterator::GetHashCode() const -> HashCode {
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return 0;
+  return kInvalidHashCode;
 }
 
 auto Iterator::Compare(Object* rhs) const -> bool {

@@ -10,7 +10,7 @@
 
 #include "gel/common.h"
 #include "gel/error.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/flags.h"
 #include "gel/flow_graph_compiler.h"
 #include "gel/heap.h"
@@ -47,7 +47,7 @@ struct TimedResult {
   }
 
   auto IsNull() const -> bool {
-    return gel::IsNull(result);
+    return gel::IsNil(result);
   }
 
   operator bool() const {
@@ -58,11 +58,11 @@ struct TimedResult {
     const auto& result = rhs.result;
     const auto& duration = rhs.duration;
     DVLOG(1) << "finished in " << units::time::nanosecond_t(static_cast<double>(duration.count()));
-    if (gel::IsNull(result))
+    if (result->IsNil())
       return stream;
     if (gel::IsError(result))
       return stream << "error: " << ToError(result)->GetMessage()->Get();
-    ASSERT(!gel::IsNull(result));
+    ASSERT(!result->IsNil());
     stream << "result: ";
     PrintValue(stream, result) << std::endl;
     return stream;
@@ -74,7 +74,7 @@ static inline auto Execute(const std::string& expr) -> int {
   if (FLAGS_dump_ast) {
     try {
       const auto lambda = Parser::ParseExpr(expr);
-      LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, GetRuntime()->GetScope())) << "failed to compile: " << expr;
+      LOG_IF(FATAL, !FlowGraphCompiler::Compile(*lambda, GetRuntime()->GetScope())) << "failed to compile: " << expr;
     } catch (const gel::Exception& exc) {
       LOG(ERROR) << "failed to execute expression.";
       std::cerr << " * expression: " << expr << std::endl;
@@ -126,9 +126,6 @@ auto main(int argc, char** argv) -> int {
   Parser::Init();
   Heap::Init();
   Runtime::Init();
-#ifdef GEL_DEBUG
-  Bytecode::PrintAllOps();
-#endif  // GEL_DEBUG
   int result = EXIT_FAILURE;
   const auto expr = GetExpressionFlag();
   if (expr) {
@@ -137,8 +134,7 @@ auto main(int argc, char** argv) -> int {
     result = ExecuteScript(std::string(argv[1]));
   } else {
     ASSERT(argc <= 1);
-    Repl::Init();
-    result = RunReplInCurrentThread();
+    result = Repl::Run();
   }
   GetRuntime()->Shutdown();
   return result;

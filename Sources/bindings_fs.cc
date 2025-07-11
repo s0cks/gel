@@ -108,7 +108,7 @@ NATIVE_FS_PROCEDURE_F(rmdir) {
 static inline auto WrapOpenFileOnNext(Procedure* on_next) -> FileOpenedCallback {
   return [on_next](Long* next) {
     if (on_next)
-      GetRuntime()->Call(on_next, {next});
+      GetRuntime()->Call(*on_next, {next});
   };
 }
 

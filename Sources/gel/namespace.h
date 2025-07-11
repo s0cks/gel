@@ -7,7 +7,7 @@
 #include "gel/argument.h"
 #include "gel/common.h"
 #include "gel/constructor.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/object.h"
 #include "gel/pointer.h"
 #include "gel/type_traits.h"
@@ -30,25 +30,9 @@ class Namespace : public Object {
   using Predicate = std::function<bool(Namespace*)>;
   static constexpr const auto kPrefixChar = '/';
 
-  static inline auto IsNamed(Symbol* rhs) -> Predicate {
-    ASSERT(rhs);
-    return [rhs](Namespace* ns) {
-      ASSERT(ns);
-      return ns->GetName() == rhs->GetFullyQualifiedName();
-    };
-  }
-
-  static inline auto IsNamed(const std::string& name) -> Predicate {
-    ASSERT(!name.empty());
-    return [&name](Namespace* ns) {
-      ASSERT(ns);
-      return ns->GetName() == name;
-    };
-  }
-
  private:
   Object* owner_ = nullptr;
-  Symbol* symbol_;
+  Symbol* symbol_ = nullptr;
   LocalScope* scope_;
   String* docs_ = nullptr;
   Constructor* init_ = nullptr;
@@ -66,11 +50,6 @@ class Namespace : public Object {
     ASSERT(macros_);
     procedures_ = Array<Procedure*>::New();
     ASSERT(procedures_);
-  }
-
-  void SetDocs(String* rhs) {
-    ASSERT(rhs);
-    docs_ = rhs;
   }
 
   void SetOwner(Object* rhs) {
@@ -91,10 +70,6 @@ class Namespace : public Object {
  public:
   ~Namespace() override = default;
 
-  auto GetSymbol() const -> Symbol* {
-    return symbol_;
-  }
-
   auto GetInit() const -> Constructor* {
     return init_;
   }
@@ -103,12 +78,23 @@ class Namespace : public Object {
     return GetInit() != nullptr;
   }
 
+  auto Init(Runtime* runtime) -> bool;
+
   auto GetScope() const -> LocalScope* {
     return scope_;
   }
 
-  auto GetDocs() const -> String* {
+  auto GetDocstring() const -> String* {
     return docs_;
+  }
+
+  inline auto HasDocstring() const -> bool {
+    return GetDocstring() != nullptr;
+  }
+
+  void SetDocstring(String* rhs) {
+    ASSERT(rhs);
+    docs_ = rhs;
   }
 
   auto GetOwner() const -> Object* {
@@ -127,12 +113,25 @@ class Namespace : public Object {
     return procedures_;
   }
 
+  auto GetSymbol() const -> Symbol* {
+    return symbol_;
+  }
+
+  inline auto HasSymbol() const -> bool {
+    return GetSymbol() != nullptr;
+  }
+
+  void SetSymbol(Symbol* rhs) {
+    ASSERT(rhs);
+    symbol_ = rhs;
+  }
+
   auto InitNamespace() -> Namespace*;
   auto Get(Symbol* rhs) const -> Object*;
   auto Get(const std::string& rhs) const -> Object*;
+
   auto HasSymbol(Symbol* rhs) const -> bool;
   auto HasSymbol(const std::string& rhs) const -> bool;
-  auto GetName() const -> const std::string&;
   auto CreateSymbol(const std::string& value) -> Symbol*;
 
   auto FindMacro(const std::string& name) -> Macro*;
@@ -140,10 +139,26 @@ class Namespace : public Object {
   auto FindLambda(const std::string& name) -> Lambda*;
   auto FindNativeProcedure(const std::string& name) -> NativeProcedure*;
 
-  auto VisitAllMacros(MacroVisitor* vis) const -> bool;
-  auto VisitAllProcedures(ProcedureVisitor* vis) const -> bool;
-  auto VisitAllNativeProcedures(ProcedureVisitor* vis) const -> bool;
-  auto VisitAllLambdaProcedures(ProcedureVisitor* vis) const -> bool;
+  template <VisitorLike<Macro*> Visitor>
+  inline auto VisitAllMacros(Visitor& vis) const -> bool {
+    return macros_->VisitAll(vis);
+  }
+
+  template <VisitorLike<Procedure*> Visitor>
+  inline auto VisitAllProcedures(Visitor& vis) const -> bool {
+    return procedures_->VisitAll(vis);
+  }
+
+  template <VisitorLike<Procedure*> Visitor>
+  inline auto VisitAllNativeProcedures(Visitor& vis) const -> bool {
+    return procedures_->VisitIf(vis, Procedure::IsNativeProc);
+  }
+
+  template <VisitorLike<Procedure*> Visitor>
+  inline auto VisitAllLambdaProcedures(Visitor& vis) const -> bool {
+    return procedures_->VisitIf(vis, Procedure::IsLambdaProc);
+  }
+
   DECLARE_TYPE(Namespace);
 
  private:
@@ -151,19 +166,25 @@ class Namespace : public Object {
 
  public:
   static auto New(Symbol* symbol, LocalScope* scope) -> Namespace*;
-  static auto VisitAllNamespaces(NamespaceVisitor* vis) -> bool;
+
+  template <VisitorLike<Namespace*> Visitor>
+  static auto VisitAllNamespaces(Visitor& vis) -> bool;
+
   static auto CreateConstructor(Namespace* ns, expr::SeqExpr* body = nullptr) -> Constructor*;
   static auto FindNamespace(const Predicate& filter) -> Namespace*;
 
   static inline auto FindNamespace(const std::string& name) -> Namespace* {
-    return FindNamespace(IsNamed(name));
+    return FindNamespace(IsNamed<Namespace>(name));
   }
 
   static inline auto FindNamespace(Symbol* rhs) -> Namespace* {
     ASSERT(rhs);
-    return FindNamespace(IsNamed(rhs));
+    return FindNamespace(IsNamed<Namespace>(*rhs));
   }
 };
+static_assert(WithSymbol<Namespace>);
+static_assert(HasDocstring<Namespace>);
+static_assert(WithInit<Namespace>);
 
 namespace proc {
 _DECLARE_NATIVE_PROCEDURE(gel_get_namespace, "gel/get-namespace");

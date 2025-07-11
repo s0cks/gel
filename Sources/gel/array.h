@@ -111,7 +111,7 @@ class ArrayBase : public Object {
     return length_;
   }
 
-  auto HashCode() const -> uword override;
+  auto GetHashCode() const -> HashCode override;
   auto Equals(Object* rhs) const -> bool override;
   auto Compare(Object* rhs) const -> bool override;
   auto ToString() const -> std::string override;
@@ -184,6 +184,29 @@ class Array : public ArrayBase {
         return val;
     }
     return (T)UNALLOCATED;
+  }
+
+  template <VisitorLike<T> Visitor>
+  inline auto VisitAll(Visitor& vis) const -> bool {
+    for (auto idx = 0; idx < GetLength(); idx++) {
+      if (!vis(Get(idx)))
+        return false;
+    }
+    return true;
+  }
+
+  template <VisitorLike<T> Visitor, std::predicate<T> P>
+  inline auto VisitIf(Visitor& vis, const P& filter) const -> bool {
+    for (auto idx = 0; idx < GetLength(); idx++) {
+      const auto value = Get(idx);
+      if (filter(value) && !vis(value))
+        return false;
+    }
+    return true;
+  }
+
+  inline auto ToString() const -> std::string override {
+    return ArrayBase::ToString();
   }
 
   friend auto operator<<(std::ostream& stream, const Array<T>& rhs) -> std::ostream& {

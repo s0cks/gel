@@ -4,8 +4,8 @@
 // #include <fstream>
 
 // #include "gel/common.h"
-// #include "gel/expression.h"
-// #include "gel/expression_dot.h"
+// #include "gel/expr/expression.h"
+// #include "gel/expr/expression_dot.h"
 // #include "gel/module.h"
 // #include "gel/parser.h"
 // #include "gmock/gmock.h"

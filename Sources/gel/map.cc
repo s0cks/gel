@@ -1,5 +1,6 @@
 #include "gel/map.h"
 
+#include "gel/hashcode.h"
 #include "gel/native_procedure.h"
 #include "gel/to_string_helper.h"
 
@@ -15,17 +16,15 @@ void Map::Init() {
   InitClass();
 }
 
-auto Map::Get(Object* key) const -> Object* {
+auto Map::Get(Symbol* key) const -> Object* {
   ASSERT(key);
   const auto pos = Find(key);
-  if (pos == std::end(data()))
-    return Null();
-  return pos->second;
+  return pos == std::end(data()) ? pos->second : Nil::Get();
 }
 
-auto Map::HashCode() const -> uword {
+auto Map::GetHashCode() const -> HashCode {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return 0;
+  return kInvalidHashCode;
 }
 
 auto Map::Equals(Object* rhs) const -> bool {
@@ -42,8 +41,22 @@ auto Map::Compare(Object* rhs) const -> bool {
 }
 
 auto Map::ToString() const -> std::string {
-  ToStringHelper<Map> helper;
+  ToStringHelper<Map> helper{};
   helper.AddField("size", GetSize());
+  if (!IsEmpty()) {
+    std::stringstream ss;
+    ss << "{";
+    auto remaining = data().size();
+    for (const auto& [first, second] : data()) {
+      ss << first->AsSymbol()->GetSymbolName() << ": " << second->ToString();
+      if (--remaining >= 0)
+        ss << ", ";
+    }
+    ss << "}";
+    helper.AddField("data", ss.str());
+  } else {
+    helper.AddField("data", "{}");
+  }
   return helper;
 }
 
@@ -54,20 +67,17 @@ auto Map::New(const ObjectList& args) -> Map* {
   StorageType data{};
   for (auto idx = 0; idx < args.size(); idx += 2) {
     const auto key = args[idx];
-    ASSERT(key);
+    ASSERT(gel::IsSymbol(key));
     const auto value = args[idx + 1];
     ASSERT(value);
-    data.insert({key, value});  // TODO: prolly should check this insertion
+    data.insert({key->AsSymbol(), value});  // TODO: prolly should check this insertion
   }
   return Map::New(data);
 }
 
 auto Map::CreateClass() -> Class* {
   ASSERT(kClass == nullptr);
-  const auto cls = Class::New(Seq::GetClass(), "Map");
-  ASSERT(cls);
-  cls->AddFunction(proc::map_contains::Get()->GetNative());
-  return cls;
+  return Class::New(Seq::GetClass(), "map");
 }
 
 namespace proc {
@@ -75,7 +85,7 @@ namespace proc {
 
 MAP_PROCEDURE_F(contains) {
   REQUIRED_NATIVE_ARG(0, Map, map);
-  REQUIRED_NATIVE_ARG(1, Object, key);
+  REQUIRED_NATIVE_ARG(1, Symbol, key);
   return ReturnBool(map->Contains(key));
 }
 
@@ -91,7 +101,7 @@ MAP_PROCEDURE_F(size) {
 
 MAP_PROCEDURE_F(get) {
   REQUIRED_NATIVE_ARG(0, Map, map);
-  REQUIRED_NATIVE_ARG(1, Object, key);
+  REQUIRED_NATIVE_ARG(1, Symbol, key);
   return Return(map->Get(key));
 }
 

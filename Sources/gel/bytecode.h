@@ -9,7 +9,7 @@
 
 #include "gel/binary_op.h"
 #include "gel/common.h"
-#include "gel/expression.h"  // IWYU pragma: keep
+#include "gel/expr/expression.h"  // IWYU pragma: keep
 #include "gel/platform.h"
 #include "gel/unary_op.h"
 
@@ -17,6 +17,7 @@
   V(Nop)                     \
   V(Pop)                     \
   V(Dup)                     \
+  V(Dup2)                    \
   V(StoreFirst)              \
   V(StoreSecond)             \
   V(LoadFirst)               \
@@ -105,9 +106,9 @@ class Bytecode {
     return op() == kInvalid;
   }
 
-#define DEFINE_OP_CHECK(Name)                        \
-  inline constexpr auto Is##Name##Op() const->bool { \
-    return op() == k##Name;                          \
+#define DEFINE_OP_CHECK(Name)                          \
+  inline constexpr auto Is##Name##Op() const -> bool { \
+    return op() == k##Name;                            \
   }
   FOR_EACH_BYTECODE(DEFINE_OP_CHECK)
 #undef DEFINE_OP_CHECK
@@ -142,6 +143,8 @@ class Bytecode {
         return "nop";
       case kDup:
         return "dup";
+      case kDup2:
+        return "dup2";
       case kPop:
         return "pop";
       case kStoreLocal:
@@ -300,7 +303,7 @@ class Bytecode {
 #undef DEFINE_TO_STRING
       case kInvalid:
       default: {
-        stream << "Unknwon gel::Bytecode(";
+        stream << "Unknown gel::Bytecode(";
         PrintHex(stream, rhs.raw());
         stream << ")";
         return stream;

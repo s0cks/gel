@@ -35,7 +35,7 @@ class Heap {
  public:
   ~Heap();
 
-  auto TryAllocateOld(const uword size) -> uword;  // TODO: reduce visbility
+  auto TryAllocateOld(const uword size) -> uword;  // TODO: reduce visibility
 
   template <typename T>
   auto TryAllocateOldValue() -> T* {

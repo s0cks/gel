@@ -45,7 +45,7 @@ auto Symbol::Equals(Object* rhs) const -> bool {
          GetSymbolName() == other->GetSymbolName();
 }
 
-auto Symbol::HashCode() const -> uword {
+auto Symbol::GetHashCode() const -> HashCode {
   uword hash = 0;
   if (HasNamespace())
     CombineHash(hash, GetNamespace());
@@ -90,7 +90,8 @@ auto Symbol::New(const std::string& ns, const std::string& type, const std::stri
 #ifdef GEL_ENABLE_SYMBOL_POOL
   Symbol* symbol = nullptr;
   if ((GetCurrentThreadSymbolPoolSize() + 1) <= GetSymbolPoolMaxSize()) {
-    const auto created = trie::SearchOrCreate<std::string, Symbol*>(trie_.Get(), ss.str(), &symbol, &Symbol::NewInternal);
+    const auto created =
+        trie::SearchOrCreate<std::string, Symbol*>(trie_.Get(), ss.str(), &symbol, &Symbol::NewInternal);
     LOG_IF(FATAL, !created) << "failed to internalize Symbol: " << ss.str();
     IncrementPoolSize();
     ASSERT(symbol);

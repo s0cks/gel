@@ -5,7 +5,8 @@
 
 #include "gel/common.h"
 #include "gel/compiled_code.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
+#include "gel/expr/seq_expr.h"
 #include "gel/local_scope.h"
 #include "gel/object.h"
 #include "gel/procedure.h"
@@ -72,6 +73,14 @@ class Constructor : public Procedure {
     return code_;
   }
 
+  inline auto IsCompiled() const -> bool {
+    return GetCode() != nullptr;
+  }
+
+  friend auto operator<<(std::ostream& stream, const Constructor& rhs) -> std::ostream& {
+    return stream << rhs.ToString();
+  }
+
   DECLARE_TYPE(Constructor);
 
  public:
@@ -79,6 +88,13 @@ class Constructor : public Procedure {
     ASSERT(symbol);
     return new Constructor(symbol, body);
   }
+};
+
+template <class T>
+concept WithInit = requires(T value) {
+  { value.GetInit() } -> std::same_as<Constructor*>;
+  { value.HasInit() } -> std::same_as<bool>;
+  { value.Init((Runtime*)nullptr) } -> std::same_as<bool>;
 };
 }  // namespace gel
 

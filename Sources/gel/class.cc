@@ -11,6 +11,7 @@
 #include "gel/native_procedure.h"
 #include "gel/natives.h"
 #include "gel/object.h"
+#include "gel/pair.h"
 #include "gel/platform.h"
 #include "gel/pointer.h"
 #include "gel/procedure.h"
@@ -141,19 +142,14 @@ auto Class::AddField(const std::string& name) -> Field* {
 
 auto Class::VisitPointers(PointerVisitor* vis) -> bool {
   ASSERT(vis);
-  if (HasParent()) {
-    if (!vis->Visit(GetParent()->raw_ptr()))
-      return false;
-  }
-  if (!vis->Visit(GetName()->raw_ptr()))
+  if (!Visit(parent_, *vis))
     return false;
-  if (!vis->Visit(GetFields()->raw_ptr()))
+  if (!Visit(name_, *vis))
     return false;
-  for (const auto& func : funcs_) {
-    ASSERT(func);
-    if (!vis->Visit(func->raw_ptr()))
-      return false;
-  }
+  if (!Visit(fields_, *vis))
+    return false;
+  if (!VisitAll(funcs_, *vis))
+    return false;
   return true;
 }
 
@@ -171,7 +167,7 @@ auto Class::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
 auto Class::FindOrCreateNativeProcedure(Symbol* symbol) -> NativeProcedure* {
   ASSERT(symbol);
   for (const auto& proc : funcs_) {
-    if (proc->IsNativeProcedure() && proc->GetSymbol()->Equals(symbol))
+    if (proc->IsNative() && proc->GetSymbol()->Equals(symbol))
       return proc->AsNativeProcedure();
   }
   const auto native = NativeProcedure::FindOrCreate(symbol);
@@ -199,21 +195,14 @@ auto Class::Equals(Object* rhs) const -> bool {
   return GetName()->Equals(other->GetName());
 }
 
-auto Class::HashCode() const -> uword {
-  uword hash = 0;
-  CombineHash(hash, GetName()->Get());
+auto Class::GetHashCode() const -> HashCode {
+  HashCode hash{};
+  hash ^= (*name_);
   return hash;
 }
 
-static inline auto IsNamed(const std::string& name) -> std::function<bool(Class*)> {
-  ASSERT(!name.empty());
-  return [name](Class* cls) {
-    return cls && cls->GetName()->Equals(name);
-  };
-}
-
 auto Class::FindClass(const std::string& name) -> Class* {
-  return classes_->FindIf(IsNamed(name));
+  return classes_->FindIf(IsNamed<Class>(name));
 }
 
 auto Class::FindClass(String* name) -> Class* {
@@ -318,17 +307,10 @@ auto Class::Compare(Object* rhs) const -> bool {
   return GetName()->Compare(rhs->AsClass()->GetName());
 }
 
-auto Field::IsNamed(const std::string& name) -> Field::Predicate {
-  ASSERT(!name.empty());
-  return [&name](Field* field) {
-    return field && field->GetName()->Equals(name);
-  };
-}
-
 auto Class::FindField(const std::string& name, const bool recursive) const -> Field* {
   Class const* cls = this;
   do {
-    const auto field = cls->GetFields()->FindIf(Field::IsNamed(name));
+    const auto field = cls->GetFields()->FindIf(IsNamed<Field>(name));
     if (field)
       return field;
     if (!recursive)
@@ -342,7 +324,7 @@ auto Class::FindField(const std::string& name, const bool recursive) const -> Fi
 auto Class::FindField(Symbol* symbol, const bool recursive) const -> Field* {
   Class const* cls = this;
   do {
-    const auto field = cls->GetFields()->FindIf(Field::IsNamed(symbol->GetSymbolName()));
+    const auto field = cls->GetFields()->FindIf(IsNamed<Field>(*symbol));
     if (field)
       return field;
     if (!recursive)
@@ -433,25 +415,25 @@ auto Field::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
 
 auto Field::VisitPointers(PointerVisitor* vis) -> bool {
   ASSERT(vis);
-  if (!vis->Visit(GetOwner()->raw_ptr()))
+  if (!Visit(owner_, *vis))
     return false;
-  if (!vis->Visit(GetName()->raw_ptr()))
+  if (!Visit(name_, *vis))
     return false;
   return true;
 }
 
 auto Field::ToString() const -> std::string {
-  ToStringHelper<Field> helper;
+  ToStringHelper<Field> helper{};
   helper.AddField("name", GetName());
   helper.AddField("owner", GetOwner());
   helper.AddField("offset", GetOffset());
   return helper;
 }
 
-auto Field::HashCode() const -> uword {
-  uword hash = 0;
-  CombineHash(hash, GetName()->HashCode());
-  CombineHash(hash, GetOwner()->HashCode());
+auto Field::GetHashCode() const -> HashCode {
+  HashCode hash{};
+  hash ^= (*name_);
+  hash ^= (*owner_);
   return hash;
 }
 
@@ -498,7 +480,7 @@ NATIVE_PROCEDURE_F(get_class) {
 
 NATIVE_PROCEDURE_F(get_classes) {
   ASSERT(args.empty());
-  Object* result = Null();
+  Object* result = Nil::Get();
   ClassVisitorWrapper vis([&result](Class* cls) {
     result = Cons(cls, result);
     return true;
@@ -569,7 +551,7 @@ CLASS_PROCEDURE_F(get_fields) {
     return ThrowError(ss);
   }
   ASSERT(cls);
-  Object* result = Null();
+  Object* result = Nil::Get();
   for (auto idx = 0; idx < cls->GetNumberOfFields(); idx++) {
     const auto field = cls->GetFieldAt(idx);
     ASSERT(field);
@@ -596,7 +578,7 @@ CLASS_PROCEDURE_F(get_procedures) {
     return ThrowError(ss);
   }
   ASSERT(cls);
-  Object* result = Null();
+  Object* result = Nil::Get();
   for (auto idx = 0; idx < cls->GetNumberOfProcedures(); idx++) {
     const auto proc = cls->GetProcedureAt(idx);
     ASSERT(proc);

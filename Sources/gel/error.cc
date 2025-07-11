@@ -15,7 +15,7 @@ auto Error::CreateClass() -> Class* {
   return Class::New(Object::GetClass(), kClassName);
 }
 
-auto Error::HashCode() const -> uword {
+auto Error::GetHashCode() const -> HashCode {
   uword hash = 0;
   CombineHash(hash, GetMessage()->Get());
   return hash;
@@ -52,7 +52,7 @@ auto Error::New(const ObjectList& args) -> Error* {
 }
 
 auto Error::ToString() const -> std::string {
-  ToStringHelper<Error> helper;
+  ToStringHelper<Error> helper{};
   helper.AddField("message", GetMessage()->Get());
   return helper;
 }

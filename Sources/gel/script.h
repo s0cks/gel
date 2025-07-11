@@ -3,7 +3,7 @@
 
 #include "gel/common.h"
 #include "gel/compiled_code.h"
-#include "gel/expression.h"
+#include "gel/expr/expression.h"
 #include "gel/lambda.h"
 #include "gel/local_scope.h"
 #include "gel/namespace.h"
@@ -44,10 +44,6 @@ class Script : public Object {
   inline void Append(const NamespaceList& namespaces) {
     namespaces_.insert(std::end(namespaces_), std::begin(namespaces), std::end(namespaces));
   }
-
-  void Append(Macro* macro);
-  void Append(Lambda* lambda);
-  void Append(Namespace* ns);
 
   auto VisitPointers(PointerVisitor* vis) -> bool override;
 
@@ -113,6 +109,14 @@ class Script : public Object {
 
   auto GetCode() const -> CompiledCode* {
     return code_;
+  }
+
+  inline auto IsCompiled() const -> bool {
+    return GetCode() != nullptr;
+  }
+
+  friend auto operator<<(std::ostream& stream, const Script& rhs) -> std::ostream& {
+    return stream << rhs.ToString();
   }
 
   DECLARE_TYPE(Script);

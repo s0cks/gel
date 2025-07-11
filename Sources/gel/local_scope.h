@@ -187,8 +187,7 @@ class LocalScope : public HeapObject {
   }
 
   template <class T>
-  inline auto Add(T* value, std::enable_if_t<gel::is_object<T>::value && gel::has_symbol<T>::value>* = nullptr)
-      -> LocalVariable* {
+  inline auto Add(T* value) -> LocalVariable* requires(WithSymbol<T>&& IsGelObject<T>) {
     ASSERT(value);
     return Add(value->GetSymbol(), value);
   }
@@ -257,7 +256,7 @@ class LocalScopePrinter : public LocalVariableVisitor {
     indent_ += by;
   }
 
-  inline void Deindent(const int by = 1) {
+  inline void DeIndent(const int by = 1) {
     ASSERT(by >= 1);
     indent_ -= by;
   }

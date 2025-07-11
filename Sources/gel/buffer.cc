@@ -9,6 +9,7 @@
 
 #include "gel/allocator.h"
 #include "gel/common.h"
+#include "gel/hashcode.h"
 #include "gel/heap.h"  // IWYU pragma: keep
 #include "gel/native_procedure.h"
 #include "gel/object.h"
@@ -20,9 +21,9 @@
 namespace gel {
 DEFINE_NEW_OPERATOR(Buffer);
 
-auto Buffer::HashCode() const -> uword {
+auto Buffer::GetHashCode() const -> HashCode {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement
-  return 0;
+  return kInvalidHashCode;
 }
 
 auto Buffer::Equals(Object* rhs) const -> bool {
@@ -47,12 +48,12 @@ auto HexBufferEncoding::Decode(const String& rhs) const -> Buffer* {
 }
 
 auto HexBufferEncoding::Encode(const Buffer& rhs) const -> String* {
-  const auto buff_length = rhs.wpos();
+  const auto buff_length = rhs.write_pos();
   const auto hex_buff_length = 1 + buff_length * 2;
   std::vector<char> hex{};
   hex.resize(hex_buff_length);
   size_t hex_length = 0;
-  OPENSSL_buf2hexstr_ex(&hex[0], hex_buff_length, &hex_length, rhs.data(), rhs.wpos(), '\0');
+  OPENSSL_buf2hexstr_ex(&hex[0], hex_buff_length, &hex_length, rhs.data(), rhs.write_pos(), '\0');
   std::string result(hex.data(), hex_length);
   return String::New(result);
 }
@@ -94,7 +95,7 @@ default_encoding:
 
 auto Buffer::ToString() const -> std::string {
   ToStringHelper<Buffer> helper;
-  helper.AddField("data", data());
+  helper.AddField("data", (const void*)data());
   return helper;
 }
 
@@ -115,7 +116,7 @@ auto Buffer::Compare(Object* rhs) const -> bool {
 }
 
 auto Buffer::New(const ObjectList& args) -> Buffer* {
-  if (args.empty() || gel::IsNull(args[0]))
+  if (args.empty() || args[0]->IsNil())
     return Buffer::New(kDefaultBufferSize);
   else if (gel::IsLong(args[0]))
     return Buffer::New(args[0]->AsLong()->Get());
@@ -150,25 +151,25 @@ void Buffer::Init() {
 }
 
 namespace proc {
-#define BUFFER_PROCEEDURE_F(Name) NATIVE_PROCEDURE_F(buffer_##Name)
+#define BUFFER_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(buffer_##Name)
 
-BUFFER_PROCEEDURE_F(get_capacity) {
+BUFFER_PROCEDURE_F(get_capacity) {
   REQUIRED_NATIVE_ARG(0, Buffer, buffer);
   return ReturnLong(static_cast<RawLong>(buffer->GetCapacity()));
 }
 
-BUFFER_PROCEEDURE_F(to_string) {
+BUFFER_PROCEDURE_F(to_string) {
   REQUIRED_NATIVE_ARG(0, Buffer, buffer);
   OptionalNativeArgument<1, String> encoding(args);
   if (!encoding)
     return Throw(encoding);
-  if (gel::IsNull(encoding.GetValue()))
+  if (encoding.GetValue()->IsNil())
     return Return(buffer->ToString(nullptr));
   return Return(buffer->ToString(encoding.GetValue()));
 }
 
 #define DEFINE_BUFFER_READ_PROCEDURE(Sz)                             \
-  BUFFER_PROCEEDURE_F(read_uint##Sz) {                               \
+  BUFFER_PROCEDURE_F(read_uint##Sz) {                                \
     NativeArgument<0, Buffer> buffer(args);                          \
     if (!buffer)                                                     \
       return Throw(buffer);                                          \
@@ -180,7 +181,7 @@ BUFFER_PROCEEDURE_F(to_string) {
   }
 
 #define DEFINE_BUFFER_WRITE_PROCEDURE(Sz)                                 \
-  BUFFER_PROCEEDURE_F(write_uint##Sz) {                                   \
+  BUFFER_PROCEDURE_F(write_uint##Sz) {                                    \
     REQUIRED_NATIVE_ARG(0, Buffer, buffer);                               \
     NativeArgument<1, Long> value(args);                                  \
     if (!value)                                                           \
