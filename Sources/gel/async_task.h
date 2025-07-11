@@ -9,10 +9,10 @@ class Task {
   DEFINE_DEFAULT_COPYABLE_TYPE(Task);
 
  private:
-  Procedure* callback_;
+  Fn* callback_;
 
  public:
-  explicit Task(Procedure* callback = nullptr) :
+  explicit Task(Fn* callback = nullptr) :
     callback_(callback) {}
   ~Task() = default;
 

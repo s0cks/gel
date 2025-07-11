@@ -10,36 +10,36 @@
 #include "gel/type.h"
 
 namespace gel {
-auto NativeProcedureEntry::Return(Object* rhs) const -> bool {
+auto NativeFnEntry::Return(Object* rhs) const -> bool {
   ASSERT(rhs);
   GetRuntime()->GetCallStack()->SetReturnAddress(rhs->GetStartingAddress());
   return DoNothing();
 }
 
-auto NativeProcedure::Compare(Object* rhs) const -> bool {
+auto NativeFn::Compare(Object* rhs) const -> bool {
   ASSERT(rhs);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return -1;
 }
 
-auto NativeProcedureEntry::ThrowNotImplementedError() const -> bool {
+auto NativeFnEntry::ThrowNotImplementedError() const -> bool {
   std::stringstream ss;
   if (HasNative()) {
-    ss << "NativeProcedure `" << GetNative()->GetSymbol()->GetFullyQualifiedName() << "` is ";
+    ss << "NativeFn `" << GetNative()->GetSymbol()->GetFullyQualifiedName() << "` is ";
   }
   ss << "not implemented!";
   return ThrowError(ss);
 }
 
-NativeProcedureList NativeProcedure::all_{};
+NativeFnList NativeFn::all_{};
 
-void NativeProcedure::Init() {
+void NativeFn::Init() {
   using namespace proc;
   InitClass();
   InitNatives();
 }
 
-void NativeProcedure::Register(NativeProcedure* native) {
+void NativeFn::Register(NativeFn* native) {
   ASSERT(native);
   const auto scope = GetRuntime()->GetInitScope();
   ASSERT(scope);
@@ -55,103 +55,88 @@ void NativeProcedure::Register(NativeProcedure* native) {
   all_.push_back(native);
 }
 
-auto NativeProcedure::Find(const std::string& name) -> NativeProcedure* {
-  ASSERT(!name.empty());
-  for (const auto& native : all_) {
-    ASSERT(native);
-    const auto symbol = native->GetSymbol()->GetFullyQualifiedName();
-    if (name == symbol)
-      return native;
+template <StringLike S>
+auto NativeFn::Find(S symbol) -> NativeFn* {
+  ASSERT(!symbol.empty());
+  for (const auto& fn : all_) {
+    if (fn->GetSymbol()->Equals(symbol))
+      return fn;
   }
   return nullptr;
 }
 
-auto NativeProcedure::VisitPointers(PointerVisitor* vis) -> bool {
+auto NativeFn::VisitPointers(PointerVisitor* vis) -> bool {
   ASSERT(vis);
-  if (!Procedure::VisitPointers(vis))
+  if (!Fn::VisitPointers(vis))
     return false;
   // TODO: visit entry_?
   return true;
 }
 
-auto NativeProcedure::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
+auto NativeFn::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
   ASSERT(vis);
-  if (!Procedure::VisitPointerPointers(vis))
+  if (!Fn::VisitPointerPointers(vis))
     return false;
-  if (HasDocstring()) {
-    auto docs = GetDocstring()->raw_ptr();
-    if (!vis->Visit(&docs))
-      return false;
-    if (!GetDocstring()->raw_ptr()->Equals(docs))
-      SetDocstring(docs->As<String>());
-  }
-  if (HasArgs()) {
-    auto args = GetArgs()->raw_ptr();
-    if (!vis->Visit(&args))
-      return false;
-    if (!GetDocstring()->raw_ptr()->Equals(args))
-      SetArgs(args->As<Array<Argument*>>());
-  }
+  // TODO: @s0cks visit entry_?
   return true;
 }
 
-auto NativeProcedure::GetHashCode() const -> HashCode {
-  return Procedure::GetHashCode();
+auto NativeFn::GetHashCode() const -> HashCode {
+  return Fn::GetHashCode();
 }
 
-auto NativeProcedure::Find(Symbol* symbol) -> NativeProcedure* {
+auto NativeFn::FindOrCreate(Symbol* symbol) -> NativeFn* {
   ASSERT(symbol);
   for (const auto& native : all_) {
     ASSERT(native);
     if (native->GetSymbol()->Equals(symbol))
       return native;
   }
-  return nullptr;
-}
-
-auto NativeProcedure::FindOrCreate(Symbol* symbol) -> NativeProcedure* {
-  ASSERT(symbol);
-  for (const auto& native : all_) {
-    ASSERT(native);
-    if (native->GetSymbol()->Equals(symbol))
-      return native;
-  }
-  const auto native = new NativeProcedure(symbol);
+  const auto native = new NativeFn(symbol);
   ASSERT(native);
-  NativeProcedure::Register(native);
+  NativeFn::Register(native);
   return native;
 }
 
-void NativeProcedure::Link(Symbol* symbol, NativeProcedureEntry* entry) {
+void NativeFn::Link(Symbol* symbol, NativeFnEntry* entry) {
   ASSERT(symbol);
   ASSERT(entry);
   LOG_IF(FATAL, entry->IsBound()) << "cannot rebind " << (*entry);
-  NativeProcedure* native = FindOrCreate(symbol);
+  NativeFn* native = FindOrCreate(symbol);
   ASSERT(native);
   LOG_IF(FATAL, native->HasEntry()) << "cannot relink " << native->ToString();
   native->SetEntry(entry);
   entry->SetNative(native);
 }
 
-auto NativeProcedure::New(const ObjectList& args) -> NativeProcedure* {
+auto NativeFn::New(const ObjectList& args) -> NativeFn* {
   NOT_IMPLEMENTED(FATAL);
 }
 
-auto NativeProcedure::CreateClass() -> Class* {
-  return Class::New(Procedure::GetClass(), kClassName);
+auto NativeFn::CreateClass() -> Class* {
+  return Class::New(Fn::GetClass(), kClassName);
 }
 
-auto NativeProcedure::Equals(Object* rhs) const -> bool {
-  if (!rhs || !rhs->IsNativeProcedure())
+auto NativeFn::Equals(Object* rhs) const -> bool {
+  if (!rhs || !rhs->IsNativeFn())
     return false;
-  return GetSymbol()->Equals(rhs->AsNativeProcedure()->GetSymbol());
+  const auto other = rhs->AsNativeFn();
+  return GetSymbol()->Equals(other->GetSymbol());
 }
 
-auto NativeProcedure::ToString() const -> std::string {
-  ToStringHelper<NativeProcedure> helper;
-  helper.AddField("symbol", GetSymbol()->GetFullyQualifiedName());
+auto NativeFn::ToString() const -> std::string {
+  ToStringHelper<NativeFn> helper{};
+  helper.AddSymbolField(*GetSymbol());
   helper.AddField("args", GetArgs());
   helper.AddField("docs", GetDocstring());
   return helper;
 }
+
+namespace procs {
+// _DECLARE_NATIVE_PROCEDURE(gel_get_native_fn, "gel/get-native-fn");
+// _DECLARE_NATIVE_PROCEDURE(gel_get_native_fns, "gel/get-native-fns");
+// _DECLARE_NATIVEFN_FN(get_owner, "get-owner");
+// _DECLARE_NATIVEFN_FN(get_symbol, "get-symbol");
+// _DECLARE_NATIVEFN_FN(get_docs, "get-docs");
+}  // namespace procs
 }  // namespace gel

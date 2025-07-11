@@ -42,7 +42,7 @@ class Object : public HeapObject {
   friend class Module;
   friend class Pointer;
   friend class RefBase;
-  friend class Procedure;
+  friend class Fn;
   friend class Namespace;
   DEFINE_NON_COPYABLE_TYPE(Object)
  protected:
@@ -288,9 +288,5 @@ static inline auto operator<<(std::ostream& stream, const ObjectList& values) ->
   return Stringify(stream, values);
 }
 }  // namespace gel
-
-#ifdef GEL_ENABLE_RX
-#include "gel/rx_object.h"
-#endif  // GEL_ENABLE_RX
 
 #endif  // GEL_OBJECT_H

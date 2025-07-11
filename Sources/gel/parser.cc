@@ -431,7 +431,7 @@ static inline auto IsClassReference(expr::Expression* expr) -> bool {
   return false;
 }
 
-static inline auto IsNativeCall(LocalScope* scope, expr::Expression* expr, NativeProcedure** target) -> bool {
+static inline auto IsNativeCall(LocalScope* scope, expr::Expression* expr, NativeFn** target) -> bool {
   ASSERT(scope);
   ASSERT(expr);
   if (!expr->IsLiteralExpr()) {
@@ -440,8 +440,8 @@ static inline auto IsNativeCall(LocalScope* scope, expr::Expression* expr, Nativ
   }
 
   const auto literal = expr->AsLiteralExpr();
-  if (literal->GetValue()->IsNativeProcedure()) {
-    (*target) = literal->GetValue()->AsNativeProcedure();
+  if (literal->GetValue()->IsNativeFn()) {
+    (*target) = literal->GetValue()->AsNativeFn();
     return true;
   } else if (literal->GetValue()->IsSymbol()) {
     const auto symbol = literal->GetValue()->AsSymbol();
@@ -451,11 +451,11 @@ static inline auto IsNativeCall(LocalScope* scope, expr::Expression* expr, Nativ
       (*target) = nullptr;
       return false;
     }
-    if (!local->HasValue() || !local->GetValue()->IsNativeProcedure()) {
+    if (!local->HasValue() || !local->GetValue()->IsNativeFn()) {
       (*target) = nullptr;
       return false;
     }
-    (*target) = local->GetValue()->AsNativeProcedure();
+    (*target) = local->GetValue()->AsNativeFn();
     return true;
   }
   (*target) = nullptr;
@@ -494,7 +494,7 @@ static inline auto IsMacroCall(LocalScope* scope, expr::Expression* expr, Macro*
 }
 
 static inline auto IsCallable(LocalVariable* local) -> bool {
-  return local && local->HasValue() && (local->GetValue()->IsProcedure() || local->GetValue()->IsMacro());
+  return local && local->HasValue() && (local->GetValue()->IsFn() || local->GetValue()->IsMacro());
 }
 
 auto Parser::ParseCallExpr(expr::Expression** result) -> ParseResult {
@@ -594,8 +594,8 @@ auto Parser::ParseCallExpr(expr::Expression** result) -> ParseResult {
     if (literal->GetValue()->IsMacro()) {
       (*result) = expr::InvokeMacroExpr::New(literal->GetValue()->AsMacro(), args);
       return true;
-    } else if (literal->GetValue()->IsNativeProcedure()) {
-      (*result) = expr::InvokeNativeExpr::New(literal->GetValue()->AsNativeProcedure(), args);
+    } else if (literal->GetValue()->IsNativeFn()) {
+      (*result) = expr::InvokeNativeExpr::New(literal->GetValue()->AsNativeFn(), args);
       return true;
     } else if (literal->GetValue()->IsSymbol()) {
       const auto symbol = literal->GetValue()->AsSymbol();
@@ -605,8 +605,8 @@ auto Parser::ParseCallExpr(expr::Expression** result) -> ParseResult {
         if (local->GetValue()->IsMacro()) {
           (*result) = expr::InvokeMacroExpr::New(literal->GetValue()->AsMacro(), args);
           return true;
-        } else if (local->GetValue()->IsNativeProcedure()) {
-          (*result) = expr::InvokeNativeExpr::New(literal->GetValue()->AsNativeProcedure(), args);
+        } else if (local->GetValue()->IsNativeFn()) {
+          (*result) = expr::InvokeNativeExpr::New(literal->GetValue()->AsNativeFn(), args);
           return true;
         }
       }
@@ -884,7 +884,7 @@ auto Parser::ParseExpression(expr::Expression** result, const int depth) -> Pars
       case Token::kDefNative: {
         LocalVariable* local = nullptr;
         CHECK_RESULT(ParseDefNative(&local));
-        ASSERT(local && local->HasValue() && local->GetValue()->IsNativeProcedure());
+        ASSERT(local && local->HasValue() && local->GetValue()->IsNativeFn());
         break;
       }
       case Token::kDef: {
@@ -1639,13 +1639,12 @@ auto Parser::ParseDefNative(LocalVariable** local) -> ParseResult {
   CHECK_RESULT(ParseLiteralSymbol(&symbol));
   ASSERT(symbol);
 
-  const auto native = HasTopLevel() && GetTopLevel()->IsClass()
-                        ? GetTopLevel()->AsClass()->FindOrCreateNativeProcedure(symbol)
-                        : NativeProcedure::FindOrCreate(symbol);
+  const auto native = HasTopLevel() && GetTopLevel()->IsClass() ? GetTopLevel()->AsClass()->FindOrCreateNativeFn(symbol)
+                                                                : NativeFn::FindOrCreate(symbol);
   if (!native) {
     (*local) = nullptr;
     std::stringstream ss;
-    ss << "failed to find NativeProcedure w/ Symbol: " << symbol;
+    ss << "failed to find NativeFn w/ Symbol: " << symbol;
     return ReturnError(ss, start_pos);
   }
   // arguments

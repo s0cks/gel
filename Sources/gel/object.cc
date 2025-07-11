@@ -29,6 +29,7 @@
 #include "gel/pointer.h"
 #include "gel/runtime.h"
 #include "gel/rx.h"
+#include "gel/rx_object.h"
 #include "gel/subject.h"
 #include "gel/symbol.h"
 #include "gel/to_string_helper.h"
@@ -36,32 +37,32 @@
 #include "gel/types.h"
 
 namespace gel {
-DEFINE_NEW_OPERATOR(Seq);              // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Field);            // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Bool);             // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Number);           // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Double);           // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Long);             // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(String);           // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Symbol);           // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Macro);            // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Procedure);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Lambda);           // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Constructor);      // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(NativeProcedure);  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Pair);             // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Script);           // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Error);            // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Namespace);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Set);              // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Iterator);         // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Map);              // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Module);           // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(EventLoop);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Timer);            // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(EventEmitter);     // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Observer);         // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Observable);       // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Seq);           // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Field);         // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Bool);          // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Number);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Double);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Long);          // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(String);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Symbol);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Macro);         // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Fn);            // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Lambda);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Constructor);   // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(NativeFn);      // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Pair);          // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Script);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Error);         // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Namespace);     // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Set);           // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Iterator);      // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Map);           // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Module);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(EventLoop);     // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Timer);         // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(EventEmitter);  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Observer);      // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Observable);    // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 
 #undef DEFINE_NEW_OPERATOR
 
@@ -151,10 +152,10 @@ void Object::Init() {
   Module::Init();
   Seq::InitClass();
   Map::Init();
-  Procedure::InitClass();
+  Fn::InitClass();
   Constructor::InitClass();
   Lambda::InitClass();
-  NativeProcedure::Init();
+  NativeFn::Init();
   Buffer::Init();
   Script::InitClass();
   Number::InitClass();
@@ -241,9 +242,9 @@ auto PrintValue(std::ostream& stream, Symbol& value) -> std::ostream& {
 }
 
 template <>
-auto PrintValue(std::ostream& stream, NativeProcedure& value) -> std::ostream& {
+auto PrintValue(std::ostream& stream, NativeFn& value) -> std::ostream& {
   const auto& symbol = value.GetSymbol()->GetFullyQualifiedName();
-  return stream << "NativeProcedure(" << symbol << ")";
+  return stream << "NativeFn(" << symbol << ")";
 }
 
 template <>
@@ -326,8 +327,8 @@ auto PrintValue(std::ostream& stream, Object* value) -> std::ostream& {
     return PrintValue(stream, *(value->AsString()));
   } else if (value->IsSymbol()) {
     return PrintValue(stream, *(value->AsSymbol()));
-  } else if (value->IsNativeProcedure()) {
-    return PrintValue(stream, *(value->AsNativeProcedure()));
+  } else if (value->IsNativeFn()) {
+    return PrintValue(stream, *(value->AsNativeFn()));
   } else if (value->IsClass()) {
     return PrintValue(stream, *(value->AsClass()));
   } else if (value->IsLambda()) {

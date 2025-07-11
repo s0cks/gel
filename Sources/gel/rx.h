@@ -20,7 +20,7 @@
 namespace gel {
 class Object;
 class Runtime;
-class Procedure;
+class Fn;
 class LocalScope;
 namespace rx {
 using namespace rpp;
@@ -39,11 +39,11 @@ static inline auto empty() -> DynamicObjectObservable {
 }
 
 auto GetRxScope() -> LocalScope*;
-auto CallPredicate(Runtime* runtime, Procedure* predicate) -> Predicate;
-auto CallOnNext(Runtime* runtime, Procedure* proc) -> OnNextFunc;
-auto CallOnError(Runtime* runtime, Procedure* proc) -> OnErrorFunc;
-auto CallOnComplete(Runtime* runtime, Procedure* proc) -> OnCompleteFunc;
-auto map(Runtime* runtime, Procedure* proc) -> rpp::operators::details::map_t<std::decay_t<MapFunc>>;
+auto CallPredicate(Runtime* runtime, Fn* predicate) -> Predicate;
+auto CallOnNext(Runtime* runtime, Fn* proc) -> OnNextFunc;
+auto CallOnError(Runtime* runtime, Fn* proc) -> OnErrorFunc;
+auto CallOnComplete(Runtime* runtime, Fn* proc) -> OnCompleteFunc;
+auto map(Runtime* runtime, Fn* proc) -> rpp::operators::details::map_t<std::decay_t<MapFunc>>;
 
 auto DoNothingOnNext() -> OnNextFunc;
 auto DoNothingOnError() -> OnErrorFunc;

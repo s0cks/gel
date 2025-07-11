@@ -213,6 +213,8 @@ class ToStringHelperBase {
     return AddField(std::move(name), ss.str());
   }
 
+  inline void AddSymbolField(const Symbol& value, const std::string_view name = "symbol");
+
   void AddBytesField(const std::string_view name, const uword num_bytes);
   auto ToString() const -> std::string;
 };
@@ -289,6 +291,10 @@ inline void ToStringHelperBase::AddField<const void*>(const std::string_view nam
 template <>
 inline void ToStringHelperBase::AddField<bool>(const std::string_view name, const bool value) {
   return AddField<std::string_view>(name, value ? "true" : "false");
+}
+
+inline void ToStringHelperBase::AddSymbolField(const Symbol& value, const std::string_view name) {
+  return AddField(name, value.GetFullyQualifiedName());
 }
 
 // template <HasToString V>

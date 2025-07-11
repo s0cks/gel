@@ -22,8 +22,8 @@ auto Namespace::IsKernelNamespace() const -> bool {
 
 void Namespace::AddChild(Object* rhs) {
   ASSERT(rhs);
-  if (rhs->IsProcedure()) {
-    const auto procedure = rhs->AsProcedure();
+  if (rhs->IsFn()) {
+    const auto procedure = rhs->AsFn();
     ASSERT(procedure);
     procedures_->Push(procedure);
     procedure->SetOwner(this);
@@ -171,18 +171,18 @@ auto Namespace::FindMacro(const std::string& name) -> Macro* {
   return macros_->FindIf(IsNamed<Macro>(name));
 }
 
-auto Namespace::FindProcedure(const std::string& name) -> Procedure* {
+auto Namespace::FindFn(const std::string& name) -> Fn* {
   ASSERT(!name.empty());
-  return procedures_->FindIf(Procedure::IsNamed(name));
+  return procedures_->FindIf(Fn::IsNamed(name));
 }
 
-auto Namespace::FindNativeProcedure(const std::string& name) -> NativeProcedure* {
-  const auto proc = FindProcedure(name);
-  return proc && proc->IsNative() ? proc->AsNativeProcedure() : nullptr;
+auto Namespace::FindNativeFn(const std::string& name) -> NativeFn* {
+  const auto proc = FindFn(name);
+  return proc && proc->IsNative() ? proc->AsNativeFn() : nullptr;
 }
 
 auto Namespace::FindLambda(const std::string& name) -> Lambda* {
-  const auto proc = FindProcedure(name);
+  const auto proc = FindFn(name);
   return proc && proc->IsLambda() ? proc->AsLambda() : nullptr;
 }
 
@@ -315,14 +315,14 @@ NAMESPACE_PROCEDURE_F(get_procedures) {
   }
   ASSERT(target);
   Object* result = Nil::Get();
-  ProcedureVisitorWrapper visitor([&result](Procedure* macro) {
+  FnVisitorWrapper visitor([&result](Fn* macro) {
     ASSERT(macro);
     result = Cons(macro, result);
     return true;
   });
-  if (!target->VisitAllProcedures(visitor)) {
+  if (!target->VisitAllFns(visitor)) {
     std::stringstream ss;
-    ss << "failed to get Procedures for: " << target->ToString();
+    ss << "failed to get Fns for: " << target->ToString();
     return ThrowError(ss);
   }
   return Return(result);
@@ -343,12 +343,12 @@ NAMESPACE_PROCEDURE_F(get_lambdas) {
   }
   ASSERT(target);
   Object* result = Nil::Get();
-  ProcedureVisitorWrapper visitor([&result](Procedure* macro) {
+  FnVisitorWrapper visitor([&result](Fn* macro) {
     ASSERT(macro);
     result = Cons(macro, result);
     return true;
   });
-  if (!target->VisitAllLambdaProcedures(visitor)) {
+  if (!target->VisitAllLambdaFns(visitor)) {
     std::stringstream ss;
     ss << "failed to get all Lambdas for: " << target->ToString();
     return ThrowError(ss);
@@ -371,14 +371,14 @@ NAMESPACE_PROCEDURE_F(get_native_procedures) {
   }
   ASSERT(target);
   Object* result = Nil::Get();
-  ProcedureVisitorWrapper visitor([&result](Procedure* macro) {
+  FnVisitorWrapper visitor([&result](Fn* macro) {
     ASSERT(macro);
     result = Cons(macro, result);
     return true;
   });
-  if (!target->VisitAllNativeProcedures(visitor)) {
+  if (!target->VisitAllNativeFns(visitor)) {
     std::stringstream ss;
-    ss << "failed to get NativeProcedures for: " << target->ToString();
+    ss << "failed to get NativeFns for: " << target->ToString();
     return ThrowError(ss);
   }
   return Return(result);

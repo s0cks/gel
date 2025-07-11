@@ -4,9 +4,9 @@
 #include "gel/expr/invoke_expr.h"
 
 namespace gel::expr {
-class InvokeInstanceExpr : public TemplateInvokeExpr<Procedure> {
+class InvokeInstanceExpr : public TemplateInvokeExpr<Fn> {
  private:
-  explicit InvokeInstanceExpr(Procedure* target, Expression* instance, const ExpressionList& args) :
+  explicit InvokeInstanceExpr(Fn* target, Expression* instance, const ExpressionList& args) :
     TemplateInvokeExpr(target, {instance}) {
     AddArgs(args);
   }
@@ -31,7 +31,7 @@ class InvokeInstanceExpr : public TemplateInvokeExpr<Procedure> {
   DECLARE_EXPRESSION(InvokeInstanceExpr);
 
  public:
-  static inline auto New(Procedure* target, Expression* instance, const ExpressionList& args) -> InvokeInstanceExpr* {
+  static inline auto New(Fn* target, Expression* instance, const ExpressionList& args) -> InvokeInstanceExpr* {
     ASSERT(target);
     ASSERT(instance);
     return new InvokeInstanceExpr(target, instance, args);

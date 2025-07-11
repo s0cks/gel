@@ -2,6 +2,7 @@
 #define GEL_SUBJECT_H
 
 #include "gel/object.h"
+#include "gel/rx_object.h"
 
 namespace gel {
 class Subject : public Object {

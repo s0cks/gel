@@ -15,6 +15,7 @@
 #include "gel/platform.h"
 #include "gel/pointer.h"
 #include "gel/procedure.h"
+#include "gel/rx_object.h"
 #include "gel/to_string_helper.h"
 #include "gel/type.h"
 #include "gel/types.h"
@@ -164,13 +165,13 @@ auto Class::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
   return true;
 }
 
-auto Class::FindOrCreateNativeProcedure(Symbol* symbol) -> NativeProcedure* {
+auto Class::FindOrCreateNativeFn(Symbol* symbol) -> NativeFn* {
   ASSERT(symbol);
   for (const auto& proc : funcs_) {
     if (proc->IsNative() && proc->GetSymbol()->Equals(symbol))
-      return proc->AsNativeProcedure();
+      return proc->AsNativeFn();
   }
-  const auto native = NativeProcedure::FindOrCreate(symbol);
+  const auto native = NativeFn::FindOrCreate(symbol);
   if (native)
     AddFunction(native);
   return native;
@@ -217,8 +218,8 @@ void Class::AddChild(Object* rhs) {
   ASSERT(rhs);
   if (rhs->IsField()) {
     fields_->Push(rhs->AsField());
-  } else if (rhs->IsProcedure()) {
-    funcs_.push_back(rhs->AsProcedure());
+  } else if (rhs->IsFn()) {
+    funcs_.push_back(rhs->AsFn());
   }
 }
 
@@ -236,12 +237,12 @@ auto Class::GetFieldAt(const uint64_t idx) const -> Field* {
   return fields_->Get(idx);
 }
 
-auto Class::GetNumberOfProcedures() const -> uint64_t {
+auto Class::GetNumberOfFns() const -> uint64_t {
   return funcs_.size();
 }
 
-auto Class::GetProcedureAt(const uint64_t idx) const -> Procedure* {
-  ASSERT(idx >= 0 && idx <= GetNumberOfProcedures());
+auto Class::GetFnAt(const uint64_t idx) const -> Fn* {
+  ASSERT(idx >= 0 && idx <= GetNumberOfFns());
   return funcs_[idx];
 }
 
@@ -259,7 +260,7 @@ auto Class::NewInstance(const ObjectList& args) -> Object* {
   return nullptr;
 }
 
-auto Class::FindFunction(const std::string& name, const bool recursive) const -> Procedure* {
+auto Class::FindFunction(const std::string& name, const bool recursive) const -> Fn* {
   for (const auto& func : funcs_) {
     if (func->GetSymbol()->GetSymbolName() == name)
       return func;
@@ -335,7 +336,7 @@ auto Class::FindField(Symbol* symbol, const bool recursive) const -> Field* {
   return nullptr;
 }
 
-auto Class::FindFunction(Symbol* symbol, const bool recursive) const -> Procedure* {
+auto Class::FindFunction(Symbol* symbol, const bool recursive) const -> Fn* {
   for (const auto& func : funcs_) {
     if (func->GetSymbol()->Equals(symbol))
       return func;
@@ -579,8 +580,8 @@ CLASS_PROCEDURE_F(get_procedures) {
   }
   ASSERT(cls);
   Object* result = Nil::Get();
-  for (auto idx = 0; idx < cls->GetNumberOfProcedures(); idx++) {
-    const auto proc = cls->GetProcedureAt(idx);
+  for (auto idx = 0; idx < cls->GetNumberOfFns(); idx++) {
+    const auto proc = cls->GetFnAt(idx);
     ASSERT(proc);
     result = Cons(proc->GetSymbol(), result);
   }

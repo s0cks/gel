@@ -53,7 +53,7 @@ auto StackFrame::GetTargetName() const -> std::string {
   if (IsScriptFrame()) {
     return "Script";  // TODO: implement
   } else if (IsNativeFrame()) {
-    return GetTarget()->AsNativeProcedure()->GetSymbol()->GetFullyQualifiedName();
+    return GetTarget()->AsNativeFn()->GetSymbol()->GetFullyQualifiedName();
   } else if (IsLambdaFrame()) {
     const auto lambda = GetTarget()->AsLambda();
     ASSERT(lambda);

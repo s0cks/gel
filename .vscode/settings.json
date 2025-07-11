@@ -137,6 +137,10 @@
   "cSpell.words": [
     "CFLAGS",
     "cgraph",
+    "defmacro",
+    "defn",
+    "defnative",
+    "deftype",
     "elease",
     "elfio",
     "endforeach",
@@ -155,6 +159,7 @@
     "ldinstanceproc",
     "ldsecond",
     "libuv",
+    "nativefn",
     "neqnull",
     "POPN",
     "pushf",
@@ -166,7 +171,8 @@
     "stfield",
     "stfirst",
     "stsecond",
-    "TERMCOLOR"
+    "TERMCOLOR",
+    "utask"
   ],
   "editor.quickSuggestions": {
     "comments": true,

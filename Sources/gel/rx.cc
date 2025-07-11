@@ -19,7 +19,7 @@ auto GetRxScope() -> LocalScope* {
   return kRxScope;
 }
 
-auto CallPredicate(Runtime* runtime, Procedure* predicate) -> Predicate {
+auto CallPredicate(Runtime* runtime, Fn* predicate) -> Predicate {
   ASSERT(runtime);
   ASSERT(predicate);
   return [runtime, predicate](gel::Object* value) {
@@ -48,7 +48,7 @@ auto DoNothingOnComplete() -> OnCompleteFunc {
   return kDoNothing;
 }
 
-auto CallOnNext(Runtime* runtime, Procedure* proc) -> OnNextFunc {
+auto CallOnNext(Runtime* runtime, Fn* proc) -> OnNextFunc {
   ASSERT(runtime);
   if (proc->IsNil())
     return DoNothingOnNext();
@@ -59,7 +59,7 @@ auto CallOnNext(Runtime* runtime, Procedure* proc) -> OnNextFunc {
   };
 }
 
-auto CallOnError(Runtime* runtime, Procedure* proc) -> OnErrorFunc {
+auto CallOnError(Runtime* runtime, Fn* proc) -> OnErrorFunc {
   ASSERT(runtime);
   if (proc->IsNil())
     return DoNothingOnError();
@@ -74,7 +74,7 @@ auto CallOnError(Runtime* runtime, Procedure* proc) -> OnErrorFunc {
   };
 }
 
-auto CallOnComplete(Runtime* runtime, Procedure* proc) -> OnCompleteFunc {
+auto CallOnComplete(Runtime* runtime, Fn* proc) -> OnCompleteFunc {
   ASSERT(runtime);
   if (proc->IsNil())
     return DoNothingOnComplete();
@@ -84,7 +84,7 @@ auto CallOnComplete(Runtime* runtime, Procedure* proc) -> OnCompleteFunc {
   };
 }
 
-auto map(Runtime* runtime, Procedure* proc) -> rpp::operators::details::map_t<std::decay_t<MapFunc>> {
+auto map(Runtime* runtime, Fn* proc) -> rpp::operators::details::map_t<std::decay_t<MapFunc>> {
   const MapFunc func = [runtime, proc](Object* value) {
     return runtime->CallPop(*proc, {value});
   };

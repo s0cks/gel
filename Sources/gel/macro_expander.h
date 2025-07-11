@@ -178,7 +178,7 @@ class MacroEffectVisitor : public ExpressionVisitor {
     return expr->Accept(*this);
   }
 
-#define DECLARE_VISIT(Name) auto Visit##Name(expr::Name* expr)->bool override;
+#define DECLARE_VISIT(Name) auto Visit##Name(expr::Name* expr) -> bool override;
   FOR_EACH_EXPRESSION_NODE(DECLARE_VISIT)
 #undef DECLARE_VISIT
 

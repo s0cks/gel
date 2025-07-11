@@ -27,7 +27,7 @@ namespace ir {
 class GraphEntryInstr;
 }  // namespace ir
 
-class Lambda : public Procedure {
+class Lambda : public Fn {
   friend class Parser;
   friend class Module;
   friend class Runtime;
@@ -57,7 +57,7 @@ class Lambda : public Procedure {
  protected:
   // TODO: remove args from constructor
   Lambda(Symbol* symbol, Array<Argument*>* args, expr::SeqExpr* body = nullptr) :
-    Procedure(symbol),
+    Fn(symbol),
     body_(body) {
     if (args)
       SetArgs(args);

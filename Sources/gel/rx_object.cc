@@ -71,7 +71,7 @@ auto Observable::New(const ObjectList& args) -> Observable* {
   return New(args[0]);
 }
 
-auto Observer::CreateDynamicObserver(Procedure* on_next_proc, Procedure* on_error_proc, Procedure* on_completed_proc)
+auto Observer::CreateDynamicObserver(Fn* on_next_proc, Fn* on_error_proc, Fn* on_completed_proc)
     -> rx::DynamicObjectObserver {
   ASSERT(on_next_proc);
   const auto runtime = GetRuntime();
@@ -115,13 +115,13 @@ auto Observer::New(const ObjectList& args) -> Observer* {
   if (args.empty())
     return New();
   const auto on_next = args[0];
-  if (!on_next->IsProcedure())
+  if (!on_next->IsFn())
     throw Exception(fmt::format("cannot create observer with on_next value of: {}", (*on_next)));
   const auto on_error = args.size() >= 2 ? args[1] : nullptr;
-  if (on_error && !on_error->IsProcedure())
+  if (on_error && !on_error->IsFn())
     throw Exception(fmt::format("cannot create observer with on_error value of: {}", (*on_error)));
   const auto on_complete = args.size() >= 3 ? args[2] : nullptr;
-  if (on_complete && !on_complete->IsProcedure())
+  if (on_complete && !on_complete->IsFn())
     throw Exception(fmt::format("cannot create observer with on_complete value of: {}", (*on_complete)));
   return New(on_next, on_error, on_complete);
 }
@@ -129,9 +129,9 @@ namespace proc {
 #define NATIVE_RX_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(rx_##Name)
 
 NATIVE_RX_PROCEDURE_F(observer) {
-  REQUIRED_NATIVE_ARG(0, Procedure, on_next);
-  OptionalNativeArgument<1, Procedure> on_error(args);
-  OptionalNativeArgument<2, Procedure> on_completed(args);
+  REQUIRED_NATIVE_ARG(0, Fn, on_next);
+  OptionalNativeArgument<1, Fn> on_error(args);
+  OptionalNativeArgument<2, Fn> on_completed(args);
   return ReturnNew<Observer>(on_next.GetValue(), on_error.GetValue(), on_completed.GetValue());
 }
 
@@ -163,7 +163,7 @@ NATIVE_RX_PROCEDURE_F(take) {
 
 NATIVE_RX_PROCEDURE_F(filter) {
   REQUIRED_NATIVE_ARG(0, Observable, source);
-  REQUIRED_NATIVE_ARG(1, Procedure, filter);
+  REQUIRED_NATIVE_ARG(1, Fn, filter);
   source->Apply(rx::operators::filter(rx::CallPredicate(GetRuntime(), filter)));
   return DoNothing();
 }
@@ -205,20 +205,18 @@ NATIVE_RX_PROCEDURE_F(subscribe) {
       return DoNothing();
     }
   }
-  ASSERT(on_next->IsProcedure());
-  OptionalNativeArgument<2, Procedure> on_error_arg(args);
-  OptionalNativeArgument<3, Procedure> on_completed_arg(args);
+  ASSERT(on_next->IsFn());
+  OptionalNativeArgument<2, Fn> on_error_arg(args);
+  OptionalNativeArgument<3, Fn> on_completed_arg(args);
   const auto on_error = rx::CallOnError(runtime, on_error_arg);
   const auto on_completed = rx::CallOnComplete(runtime, on_completed_arg);
   if (source.GetValue()->IsSubject()) {
-    (source.GetValue())
-        ->AsSubject()
-        ->Subscribe(rx::CallOnNext(runtime, on_next->AsProcedure()), on_error, on_completed);
+    (source.GetValue())->AsSubject()->Subscribe(rx::CallOnNext(runtime, on_next->AsFn()), on_error, on_completed);
     return DoNothing();
   } else if (source.GetValue()->IsObservable()) {
     (source.GetValue()->AsObservable())
         ->GetValue()
-        .subscribe(rx::CallOnNext(runtime, on_next->AsProcedure()), on_error, on_completed);
+        .subscribe(rx::CallOnNext(runtime, on_next->AsFn()), on_error, on_completed);
     return DoNothing();
   }
   return ThrowError("not implemented");
@@ -237,7 +235,7 @@ NATIVE_RX_PROCEDURE_F(map) {
   if (args.size() != 2)
     return ThrowError(fmt::format("expected args to be: `<observable> <func>`"));
   REQUIRED_NATIVE_ARG(0, Observable, source);
-  REQUIRED_NATIVE_ARG(1, Procedure, callback);
+  REQUIRED_NATIVE_ARG(1, Fn, callback);
   source->AsObservable()->Apply(rx::map(runtime, callback));
   return DoNothing();
 }
@@ -272,9 +270,9 @@ NATIVE_RX_PROCEDURE_F(take_while) {
   if (args.size() != 2)
     return ThrowError(fmt::format("expected args to be: `<observable> <func>`"));
   CHECK_ARG_TYPE(0, source, Observable::GetClass());
-  CHECK_ARG_TYPE(1, predicate, Procedure::GetClass());
+  CHECK_ARG_TYPE(1, predicate, Fn::GetClass());
   source->AsObservable()->Apply(rx::operators::take_while([predicate, runtime](Object* value) {
-    return gel::Truth(runtime->CallPop(*(predicate->AsProcedure()), {value}));
+    return gel::Truth(runtime->CallPop(*(predicate->AsFn()), {value}));
   }));
   return DoNothing();
 }

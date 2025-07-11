@@ -48,7 +48,7 @@
 namespace gel {
 class Assembler;
 class EffectVisitor;
-class NativeProcedure;
+class NativeFn;
 class FlowGraphBuilder;
 class FlowGraphCompiler;
 
@@ -351,7 +351,7 @@ class GraphEntryInstr : public EntryInstr {
  public:
   ~GraphEntryInstr() override = default;
 
-  auto GetProcedure() const -> Object* {
+  auto GetFn() const -> Object* {
     return procedure_;
   }
 
@@ -766,9 +766,9 @@ class InvokeInstr : public Definition {
     return target_;
   }
 
-  auto GetProcedure() const -> Procedure* {
-    ASSERT(GetTarget()->IsConstantInstr() && GetTarget()->AsConstantInstr()->GetValue()->IsProcedure());
-    return GetTarget()->AsConstantInstr()->GetValue()->AsProcedure();
+  auto GetFn() const -> Fn* {
+    ASSERT(GetTarget()->IsConstantInstr() && GetTarget()->AsConstantInstr()->GetValue()->IsFn());
+    return GetTarget()->AsConstantInstr()->GetValue()->AsFn();
   }
 
   DECLARE_INSTRUCTION(InvokeInstr);
@@ -822,9 +822,9 @@ class InvokeNativeInstr : public InvokeInstr {
  public:
   ~InvokeNativeInstr() override = default;
 
-  auto GetNativeProcedure() const -> NativeProcedure* {
-    ASSERT(GetProcedure()->IsNative());
-    return GetProcedure()->AsNativeProcedure();
+  auto GetNativeFn() const -> NativeFn* {
+    ASSERT(GetFn()->IsNative());
+    return GetFn()->AsNativeFn();
   }
 
   DECLARE_INSTRUCTION(InvokeNativeInstr);

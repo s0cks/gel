@@ -14,7 +14,7 @@
 #include "gel/type.h"
 
 namespace gel {
-Timer::Timer(uword id, Procedure* on_tick) :
+Timer::Timer(uword id, Fn* on_tick) :
   Object(),
   id_(id),
   on_tick_(on_tick) {

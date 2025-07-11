@@ -33,7 +33,7 @@ auto Constructor::ToString() const -> std::string {
 
 auto Constructor::CreateClass() -> Class* {
   ASSERT(kClass == nullptr);
-  return Class::New(Procedure::GetClass(), "Constructor");
+  return Class::New(Fn::GetClass(), "Constructor");
 }
 
 auto Constructor::New(const ObjectList& args) -> Constructor* {

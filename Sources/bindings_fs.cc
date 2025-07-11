@@ -48,11 +48,11 @@ NATIVE_FS_PROCEDURE_F(get_cwd) {
 NATIVE_FS_PROCEDURE_F(stat) {
   NativeArgument<0, String> path(args);
   CHECK_NATIVE_ARG(path);
-  NativeArgument<1, Procedure> on_next(args);
+  NativeArgument<1, Fn> on_next(args);
   CHECK_NATIVE_ARG(on_next);
-  OptionalNativeArgument<2, Procedure> on_error(args);
+  OptionalNativeArgument<2, Fn> on_error(args);
   CHECK_NATIVE_ARG(on_error);
-  OptionalNativeArgument<3, Procedure> on_finished(args);
+  OptionalNativeArgument<3, Fn> on_finished(args);
   CHECK_NATIVE_ARG(on_finished);
   const auto loop = GetThreadEventLoop();
   ASSERT(loop);
@@ -64,11 +64,11 @@ NATIVE_FS_PROCEDURE_F(rename) {
   CHECK_NATIVE_ARG(old_path);
   NativeArgument<1, String> new_path(args);
   CHECK_NATIVE_ARG(new_path);
-  OptionalNativeArgument<2, Procedure> on_success(args);
+  OptionalNativeArgument<2, Fn> on_success(args);
   CHECK_NATIVE_ARG(on_success);
-  OptionalNativeArgument<3, Procedure> on_error(args);
+  OptionalNativeArgument<3, Fn> on_error(args);
   CHECK_NATIVE_ARG(on_error);
-  OptionalNativeArgument<4, Procedure> on_finished(args);
+  OptionalNativeArgument<4, Fn> on_finished(args);
   CHECK_NATIVE_ARG(on_finished);
   const auto loop = GetThreadEventLoop();
   ASSERT(loop);
@@ -80,11 +80,11 @@ NATIVE_FS_PROCEDURE_F(mkdir) {
   CHECK_NATIVE_ARG(path);
   NativeArgument<1, Long> mode(args);
   CHECK_NATIVE_ARG(mode);
-  OptionalNativeArgument<2, Procedure> on_success(args);
+  OptionalNativeArgument<2, Fn> on_success(args);
   CHECK_NATIVE_ARG(on_success);
-  OptionalNativeArgument<3, Procedure> on_error(args);
+  OptionalNativeArgument<3, Fn> on_error(args);
   CHECK_NATIVE_ARG(on_error);
-  OptionalNativeArgument<4, Procedure> on_finished(args);
+  OptionalNativeArgument<4, Fn> on_finished(args);
   CHECK_NATIVE_ARG(on_finished);
   const auto loop = GetThreadEventLoop();
   ASSERT(loop);
@@ -94,18 +94,18 @@ NATIVE_FS_PROCEDURE_F(mkdir) {
 NATIVE_FS_PROCEDURE_F(rmdir) {
   NativeArgument<0, String> path(args);
   CHECK_NATIVE_ARG(path);
-  OptionalNativeArgument<1, Procedure> on_success(args);
+  OptionalNativeArgument<1, Fn> on_success(args);
   CHECK_NATIVE_ARG(on_success);
-  OptionalNativeArgument<2, Procedure> on_error(args);
+  OptionalNativeArgument<2, Fn> on_error(args);
   CHECK_NATIVE_ARG(on_error);
-  OptionalNativeArgument<3, Procedure> on_finished(args);
+  OptionalNativeArgument<3, Fn> on_finished(args);
   CHECK_NATIVE_ARG(on_finished);
   const auto loop = GetThreadEventLoop();
   ASSERT(loop);
   return ReturnBool(loop->Rmdir(path->Get(), on_success, on_error, on_finished));
 }
 
-static inline auto WrapOpenFileOnNext(Procedure* on_next) -> FileOpenedCallback {
+static inline auto WrapOpenFileOnNext(Fn* on_next) -> FileOpenedCallback {
   return [on_next](Long* next) {
     if (on_next)
       GetRuntime()->Call(*on_next, {next});
@@ -119,11 +119,11 @@ NATIVE_FS_PROCEDURE_F(open) {
   CHECK_NATIVE_ARG(flags);
   NativeArgument<2, Long> mode(args);
   CHECK_NATIVE_ARG(mode);
-  OptionalNativeArgument<3, Procedure> on_next(args);
+  OptionalNativeArgument<3, Fn> on_next(args);
   CHECK_NATIVE_ARG(on_next);
-  OptionalNativeArgument<4, Procedure> on_error(args);
+  OptionalNativeArgument<4, Fn> on_error(args);
   CHECK_NATIVE_ARG(on_error);
-  OptionalNativeArgument<5, Procedure> on_finished(args);
+  OptionalNativeArgument<5, Fn> on_finished(args);
   CHECK_NATIVE_ARG(on_finished);
   return ReturnBool(OpenFileAsync(path->Get(), static_cast<int>(flags->Get()), static_cast<int>(mode->Get()),
                                   WrapOpenFileOnNext(on_next), WrapOnError(on_error), WrapOnFinished(on_finished)));

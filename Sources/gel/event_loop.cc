@@ -22,19 +22,19 @@
 #include "gel/type.h"
 
 namespace gel {
-auto WrapOnError(Procedure* on_error) -> OnErrorCallback {
+auto WrapOnError(Fn* on_error) -> OnErrorCallback {
   return on_error->IsError() ? OnErrorCallback{} : [on_error](Error* error) {
     return GetRuntime()->Call(*on_error, ObjectList{error});
   };
 }
 
-auto WrapOnSuccess(Procedure* on_success) -> OnSuccessCallback {
+auto WrapOnSuccess(Fn* on_success) -> OnSuccessCallback {
   return on_success->IsNil() ? OnSuccessCallback{} : [on_success]() {
     return GetRuntime()->Call(*on_success);
   };
 }
 
-auto WrapOnFinished(Procedure* on_finished) -> OnFinishedCallback {
+auto WrapOnFinished(Fn* on_finished) -> OnFinishedCallback {
   return on_finished->IsNil() ? OnFinishedCallback{} : [on_finished]() {
     return GetRuntime()->Call(*on_finished);
   };
@@ -55,7 +55,7 @@ auto EventLoop::Compare(Object* rhs) const -> bool {
   return -1;
 }
 
-auto EventLoop::CreateTimer(Procedure* on_tick) -> Timer* {
+auto EventLoop::CreateTimer(Fn* on_tick) -> Timer* {
   const auto timer = Timer::New(timers_.size() + 1, on_tick);
   ASSERT(timer);
   timers_.push_back(timer);
@@ -69,7 +69,7 @@ auto EventLoop::GetTimer(const uword idx) const -> Timer* {
   return pos != std::end(timers()) ? (*pos) : nullptr;
 }
 
-auto EventLoop::Stat(const std::string& path, Procedure* on_next, Procedure* on_error, Procedure* on_finished) -> bool {
+auto EventLoop::Stat(const std::string& path, Fn* on_next, Fn* on_error, Fn* on_finished) -> bool {
   ASSERT(!path.empty());
   ASSERT(on_next);
   return Stat(
@@ -97,8 +97,8 @@ auto EventLoop::Rename(const std::string& old_path, const std::string& new_path,
   return request->Execute(this) == 0;
 }
 
-auto EventLoop::Rename(const std::string& old_path, const std::string& new_path, Procedure* on_success,
-                       Procedure* on_error, Procedure* on_finished) -> bool {
+auto EventLoop::Rename(const std::string& old_path, const std::string& new_path, Fn* on_success, Fn* on_error,
+                       Fn* on_finished) -> bool {
   ASSERT(!old_path.empty());
   ASSERT(!new_path.empty());
   return Rename(old_path, new_path, WrapOnSuccess(on_success), WrapOnError(on_error), WrapOnFinished(on_finished));
@@ -112,8 +112,7 @@ auto EventLoop::Mkdir(const std::string& path, const int mode, const OnSuccessCa
   return request->Execute(this) == 0;
 }
 
-auto EventLoop::Mkdir(const std::string& path, const int mode, Procedure* on_success, Procedure* on_error,
-                      Procedure* on_finished) -> bool {
+auto EventLoop::Mkdir(const std::string& path, const int mode, Fn* on_success, Fn* on_error, Fn* on_finished) -> bool {
   ASSERT(!path.empty());
   return Mkdir(path, mode, WrapOnSuccess(on_success), WrapOnError(on_error), WrapOnFinished(on_finished));
 }
@@ -126,8 +125,7 @@ auto EventLoop::Rmdir(const std::string& path, const OnSuccessCallback& on_succe
   return request->Execute(this) == 0;
 }
 
-auto EventLoop::Rmdir(const std::string& path, Procedure* on_success, Procedure* on_error, Procedure* on_finished)
-    -> bool {
+auto EventLoop::Rmdir(const std::string& path, Fn* on_success, Fn* on_error, Fn* on_finished) -> bool {
   ASSERT(!path.empty());
   return Rmdir(path, WrapOnSuccess(on_success), WrapOnError(on_error), WrapOnFinished(on_finished));
 }

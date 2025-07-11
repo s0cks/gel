@@ -82,7 +82,7 @@ NATIVE_PROCEDURE_F(gel_get_target_triple) {
 
 NATIVE_PROCEDURE_F(gel_get_natives) {
   ASSERT(args.empty());
-  const auto& natives = NativeProcedure::GetAll();
+  const auto& natives = NativeFn::GetAll();
   Object* result = Nil::Get();
   for (const auto& native : natives) {
     result = Pair::New(String::ValueOf(native->GetSymbol()), result);

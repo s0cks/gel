@@ -11,22 +11,22 @@
 #include "gel/type_traits.h"
 
 namespace gel {
-class Procedure;
-DECLARE_VISITOR(Procedure);
-class Procedure : public Object {
+class Fn;
+DECLARE_VISITOR(Fn);
+class Fn : public Object {
   friend class Object;
   friend class Script;
   friend class Runtime;
   friend class Namespace;
   friend class Interpreter;
-  DEFINE_NON_COPYABLE_TYPE(Procedure);
+  DEFINE_NON_COPYABLE_TYPE(Fn);
 
  public:
-  using Predicate = std::function<bool(Procedure*)>;
+  using Predicate = std::function<bool(Fn*)>;
 
   template <StringLike Str>
   static inline auto IsNamed(const Str& value) -> Predicate {
-    return [&](Procedure* procedure) {
+    return [&](Fn* procedure) {
       ASSERT(procedure);
       return procedure->HasSymbol() && procedure->GetSymbol()->Equals(value);
     };
@@ -39,7 +39,7 @@ class Procedure : public Object {
   Array<Argument*>* args_ = nullptr;
 
  protected:
-  explicit Procedure(Symbol* symbol) :
+  explicit Fn(Symbol* symbol) :
     symbol_(symbol) {}
 
   void SetOwner(Object* rhs) {
@@ -93,7 +93,7 @@ class Procedure : public Object {
   }
 
  public:
-  ~Procedure() override = default;
+  ~Fn() override = default;
 
   auto GetSymbol() const -> Symbol* {
     return symbol_;
@@ -120,10 +120,10 @@ class Procedure : public Object {
   }
 
   auto Equals(Object* rhs) const -> bool override {
-    return rhs && rhs->IsProcedure();
+    return rhs && rhs->IsFn();
   }
 
-  auto AsProcedure() -> Procedure* override {
+  auto AsFn() -> Fn* override {
     return this;
   }
 
@@ -181,7 +181,7 @@ class Procedure : public Object {
     return args_ && (idx >= 0 && idx <= GetNumberOfArgs()) && (args_->Get(idx) != nullptr);
   }
 
-  inline friend auto operator<<(std::ostream& stream, const Procedure& rhs) -> std::ostream& {
+  inline friend auto operator<<(std::ostream& stream, const Fn& rhs) -> std::ostream& {
     return stream << rhs.ToString();
   }
 
@@ -192,7 +192,7 @@ class Procedure : public Object {
 
  public:
   static auto VisitClassPointerPointer(PointerPointerVisitor* vis) -> bool;
-  static inline auto New(const ObjectList& args) -> Procedure* {
+  static inline auto New(const ObjectList& args) -> Fn* {
     NOT_IMPLEMENTED(FATAL);
   }
 
@@ -209,16 +209,16 @@ class Procedure : public Object {
   }
 
  public:
-  static inline auto IsLambdaProc(Procedure* p) -> bool {
+  static inline auto IsLambdaProc(Fn* p) -> bool {
     return p && p->IsLambda();
   }
 
-  static inline auto IsNativeProc(Procedure* p) -> bool {
+  static inline auto IsNativeProc(Fn* p) -> bool {
     return p && p->IsNative();
   }
 };
-static_assert(WithSymbol<Procedure>);
-static_assert(HasDocstring<Procedure>);
+static_assert(WithSymbol<Fn>);
+static_assert(HasDocstring<Fn>);
 }  // namespace gel
 
 #endif  // GEL_PROCEDURE_H

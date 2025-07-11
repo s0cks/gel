@@ -49,7 +49,7 @@ class Class : public Object {
   Class* parent_;
   String* name_;
   Array<Field*>* fields_;
-  std::vector<Procedure*> funcs_{};
+  std::vector<Fn*> funcs_{};
 
  protected:
   explicit Class(ClassId id, Class* parent, String* name);
@@ -69,7 +69,7 @@ class Class : public Object {
   auto VisitPointers(PointerVisitor* vis) -> bool override;
   auto VisitPointerPointers(PointerPointerVisitor* vis) -> bool override;
 
-  auto FindOrCreateNativeProcedure(Symbol* symbol) -> NativeProcedure*;
+  auto FindOrCreateNativeFn(Symbol* symbol) -> NativeFn*;
 
  public:
   ~Class() override = default;
@@ -82,7 +82,7 @@ class Class : public Object {
     return GetClassId() >= 0 && GetClassId() <= kTotalNumberOfInternalClassIds;
   }
 
-  void AddFunction(Procedure* func) {
+  void AddFunction(Fn* func) {
     ASSERT(func);
     funcs_.push_back(func);
   }
@@ -123,15 +123,15 @@ class Class : public Object {
   auto GetNumberOfFields() const -> uint64_t;
   auto GetFieldAt(const uint64_t idx) const -> Field*;
 
-  auto GetNumberOfProcedures() const -> uint64_t;
-  auto GetProcedureAt(const uint64_t idx) const -> Procedure*;
+  auto GetNumberOfFns() const -> uint64_t;
+  auto GetFnAt(const uint64_t idx) const -> Fn*;
 
   auto NewInstance(const ObjectList& args) -> Object*;
   auto GetAllocationSize() const -> uword;
   auto IsInstanceOf(Class* rhs) const -> bool;
   auto HasFunction(Symbol* symbol, const bool recursive = true) const -> bool;
-  auto FindFunction(const std::string& name, const bool recursive = true) const -> Procedure*;
-  auto FindFunction(Symbol* symbol, const bool recursive = true) const -> Procedure*;
+  auto FindFunction(const std::string& name, const bool recursive = true) const -> Fn*;
+  auto FindFunction(Symbol* symbol, const bool recursive = true) const -> Fn*;
   auto FindField(Symbol* symbol, const bool recursive = true) const -> Field*;
   auto FindField(const std::string& name, const bool recursive = true) const -> Field*;
   DECLARE_TYPE(Class);

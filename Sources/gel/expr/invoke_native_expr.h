@@ -4,10 +4,10 @@
 #include "gel/expr/invoke_expr.h"
 
 namespace gel::expr {
-class InvokeNativeExpr : public TemplateInvokeExpr<NativeProcedure> {
+class InvokeNativeExpr : public TemplateInvokeExpr<NativeFn> {
  private:
-  explicit InvokeNativeExpr(NativeProcedure* target, const ExpressionList& args) :
-    TemplateInvokeExpr<NativeProcedure>(target, args) {}
+  explicit InvokeNativeExpr(NativeFn* target, const ExpressionList& args) :
+    TemplateInvokeExpr<NativeFn>(target, args) {}
 
   void SetChildAt(const uint64_t idx, Expression* expr) override {
     return SetArgAt(idx, expr);
@@ -28,7 +28,7 @@ class InvokeNativeExpr : public TemplateInvokeExpr<NativeProcedure> {
   DECLARE_EXPRESSION(InvokeNativeExpr);
 
  public:
-  static inline auto New(NativeProcedure* target, const ExpressionList& args) -> InvokeNativeExpr* {
+  static inline auto New(NativeFn* target, const ExpressionList& args) -> InvokeNativeExpr* {
     ASSERT(target);
     return new InvokeNativeExpr(target, args);
   }
