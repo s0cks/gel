@@ -225,12 +225,12 @@ NATIVE_PROCEDURE_F(gel_get_namespace) {
 
 NATIVE_PROCEDURE_F(gel_get_namespaces) {
   Object* result = Nil::Get();
-  NamespaceVisitorWrapper vis([&result](Namespace* ns) {
+  const auto vis = [&result](Namespace* ns) {
     ASSERT(ns);
     result = Cons(ns, result);
     ASSERT(result);
     return true;
-  });
+  };
   if (!Namespace::VisitAllNamespaces(vis))
     return ThrowError("failed to visit Namespaces");
   return Return(result);
@@ -287,12 +287,12 @@ NAMESPACE_PROCEDURE_F(get_macros) {
   }
   ASSERT(target);
   Object* result = Nil::Get();
-  MacroVisitorWrapper visitor([&result](Macro* macro) {
+  const auto vis = [&result](Macro* macro) {
     ASSERT(macro);
     result = Cons(macro, result);
     return true;
-  });
-  if (!target->VisitAllMacros(visitor)) {
+  };
+  if (!target->VisitAllMacros(vis)) {
     std::stringstream ss;
     ss << "failed to get Macros for: " << target->ToString();
     return ThrowError(ss);
@@ -315,12 +315,12 @@ NAMESPACE_PROCEDURE_F(get_procedures) {
   }
   ASSERT(target);
   Object* result = Nil::Get();
-  FnVisitorWrapper visitor([&result](Fn* macro) {
+  const auto vis = [&result](Fn* macro) {
     ASSERT(macro);
     result = Cons(macro, result);
     return true;
-  });
-  if (!target->VisitAllFns(visitor)) {
+  };
+  if (!target->VisitAllFns(vis)) {
     std::stringstream ss;
     ss << "failed to get Fns for: " << target->ToString();
     return ThrowError(ss);
@@ -343,11 +343,11 @@ NAMESPACE_PROCEDURE_F(get_lambdas) {
   }
   ASSERT(target);
   Object* result = Nil::Get();
-  FnVisitorWrapper visitor([&result](Fn* macro) {
-    ASSERT(macro);
-    result = Cons(macro, result);
+  const FnPredicate visitor = [&result](Fn* fn) {
+    ASSERT(fn);
+    result = Cons(fn, result);
     return true;
-  });
+  };
   if (!target->VisitAllLambdaFns(visitor)) {
     std::stringstream ss;
     ss << "failed to get all Lambdas for: " << target->ToString();
@@ -371,12 +371,12 @@ NAMESPACE_PROCEDURE_F(get_native_procedures) {
   }
   ASSERT(target);
   Object* result = Nil::Get();
-  FnVisitorWrapper visitor([&result](Fn* macro) {
+  const auto vis = [&result](Fn* macro) {
     ASSERT(macro);
     result = Cons(macro, result);
     return true;
-  });
-  if (!target->VisitAllNativeFns(visitor)) {
+  };
+  if (!target->VisitAllNativeFns(vis)) {
     std::stringstream ss;
     ss << "failed to get NativeFns for: " << target->ToString();
     return ThrowError(ss);

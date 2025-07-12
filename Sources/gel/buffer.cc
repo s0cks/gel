@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "gel/allocator.h"
+#include "gel/class.h"
 #include "gel/common.h"
 #include "gel/hashcode.h"
 #include "gel/heap.h"  // IWYU pragma: keep

@@ -183,7 +183,7 @@ auto Module::VisitAllModules(ModuleVisitor* vis) -> bool {
   for (auto idx = 0; idx < modules_->GetLength(); idx++) {
     const auto m = modules_->Get(idx);
     ASSERT(m);
-    if (!vis->Visit(m))
+    if (!vis->VisitModule(m))
       return false;
   }
   return true;

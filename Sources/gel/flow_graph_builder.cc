@@ -618,10 +618,9 @@ static inline auto IsConstantString(ir::Definition* defn) -> bool {
 }
 
 static inline auto GetClassReference(ir::Definition* defn) -> Class* {
-  if (IsConstantSymbol(defn)) {
-    return Class::FindClass(ToSymbol(defn->AsConstantInstr()->GetValue()));
-  } else if (IsConstantString(defn)) {
-    return Class::FindClass(ToString(defn->AsConstantInstr()->GetValue()));
+  if (IsConstantString(defn)) {
+    const auto name = ToString(defn->AsConstantInstr()->GetValue());
+    return Class::FindClass(*name);
   }
   return nullptr;
 }

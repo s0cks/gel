@@ -1,5 +1,6 @@
 #include "gel/boolean.h"
 
+#include "gel/class.h"
 #include "gel/number.h"
 
 namespace gel {
@@ -7,7 +8,7 @@ static Bool* kTrue = nullptr;   // NOLINT(cppcoreguidelines-avoid-non-const-glob
 static Bool* kFalse = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
 auto Bool::CreateClass() -> Class* {
-  return Class::New(kClassId, Object::GetClass(), kClassName);
+  return Class::New(Class::kBoolClassId, Object::GetClass(), kClassName);
 }
 
 void Bool::Init() {

@@ -14,6 +14,7 @@
 #include "gel/binary_op.h"
 #include "gel/boolean.h"
 #include "gel/buffer.h"
+#include "gel/class.h"
 #include "gel/common.h"
 #include "gel/event_emitter.h"
 #include "gel/event_loop.h"

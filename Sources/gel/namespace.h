@@ -15,7 +15,6 @@
 namespace gel {
 class Namespace;
 using NamespaceList = std::vector<Namespace*>;
-DECLARE_VISITOR(Namespace);
 
 class Macro;
 class MacroVisitor;

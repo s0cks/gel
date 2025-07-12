@@ -5,6 +5,7 @@
 #include "gel/pair.h"
 
 namespace gel {
+class Class;
 class Bool : public Object {
  private:
   bool value_;

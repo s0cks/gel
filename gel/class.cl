@@ -1,6 +1,6 @@
 (ns gel
-  (defnative get-class [s]
-    "Returns the Class for Symbol [s].")
+  (defnative get-class [n]
+    "Returns the Class with Name [n].")
   (defnative get-classes []
     "Returns the list of Classes registered.")
   (deftype Class

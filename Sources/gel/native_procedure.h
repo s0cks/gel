@@ -7,6 +7,7 @@
 #include "gel/argument.h"
 #include "gel/array.h"
 #include "gel/boolean.h"
+#include "gel/class.h"
 #include "gel/common.h"
 #include "gel/error.h"
 #include "gel/fmt.h"

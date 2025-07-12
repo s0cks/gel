@@ -134,37 +134,37 @@ static inline auto IsPow2(T x) -> bool {
   return ((x & (x - 1)) == 0) && (x != 0);
 }
 
-#define DECLARE_VISITOR_WRAPPER(Name, Type)           \
-  class Name##VisitorWrapper : public Type##Visitor { \
-    using Callback = std::function<bool(Type*)>;      \
-    DEFINE_NON_COPYABLE_TYPE(Name##VisitorWrapper);   \
-                                                      \
-   private:                                           \
-    Callback delegate_;                               \
-                                                      \
-   public:                                            \
-    Name##VisitorWrapper(Callback delegate) :         \
-      Name##Visitor(),                                \
-      delegate_(std::move(delegate)) {}               \
-    ~Name##VisitorWrapper() override = default;       \
-    inline auto Visit(Type* ptr) -> bool override {   \
-      return delegate_(ptr);                          \
-    }                                                 \
-    inline auto operator()(Type* ptr) -> bool {       \
-      return Visit(ptr);                              \
-    }                                                 \
+#define DECLARE_VISITOR_WRAPPER(Name, Type)               \
+  class Name##VisitorWrapper : public Type##Visitor {     \
+    using Callback = std::function<bool(Type*)>;          \
+    DEFINE_NON_COPYABLE_TYPE(Name##VisitorWrapper);       \
+                                                          \
+   private:                                               \
+    Callback delegate_;                                   \
+                                                          \
+   public:                                                \
+    Name##VisitorWrapper(Callback delegate) :             \
+      Name##Visitor(),                                    \
+      delegate_(std::move(delegate)) {}                   \
+    ~Name##VisitorWrapper() override = default;           \
+    inline auto Visit##Type(Type* ptr) -> bool override { \
+      return delegate_(ptr);                              \
+    }                                                     \
+    inline auto operator()(Type* ptr) -> bool {           \
+      return Visit##Type(ptr);                            \
+    }                                                     \
   };
-#define DECLARE_VISITOR(Type)                    \
-  class Type##Visitor {                          \
-    DEFINE_NON_COPYABLE_TYPE(Type##Visitor);     \
-                                                 \
-   protected:                                    \
-    Type##Visitor() = default;                   \
-                                                 \
-   public:                                       \
-    virtual ~Type##Visitor() = default;          \
-    virtual auto Visit(Type* value) -> bool = 0; \
-  };                                             \
+#define DECLARE_VISITOR(Type)                          \
+  class Type##Visitor {                                \
+    DEFINE_NON_COPYABLE_TYPE(Type##Visitor);           \
+                                                       \
+   protected:                                          \
+    Type##Visitor() = default;                         \
+                                                       \
+   public:                                             \
+    virtual ~Type##Visitor() = default;                \
+    virtual auto Visit##Type(Type* value) -> bool = 0; \
+  };                                                   \
   DECLARE_VISITOR_WRAPPER(Type, Type);
 
 static inline void Split(const std::string& str, const char delimiter, std::vector<std::string>& results) {
@@ -434,7 +434,7 @@ static inline auto VisitAll(const R& range, Visitor& vis) -> bool {
 }
 
 template <typename T, typename V>
-concept VisitorLike = Visitor<T, V> || std::predicate<V>;
+concept VisitorLike = Visitor<T, V> || std::predicate<T, V>;
 }  // namespace gel
 
 #endif  // GEL_COMMON_H

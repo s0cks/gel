@@ -18,7 +18,6 @@
 namespace gel {
 class Macro;
 class Parser;
-DECLARE_VISITOR(Macro);
 class Macro : public Object {
   friend class Script;
   friend class Parser;

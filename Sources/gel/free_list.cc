@@ -21,7 +21,7 @@ auto FreeList::VisitFreePointers(FreePointerVisitor* vis) const -> bool {
   ASSERT(vis);
   Iterator iter(this);
   while (iter.HasNext()) {
-    if (!vis->Visit(iter.Next()))
+    if (!vis->VisitFreePointer(iter.Next()))
       return false;
   }
   return true;

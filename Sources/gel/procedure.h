@@ -8,12 +8,43 @@
 #include "gel/object.h"
 #include "gel/pointer.h"
 #include "gel/symbol.h"
+#include "gel/type.h"
 #include "gel/type_traits.h"
 
 namespace gel {
-class Fn;
-DECLARE_VISITOR(Fn);
-class Fn : public Object {
+namespace proto {
+class IHaveOwner {
+  DEFINE_NON_COPYABLE_TYPE(IHaveOwner);
+
+ private:
+  Object* owner_;
+
+ protected:
+  explicit IHaveOwner(Object* owner = nullptr) :
+    owner_(owner) {}
+
+  inline void SetOwner(Object* rhs) {
+    owner_ = rhs;
+  }
+
+  inline void RemoveOwner() {
+    return SetOwner(nullptr);
+  }
+
+ public:
+  ~IHaveOwner() = default;
+
+  auto GetOwner() const -> Object* {
+    return owner_;
+  }
+
+  inline auto HasOwner() const -> bool {
+    return GetOwner() != nullptr;
+  }
+};
+}  // namespace proto
+
+class Fn : public Object, public proto::IHaveOwner {
   friend class Object;
   friend class Script;
   friend class Runtime;
@@ -22,10 +53,8 @@ class Fn : public Object {
   DEFINE_NON_COPYABLE_TYPE(Fn);
 
  public:
-  using Predicate = std::function<bool(Fn*)>;
-
   template <StringLike Str>
-  static inline auto IsNamed(const Str& value) -> Predicate {
+  static inline auto IsNamed(const Str& value) -> FnPredicate {
     return [&](Fn* procedure) {
       ASSERT(procedure);
       return procedure->HasSymbol() && procedure->GetSymbol()->Equals(value);
@@ -34,22 +63,12 @@ class Fn : public Object {
 
  private:
   Symbol* symbol_;
-  Object* owner_ = nullptr;
   String* docs_ = nullptr;
   Array<Argument*>* args_ = nullptr;
 
  protected:
   explicit Fn(Symbol* symbol) :
     symbol_(symbol) {}
-
-  void SetOwner(Object* rhs) {
-    ASSERT(rhs);
-    owner_ = rhs;
-  }
-
-  void RemoveOwner() {
-    owner_ = nullptr;
-  }
 
   void SetArgs(Array<Argument*>* rhs) {
     ASSERT(rhs);
@@ -64,8 +83,6 @@ class Fn : public Object {
     ASSERT(vis);
     if (!Visit(symbol_, *vis))
       return false;
-    if (!Visit(owner_, *vis))
-      return false;
     if (!Visit(docs_, *vis))
       return false;
     if (!Visit(args_, *vis))
@@ -76,8 +93,6 @@ class Fn : public Object {
   auto VisitPointerPointers(PointerPointerVisitor* vis) -> bool override {
     ASSERT(vis);
     if (!VisitPointerPointer(vis, &symbol_))
-      return false;
-    if (!VisitPointerPointer(vis, &owner_))
       return false;
     if (!VisitPointerPointer(vis, &docs_))
       return false;
@@ -133,10 +148,6 @@ class Fn : public Object {
 
   auto GetType() const -> Class* override {
     return GetClass();
-  }
-
-  auto GetOwner() const -> Object* {
-    return owner_;
   }
 
   auto HasOwner() const -> bool {

@@ -83,7 +83,7 @@ class Symbol : public Object {
   operator std::string() const {
     return GetFullyQualifiedName();
   }
-  
+
   DECLARE_TYPE(Symbol);
 
  private:
@@ -120,6 +120,13 @@ class Symbol : public Object {
     return new Symbol(ns, rhs->GetSymbolType(), rhs->GetSymbolName());
   }
 };
+
+template <HasName Named>
+static inline auto IsNamed(Symbol& name) -> std::function<bool(Named*)> {
+  return [&](Named* value) {
+    return value && value->GetName()->Equals(name.GetFullyQualifiedName());
+  };
+}
 
 using SymbolList = std::vector<Symbol*>;
 using SymbolSet = std::unordered_set<Symbol*, Symbol::Comparator>;

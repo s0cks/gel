@@ -180,7 +180,6 @@ static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream
                                                                             \
  public:                                                                    \
   static auto New(const ObjectList& args) -> Name*;                         \
-  static constexpr const auto kClassId = Class::k##Name##ClassId;           \
   static constexpr const auto kClassName = #Name;                           \
   static auto operator new(const size_t sz)->void*;                         \
   static inline void operator delete(void* ptr) {                           \
@@ -205,8 +204,6 @@ static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream
   }
 
 }  // namespace gel
-
-#include "gel/class.h"
 
 namespace gel {
 class Seq : public Object {

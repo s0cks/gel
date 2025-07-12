@@ -34,7 +34,7 @@ auto Double::Compare(Object* rhs) const -> bool {
 }
 
 auto Double::CreateClass() -> Class* {
-  return Class::New(kClassId, Number::GetClass(), kClassName);
+  return Class::New(Number::GetClass(), kClassName);
 }
 
 auto Double::New(const ObjectList& args) -> Double* {

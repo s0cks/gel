@@ -21,14 +21,13 @@
 #include "gel/types.h"
 
 namespace gel {
-static Array<Class*>* classes_ = nullptr;
+static Array<Class*>* classes_;
 
 static inline auto Register(Class* cls) -> Class* {
   ASSERT(cls);
   classes_->Push(cls);
   return cls;
 }
-
 Class::Class(ClassId id, Class* parent, String* name) :
   Object(),
   id_(id),
@@ -202,18 +201,6 @@ auto Class::GetHashCode() const -> HashCode {
   return hash;
 }
 
-auto Class::FindClass(const std::string& name) -> Class* {
-  return classes_->FindIf(IsNamed<Class>(name));
-}
-
-auto Class::FindClass(String* name) -> Class* {
-  return FindClass(name->Get());
-}
-
-auto Class::FindClass(Symbol* name) -> Class* {
-  return FindClass(name->GetSymbolName());
-}
-
 void Class::AddChild(Object* rhs) {
   ASSERT(rhs);
   if (rhs->IsField()) {
@@ -369,17 +356,6 @@ auto Class::HasFunction(Symbol* symbol, const bool recursive) const -> bool {
   return false;
 }
 
-auto Class::VisitAllClasses(ClassVisitor* vis) -> bool {
-  ASSERT(vis);
-  for (auto idx = 0; idx < classes_->GetLength(); idx++) {
-    const auto cls = classes_->Get(idx);
-    ASSERT(cls);
-    if (!vis->Visit(cls))
-      return false;
-  }
-  return true;
-}
-
 auto Class::VisitAllClassPointers(PointerVisitor* vis) -> bool {
   ASSERT(vis);
   return classes_->VisitPointers(vis);
@@ -398,6 +374,15 @@ auto Class::VisitAllClassPointerPointers(PointerPointerVisitor* vis) -> bool {
   FOR_EACH_TYPE(VISIT_CLASS_POINTER_POINTER)
 #undef VISIT_CLASS_POINTER_POINTER
   return true;
+}
+
+auto Class::GetTotalNumberOfClasses() -> uword {
+  return classes_->GetLength();
+}
+
+auto Class::GetClassAt(const uword idx) -> Class* {
+  ASSERT(idx >= 0 && idx <= GetTotalNumberOfClasses());
+  return classes_->Get(idx);
 }
 
 auto Field::CreateClass() -> Class* {
@@ -475,18 +460,18 @@ void Class::Init() {
 
 namespace proc {
 NATIVE_PROCEDURE_F(get_class) {
-  REQUIRED_NATIVE_ARG(0, Symbol, symbol);
-  return Return(Class::FindClass(symbol));
+  REQUIRED_NATIVE_ARG(0, String, name);
+  return Return(Class::FindClass(*name));
 }
 
 NATIVE_PROCEDURE_F(get_classes) {
   ASSERT(args.empty());
   Object* result = Nil::Get();
-  ClassVisitorWrapper vis([&result](Class* cls) {
+  const auto vis = [&result](Class* cls) {
     result = Cons(cls, result);
     return true;
-  });
-  LOG_IF(FATAL, !Class::VisitAllClasses(&vis)) << "failed to visit classes.";
+  };
+  LOG_IF(FATAL, !Class::VisitAllClasses(vis)) << "failed to visit classes.";
   return Return(result);
 }
 
@@ -498,7 +483,7 @@ CLASS_PROCEDURE_F(is_primitive) {
   if (value->IsClass()) {
     cls = value->AsClass();
   } else if (value->IsSymbol()) {
-    cls = Class::FindClass(value->AsSymbol());
+    cls = Class::FindClass(*(value->AsSymbol()));
     if (!cls) {
       std::stringstream ss;
       ss << "failed to find Class for symbol: " << value->AsSymbol();
@@ -519,7 +504,7 @@ CLASS_PROCEDURE_F(get_id) {
   if (value->IsClass()) {
     cls = value->AsClass();
   } else if (value->IsSymbol()) {
-    cls = Class::FindClass(value->AsSymbol());
+    cls = Class::FindClass(*(value->AsSymbol()));
     if (!cls) {
       std::stringstream ss;
       ss << "failed to find Class for symbol: " << value->AsSymbol();
@@ -540,7 +525,7 @@ CLASS_PROCEDURE_F(get_fields) {
   if (value->IsClass()) {
     cls = value->AsClass();
   } else if (value->IsSymbol()) {
-    cls = Class::FindClass(value->AsSymbol());
+    cls = Class::FindClass(*(value->AsSymbol()));
     if (!cls) {
       std::stringstream ss;
       ss << "failed to find Class for symbol: " << value->AsSymbol();
@@ -567,7 +552,7 @@ CLASS_PROCEDURE_F(get_procedures) {
   if (value->IsClass()) {
     cls = value->AsClass();
   } else if (value->IsSymbol()) {
-    cls = Class::FindClass(value->AsSymbol());
+    cls = Class::FindClass(*(value->AsSymbol()));
     if (!cls) {
       std::stringstream ss;
       ss << "failed to find Class for symbol: " << value->AsSymbol();

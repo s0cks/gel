@@ -126,6 +126,9 @@ auto main(int argc, char** argv) -> int {
   Parser::Init();
   Heap::Init();
   Runtime::Init();
+
+  DLOG(WARNING) << "sizeof(Fn) := " << sizeof(Fn);
+
   int result = EXIT_FAILURE;
   const auto expr = GetExpressionFlag();
   if (expr) {

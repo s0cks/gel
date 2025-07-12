@@ -5,6 +5,7 @@
 #include <sstream>
 #include <string>
 
+#include "gel/class.h"
 #include "gel/common.h"
 #include "gel/hashcode.h"
 #include "gel/heap.h"

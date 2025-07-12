@@ -15,17 +15,6 @@ namespace gel {
 class Module;
 using MacroList = std::vector<Macro*>;
 using ModuleList = std::vector<Module*>;
-
-class ModuleVisitor {
-  DEFINE_NON_COPYABLE_TYPE(ModuleVisitor);
-
- protected:
-  ModuleVisitor() = default;
-
- public:
-  virtual ~ModuleVisitor() = default;
-  virtual auto Visit(Module* m) -> bool = 0;
-};
 DECLARE_VISITOR_WRAPPER(Module, Module);
 
 class ModuleLoader;

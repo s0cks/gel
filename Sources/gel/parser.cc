@@ -426,7 +426,7 @@ static inline auto IsClassReference(expr::Expression* expr) -> bool {
   if (IsLiteralSymbol(expr)) {
     const auto symbol = expr->AsLiteralExpr()->GetValue()->AsSymbol();
     ASSERT(symbol);
-    return Class::FindClass(symbol) != nullptr;
+    return Class::FindClass(*String::New(symbol)) != nullptr;
   }
   return false;
 }
@@ -554,7 +554,7 @@ auto Parser::ParseCallExpr(expr::Expression** result) -> ParseResult {
       }
     }
 
-    const auto cls = Class::FindClass(symbol);
+    const auto cls = Class::FindClass(*symbol);
     if (cls) {
       ASSERT(cls && cls->GetName()->Equals(symbol));
       expr::ExpressionList args{};
@@ -1013,7 +1013,7 @@ auto Parser::ParseNewExpr(expr::Expression** result) -> ParseResult {
   EXPECT(new_expr_token, Token::kNewExpr);
   const auto symbol = Symbol::New(new_expr_token.text);
   ASSERT(symbol);
-  const auto cls = Class::FindClass(symbol);
+  const auto cls = Class::FindClass(*symbol);
   if (!cls) {
     std::stringstream ss;
     ss << "failed to find Class w/ symbol: " << symbol;
@@ -1488,7 +1488,7 @@ auto Parser::ParseDefType(LocalVariable** result) -> ParseResult {
   Symbol* symbol = nullptr;
   CHECK_RESULT(ParseLiteralSymbol(&symbol));
   ASSERT(symbol);
-  const auto cls = Class::FindClass(symbol);
+  const auto cls = Class::FindClass(*symbol);
   if (!cls) {
     std::stringstream ss;
     ss << "cannot find type: " << symbol;

@@ -1,22 +1,18 @@
-#include <cstdint>
-#include <functional>
-#include <string>
-
-#ifndef GEL_OBJECT_H
-#error "Please #include <gel/object.h> instead."
-#endif  // GEL_OBJECT_H
-
 #ifndef GEL_CLASS_H
 #define GEL_CLASS_H
 
+#include <cstdint>
+#include <functional>
+#include <string>
 #include <vector>
 
 #include "gel/common.h"
+#include "gel/object.h"
 #include "gel/platform.h"
+#include "gel/symbol.h"
 #include "gel/type.h"
 
 namespace gel {
-using ClassId = uword;
 class Field;
 class Class;
 class Object;
@@ -24,8 +20,6 @@ class Symbol;
 class String;
 class PointerPointerVisitor;
 using ClassList = std::vector<Class*>;
-
-DECLARE_VISITOR(Class);
 
 class Class : public Object {
   friend class Long;
@@ -143,32 +137,59 @@ class Class : public Object {
 
  public:
   static auto GetTotalNumberOfClasses() -> uword;
+  static auto GetClassAt(const uword idx) -> Class*;
 
   static auto New(const ClassId id, Class* parent, String* name) -> Class*;
   static auto New(const ClassId id, Class* parent, const std::string& name) -> Class*;
   static auto New(Class* parent, String* name) -> Class*;
   static auto New(Class* parent, const std::string& name) -> Class*;
 
-  static auto FindClass(const std::string& name) -> Class*;
-  static auto FindClass(String* name) -> Class*;
-  static auto FindClass(Symbol* name) -> Class*;
+  template <typename P>
+  static auto FindClass(P filter) -> Class* requires(std::predicate<P, Class*>) {
+    for (auto idx = 0; idx < GetTotalNumberOfClasses(); idx++) {
+      const auto cls = GetClassAt(idx);
+      if (filter(cls))
+        return cls;
+    }
+    return nullptr;
+  }
 
-  static auto VisitAllClasses(ClassVisitor* vis) -> bool;
+  template <StringLike S>
+  static inline auto FindClass(const S& name) -> Class* {
+    return FindClass(IsNamed<Class>(name));
+  }
+
+  static inline auto FindClass(Symbol& name) -> Class* {
+    return FindClass(IsNamed<Class>(name));
+  }
+
+  template <VisitorLike<Class*> V>
+  static inline auto VisitAllClasses(V& vis) -> bool {
+    for (auto idx = 0; idx < GetTotalNumberOfClasses(); idx++) {
+      const auto cls = GetClassAt(idx);
+      ASSERT(cls);
+      if (!vis(cls))
+        return false;
+    }
+    return true;
+  }
+
   static auto VisitAllClassPointers(PointerVisitor* vis) -> bool;
   static auto VisitAllClassPointerPointers(PointerPointerVisitor* vis) -> bool;
 
 #ifdef GEL_DEBUG
   static inline auto PrintAllClasses() -> bool {
-    ClassVisitorWrapper vis([](Class* cls) {
+    const auto vis = [](Class* cls) {
       ASSERT(cls);
       DLOG(INFO) << cls->ToString() << "  ;;  " << (*cls->raw_ptr());
       return true;
-    });
+    };
     DLOG(INFO) << "classes:";
-    return VisitAllClasses(&vis);
+    return VisitAllClasses(vis);
   }
 #endif  // GEL_DEBUG
 };
+static_assert(HasName<Class>);
 
 class Field : public Object {
   friend class Class;

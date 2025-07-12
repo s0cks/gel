@@ -106,15 +106,15 @@ class Buffer : public Object {
   }
 
 #define DEFINE_READ_SIZE(Sz)                                                                                       \
-  auto ReadUInt##Sz##At(const uint64_t pos)->uint##Sz##_t {                                                        \
+  auto ReadUInt##Sz##At(const uint64_t pos) -> uint##Sz##_t {                                                      \
     uint##Sz##_t result = 0;                                                                                       \
     LOG_IF(ERROR, !ReadAt<uint##Sz##_t>(pos, &result)) << "failed to read uint" << Sz << "_t from " << ToString(); \
     return result;                                                                                                 \
   }
 
-#define DEFINE_WRITE_SIZE(Sz)                                              \
-  auto PutUInt##Sz##At(const uint64_t pos, const uint##Sz##_t val)->bool { \
-    return PutAt<uint##Sz##_t>(pos, val);                                  \
+#define DEFINE_WRITE_SIZE(Sz)                                                \
+  auto PutUInt##Sz##At(const uint64_t pos, const uint##Sz##_t val) -> bool { \
+    return PutAt<uint##Sz##_t>(pos, val);                                    \
   }
 
   FOR_EACH_BUFFER_ELEMENT_SIZE(DEFINE_READ_SIZE);
