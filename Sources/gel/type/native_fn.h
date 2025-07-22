@@ -152,7 +152,7 @@ class NativeFnEntry {
   }
 
   inline auto ReturnString(const std::string& rhs) const -> bool {
-    return ReturnNew<String>(rhs);
+    return ReturnNew<Str>(rhs);
   }
 
   inline auto ReturnString(const std::stringstream& rhs) const -> bool {
@@ -171,16 +171,8 @@ class NativeFnEntry {
     return Return(Bool::False());
   }
 
-  inline auto ReturnLong(const RawLong rhs = 0) const -> bool {
-    return ReturnNew<Long>(rhs);
-  }
-
-  inline auto ReturnLong(const uword rhs) const -> bool {
-    return ReturnLong(static_cast<RawLong>(rhs));
-  }
-
-  inline auto ReturnDouble(const double rhs) const -> bool {
-    return ReturnNew<Double>(rhs);
+  inline auto ReturnNumber(const RawNumber rhs = 0) const -> bool {
+    return ReturnNew<Number>(rhs);
   }
 
   inline auto Throw(Error* error) const -> bool {

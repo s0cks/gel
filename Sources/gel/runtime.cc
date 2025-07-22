@@ -291,7 +291,7 @@ class CallStackFrame {
 };
 
 template <>
-void Runtime::Call(Constructor& init, const ObjectList args) {
+void Runtime::Call(InitFn& init, const ObjectList args) {
   {
     CallScope locals(this);
     if (init.HasScope())
@@ -316,7 +316,7 @@ void Runtime::Call(Constructor& init, const ObjectList args) {
     PRINT_SCOPE(INFO, locals);
     LOG_IF(FATAL, !FlowGraphCompiler::Compile(init, locals)) << "failed to compile: " << init;
     {
-      StackFrameGuard<Constructor> stack_guard(&init);
+      StackFrameGuard<InitFn> stack_guard(&init);
       CallStackFrame call_frame(GetCallStack(), &init, locals);
       Interpreter interpreter(this);
       interpreter(init);
@@ -328,7 +328,7 @@ void Runtime::Call(Constructor& init, const ObjectList args) {
 }
 
 template <>
-void Runtime::Call(Lambda& lambda, const ObjectList args) {
+void Runtime::Call(LambdaFn& lambda, const ObjectList args) {
   {
     CallScope locals(this);
     if (lambda.HasScope())
@@ -353,7 +353,7 @@ void Runtime::Call(Lambda& lambda, const ObjectList args) {
     PRINT_SCOPE(INFO, locals);
     LOG_IF(FATAL, !FlowGraphCompiler::Compile(lambda, locals)) << "failed to compile: " << lambda;
     {
-      StackFrameGuard<Lambda> stack_guard(&lambda);
+      StackFrameGuard<LambdaFn> stack_guard(&lambda);
       CallStackFrame call_frame(GetCallStack(), &lambda, locals);
       Interpreter interpreter(this);
       interpreter(lambda);
@@ -403,14 +403,14 @@ void Runtime::Call(Script& script, const ObjectList args) {
 }
 
 void Runtime::Call(Fn& target, const ObjectList args) {
-  if (target.IsConstructor())
-    return Call(reinterpret_cast<Constructor&>(target), std::move(args));
+  if (target.IsInitFn())
+    return Call(reinterpret_cast<InitFn&>(target), std::move(args));
   else if (target.IsNative())
     return Call(dynamic_cast<NativeFn&>(target), std::move(args));
   else if (target.IsScript())
     return Call(reinterpret_cast<Script&>(target), std::move(args));
-  else if (target.IsLambda())
-    return Call(reinterpret_cast<Lambda&>(target), std::move(args));
+  else if (target.IsLambdaFn())
+    return Call(reinterpret_cast<LambdaFn&>(target), std::move(args));
   LOG(FATAL) << "invalid call to " << target << " with args: " << args;
 }
 

@@ -38,7 +38,7 @@ NATIVE_PROCEDURE_F(gel_print_old_zone) {
 NATIVE_PROCEDURE_F(gel_numrefs) {
   REQUIRED_NATIVE_ARG(0, Object, value);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
-  return ReturnLong();
+  return ReturnNumber();
 }
 
 NATIVE_PROCEDURE_F(gel_print_roots) {
@@ -71,13 +71,13 @@ NATIVE_PROCEDURE_F(gel_get_locals) {
   return Return(gel::ToList<LocalScope::Iterator, LocalVariable*>(iter, [](LocalVariable* local) -> Object* {
     return gel::ToList(ObjectList{
         local->HasValue() ? local->GetValue() : Nil::Get(),
-        String::New(local->GetSymbol()),
+        Str::New(local->GetSymbol()),
     });
   }));
 }
 
 NATIVE_PROCEDURE_F(gel_get_target_triple) {
-  return ReturnNew<String>(GEL_TARGET_TRIPLE);
+  return ReturnNew<Str>(GEL_TARGET_TRIPLE);
 }
 
 NATIVE_PROCEDURE_F(gel_get_natives) {
@@ -85,15 +85,15 @@ NATIVE_PROCEDURE_F(gel_get_natives) {
   const auto& natives = NativeFn::GetAll();
   Object* result = Nil::Get();
   for (const auto& native : natives) {
-    result = Pair::New(String::ValueOf(native->GetSymbol()), result);
+    result = Pair::New(Str::ValueOf(native->GetSymbol()), result);
   }
   return Return(result);
 }
 
 NATIVE_PROCEDURE_F(gel_get_compile_time) {
-  REQUIRED_NATIVE_ARG(0, Lambda, target);
+  REQUIRED_NATIVE_ARG(0, LambdaFn, target);
   const auto& code = target->GetCode();
-  return ReturnLong(code->GetCompileTime());
+  return ReturnNumber(code->GetCompileTime());
 }
 }  // namespace gel::proc
 

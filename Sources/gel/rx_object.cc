@@ -149,14 +149,14 @@ NATIVE_RX_PROCEDURE_F(last) {
 
 NATIVE_RX_PROCEDURE_F(skip) {
   REQUIRED_NATIVE_ARG(0, Observable, source);
-  REQUIRED_NATIVE_ARG(1, Long, num_values);
+  REQUIRED_NATIVE_ARG(1, Number, num_values);
   source->Apply(rx::operators::skip(num_values->Get()));
   return DoNothing();
 }
 
 NATIVE_RX_PROCEDURE_F(take) {
   REQUIRED_NATIVE_ARG(0, Observable, source);
-  REQUIRED_NATIVE_ARG(1, Long, num_values);
+  REQUIRED_NATIVE_ARG(1, Number, num_values);
   source->Apply(rx::operators::take(num_values->Get()));
   return DoNothing();
 }
@@ -170,14 +170,14 @@ NATIVE_RX_PROCEDURE_F(filter) {
 
 NATIVE_RX_PROCEDURE_F(take_last) {
   REQUIRED_NATIVE_ARG(0, Observable, source);
-  REQUIRED_NATIVE_ARG(0, Long, num_values);
+  REQUIRED_NATIVE_ARG(0, Number, num_values);
   source->Apply(rx::operators::take_last(num_values->Get()));
   return DoNothing();
 }
 
 NATIVE_RX_PROCEDURE_F(buffer) {
   REQUIRED_NATIVE_ARG(0, Observable, source);
-  REQUIRED_NATIVE_ARG(1, Long, bucket_size);
+  REQUIRED_NATIVE_ARG(1, Number, bucket_size);
   const auto buffer = rx::operators::buffer(bucket_size->Get());
   const auto map = rx::operators::map([](ObjectList values) {
     return gel::ToList((const ObjectList&)values);

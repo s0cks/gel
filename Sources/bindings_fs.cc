@@ -42,11 +42,11 @@ DECLARE_FS_PROCEDURE(readdir);
 
 NATIVE_FS_PROCEDURE_F(get_cwd) {
   ASSERT(args.empty());
-  return ReturnNew<String>(std::filesystem::current_path());
+  return ReturnNew<Str>(std::filesystem::current_path());
 }
 
 NATIVE_FS_PROCEDURE_F(stat) {
-  NativeArgument<0, String> path(args);
+  NativeArgument<0, Str> path(args);
   CHECK_NATIVE_ARG(path);
   NativeArgument<1, Fn> on_next(args);
   CHECK_NATIVE_ARG(on_next);
@@ -60,9 +60,9 @@ NATIVE_FS_PROCEDURE_F(stat) {
 }
 
 NATIVE_FS_PROCEDURE_F(rename) {
-  NativeArgument<0, String> old_path(args);
+  NativeArgument<0, Str> old_path(args);
   CHECK_NATIVE_ARG(old_path);
-  NativeArgument<1, String> new_path(args);
+  NativeArgument<1, Str> new_path(args);
   CHECK_NATIVE_ARG(new_path);
   OptionalNativeArgument<2, Fn> on_success(args);
   CHECK_NATIVE_ARG(on_success);
@@ -76,9 +76,9 @@ NATIVE_FS_PROCEDURE_F(rename) {
 }
 
 NATIVE_FS_PROCEDURE_F(mkdir) {
-  NativeArgument<0, String> path(args);
+  NativeArgument<0, Str> path(args);
   CHECK_NATIVE_ARG(path);
-  NativeArgument<1, Long> mode(args);
+  NativeArgument<1, Number> mode(args);
   CHECK_NATIVE_ARG(mode);
   OptionalNativeArgument<2, Fn> on_success(args);
   CHECK_NATIVE_ARG(on_success);
@@ -92,7 +92,7 @@ NATIVE_FS_PROCEDURE_F(mkdir) {
 }
 
 NATIVE_FS_PROCEDURE_F(rmdir) {
-  NativeArgument<0, String> path(args);
+  NativeArgument<0, Str> path(args);
   CHECK_NATIVE_ARG(path);
   OptionalNativeArgument<1, Fn> on_success(args);
   CHECK_NATIVE_ARG(on_success);
@@ -106,18 +106,18 @@ NATIVE_FS_PROCEDURE_F(rmdir) {
 }
 
 static inline auto WrapOpenFileOnNext(Fn* on_next) -> FileOpenedCallback {
-  return [on_next](Long* next) {
+  return [on_next](Number* next) {
     if (on_next)
       GetRuntime()->Call(*on_next, {next});
   };
 }
 
 NATIVE_FS_PROCEDURE_F(open) {
-  NativeArgument<0, String> path(args);
+  NativeArgument<0, Str> path(args);
   CHECK_NATIVE_ARG(path);
-  NativeArgument<1, Long> flags(args);
+  NativeArgument<1, Number> flags(args);
   CHECK_NATIVE_ARG(flags);
-  NativeArgument<2, Long> mode(args);
+  NativeArgument<2, Number> mode(args);
   CHECK_NATIVE_ARG(mode);
   OptionalNativeArgument<3, Fn> on_next(args);
   CHECK_NATIVE_ARG(on_next);
@@ -185,7 +185,7 @@ NATIVE_FS_PROCEDURE_F(copy_file) {
 }
 
 NATIVE_FS_PROCEDURE_F(readdir) {
-  NativeArgument<0, String> path(args);
+  NativeArgument<0, Str> path(args);
   CHECK_NATIVE_ARG(path);
   const auto loop = GetThreadEventLoop();
   ASSERT(loop);

@@ -121,7 +121,7 @@ class Buffer : public Object {
   FOR_EACH_BUFFER_ELEMENT_SIZE(DEFINE_WRITE_SIZE);
 #undef DEFINE_READ_SIZE
 
-  auto ToString(String* encoding) const -> String*;
+  auto ToStr(Str* encoding) const -> Str*;
   DECLARE_TYPE(Buffer);
 
  public:
@@ -154,7 +154,7 @@ class Buffer : public Object {
     return Copy((const uint8_t*)src.data(), src.length());  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   }
 
-  static auto Copy(String* src) -> Buffer*;
+  static auto Copy(Str* src) -> Buffer*;
 };
 
 class BufferEncoding {
@@ -163,16 +163,16 @@ class BufferEncoding {
  public:
   BufferEncoding() = default;
   virtual ~BufferEncoding() = default;
-  virtual auto Decode(const String& value) const -> Buffer* = 0;
-  virtual auto Encode(const Buffer& value) const -> String* = 0;
+  virtual auto Decode(const Str& value) const -> Buffer* = 0;
+  virtual auto Encode(const Buffer& value) const -> Str* = 0;
 };
 
 class DefaultBufferEncoding : public BufferEncoding {
  public:
-  auto Decode(const String& value) const -> Buffer* override;
-  auto Encode(const Buffer& value) const -> String* override;
+  auto Decode(const Str& value) const -> Buffer* override;
+  auto Encode(const Buffer& value) const -> Str* override;
 
-  static inline auto Matches(String* rhs) -> bool {
+  static inline auto Matches(Str* rhs) -> bool {
     return rhs == nullptr || (rhs && (rhs->Equals("default") || rhs->Equals("none")));
   }
 };
@@ -192,16 +192,16 @@ class Base64BufferEncoding : public BufferEncoding {
     return DecodeBlockData(decoded, (const uint8_t*)in.data(), in.size());
   }
 
-  inline auto DecodeBlock(std::string& decoded, const String& data) const -> bool {
+  inline auto DecodeBlock(std::string& decoded, const Str& data) const -> bool {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
     return DecodeBlockData(decoded, data.Get()) == (decoded.capacity() - 2);
   }
 
  public:
-  auto Decode(const String& value) const -> Buffer* override;
-  auto Encode(const Buffer& value) const -> String* override;
+  auto Decode(const Str& value) const -> Buffer* override;
+  auto Encode(const Buffer& value) const -> Str* override;
 
-  static inline auto Matches(String* rhs) -> bool {
+  static inline auto Matches(Str* rhs) -> bool {
     return rhs != nullptr && (rhs->Equals("b64") || rhs->Equals("base64"));
   }
 
@@ -209,17 +209,17 @@ class Base64BufferEncoding : public BufferEncoding {
     return 4 * ((rhs.write_pos() + 2) / 3);
   }
 
-  static inline constexpr auto CalcDecodedLength(const String& rhs) -> uword {
+  static inline constexpr auto CalcDecodedLength(const Str& rhs) -> uword {
     return 3 * rhs.GetLength() / 4;
   }
 };
 
 class HexBufferEncoding : public BufferEncoding {
  public:
-  auto Decode(const String& rhs) const -> Buffer* override;
-  auto Encode(const Buffer& rhs) const -> String* override;
+  auto Decode(const Str& rhs) const -> Buffer* override;
+  auto Encode(const Buffer& rhs) const -> Str* override;
 
-  static inline auto Matches(String* rhs) -> bool {
+  static inline auto Matches(Str* rhs) -> bool {
     return rhs != nullptr && rhs->Equals("hex");
   }
 };

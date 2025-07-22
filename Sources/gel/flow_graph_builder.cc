@@ -16,7 +16,6 @@
 #include "gel/lambda.h"
 #include "gel/local.h"
 #include "gel/local_scope.h"
-#include "gel/map.h"
 #include "gel/natives.h"
 #include "gel/object.h"
 #include "gel/platform.h"
@@ -84,13 +83,13 @@ static inline auto IsNativeCall(ir::Instruction* instr) -> bool {
   return target->IsNativeFn();
 }
 
-static inline auto IsLambdaCall(ir::Instruction* instr) -> bool {
+static inline auto IsLambdaFnCall(ir::Instruction* instr) -> bool {
   ASSERT(instr);
   if (!instr->IsConstantInstr())
     return false;
   const auto target = instr->AsConstantInstr()->GetValue();
   ASSERT(target);
-  return target->IsLambda();
+  return target->IsLambdaFn();
 }
 
 void EffectVisitor::AddInstanceOf(ir::Definition* defn, Class* cls) {
@@ -105,8 +104,8 @@ auto EffectVisitor::CreateCallFor(ir::Definition* defn, const uword num_args) ->
     const auto native = defn->AsConstantInstr()->GetValue()->AsNativeFn();
     ASSERT(native);
     return ir::InvokeNativeInstr::New(defn, num_args);
-  } else if (IsLambdaCall(defn)) {
-    const auto lambda = defn->AsConstantInstr()->GetValue()->AsLambda();
+  } else if (IsLambdaFnCall(defn)) {
+    const auto lambda = defn->AsConstantInstr()->GetValue()->AsLambdaFn();
     ASSERT(lambda);
     return ir::InvokeInstr::New(defn, num_args);
   }
@@ -318,25 +317,6 @@ auto EffectVisitor::VisitInvokeMacroExpr(expr::InvokeMacroExpr* expr) -> bool {
   ASSERT(expr);
   NOT_IMPLEMENTED(FATAL);
   return false;
-}
-
-auto EffectVisitor::VisitNewMapExpr(expr::NewMapExpr* expr) -> bool {
-  ASSERT(expr);
-  for (const auto& e : expr->data()) {
-    ASSERT(e.first && e.second);
-    Do(ir::ConstantInstr::New(e.first));
-
-    ValueVisitor for_value(GetOwner());
-    if (!e.second->Accept(for_value)) {
-      LOG(FATAL) << "failed to visit map entry: " << e.first << " := " << e.second;
-      return false;
-    }
-    Append(for_value);
-  }
-  const auto defn = Bind(ir::NewInstr::New(Map::GetClass(), expr->GetNumberOfChildren() * 2));
-  ASSERT(defn);
-  ReturnDefinition(defn);
-  return true;
 }
 
 static inline auto IsLiteralSymbol(expr::LiteralExpr* expr, Symbol* value) -> bool {
@@ -612,14 +592,14 @@ static inline auto IsConstantSymbol(ir::Definition* defn) -> bool {
          defn->AsConstantInstr()->GetValue()->IsSymbol();
 }
 
-static inline auto IsConstantString(ir::Definition* defn) -> bool {
+static inline auto IsConstantStr(ir::Definition* defn) -> bool {
   return defn && defn->IsConstantInstr() && defn->AsConstantInstr()->GetValue() &&
-         defn->AsConstantInstr()->GetValue()->IsString();
+         defn->AsConstantInstr()->GetValue()->IsStr();
 }
 
 static inline auto GetClassReference(ir::Definition* defn) -> Class* {
-  if (IsConstantString(defn)) {
-    const auto name = ToString(defn->AsConstantInstr()->GetValue());
+  if (IsConstantStr(defn)) {
+    const auto name = defn->AsConstantInstr()->GetValue()->AsStr();
     return Class::FindClass(*name);
   }
   return nullptr;
@@ -734,9 +714,9 @@ auto EffectVisitor::Visit(T& target) -> bool {
   return true;
 }
 
-template auto EffectVisitor::Visit(Lambda& rhs) -> bool;
+template auto EffectVisitor::Visit(LambdaFn& rhs) -> bool;
 template auto EffectVisitor::Visit(Script& rhs) -> bool;
-template auto EffectVisitor::Visit(Constructor& rhs) -> bool;
+template auto EffectVisitor::Visit(InitFn& rhs) -> bool;
 
 auto EffectVisitor::VisitSeqExpr(expr::SeqExpr* expr) -> bool {
   ASSERT(expr);
@@ -809,7 +789,7 @@ auto FlowGraphBuilder::Build(Target& target, LocalScope* scope) -> FlowGraph* {
   return new FlowGraph(&target, graph_entry);
 }
 
-template auto FlowGraphBuilder::Build(Lambda& target, LocalScope* scope) -> FlowGraph*;
+template auto FlowGraphBuilder::Build(LambdaFn& target, LocalScope* scope) -> FlowGraph*;
 template auto FlowGraphBuilder::Build(Script& target, LocalScope* scope) -> FlowGraph*;
-template auto FlowGraphBuilder::Build(Constructor& target, LocalScope* scope) -> FlowGraph*;
+template auto FlowGraphBuilder::Build(InitFn& target, LocalScope* scope) -> FlowGraph*;
 }  // namespace gel

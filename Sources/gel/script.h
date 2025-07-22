@@ -14,14 +14,14 @@ class Script : public Object {
   friend class MacroExpander;
   friend class ScriptCompiler;
   friend class FlowGraphCompiler;
-  using LambdaList = std::vector<Lambda*>;
+  using LambdaFnList = std::vector<LambdaFn*>;
   using MacroList = std::vector<Macro*>;
 
  private:
   LocalScope* scope_;
-  String* name_ = nullptr;
+  Str* name_ = nullptr;
   MacroList macros_{};
-  LambdaList lambdas_{};
+  LambdaFnList lambdas_{};
   NamespaceList namespaces_{};
   expr::SeqExpr* body_ = nullptr;
   CompiledCode* code_ = nullptr;
@@ -32,7 +32,7 @@ class Script : public Object {
     ASSERT(scope_);
   }
 
-  void SetName(String* name) {
+  void SetName(Str* name) {
     ASSERT(name);
     name_ = name;
   }
@@ -51,8 +51,8 @@ class Script : public Object {
     ASSERT(rhs);
     if (rhs->IsMacro()) {
       macros_.push_back(rhs->AsMacro());
-    } else if (rhs->IsLambda()) {
-      lambdas_.push_back(rhs->AsLambda());
+    } else if (rhs->IsLambdaFn()) {
+      lambdas_.push_back(rhs->AsLambdaFn());
     } else if (rhs->IsNamespace()) {
       namespaces_.push_back(rhs->AsNamespace());
     }
@@ -75,7 +75,7 @@ class Script : public Object {
     return HasName() ? GetName()->Get() : "Script";
   }
 
-  auto GetName() const -> String* {
+  auto GetName() const -> Str* {
     return name_;
   }
 

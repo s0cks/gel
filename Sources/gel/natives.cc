@@ -114,12 +114,12 @@ namespace proc {
 #define GEL_NATIVE_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(gel_##Name)
 
 GEL_NATIVE_PROCEDURE_F(get_version) {
-  return ReturnNew<String>(gel::GetVersion());
+  return ReturnNew<Str>(gel::GetVersion());
 }
 
 GEL_NATIVE_PROCEDURE_F(sizeof) {
   REQUIRED_NATIVE_ARG(0, Object, value);
-  return ReturnLong(value->GetType()->GetAllocationSize());
+  return ReturnNumber(value->GetType()->GetAllocationSize());
 }
 
 GEL_NATIVE_PROCEDURE_F(on_shutdown) {
@@ -143,14 +143,14 @@ GEL_NATIVE_PROCEDURE_F(compare) {
 GEL_NATIVE_PROCEDURE_F(bit_str) {
   REQUIRED_NATIVE_ARG(0, Number, value);
   std::stringstream ss;
-  ss << std::bitset<kWordSize>(value->GetLong());
+  ss << std::bitset<kWordSize>(value->AsRaw<uword>());
   return ReturnString(ss);
 }
 
 GEL_NATIVE_PROCEDURE_F(docs) {
   REQUIRED_NATIVE_ARG(0, Fn, func);
-  if (func->IsLambda()) {
-    const auto lambda = func->AsLambda();
+  if (func->IsLambdaFn()) {
+    const auto lambda = func->AsLambdaFn();
     std::stringstream ss;
     if (lambda->HasSymbol())
       ss << lambda->GetSymbol()->GetFullyQualifiedName();
@@ -170,7 +170,7 @@ GEL_NATIVE_PROCEDURE_F(docs) {
     ss << "  ";
     if (lambda->HasDocstring())
       ss << lambda->GetDocstring()->Get();
-    return ReturnNew<String>(ss.str());
+    return ReturnNew<Str>(ss.str());
   } else if (func->IsNative()) {
     const auto native = func->AsNativeFn();
     std::stringstream ss;
@@ -190,7 +190,7 @@ GEL_NATIVE_PROCEDURE_F(docs) {
     ss << "  ";
     if (native->HasDocstring())
       ss << native->GetDocstring()->Get();
-    return ReturnNew<String>(ss.str());
+    return ReturnNew<Str>(ss.str());
   }
   return ThrowError(fmt::format("`{}` is not a Fn", func->ToString()));
 }
@@ -216,7 +216,7 @@ GEL_NATIVE_PROCEDURE_F(print) {
 }
 
 GEL_NATIVE_PROCEDURE_F(load_bindings) {
-  REQUIRED_NATIVE_ARG(0, String, filename);
+  REQUIRED_NATIVE_ARG(0, Str, filename);
   NativeBindings::Load(filename->Get()) | rx::operators::as_blocking() |
       rx::operators::subscribe([&filename](const int status) {
         LOG_IF(ERROR, status != EXIT_SUCCESS) << "failed to load bindings from " << filename->Get() << ": " << status;
@@ -230,22 +230,22 @@ static std::mt19937_64 mt(rand_device_());  // NOLINT(cppcoreguidelines-avoid-no
 NATIVE_PROCEDURE_F(random) {
   ASSERT(HasRuntime());
   ASSERT(args.empty());
-  return ReturnLong(static_cast<RawLong>(mt()));
+  return ReturnNumber(static_cast<RawNumber>(mt()));
 }
 
 NATIVE_PROCEDURE_F(rand_range) {
   ASSERT(HasRuntime());
-  NativeArgument<0, Long> min(args);
-  NativeArgument<1, Long> max(args);
-  std::uniform_int_distribution<RawLong> distribution(Long::Unbox(min), Long::Unbox(max));
-  return ReturnLong(distribution(mt));
+  NativeArgument<0, Number> min(args);
+  NativeArgument<1, Number> max(args);
+  std::uniform_int_distribution<uword> distribution(min->AsRaw<uword>(), max->AsRaw<uword>());
+  return ReturnNumber(distribution(mt));
 }
 
 GEL_NATIVE_PROCEDURE_F(type) {
   ASSERT(!args.empty());
   NativeArgument<0> value(args);
   if (value->IsNil())
-    return ReturnNew<String>("Null");
+    return ReturnNew<Str>("Null");
   return Return(value->GetType()->GetName());
 }
 
@@ -255,16 +255,16 @@ NATIVE_PROCEDURE_F(exit) {
 }
 
 GEL_NATIVE_PROCEDURE_F(format) {
-  REQUIRED_NATIVE_ARG(0, String, format);
+  REQUIRED_NATIVE_ARG(0, Str, format);
   const auto& fmt_val = format->Get();
   ASSERT(!fmt_val.empty());
   fmt::dynamic_format_arg_store<fmt::format_context> fmt_args{};
   std::for_each(std::begin(args) + 1, std::end(args), [&fmt_args](Object* arg) {
-    fmt_args.push_back(String::ValueOf(arg)->Get());
+    fmt_args.push_back(Str::ValueOf(arg)->Get());
   });
   const auto result = fmt::vformat(fmt_val, fmt_args);
   ASSERT(!result.empty());
-  return ReturnNew<String>(result);
+  return ReturnNew<Str>(result);
 }
 
 GEL_NATIVE_PROCEDURE_F(get_event_loop) {
@@ -275,7 +275,7 @@ GEL_NATIVE_PROCEDURE_F(get_event_loop) {
 
 OBJECT_PROCEDURE_F(hashcode) {
   REQUIRED_NATIVE_ARG(0, Object, value);
-  return ReturnLong(value->GetHashCode());
+  return ReturnNumber(value->GetHashCode());
 }
 
 #undef OBJECT_PROCEDURE_F
@@ -283,9 +283,9 @@ OBJECT_PROCEDURE_F(hashcode) {
 #define TIMER_PROCEDURE_F(Name) NATIVE_PROCEDURE_F(timer_##Name)
 
 TIMER_PROCEDURE_F(start) {
-  REQUIRED_NATIVE_ARG(0, Long, id);
-  REQUIRED_NATIVE_ARG(1, Long, timeout_value);
-  REQUIRED_NATIVE_ARG(2, Long, repeat);
+  REQUIRED_NATIVE_ARG(0, Number, id);
+  REQUIRED_NATIVE_ARG(1, Number, timeout_value);
+  REQUIRED_NATIVE_ARG(2, Number, repeat);
   const auto timer = GetThreadEventLoop()->GetTimer(id->Get());
   if (!timer)  // TODO: create new Timer?
     return ThrowError(fmt::format("failed to find Timer w/ id {}", id->Get()));
@@ -294,7 +294,7 @@ TIMER_PROCEDURE_F(start) {
 }
 
 TIMER_PROCEDURE_F(stop) {
-  REQUIRED_NATIVE_ARG(0, Long, id);
+  REQUIRED_NATIVE_ARG(0, Number, id);
   const auto timer = GetThreadEventLoop()->GetTimer(id->Get());
   if (!timer)
     return ThrowError(fmt::format("failed to find Timer w/ id {}", id->Get()));
@@ -303,7 +303,7 @@ TIMER_PROCEDURE_F(stop) {
 }
 
 TIMER_PROCEDURE_F(again) {
-  REQUIRED_NATIVE_ARG(0, Long, id);
+  REQUIRED_NATIVE_ARG(0, Number, id);
   const auto timer = GetThreadEventLoop()->GetTimer(id->Get());
   if (!timer)
     return ThrowError(fmt::format("failed to find Timer w/ id {}", id->Get()));
@@ -312,16 +312,16 @@ TIMER_PROCEDURE_F(again) {
 }
 
 TIMER_PROCEDURE_F(get_repeat) {
-  REQUIRED_NATIVE_ARG(0, Long, id);
+  REQUIRED_NATIVE_ARG(0, Number, id);
   const auto timer = GetThreadEventLoop()->GetTimer(id->Get());
   if (!timer)
     return ThrowError(fmt::format("failed to find Timer w/ id {}", id->Get()));
-  return ReturnLong(timer->GetRepeat());
+  return ReturnNumber(timer->GetRepeat());
 }
 
 TIMER_PROCEDURE_F(set_repeat) {
-  REQUIRED_NATIVE_ARG(0, Long, id);
-  REQUIRED_NATIVE_ARG(1, Long, repeat);
+  REQUIRED_NATIVE_ARG(0, Number, id);
+  REQUIRED_NATIVE_ARG(1, Number, repeat);
   const auto timer = GetThreadEventLoop()->GetTimer(id->Get());
   if (!timer)
     return ThrowError(fmt::format("failed to find Timer w/ id {}", id->Get()));
@@ -330,21 +330,21 @@ TIMER_PROCEDURE_F(set_repeat) {
 }
 
 TIMER_PROCEDURE_F(get_due_in) {
-  REQUIRED_NATIVE_ARG(0, Long, id);
+  REQUIRED_NATIVE_ARG(0, Number, id);
   const auto timer = GetThreadEventLoop()->GetTimer(id->Get());
   if (!timer)
     return ThrowError(fmt::format("failed to find Timer w/ id {}", id->Get()));
-  return ReturnLong(timer->GetDueIn());
+  return ReturnNumber(timer->GetDueIn());
 }
 
 TIMER_PROCEDURE_F(create) {
   REQUIRED_NATIVE_ARG(0, Fn, on_tick);
-  REQUIRED_NATIVE_ARG(1, Long, timeout_value);
-  REQUIRED_NATIVE_ARG(2, Long, repeat);
+  REQUIRED_NATIVE_ARG(1, Number, timeout_value);
+  REQUIRED_NATIVE_ARG(2, Number, repeat);
   const auto timer = GetThreadEventLoop()->CreateTimer(on_tick);
   ASSERT(timer);
   timer->Start(timeout_value->Get(), repeat->Get());
-  return ReturnLong(timer->GetId());
+  return ReturnNumber(timer->GetId());
 }
 
 #undef TIMER_PROCEDURE_F

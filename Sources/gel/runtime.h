@@ -48,7 +48,7 @@ concept HasArgs = requires(const T value) {
 
 template <class T>
 concept RuntimeTarget =
-    std::same_as<T, Constructor> || std::same_as<T, Lambda> || std::same_as<T, NativeFn> || std::same_as<T, Script>;
+    std::same_as<T, InitFn> || std::same_as<T, LambdaFn> || std::same_as<T, NativeFn> || std::same_as<T, Script>;
 
 class Module;
 class Runtime {
@@ -61,7 +61,7 @@ class Runtime {
   friend class proc::rx_take_while;
   friend class Repl;
   friend class StackFrameGuardBase;
-  friend class Lambda;
+  friend class LambdaFn;
   friend class Module;
   friend class Interpreter;
   friend class Interpreter;
@@ -161,7 +161,7 @@ class Runtime {
   void Call(Fn& target, const ObjectList args = {});
 
   template <WithInit I>
-  inline void InvokeConstructor(I* this_value, const ObjectList& args = {}) {
+  inline void InvokeInitFn(I* this_value, const ObjectList& args = {}) {
     ASSERT(this_value);
     if (!this_value->HasInit())
       return;
@@ -243,8 +243,8 @@ class Runtime {
       return AddShutdownListener(dynamic_cast<NativeFn&>(target));
     else if (target.IsScript())
       return AddShutdownListener(reinterpret_cast<Script&>(target));
-    else if (target.IsLambda())
-      return AddShutdownListener(reinterpret_cast<Lambda&>(target));
+    else if (target.IsLambdaFn())
+      return AddShutdownListener(reinterpret_cast<LambdaFn&>(target));
     LOG(FATAL) << "cannot add shutdown listener: " << target;
   }
 

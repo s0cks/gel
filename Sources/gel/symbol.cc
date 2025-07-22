@@ -111,11 +111,11 @@ void Symbol::Init() {
 #ifdef GEL_DEBUG
 namespace proc {
 NATIVE_PROCEDURE_F(gel_get_symbol_pool_size) {
-  return ReturnLong(GetCurrentThreadSymbolPoolSize());
+  return ReturnNumber(GetCurrentThreadSymbolPoolSize());
 }
 
 NATIVE_PROCEDURE_F(gel_get_symbol_pool_max_size) {
-  return ReturnLong(GetSymbolPoolMaxSize());
+  return ReturnNumber(GetSymbolPoolMaxSize());
 }
 }  // namespace proc
 

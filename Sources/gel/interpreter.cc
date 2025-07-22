@@ -74,7 +74,7 @@ void Interpreter::Push(const Bytecode code) {
       return;
     }
     case Bytecode::kPushI: {
-      const auto value = NextLong();
+      const auto value = NextNumber();
       ASSERT(value);
       PUSH(value);
       return;
@@ -218,9 +218,9 @@ void Interpreter::Invoke(const Bytecode::Op op) {
   if (func->IsNative()) {
     ASSERT(op == Bytecode::kInvokeNative || op == Bytecode::kInvokeDynamic);
     return GetRuntime()->CallWithNArgs(*(func->AsNativeFn()), num_args);
-  } else if (func->IsLambda()) {
+  } else if (func->IsLambdaFn()) {
     ASSERT(op == Bytecode::kInvoke || op == Bytecode::kInvokeDynamic);
-    return GetRuntime()->CallWithNArgs(*(func->AsLambda()), num_args);
+    return GetRuntime()->CallWithNArgs(*(func->AsLambdaFn()), num_args);
   }
   std::stringstream ss;
   ss << "cannot invoke: " << func->ToString();

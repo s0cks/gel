@@ -145,7 +145,7 @@ SET_PROCEDURE_F(contains) {
 
 SET_PROCEDURE_F(count) {
   REQUIRED_NATIVE_ARG(0, Set, set);
-  return ReturnLong(set->GetSize());
+  return ReturnNumber(set->GetSize());
 }
 
 SET_PROCEDURE_F(empty) {

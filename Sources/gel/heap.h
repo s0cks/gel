@@ -73,6 +73,10 @@ class Heap {
 
 auto GetCurrentThreadHeap() -> Heap*;
 
+static inline auto CurrentThreadHasHeap() -> bool {
+  return GetCurrentThreadHeap() != nullptr;
+}
+
 #ifdef GEL_DEBUG
 
 void PrintHeap(Heap& heap);

@@ -254,7 +254,7 @@ class EffectVisitor : public ExpressionVisitor {
   }
 
   virtual void ReturnValue(ir::Definition* defn) {}
-  void GenerateDefaultImplementation(Lambda* lambda);
+  void GenerateDefaultImplementation(LambdaFn* lambda);
 
  public:
   explicit EffectVisitor(FlowGraphBuilder* owner) :

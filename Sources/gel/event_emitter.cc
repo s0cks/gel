@@ -73,13 +73,13 @@ void EventEmitter::Insert(const Path& key, Fn* callback) {
   EventListener::Append(&current->value, callback);
 }
 
-void EventEmitter::On(String* event, Fn* callback) {
+void EventEmitter::On(Str* event, Fn* callback) {
   ASSERT(event && !event->IsEmpty());
   ASSERT(callback);
   return Insert(event->Get(), callback);
 }
 
-void EventEmitter::Emit(String* event, Object* data) {
+void EventEmitter::Emit(Str* event, Object* data) {
   ASSERT(event && !event->IsEmpty());
   EventListener* listeners = nullptr;
   if (!trie::Search(GetRoot(), event->Get(), &listeners))
@@ -103,7 +103,7 @@ namespace proc {
 
 EVENT_EMITTER_PROCEEDURE_F(emit) {
   REQUIRED_NATIVE_ARG(0, EventEmitter, emitter);
-  REQUIRED_NATIVE_ARG(1, String, event);
+  REQUIRED_NATIVE_ARG(1, Str, event);
   OptionalNativeArgument<2> data(args);
   CHECK_NATIVE_ARG(data);
   emitter->Emit(event, data ? data : Nil::Get());
@@ -112,7 +112,7 @@ EVENT_EMITTER_PROCEEDURE_F(emit) {
 
 EVENT_EMITTER_PROCEEDURE_F(on) {
   REQUIRED_NATIVE_ARG(0, EventEmitter, emitter);
-  REQUIRED_NATIVE_ARG(1, String, event);
+  REQUIRED_NATIVE_ARG(1, Str, event);
   REQUIRED_NATIVE_ARG(2, Fn, callback);
   emitter->On(event, callback);
   return ReturnNull();

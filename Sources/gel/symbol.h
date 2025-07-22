@@ -4,6 +4,7 @@
 #include "gel/common.h"
 #include "gel/flags.h"
 #include "gel/object.h"
+#include "gel/str.h"
 #include "gel/trie.h"
 
 namespace gel {
@@ -98,7 +99,7 @@ class Symbol : public Object {
 
  public:
   static void Init();
-  static auto New(String* rhs) -> Symbol*;
+  static auto New(Str* rhs) -> Symbol*;
   static auto New(const std::string& ns, const std::string& type, const std::string& name) -> Symbol*;
 
   static inline auto New(const std::string& ns, const std::string& name) -> Symbol* {

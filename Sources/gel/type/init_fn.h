@@ -13,7 +13,7 @@
 #include "gel/type.h"
 
 namespace gel {
-class Constructor : public Fn {
+class InitFn : public Fn {
   friend class Module;
   friend class Namespace;
   friend class MacroExpander;
@@ -24,7 +24,7 @@ class Constructor : public Fn {
   expr::SeqExpr* body_ = nullptr;
   CompiledCode* code_ = nullptr;
 
-  explicit Constructor(Symbol* symbol, expr::SeqExpr* body) :
+  explicit InitFn(Symbol* symbol, expr::SeqExpr* body) :
     Fn(symbol),
     body_(body) {}
 
@@ -39,10 +39,10 @@ class Constructor : public Fn {
   }
 
  public:
-  ~Constructor() override = default;
+  ~InitFn() override = default;
 
   auto GetTargetName() const -> std::string {
-    return HasSymbol() ? GetSymbol()->GetSymbolName() : "Constructor";
+    return HasSymbol() ? GetSymbol()->GetSymbolName() : "InitFn";
   }
 
   auto GetScope() const -> LocalScope* {
@@ -77,22 +77,22 @@ class Constructor : public Fn {
     return GetCode() != nullptr;
   }
 
-  friend auto operator<<(std::ostream& stream, const Constructor& rhs) -> std::ostream& {
+  friend auto operator<<(std::ostream& stream, const InitFn& rhs) -> std::ostream& {
     return stream << rhs.ToString();
   }
 
-  DECLARE_TYPE(Constructor);
+  DECLARE_TYPE(InitFn);
 
  public:
-  static inline auto New(Symbol* symbol, expr::SeqExpr* body = nullptr) -> Constructor* {
+  static inline auto New(Symbol* symbol, expr::SeqExpr* body = nullptr) -> InitFn* {
     ASSERT(symbol);
-    return new Constructor(symbol, body);
+    return new InitFn(symbol, body);
   }
 };
 
 template <class T>
 concept WithInit = requires(T value) {
-  { value.GetInit() } -> std::same_as<Constructor*>;
+  { value.GetInit() } -> std::same_as<InitFn*>;
   { value.HasInit() } -> std::same_as<bool>;
   { value.Init((Runtime*)nullptr) } -> std::same_as<bool>;
 };

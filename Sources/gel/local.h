@@ -26,7 +26,7 @@ class LocalVariableVisitor {
   virtual auto VisitLocal(LocalVariable* local) -> bool = 0;
 };
 
-class String;
+class Str;
 class LocalScope;
 class LocalVariable : public HeapObject {
   friend class LocalScope;
@@ -116,7 +116,7 @@ class LocalVariable : public HeapObject {
     return new LocalVariable(owner, index, symbol, value);
   }
 
-  static auto New(LocalScope* owner, String* name, Object* value = nullptr) -> LocalVariable*;
+  static auto New(LocalScope* owner, Str* name, Object* value = nullptr) -> LocalVariable*;
   static auto New(LocalScope* owner, Symbol* symbol, Object* value = nullptr) -> LocalVariable*;
 
   static auto New(LocalScope* owner, const std::string& name, Object* value = nullptr) -> LocalVariable*;

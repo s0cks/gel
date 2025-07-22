@@ -38,16 +38,16 @@ NATIVE_PROCEDURE_F(process_get_cwd) {
   size_t size = cwd.size();
   LOG_IF(FATAL, uv_cwd(cwd.data(), &size) != 0)
       << "failed to get cwd buffer of size: " << units::data::byte_t(static_cast<double>(size));
-  return ReturnNew<String>(std::string(cwd.data(), size));
+  return ReturnNew<Str>(std::string(cwd.data(), size));
 }
 
 NATIVE_PROCEDURE_F(process_get_pid) {
 #if defined(OS_IS_OSX) || defined(OS_IS_LINUX)
   const auto pid = getpid();
-  return ReturnLong(static_cast<RawLong>(pid));
+  return ReturnNumber(static_cast<RawNumber>(pid));
 #elif defined(OS_IS_WINDOWS)
   const auto pid = static_cast<word>(GetCurrentProcessId());
-  return ReturnLong(pid);
+  return ReturnNumber(pid);
 #else
   return ReturnNull();
 #endif
@@ -56,7 +56,7 @@ NATIVE_PROCEDURE_F(process_get_pid) {
 NATIVE_PROCEDURE_F(process_get_gid) {
 #if defined(OS_IS_OSX) || defined(OS_IS_LINUX)
   const auto gid = getgid();
-  return ReturnLong(static_cast<RawLong>(gid));
+  return ReturnNumber(static_cast<RawNumber>(gid));
 #else
   return ReturnNull();
 #endif
@@ -65,7 +65,7 @@ NATIVE_PROCEDURE_F(process_get_gid) {
 NATIVE_PROCEDURE_F(process_get_uid) {
 #if defined(OS_IS_OSX) || defined(OS_IS_LINUX)
   const auto uid = getuid();
-  return ReturnLong(static_cast<RawLong>(uid));
+  return ReturnNumber(static_cast<RawNumber>(uid));
 #else
   return ReturnNull();
 #endif

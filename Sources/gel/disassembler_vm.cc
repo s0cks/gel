@@ -54,7 +54,7 @@ void Disassembler::Invoke(BytecodeDecoder& decoder, const Bytecode::Op op) {
   switch (op) {
     case Bytecode::kInvoke: {
       const auto lambda = decoder.NextObjectPointer();
-      ASSERT(lambda && lambda->IsLambda());
+      ASSERT(lambda && lambda->IsLambdaFn());
       Comment(lambda) << ", num_args=" << decoder.NextUWord();
       break;
     }

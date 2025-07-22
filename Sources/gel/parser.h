@@ -247,7 +247,7 @@ class Parser {
   void PushTopLevel(Class* rhs);
   void PushTopLevel(Namespace* rhs);
   void PushTopLevel(Macro* rhs);
-  void PushTopLevel(Lambda* rhs);
+  void PushTopLevel(LambdaFn* rhs);
   void PopTopLevel();
 
  protected:
@@ -484,7 +484,7 @@ class Parser {
     requires(HasMutableSymbol<T>);
 
  protected:
-  auto ParseLambda(const Token::Kind kind, Lambda** result) -> ParseResult;
+  auto ParseLambdaFn(const Token::Kind kind, LambdaFn** result) -> ParseResult;
   auto ParseMacro(Macro** result) -> ParseResult;
   auto ParseNamespace(Namespace** result) -> ParseResult;
 
@@ -497,14 +497,14 @@ class Parser {
 
   auto ParseLiteralBool(Bool** result) -> ParseResult;
   auto ParseLiteralNumber(Number** result) -> ParseResult;
-  auto ParseLiteralString(String** result) -> ParseResult;
+  auto ParseLiteralString(Str** result) -> ParseResult;
   auto ParseLiteralSymbol(Symbol** result) -> ParseResult;
   auto ParseLiteralValue(Object** result) -> ParseResult;
   auto ParseLiteralVec(expr::Expression** result) -> ParseResult;
   auto ParseLiteralSet(expr::Expression** result) -> ParseResult;
 
-  auto ParseLiteralLambda(const Token::Kind kind, expr::LiteralExpr** result) -> ParseResult;
-  auto ParseLambdaExpr() -> expr::LambdaExpr*;
+  auto ParseLiteralLambdaFn(const Token::Kind kind, expr::LiteralExpr** result) -> ParseResult;
+  auto ParseLambdaFnExpr() -> expr::LambdaFnExpr*;
 
   auto ParseSeqExpr(expr::SeqExpr** result, const bool allow_empty = true, const Token::Kind end = Token::kRParen)
       -> ParseResult;
@@ -556,7 +556,7 @@ class Parser {
 
  public:
   static inline auto ParseExpr(std::istream& stream, LocalScope* scope = LocalScope::New(GetRuntime()->GetInitScope()))
-      -> Lambda* {
+      -> LambdaFn* {
     ASSERT(stream.good());
     ASSERT(scope);
     Parser parser(stream, scope, GetThreadModuleLoader());
@@ -564,7 +564,7 @@ class Parser {
     if (!parser.ParseExpression(&result))
       return nullptr;
     ASSERT(result);
-    const auto lambda = Lambda::New();
+    const auto lambda = LambdaFn::New();
     ASSERT(lambda);
     lambda->SetBody(expr::SeqExpr::New(result));
     lambda->SetScope(scope);
@@ -574,7 +574,7 @@ class Parser {
   }
 
   static inline auto ParseExpr(const std::string& expr,
-                               LocalScope* scope = LocalScope::New(GetRuntime()->GetInitScope())) -> Lambda* {
+                               LocalScope* scope = LocalScope::New(GetRuntime()->GetInitScope())) -> LambdaFn* {
     ASSERT(!expr.empty());
     ASSERT(scope);
     std::istringstream ss(expr);

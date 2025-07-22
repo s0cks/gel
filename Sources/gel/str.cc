@@ -92,8 +92,8 @@ auto String::ValueOf(Object* rhs) -> String* {
   std::stringstream ss;
   if (rhs->IsBool()) {
     ss << (Bool::Unbox(rhs->AsBool()) ? "#t" : "#f");
-  } else if (rhs->IsLong()) {
-    ss << rhs->AsLong()->Get();
+  } else if (rhs->IsNumber()) {
+    ss << rhs->AsNumber()->Get();
   } else if (rhs->IsDouble()) {
     ss << rhs->AsDouble()->Get();
   } else if (rhs->IsSymbol()) {

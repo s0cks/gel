@@ -78,8 +78,6 @@ struct Position {
   V(Dispatch)                 \
   V(BeginSet)                 \
   V(LiteralNumber)            \
-  V(LiteralDouble)            \
-  V(LiteralLong)              \
   V(LiteralTrue)              \
   V(LiteralFalse)             \
   V(LiteralString)            \
@@ -179,10 +177,6 @@ struct Token {
     return AnyOf(Token::kLiteralTrue, Token::kLiteralFalse);
   }
 
-  static inline constexpr auto AnyNumber() -> KindSet {
-    return AnyOf(Token::kLiteralDouble, Token::kLiteralLong);
-  }
-
  public:
   Kind kind = kInvalid;
   Position pos{};
@@ -210,8 +204,8 @@ struct Token {
 
   auto IsLiteral() const -> bool {
     return IsFunctionLiteral() || IsSymbol() || kind == Token::kLiteralTrue || kind == Token::kLiteralFalse ||
-           kind == Token::kLiteralLong || kind == Token::kLiteralDouble || kind == Token::kLiteralString ||
-           kind == Token::kBeginSet || kind == Token::kLiteralNil;
+           kind == Token::kLiteralNumber || kind == Token::kLiteralString || kind == Token::kBeginSet ||
+           kind == Token::kLiteralNil;
   }
 
   auto IsIdentifier() const -> bool {
@@ -274,8 +268,8 @@ struct Token {
     return atof(text.data());
   }
 
-  auto AsLong() const -> RawLong {
-    return static_cast<RawLong>(atol(text.data()));
+  auto AsNumber() const -> RawNumber {
+    return static_cast<RawNumber>(atol(text.data()));
   }
 
   auto AsInt() const -> uint32_t {

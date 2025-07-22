@@ -27,12 +27,12 @@ class Error : public Object {
   auto VisitPointerPointers(PointerPointerVisitor* vis) -> bool override;
 
  public:
-  explicit Error(String* message) :
+  explicit Error(Str* message) :
     Object() {
     SetMessage(message);
   }
 
-  void SetMessage(String* rhs) {
+  void SetMessage(Str* rhs) {
     ASSERT(rhs);
     (*raw_ptr()) = rhs->raw_ptr();
   }
@@ -40,21 +40,21 @@ class Error : public Object {
  public:
   ~Error() override = default;
 
-  auto GetMessage() const -> String* {
-    return (*raw_ptr())->As<String>();
+  auto GetMessage() const -> Str* {
+    return (*raw_ptr())->As<Str>();
   }
 
   DECLARE_TYPE(Error);
 
  public:
-  static inline auto New(String* message) -> Error* {
+  static inline auto New(Str* message) -> Error* {
     ASSERT(message);
     return new Error(message);
   }
 
   static inline auto New(const std::string& message) -> Error* {
     ASSERT(!message.empty());
-    return New(String::New(message));
+    return New(Str::New(message));
   }
 
   static inline auto New(const std::stringstream& ss) -> Error* {
@@ -63,7 +63,7 @@ class Error : public Object {
 
   static inline auto New(Object* rhs) -> Error* {
     ASSERT(rhs);
-    return New(String::ValueOf(rhs));
+    return New(Str::ValueOf(rhs));
   }
 
   static inline auto New(const std::exception& exc) -> Error* {

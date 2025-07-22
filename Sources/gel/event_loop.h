@@ -121,7 +121,7 @@ auto VisitThreadEventLoopPointerPointer(const std::function<bool(Pointer**)>& vi
 auto GetThreadEventLoop() -> EventLoop*;
 void RunCurrentThreadEventLoop(const uv_run_mode mode);
 
-using FileOpenedCallback = std::function<void(Long*)>;
+using FileOpenedCallback = std::function<void(Number*)>;
 
 auto OpenFileAsync(std::string path, const int flags, const int mode, FileOpenedCallback on_success,
                    OnErrorCallback on_error, OnFinishedCallback on_finished) -> bool;
@@ -320,7 +320,7 @@ class StatRequest : public TemplateRequest<uword> {
   DECLARE_FS_REQUEST_TYPE(StatRequest);
 };
 
-class OpenFileRequest : public TemplateRequest<Long*> {
+class OpenFileRequest : public TemplateRequest<Number*> {
  private:
   int flags_;
   int mode_;

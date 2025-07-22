@@ -1,36 +1,6 @@
 {
 	"files": [
 		{
-			"path": "Sources/gel/parser.cc",
-			"bookmarks": [
-				{
-					"line": 1026,
-					"column": 18,
-					"label": ""
-				}
-			]
-		},
-		{
-			"path": "Sources/gel/object.cc",
-			"bookmarks": [
-				{
-					"line": 141,
-					"column": 14,
-					"label": ""
-				}
-			]
-		},
-		{
-			"path": "Sources/gel/natives.cc",
-			"bookmarks": [
-				{
-					"line": 46,
-					"column": 27,
-					"label": ""
-				}
-			]
-		},
-		{
 			"path": ".vscode/launch.json",
 			"bookmarks": [
 				{

@@ -98,7 +98,7 @@ auto ListFromRange(const uint64_t from, const uint64_t to) -> Object* {
   auto last = std::max(from, to);
   Object* result = Nil::Get();
   for (auto idx = last; idx >= first; idx--) {
-    result = Pair::New(Long::New(static_cast<RawLong>(idx)), result);
+    result = Pair::New(Number::New(static_cast<RawNumber>(idx)), result);
     if (idx == 0)
       break;
   }

@@ -63,7 +63,7 @@ class Fn : public Object, public proto::IHaveOwner {
 
  private:
   Symbol* symbol_;
-  String* docs_ = nullptr;
+  Str* docs_ = nullptr;
   Array<Argument*>* args_ = nullptr;
 
  protected:
@@ -154,7 +154,7 @@ class Fn : public Object, public proto::IHaveOwner {
     return GetOwner() != nullptr;
   }
 
-  auto GetDocstring() const -> String* {
+  auto GetDocstring() const -> Str* {
     return docs_;
   }
 
@@ -162,7 +162,7 @@ class Fn : public Object, public proto::IHaveOwner {
     return GetDocstring() != nullptr;
   }
 
-  void SetDocstring(String* rhs) {
+  void SetDocstring(Str* rhs) {
     ASSERT(rhs);
     docs_ = rhs;
   }
@@ -220,12 +220,12 @@ class Fn : public Object, public proto::IHaveOwner {
   }
 
  public:
-  static inline auto IsLambdaProc(Fn* p) -> bool {
-    return p && p->IsLambda();
+  static inline auto IsLambdaFnProc(Fn* p) -> bool {
+    return p && p->IsLambdaFn();
   }
 
   static inline auto IsNativeProc(Fn* p) -> bool {
-    return p && p->IsNative();
+    return p && p->IsNativeFn();
   }
 };
 static_assert(WithSymbol<Fn>);

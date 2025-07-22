@@ -79,7 +79,7 @@ auto LocalVariable::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
   return true;
 }
 
-auto LocalVariable::New(LocalScope* owner, String* name, Object* value) -> LocalVariable* {
+auto LocalVariable::New(LocalScope* owner, Str* name, Object* value) -> LocalVariable* {
   ASSERT(owner);
   ASSERT(name);
   return New(owner, owner->GetNumberOfLocals(), Symbol::New(name), value);
@@ -94,6 +94,6 @@ auto LocalVariable::New(LocalScope* owner, Symbol* symbol, Object* value) -> Loc
 auto LocalVariable::New(LocalScope* owner, const std::string& name, Object* value) -> LocalVariable* {
   ASSERT(owner);
   ASSERT(!name.empty());
-  return New(owner, String::New(name), value);
+  return New(owner, Str::New(name), value);
 }
 }  // namespace gel

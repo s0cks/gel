@@ -33,8 +33,8 @@ class Namespace : public Object {
   Object* owner_ = nullptr;
   Symbol* symbol_ = nullptr;
   LocalScope* scope_;
-  String* docs_ = nullptr;
-  Constructor* init_ = nullptr;
+  Str* docs_ = nullptr;
+  InitFn* init_ = nullptr;
   Array<Fn*>* procedures_;
   Array<Macro*>* macros_;
 
@@ -56,7 +56,7 @@ class Namespace : public Object {
     owner_ = rhs;
   }
 
-  void SetInit(Constructor* rhs) {
+  void SetInit(InitFn* rhs) {
     ASSERT(rhs);
     init_ = rhs;
   }
@@ -69,7 +69,7 @@ class Namespace : public Object {
  public:
   ~Namespace() override = default;
 
-  auto GetInit() const -> Constructor* {
+  auto GetInit() const -> InitFn* {
     return init_;
   }
 
@@ -83,7 +83,7 @@ class Namespace : public Object {
     return scope_;
   }
 
-  auto GetDocstring() const -> String* {
+  auto GetDocstring() const -> Str* {
     return docs_;
   }
 
@@ -91,7 +91,7 @@ class Namespace : public Object {
     return GetDocstring() != nullptr;
   }
 
-  void SetDocstring(String* rhs) {
+  void SetDocstring(Str* rhs) {
     ASSERT(rhs);
     docs_ = rhs;
   }
@@ -135,7 +135,7 @@ class Namespace : public Object {
 
   auto FindMacro(const std::string& name) -> Macro*;
   auto FindFn(const std::string& name) -> Fn*;
-  auto FindLambda(const std::string& name) -> Lambda*;
+  auto FindLambdaFn(const std::string& name) -> LambdaFn*;
   auto FindNativeFn(const std::string& name) -> NativeFn*;
 
   template <VisitorLike<Macro*> Visitor>
@@ -154,8 +154,8 @@ class Namespace : public Object {
   }
 
   template <VisitorLike<Fn*> Visitor>
-  inline auto VisitAllLambdaFns(Visitor& vis) const -> bool {
-    return procedures_->VisitIf(vis, Fn::IsLambdaProc);
+  inline auto VisitAllLambdaFnFns(Visitor& vis) const -> bool {
+    return procedures_->VisitIf(vis, Fn::IsLambdaFnProc);
   }
 
   DECLARE_TYPE(Namespace);
@@ -169,7 +169,7 @@ class Namespace : public Object {
   template <VisitorLike<Namespace*> Visitor>
   static auto VisitAllNamespaces(Visitor& vis) -> bool;
 
-  static auto CreateConstructor(Namespace* ns, expr::SeqExpr* body = nullptr) -> Constructor*;
+  static auto CreateInitFn(Namespace* ns, expr::SeqExpr* body = nullptr) -> InitFn*;
   static auto FindNamespace(const Predicate& filter) -> Namespace*;
 
   static inline auto FindNamespace(const std::string& name) -> Namespace* {

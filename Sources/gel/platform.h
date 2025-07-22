@@ -63,7 +63,7 @@ static constexpr int kWordSizeLog2 = kInt32SizeLog2;
 #elif defined(ARCH_IS_ARM64) || defined(ARCH_IS_X64)
 static constexpr int kWordSizeLog2 = kInt64SizeLog2;
 #endif
-// cppcheck-suppress truncLongCastAssignment
+// cppcheck-suppress truncNumberCastAssignment
 static constexpr uint64_t kWordSize = 1 << kWordSizeLog2;
 
 static constexpr int kBitsPerWordLog2 = kWordSizeLog2 + kBitsPerByteLog2;

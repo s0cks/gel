@@ -50,9 +50,9 @@ auto FlowGraphCompiler::GetBlockLabel(ir::EntryInstr* blk) -> Label* {
   return GetBlockLabel(blk->GetBlockId());
 }
 
-template auto FlowGraphCompiler::CompileTarget(Lambda& lambda) -> bool;
+template auto FlowGraphCompiler::CompileTarget(LambdaFn& lambda) -> bool;
 template auto FlowGraphCompiler::CompileTarget(Script& script) -> bool;
-template auto FlowGraphCompiler::CompileTarget(Constructor& script) -> bool;
+template auto FlowGraphCompiler::CompileTarget(InitFn& script) -> bool;
 
 template <CompilerTarget Target>
 auto FlowGraphCompiler::CompileTarget(Target& target) -> bool {

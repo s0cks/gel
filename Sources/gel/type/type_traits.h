@@ -56,9 +56,9 @@ static inline auto IsNamed(const Sym& name) -> std::function<bool(Named*)> {
 
 template <class T>
 concept HasDocstring = requires(T value) {
-  { value.GetDocstring() } -> std::convertible_to<String*>;
+  { value.GetDocstring() } -> std::convertible_to<Str*>;
   { value.HasDocstring() } -> std::convertible_to<bool>;
-  { value.SetDocstring((String*)nullptr) };
+  { value.SetDocstring((Str*)nullptr) };
 };
 
 DECLARE_TRAIT(is_iterable);
@@ -70,17 +70,16 @@ DECLARE_IS_ITERABLE(ArrayBase);
 #undef DECLARE_IS_ITERABLE
 
 template <typename T>
-concept StringLike =
-    std::convertible_to<T, std::string> || std::same_as<T, gel::String> || std::same_as<T, gel::Symbol>;
+concept StringLike = std::convertible_to<T, std::string> || std::same_as<T, gel::Str> || std::same_as<T, gel::Symbol>;
 
 template <typename T>
 concept HasName = requires(T value) {
-  { value.GetName() } -> std::convertible_to<gel::String*>;
+  { value.GetName() } -> std::convertible_to<gel::Str*>;
   { value.HasName() } -> std::convertible_to<bool>;
 };
 
 template <typename T>
-concept HasMutableName = requires(T value) { value.SetName((String*)nullptr); };
+concept HasMutableName = requires(T value) { value.SetName((Str*)nullptr); };
 
 template <HasName Named, StringLike Str>
 static inline auto IsNamed(const Str& name) -> std::function<bool(Named*)> {
@@ -89,25 +88,17 @@ static inline auto IsNamed(const Str& name) -> std::function<bool(Named*)> {
   };
 }
 
-DECLARE_TRAIT(has_to_string);
-#define DECLARE_HAS_TO_STRING(Name) DECLARE_HAS_TRAIT(has_to_string, Name);
-DECLARE_HAS_TO_STRING(Object);
-DECLARE_HAS_TO_STRING(expr::Expression);
-DECLARE_HAS_TO_STRING(ir::Instruction);
-DECLARE_HAS_TO_STRING(ir::Definition);
-FOR_EACH_TYPE(DECLARE_HAS_TO_STRING)
-#undef DECLARE_HAS_TO_STRING
-
-DECLARE_TRAIT(has_docs);
-#define DECLARE_HAS_DOCS(Name) DECLARE_HAS_TRAIT(has_docs, Name);
-DECLARE_HAS_DOCS(Macro);
-DECLARE_HAS_DOCS(Lambda);
-DECLARE_HAS_DOCS(Namespace);
-DECLARE_HAS_DOCS(NativeFn);
-#undef DECLARE_HAS_DOCS
-
 template <class T>
-auto GetDocs(T* value, std::enable_if_t<has_docs<T>::value>* = nullptr) -> String*;
+concept has_docstring = requires(T value) {
+  { value.GetDocstring() } -> std::convertible_to<gel::Str*>;
+  { value.HasDocstring() } -> std::convertible_to<bool>;
+  { value.SetDocstring((gel::Str*)nullptr) };
+};
+
+template <has_docstring T>
+static inline auto GetDocstring(T& value) -> gel::Str* {
+  return value.HasDocstring() ? value.GetDocstring() : nullptr;
+}
 
 namespace ir {
 class JoinEntryInstr;

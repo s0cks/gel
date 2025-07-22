@@ -1,23 +1,21 @@
 #ifndef GEL_PAIR_H
 #define GEL_PAIR_H
 
-#include "gel/nil.h"
-#include "gel/object.h"
+#include "gel/type/nil.h"
+#include "gel/type/value.h"
 
 namespace gel {
 
-class Pair : public Seq {
- public:
-  static Field* kFirstField;
-  static Field* kSecondField;
+class Pair : public Value {
+ private:
+  Value* first_ = nullptr;
+  Value* second_ = nullptr;
 
  protected:
-  explicit Pair(Object* car = nullptr, Object* cdr = nullptr) :
-    Seq() {
-    if (car)
-      SetFirst(car);
-    if (cdr)
-      SetSecond(cdr);
+  explicit Pair(Value* car = Nil::Get(), Value* cdr = Nil::Get()) :
+    Value() {
+    SetFirst(car);
+    SetSecond(cdr);
   }
 
   auto VisitPointers(PointerVisitor* vis) -> bool override;
@@ -25,48 +23,48 @@ class Pair : public Seq {
  public:
   ~Pair() override = default;
 
-  auto GetFirst() const -> Object* {
-    return GetField(kFirstField);
+  auto GetFirst() const -> Value* {
+    return first_;
   }
 
   inline auto HasFirst() const -> bool {
-    return GetFirst() != nullptr;
+    return !GetFirst()->IsNil();
   }
 
-  void SetFirst(Object* rhs) {  // TODO: reduce visibility
+  void SetFirst(Value* rhs) {
     ASSERT(rhs);
-    SetField(kFirstField, rhs);
+    first_ = rhs;
   }
 
-  auto GetSecond() const -> Object* {
-    return GetField(kSecondField);
+  auto GetSecond() const -> Value* {
+    return second_;
   }
 
   inline auto HasSecond() const -> bool {
-    return GetSecond() != nullptr;
+    return !GetSecond()->IsNil();
   }
 
-  void SetSecond(Object* rhs) {  // TODO: reduce visibility
+  void SetSecond(Value* rhs) {
     ASSERT(rhs);
-    SetField(kSecondField, rhs);
+    second_ = rhs;
   }
 
-  auto IsEmpty() const -> bool override {
-    return !HasFirst() && !HasSecond();
+  inline auto IsEmpty() const -> bool {
+    return !(HasFirst() && HasSecond());
   }
 
   auto IsTuple() const -> bool {
     return HasSecond() && !GetSecond()->IsPair();
   }
 
-  DECLARE_TYPE(Pair);
+  DECLARE_VALUE_TYPE(Pair);
 
  public:
   static auto Empty() -> Pair*;
   static inline auto NewEmpty() -> Pair* {
-    return new Pair();
+    return new Pair(Nil::Get(), Nil::Get());
   }
-  static inline auto New(Object* car, Object* cdr) -> Pair* {
+  static inline auto New(Value* car, Value* cdr) -> Pair* {
     return new Pair(car, cdr);
   }
 
@@ -74,14 +72,12 @@ class Pair : public Seq {
   static auto VisitEmptyPointerPointer(PointerPointerVisitor* vis) -> bool;
 };
 
-static inline auto Cons(Object* lhs, Object* rhs) -> Object* {
-  ASSERT(lhs);
-  ASSERT(rhs);
+static inline auto Cons(Value* lhs, Value* rhs) -> Pair* {
   return Pair::New(lhs, rhs);
 }
 
-static inline auto ToList(const ObjectList& values, const bool reverse = false) -> Object* {
-  Object* result = Nil::Get();
+static inline auto ToList(const ObjectList& values, const bool reverse = false) -> Value* {
+  Value* result = Nil::Get();
   if (reverse) {
     for (const auto& next : std::ranges::reverse_view(values)) {
       result = Pair::New(next, result);
@@ -96,8 +92,8 @@ static inline auto ToList(const ObjectList& values, const bool reverse = false) 
 }
 
 template <class Iter>
-static inline auto ToList(Iter& iter) -> Object* {
-  Object* result = Nil::Get();
+static inline auto ToList(Iter& iter) -> Value* {
+  Value* result = Nil::Get();
   while (iter.HasNext()) {
     const auto next = iter.Next();
     ASSERT(next);
@@ -106,11 +102,11 @@ static inline auto ToList(Iter& iter) -> Object* {
   return result;
 }
 
-auto ListFromRange(const uint64_t from, const uint64_t to) -> gel::Object*;
+auto ListFromRange(const uint64_t from, const uint64_t to) -> gel::Value*;
 
 template <class Iter, typename T>
-static inline auto ToList(Iter& iter, const std::function<Object*(T)>& map) -> Object* {
-  Object* result = Nil::Get();
+static inline auto ToList(Iter& iter, const std::function<Value*(T)>& map) -> Value* {
+  Value* result = Nil::Get();
   while (iter.HasNext()) {
     const auto next = iter.Next();
     ASSERT(next);
@@ -119,13 +115,13 @@ static inline auto ToList(Iter& iter, const std::function<Object*(T)>& map) -> O
   return result;
 }
 
-static inline auto Car(Object* rhs) -> Object* {
+static inline auto Car(Value* rhs) -> Value* {
   ASSERT(rhs && rhs->IsPair());
   const auto value = rhs->AsPair()->GetFirst();
   return value ? value : Nil::Get();
 }
 
-static inline auto Cdr(Object* rhs) -> Object* {
+static inline auto Cdr(Value* rhs) -> Value* {
   ASSERT(rhs && rhs->IsPair());
   const auto value = rhs->AsPair()->GetSecond();
   return value ? value : Nil::Get();

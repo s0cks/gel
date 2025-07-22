@@ -90,8 +90,8 @@ class StackFrame {  // TODO: extend Object
     return GetTarget()->IsScript();
   }
 
-  auto IsLambdaFrame() const -> bool {
-    return GetTarget()->IsLambda();
+  auto IsLambdaFnFrame() const -> bool {
+    return GetTarget()->IsLambdaFn();
   }
 
   auto IsNativeFrame() const -> bool {
@@ -99,7 +99,7 @@ class StackFrame {  // TODO: extend Object
   }
 
   auto IsInitFrame() const -> bool {
-    return GetTarget()->IsConstructor();
+    return GetTarget()->IsInitFn();
   }
 
   auto GetLocals() const -> LocalScope* {

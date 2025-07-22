@@ -1,14 +1,18 @@
 #ifndef GEL_NIL_H
 #define GEL_NIL_H
 
-#include "gel/object.h"
+#include <fmt/base.h>
+
+#include "gel/common.h"
+#include "gel/type/value.h"
 
 namespace gel {
-class Nil : public Object {
+class Nil : public Value {
  public:
   Nil() = default;
   ~Nil() override = default;
-  DECLARE_TYPE(Nil);
+
+  DECLARE_VALUE_TYPE(Nil);
 
  public:
   static inline auto New() -> Nil* {

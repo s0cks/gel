@@ -19,11 +19,11 @@ class Argument : public Object {
 
  private:
   uint64_t index_;
-  String* name_;
+  Str* name_;
   bool optional_;
   bool vararg_;
 
-  Argument(const uint64_t index, String* name, const bool optional, const bool vararg) :
+  Argument(const uint64_t index, Str* name, const bool optional, const bool vararg) :
     index_(index),
     name_(name),
     optional_(optional),
@@ -45,7 +45,7 @@ class Argument : public Object {
     return index_;
   }
 
-  auto GetName() const -> String* {
+  auto GetName() const -> Str* {
     return name_;
   }
 
@@ -82,7 +82,7 @@ class Argument : public Object {
     ASSERT(ptr);
   }
 
-  static inline auto New(const uint64_t idx, String* name, const bool optional, const bool vararg) -> Argument* {
+  static inline auto New(const uint64_t idx, Str* name, const bool optional, const bool vararg) -> Argument* {
     ASSERT(idx >= 0);
     ASSERT(name);
     return new Argument(idx, name, optional, vararg);
@@ -92,7 +92,7 @@ class Argument : public Object {
       -> Argument* {
     ASSERT(idx >= 0);
     ASSERT(!name.empty());
-    return new Argument(idx, String::New(name), optional, vararg);
+    return new Argument(idx, Str::New(name), optional, vararg);
   }
 };
 }  // namespace gel

@@ -17,7 +17,7 @@ concept HasSetCode = requires(T value) {
 template <class T>
 concept CompilerTarget = HasCompiledCode<T> && HasSetCode<T>;
 
-class Lambda;
+class LambdaFn;
 class Script;
 class FlowGraph;
 class Assembler;

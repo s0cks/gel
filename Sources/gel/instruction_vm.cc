@@ -142,8 +142,8 @@ COMPILE(UnaryOpInstr) {
 
 COMPILE(InvokeInstr) {
   ASSERT(compiler);
-  ASSERT(GetFn()->IsLambda());
-  __ invoke(GetFn()->AsLambda(), GetNumberOfArgs());
+  ASSERT(GetFn()->IsLambdaFn());
+  __ invoke(GetFn()->AsLambdaFn(), GetNumberOfArgs());
 }
 
 COMPILE(InvokeNativeInstr) {

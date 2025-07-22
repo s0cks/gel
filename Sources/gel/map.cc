@@ -96,7 +96,7 @@ MAP_PROCEDURE_F(empty) {
 
 MAP_PROCEDURE_F(size) {
   REQUIRED_NATIVE_ARG(0, Map, map);
-  return ReturnLong(map->GetSize());
+  return ReturnNumber(map->GetSize());
 }
 
 MAP_PROCEDURE_F(get) {

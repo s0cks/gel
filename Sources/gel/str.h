@@ -40,14 +40,14 @@ class StringObject : public Object {
   auto Equals(const std::string& rhs) const -> bool;
 };
 
-class String : public StringObject {
+class Str : public StringObject {
  protected:
-  String() = default;
-  explicit String(const std::string& value) :
+  Str() = default;
+  explicit Str(const std::string& value) :
     StringObject(value) {}
 
  public:
-  ~String() override = default;
+  ~Str() override = default;
   auto Eq(Object* rhs) const -> Object* override;
   auto Equals(const std::string& rhs) const -> bool;
 
@@ -57,34 +57,34 @@ class String : public StringObject {
     return Get();
   }
 
-  DECLARE_TYPE(String);
+  DECLARE_TYPE(Str);
 
  public:
-  inline friend auto operator<<(std::ostream& stream, const String& rhs) -> std::ostream& {
+  inline friend auto operator<<(std::ostream& stream, const Str& rhs) -> std::ostream& {
     return stream << rhs.ToString();
   }
 
  public:
-  static auto New() -> String*;
-  static auto New(Symbol* rhs) -> String*;
-  static inline auto New(const std::string& value) -> String* {
-    return new String(value);
+  static auto New() -> Str*;
+  static auto New(Symbol* rhs) -> Str*;
+  static inline auto New(const std::string& value) -> Str* {
+    return new Str(value);
   }
   static inline auto Unbox(Object* rhs) -> const std::string& {
-    ASSERT(rhs && rhs->IsString());
-    return rhs->AsString()->Get();
+    ASSERT(rhs && rhs->IsStr());
+    return rhs->AsStr()->Get();
   }
 
-  static auto Empty() -> String*;
-  static auto ValueOf(Object* rhs) -> String*;
+  static auto Empty() -> Str*;
+  static auto ValueOf(Object* rhs) -> Str*;
 };
 }  // namespace gel
 
 namespace fmt {
 template <>
-struct formatter<gel::String> : public formatter<std::string> {
+struct formatter<gel::Str> : public formatter<std::string> {
   template <typename FormatContext>
-  constexpr auto format(const gel::String& value, FormatContext& ctx) const -> decltype(ctx.out()) {
+  constexpr auto format(const gel::Str& value, FormatContext& ctx) const -> decltype(ctx.out()) {
     return format_to(ctx.out(), "\"{}\"", value.Get());
   }
 };

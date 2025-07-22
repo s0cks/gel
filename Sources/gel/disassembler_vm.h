@@ -61,7 +61,7 @@ class BytecodeDecoder {
     return next;
   }
 
-  inline auto NextLong() -> word {
+  inline auto NextNumber() -> word {
     return NextWord();
   }
 

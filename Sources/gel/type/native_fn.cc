@@ -1,4 +1,4 @@
-#include "gel/native_procedure.h"
+#include "gel/types/native_fn.h"
 
 #include "gel/argument.h"
 #include "gel/common.h"

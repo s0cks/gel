@@ -1,17 +1,18 @@
-#ifndef GEL_BOOLEAN_H
-#define GEL_BOOLEAN_H
+#ifndef GEL_BOOL_H
+#define GEL_BOOL_H
 
-#include "gel/object.h"
-#include "gel/pair.h"
+#include "gel/common.h"
+#include "gel/type/pair.h"
+#include "gel/type/value.h"
 
 namespace gel {
 class Class;
-class Bool : public Object {
+class Bool : public Value {
  private:
   bool value_;
 
   explicit Bool(const bool value) :
-    Object(),
+    Value(),
     value_(value) {}
 
  public:
@@ -25,7 +26,7 @@ class Bool : public Object {
     return Get() ? False() : True();
   }
 
-  DECLARE_TYPE(Bool);
+  DECLARE_VALUE_TYPE(Bool);
 
  private:
   static void Init();
@@ -54,17 +55,17 @@ class Bool : public Object {
   }
 };
 
-static inline auto Truth(gel::Object* rhs) -> bool {
+static inline auto Truth(gel::Value* rhs) -> bool {
   ASSERT(rhs);
   if (rhs->IsBool())
     return rhs->AsBool()->Get();
   return !rhs->IsNil();
 }
 
-static inline auto Not(Object* rhs) -> Object* {
+static inline auto Not(Value* rhs) -> Value* {
   ASSERT(rhs);
   return Truth(rhs) ? Bool::False() : Bool::True();
 }
 }  // namespace gel
 
-#endif  // GEL_BOOLEAN_H
+#endif  // GEL_BOOL_H

@@ -54,10 +54,10 @@ auto StackFrame::GetTargetName() const -> std::string {
     return "Script";  // TODO: implement
   } else if (IsNativeFrame()) {
     return GetTarget()->AsNativeFn()->GetSymbol()->GetFullyQualifiedName();
-  } else if (IsLambdaFrame()) {
-    const auto lambda = GetTarget()->AsLambda();
+  } else if (IsLambdaFnFrame()) {
+    const auto lambda = GetTarget()->AsLambdaFn();
     ASSERT(lambda);
-    return lambda->HasSymbol() ? lambda->GetSymbol()->GetFullyQualifiedName() : "Lambda";
+    return lambda->HasSymbol() ? lambda->GetSymbol()->GetFullyQualifiedName() : "LambdaFn";
   }
   return "Unknown";
 }

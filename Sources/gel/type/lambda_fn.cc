@@ -11,28 +11,28 @@
 #include "gel/type.h"
 
 namespace gel {
-auto Lambda::CreateClass() -> Class* {
+auto LambdaFnFn::CreateClass() -> Class* {
   return Class::New(Fn::GetClass(), kClassName);
 }
 
-auto Lambda::Equals(Object* rhs) const -> bool {
-  if (!rhs->IsLambda())
+auto LambdaFnFn::Equals(Object* rhs) const -> bool {
+  if (!rhs->IsLambdaFnFn())
     return false;
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return false;
 }
 
-auto Lambda::GetHashCode() const -> HashCode {
+auto LambdaFnFn::GetHashCode() const -> HashCode {
   return Fn::GetHashCode();
 }
 
-auto Lambda::Compare(Object* rhs) const -> bool {
+auto LambdaFnFn::Compare(Object* rhs) const -> bool {
   ASSERT(rhs);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return -1;
 }
 
-auto Lambda::VisitPointers(PointerVisitor* vis) -> bool {
+auto LambdaFnFn::VisitPointers(PointerVisitor* vis) -> bool {
   ASSERT(vis);
   if (!Fn::VisitPointers(vis))
     return false;
@@ -42,7 +42,7 @@ auto Lambda::VisitPointers(PointerVisitor* vis) -> bool {
   return true;
 }
 
-auto Lambda::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
+auto LambdaFnFn::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
   ASSERT(vis);
   if (!Fn::VisitPointerPointers(vis))
     return false;
@@ -50,12 +50,12 @@ auto Lambda::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
   return true;
 }
 
-auto Lambda::New(const ObjectList& args) -> Lambda* {
+auto LambdaFnFn::New(const ObjectList& args) -> LambdaFnFn* {
   NOT_IMPLEMENTED(FATAL);
 }
 
-auto Lambda::ToString() const -> std::string {
-  ToStringHelper<Lambda> helper{};
+auto LambdaFnFn::ToString() const -> std::string {
+  ToStringHelper<LambdaFnFn> helper{};
   if (HasSymbol())
     helper.AddField("symbol", GetSymbol()->GetFullyQualifiedName());
   helper.AddField("owner", GetOwner());

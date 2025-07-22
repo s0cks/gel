@@ -87,8 +87,8 @@ class EventEmitter : public Object {
  public:
   ~EventEmitter() override = default;
 
-  void On(String* event, Fn* callback);
-  void Emit(String* event, Object* data = Nil::Get());
+  void On(Str* event, Fn* callback);
+  void Emit(Str* event, Object* data = Nil::Get());
 
   DECLARE_TYPE(EventEmitter);
 

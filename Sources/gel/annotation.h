@@ -1,0 +1,4 @@
+#ifndef GEL_ANNOTATION_H
+#define GEL_ANNOTATION_H
+
+#endif  // GEL_ANNOTATION_H

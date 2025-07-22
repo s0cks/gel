@@ -47,7 +47,7 @@ auto Error::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
 
 auto Error::New(const ObjectList& args) -> Error* {
   if (args.empty())
-    return new Error(String::New());
+    return new Error(Str::New());
   return New(args[0]);
 }
 

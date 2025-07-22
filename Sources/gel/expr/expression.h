@@ -37,7 +37,6 @@
   V(LetExpr)                        \
   V(ThrowExpr)                      \
   V(NewExpr)                        \
-  V(NewMapExpr)                     \
   V(LoadFieldExpr)
 
 namespace gel {
@@ -265,68 +264,6 @@ class TemplateOpExpression : public TemplateExpression<NumInputs> {
 
   auto GetOp() const -> Op {
     return op_;
-  }
-};
-
-// TODO: convert to constructor call and genericize it
-class NewMapExpr : public Expression {
- public:
-  using Entry = std::pair<Symbol*, Expression*>;
-  using EntryList = std::vector<Entry>;
-
- private:
-  EntryList data_;
-
-  explicit NewMapExpr(const EntryList& data) :
-    Expression(),
-    data_(data) {}
-
-  void RemoveChildAt(const uint64_t idx) override {
-    ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
-    data_.erase(begin() + static_cast<EntryList::difference_type>(idx));
-  }
-
-  void SetChildAt(const uint64_t idx, Expression* value) override {
-    ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
-    data_[idx].second = value;
-  }
-
- public:
-  ~NewMapExpr() override = default;
-
-  auto data() const -> const EntryList& {
-    return data_;
-  }
-
-  auto begin() const -> EntryList::const_iterator {
-    return std::begin(data());
-  }
-
-  auto end() const -> EntryList::const_iterator {
-    return std::end(data());
-  }
-
-  auto GetNumberOfChildren() const -> uint64_t override {
-    return data().size();
-  }
-
-  auto GetChildAt(const uint64_t idx) const -> Expression* override {
-    ASSERT(idx >= 0 && idx <= GetNumberOfChildren());
-    return data()[idx].second;
-  }
-
-  auto IsEmpty() const -> bool {
-    return data().empty();
-  }
-
-  auto IsConstantExpr() const -> bool override;
-  auto VisitChildren(ExpressionVisitor& vis) -> bool override;
-  auto EvalToConstant(LocalScope* scope) const -> Object* override;
-  DECLARE_EXPRESSION(NewMapExpr);
-
- public:
-  static inline auto New(const EntryList& data = {}) -> NewMapExpr* {
-    return new NewMapExpr(data);
   }
 };
 }  // namespace expr

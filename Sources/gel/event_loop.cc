@@ -75,7 +75,7 @@ auto EventLoop::Stat(const std::string& path, Fn* on_next, Fn* on_error, Fn* on_
   return Stat(
       path,
       [on_next](int stat) {
-        return GetRuntime()->Call(*on_next, {Long::New(stat)});
+        return GetRuntime()->Call(*on_next, {Number::New(stat)});
       },
       WrapOnError(on_error), WrapOnFinished(on_finished));
 }
@@ -291,7 +291,7 @@ FS_REQUEST_CALLBACK_F(OpenFileRequest) {
         fmt::format("error reading stats of file {}: {}", request->GetPath(), uv_strerror(static_cast<int>(result)));
     return request->OnError(Error::New(message));
   }
-  request->OnNext(Long::New(static_cast<RawLong>(result)));
+  request->OnNext(Number::New(static_cast<RawNumber>(result)));
   uv_fs_req_cleanup(handle);
   request->OnFinished();
 }

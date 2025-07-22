@@ -134,8 +134,8 @@ class Assembler {
     ASSERT(value);
     if (value->IsNil())
       return pushn();
-    if (value->IsLong())
-      return pushl(value->AsLong()->Get());
+    if (value->IsNumber())
+      return pushl(value->AsNumber()->Get());
     else if (value->IsBool() && value->AsBool()->Get())
       return pusht();
     else if (value->IsBool() && !value->AsBool()->Get())
@@ -147,7 +147,7 @@ class Assembler {
     EmitOp(Bytecode::kLookup);
   }
 
-  inline void invoke(Lambda* func, const uword num_args) {
+  inline void invoke(LambdaFn* func, const uword num_args) {
     ASSERT(func);
     EmitOp(Bytecode::kInvoke);
     EmitAddress(func);

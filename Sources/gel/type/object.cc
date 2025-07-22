@@ -42,14 +42,12 @@ DEFINE_NEW_OPERATOR(Seq);           // NOLINT(cppcoreguidelines-pro-type-reinter
 DEFINE_NEW_OPERATOR(Field);         // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Bool);          // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Number);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Double);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Long);          // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(String);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(Str);           // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Symbol);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Macro);         // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Fn);            // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Lambda);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Constructor);   // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(LambdaFn);      // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+DEFINE_NEW_OPERATOR(InitFn);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(NativeFn);      // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Pair);          // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Script);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
@@ -57,7 +55,6 @@ DEFINE_NEW_OPERATOR(Error);         // NOLINT(cppcoreguidelines-pro-type-reinter
 DEFINE_NEW_OPERATOR(Namespace);     // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Set);           // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Iterator);      // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Map);           // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Module);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(EventLoop);     // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Timer);         // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
@@ -146,7 +143,7 @@ void Object::Init() {
   InitClass();
   Class::InitClass();
   Field::InitClass();
-  String::InitClass();
+  Str::InitClass();
   Symbol::Init();
   Argument::InitClass();
   Namespace::Init();
@@ -154,14 +151,12 @@ void Object::Init() {
   Seq::InitClass();
   Map::Init();
   Fn::InitClass();
-  Constructor::InitClass();
-  Lambda::InitClass();
+  InitFn::InitClass();
+  LambdaFn::InitClass();
   NativeFn::Init();
   Buffer::Init();
   Script::InitClass();
   Number::InitClass();
-  Long::InitClass();
-  Double::InitClass();
   Pair::InitClass();
   Bool::Init();
   ArrayBase::InitClass();
@@ -172,11 +167,6 @@ void Object::Init() {
   EventLoop::Init();
   EventEmitter::Init();
   Iterator::Init();
-
-#ifdef GEL_ENABLE_GLM
-  Vec2::InitClass();
-  Vec3::InitClass();
-#endif  // GEL_ENABLE_GLM
 
 #ifdef GEL_ENABLE_RX
   Observable::InitClass();
@@ -223,17 +213,12 @@ auto PrintValue(std::ostream& stream, Bool& value) -> std::ostream& {
 }
 
 template <>
-auto PrintValue(std::ostream& stream, Double& value) -> std::ostream& {
+auto PrintValue(std::ostream& stream, Number& value) -> std::ostream& {
   return stream << value.Get();
 }
 
 template <>
-auto PrintValue(std::ostream& stream, Long& value) -> std::ostream& {
-  return stream << value.Get();
-}
-
-template <>
-auto PrintValue(std::ostream& stream, String& value) -> std::ostream& {
+auto PrintValue(std::ostream& stream, Str& value) -> std::ostream& {
   return stream << value.Get();
 }
 
@@ -280,8 +265,8 @@ auto PrintValue(std::ostream& stream, Pair& value) -> std::ostream& {
 }
 
 template <>
-auto PrintValue(std::ostream& stream, Lambda& value) -> std::ostream& {
-  stream << "Lambda(";
+auto PrintValue(std::ostream& stream, LambdaFn& value) -> std::ostream& {
+  stream << "LambdaFn(";
   if (value.HasSymbol())
     stream << value.GetSymbol()->GetFullyQualifiedName();
   stream << ")";
@@ -320,28 +305,25 @@ auto PrintValue(std::ostream& stream, Object* value) -> std::ostream& {
   ASSERT(value);
   if (value->IsBool()) {
     return PrintValue(stream, *(value->AsBool()));
-  } else if (value->IsDouble()) {
-    return PrintValue(stream, *(value->AsDouble()));
-  } else if (value->IsLong()) {
-    return PrintValue(stream, *(value->AsLong()));
-  } else if (value->IsString()) {
-    return PrintValue(stream, *(value->AsString()));
+  } else if (value->IsNumber()) {
+    return PrintValue(stream, *(value->AsNumber()));
+  } else if (value->IsStr()) {
+    return PrintValue(stream, *(value->AsStr()));
   } else if (value->IsSymbol()) {
     return PrintValue(stream, *(value->AsSymbol()));
   } else if (value->IsNativeFn()) {
     return PrintValue(stream, *(value->AsNativeFn()));
   } else if (value->IsClass()) {
     return PrintValue(stream, *(value->AsClass()));
-  } else if (value->IsLambda()) {
-    return PrintValue(stream, *(value->AsLambda()));
+  } else if (value->IsLambdaFn()) {
+    return PrintValue(stream, *(value->AsLambdaFn()));
   } else if (value->IsPair()) {
     return PrintValue(stream, *(value->AsPair()));
   } else if (value->IsSet()) {
     return PrintValue(stream, *(value->AsSet()));
-  } else if (value->IsMap()) {
-    return PrintValue(stream, *(value->AsMap()));
-  } else if (value->IsNil())
+  } else if (value->IsNil()) {
     return PrintValue(stream, *(value->AsNil()));
+  }
   return stream << value->ToString();
 }
 }  // namespace gel

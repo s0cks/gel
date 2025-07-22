@@ -30,7 +30,7 @@ class Macro : public Object {
  private:
   Object* owner_ = nullptr;
   Symbol* symbol_ = nullptr;
-  String* docstring_ = nullptr;
+  Str* docstring_ = nullptr;
   LocalScope* scope_ = nullptr;
   Array<Argument*>* args_ = nullptr;
   expr::ExpressionList body_{};  // TODO: convert to array type
@@ -93,7 +93,7 @@ class Macro : public Object {
     symbol_ = nullptr;
   }
 
-  auto GetDocstring() const -> String* {
+  auto GetDocstring() const -> Str* {
     return docstring_;
   }
 
@@ -101,7 +101,7 @@ class Macro : public Object {
     return GetDocstring() != nullptr;
   }
 
-  void SetDocstring(String* rhs) {
+  void SetDocstring(Str* rhs) {
     ASSERT(rhs);
     docstring_ = rhs;
   }
@@ -140,7 +140,7 @@ class Macro : public Object {
     return args_ ? args_->FindIf(IsNamed<Argument>(name)) : nullptr;
   }
 
-  inline auto GetArg(String* name) const -> Argument* {
+  inline auto GetArg(Str* name) const -> Argument* {
     ASSERT(name);
     return GetArg(name->Get());
   }

@@ -100,7 +100,7 @@ class TopLevelScope {
     ASSERT(parser_);
     parser_->PushTopLevel(value);
   }
-  TopLevelScope(Parser* parser, Lambda* value) :
+  TopLevelScope(Parser* parser, LambdaFn* value) :
     parser_(parser) {
     ASSERT(parser_);
     parser_->PushTopLevel(value);
@@ -156,7 +156,7 @@ void Parser::PushTopLevel(Macro* rhs) {
   toplevel_ = rhs;
 }
 
-void Parser::PushTopLevel(Lambda* rhs) {
+void Parser::PushTopLevel(LambdaFn* rhs) {
   ASSERT(rhs);
   if (HasTopLevel()) {
     const auto parent = GetTopLevel()->IsModule() ? GetTopLevel()->AsModule()->GetDefaultNamespace() : GetTopLevel();
@@ -175,8 +175,8 @@ void Parser::PopTopLevel() {
     toplevel_ = GetTopLevel()->AsNamespace()->GetOwner();
   } else if (GetTopLevel()->IsMacro()) {
     toplevel_ = GetTopLevel()->AsMacro()->GetOwner();
-  } else if (GetTopLevel()->IsLambda()) {
-    toplevel_ = GetTopLevel()->AsLambda()->GetOwner();
+  } else if (GetTopLevel()->IsLambdaFn()) {
+    toplevel_ = GetTopLevel()->AsLambdaFn()->GetOwner();
   }
 }
 
@@ -184,7 +184,7 @@ template <HasDocstring T>
 auto Parser::TryParseDocstring(T* owner) -> ParseResult {
   ASSERT(owner);
   if (PeekEq(Token::kLiteralString)) {
-    String* docstring = nullptr;
+    Str* docstring = nullptr;
     CHECK_RESULT(ParseLiteralString(&docstring));
     ASSERT(docstring);
     owner->SetDocstring(docstring);
@@ -193,7 +193,7 @@ auto Parser::TryParseDocstring(T* owner) -> ParseResult {
 }
 
 template auto Parser::TryParseDocstring(Macro*) -> ParseResult;
-template auto Parser::TryParseDocstring(Lambda*) -> ParseResult;
+template auto Parser::TryParseDocstring(LambdaFn*) -> ParseResult;
 template auto Parser::TryParseDocstring(Namespace*) -> ParseResult;
 
 template <WithSymbol T>
@@ -227,10 +227,10 @@ void Parser::PopScope() {
   SetScope(new_scope);
 }
 
-auto Parser::ParseLiteralString(String** result) -> ParseResult {
+auto Parser::ParseLiteralString(Str** result) -> ParseResult {
   const auto& next = NextToken();
   EXPECT(next, Token::kLiteralString);
-  (*result) = next.IsEmpty() ? String::Empty() : String::New(next.text);
+  (*result) = next.IsEmpty() ? Str::Empty() : Str::New(next.text);
   return true;
 }
 
@@ -258,9 +258,9 @@ auto Parser::ParseLiteralSymbol(Symbol** result) -> ParseResult {
   return true;
 }
 
-auto Parser::ParseLiteralLambda(const Token::Kind kind, expr::LiteralExpr** result) -> ParseResult {
-  Lambda* lambda = nullptr;
-  CHECK_RESULT(ParseLambda(kind, &lambda));
+auto Parser::ParseLiteralLambdaFn(const Token::Kind kind, expr::LiteralExpr** result) -> ParseResult {
+  LambdaFn* lambda = nullptr;
+  CHECK_RESULT(ParseLambdaFn(kind, &lambda));
   ASSERT(lambda);
   const auto literal = expr::LiteralExpr::New(lambda);
   ASSERT(literal);
@@ -315,12 +315,8 @@ auto Parser::ParseLiteralBool(Bool** result) -> ParseResult {
 auto Parser::ParseLiteralNumber(Number** result) -> ParseResult {
   const auto& next = NextToken();
   switch (next.kind) {
-    case Token::kLiteralLong: {
-      (*result) = Long::New(next.AsLong());
-      return true;
-    }
-    case Token::kLiteralDouble: {
-      (*result) = Double::New(next.AsDouble());
+    case Token::kLiteralNumber: {
+      (*result) = Number::New(next.AsNumber());
       return true;
     }
     default:
@@ -344,14 +340,6 @@ auto Parser::ParseLiteralVec(expr::Expression** result) -> ParseResult {
     }
   } while (values.size() < 3);
   EXPECT_NEXT(Token::kRBracket);
-
-  if (values.size() == 2) {
-    (*result) = expr::NewExpr::New(Vec2::GetClass(), values);
-    return true;
-  } else if (values.size() == 3) {
-    (*result) = expr::NewExpr::New(Vec3::GetClass(), values);
-    return true;
-  }
   NOT_IMPLEMENTED(FATAL);
 }
 
@@ -377,11 +365,10 @@ auto Parser::ParseLiteralValue(Object** result) -> ParseResult {
     case Token::kLiteralFalse:
     case Token::kLiteralTrue:
       return ParseLiteralBool((Bool**)result);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
-    case Token::kLiteralLong:
-    case Token::kLiteralDouble:
+    case Token::kLiteralNumber:
       return ParseLiteralNumber((Number**)result);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
     case Token::kLiteralString:
-      return ParseLiteralString((String**)result);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+      return ParseLiteralString((Str**)result);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
     case Token::kIdentifier:
       return ParseLiteralSymbol((Symbol**)result);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
     case Token::kLiteralNil:
@@ -395,8 +382,8 @@ auto Parser::ParseLiteralValue(Object** result) -> ParseResult {
 
 auto Parser::ParseLiteralExpr(expr::Expression** result) -> ParseResult {
   if (PeekEq(Token::kFn) || PeekEq(Token::kDispatch)) {
-    return ParseLiteralLambda(PeekKind(),
-                              (expr::LiteralExpr**)result);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+    return ParseLiteralLambdaFn(PeekKind(),
+                                (expr::LiteralExpr**)result);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   } else if (PeekEq(Token::kLBrace)) {
     return ParseMap(result);
   } else if (PeekEq(Token::kLBracket)) {
@@ -426,7 +413,7 @@ static inline auto IsClassReference(expr::Expression* expr) -> bool {
   if (IsLiteralSymbol(expr)) {
     const auto symbol = expr->AsLiteralExpr()->GetValue()->AsSymbol();
     ASSERT(symbol);
-    return Class::FindClass(*String::New(symbol)) != nullptr;
+    return Class::FindClass(*Str::New(symbol)) != nullptr;
   }
   return false;
 }
@@ -717,7 +704,7 @@ auto Parser::ParseArguments(Array<Argument*>** args, const bool bind) -> ParseRe
       default:
         LOG(FATAL) << "invalid: " << NextToken();
     }
-    parsed_args.push_back(Argument::New(idx, String::New(name), optional, vararg));
+    parsed_args.push_back(Argument::New(idx, Str::New(name), optional, vararg));
     if (bind) {
       const auto local = LocalVariable::New(scope, Symbol::New(name));
       ASSERT(local);
@@ -924,7 +911,7 @@ auto Parser::ParseExpression(expr::Expression** result, const int depth) -> Pars
       }
       case Token::kFn: {
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
-        CHECK_RESULT(ParseLiteralLambda(next.kind, (expr::LiteralExpr**)result));
+        CHECK_RESULT(ParseLiteralLambdaFn(next.kind, (expr::LiteralExpr**)result));
         break;
       }
       case Token::kLParen:
@@ -1236,8 +1223,7 @@ auto Parser::NextToken() -> const Token& {
         whole = false;
       buffer_[token_len_++] = next;
     }
-    return whole ? NextToken(Token::kLiteralLong, GetBufferedText())
-                 : NextToken(Token::kLiteralDouble, GetBufferedText());
+    return NextToken(Token::kLiteralNumber, GetBufferedText());
   } else if (IsValidIdentifierChar(next, true)) {
     token_len_ = 0;
     auto ckw = keywords_;
@@ -1273,8 +1259,8 @@ auto Parser::NextToken() -> const Token& {
   return NextToken(Token::kInvalid, GetRemaining());
 }
 
-auto Parser::ParseLambda(const Token::Kind kind, Lambda** result) -> ParseResult {
-  const auto lambda = Lambda::New();
+auto Parser::ParseLambdaFn(const Token::Kind kind, LambdaFn** result) -> ParseResult {
+  const auto lambda = LambdaFn::New();
   ASSERT(lambda);
   ParseScope scope(this);
   lambda->SetScope(scope);
@@ -1296,7 +1282,7 @@ auto Parser::ParseLambda(const Token::Kind kind, Lambda** result) -> ParseResult
     if (dispatched_ > 0) {
       for (auto idx = 0; idx < dispatched_; idx++) {
         const auto name = fmt::format("${}", idx);
-        parsed_args.push_back(Argument::New(idx, String::New(name), false, false));
+        parsed_args.push_back(Argument::New(idx, Str::New(name), false, false));
         const auto local = LocalVariable::New(scope, Symbol::New(name));
         ASSERT(local);
         LOG_IF(FATAL, !scope->Add(local)) << "failed to add " << (*local) << " to current scope.";
@@ -1338,12 +1324,12 @@ auto Parser::ParseLambda(const Token::Kind kind, Lambda** result) -> ParseResult
   return true;
 }
 
-static inline auto IsLiteralLong(Expression* expr) -> bool {
+static inline auto IsLiteralNumber(Expression* expr) -> bool {
   if (!expr || !expr->IsLiteralExpr())
     return false;
   const auto literal = expr->AsLiteralExpr();
   ASSERT(literal);
-  return literal->HasValue() && literal->GetValue()->IsLong();
+  return literal->HasValue() && literal->GetValue()->IsNumber();
 }
 
 auto Parser::ParseListExpr(expr::Expression** result) -> ParseResult {
@@ -1352,7 +1338,7 @@ auto Parser::ParseListExpr(expr::Expression** result) -> ParseResult {
   ASSERT(first);
   if (PeekEq(Token::kRange)) {
     NextToken();
-    if (!IsLiteralLong(first)) {
+    if (!IsLiteralNumber(first)) {
       std::stringstream ss;
       ss << "expected " << first << " to be a literal number.";
       return ReturnError(ss, pos_);  // TODO: fix pos
@@ -1360,13 +1346,13 @@ auto Parser::ParseListExpr(expr::Expression** result) -> ParseResult {
     expr::Expression* end = nullptr;
     CHECK_RESULT(ParseExpression(&end));
     ASSERT(end);
-    if (!IsLiteralLong(end)) {
+    if (!IsLiteralNumber(end)) {
       std::stringstream ss;
       ss << "unexpected " << end << ", expected a literal number.";
       return ReturnError(ss, pos_);  // TODO: fix pos
     }
-    const auto from = first->AsLiteralExpr()->GetValue()->AsLong()->Get();
-    const auto to = end->AsLiteralExpr()->GetValue()->AsLong()->Get();
+    const auto from = first->AsLiteralExpr()->GetValue()->AsNumber()->AsRaw<uword>();
+    const auto to = end->AsLiteralExpr()->GetValue()->AsNumber()->AsRaw<uword>();
     (*result) = expr::LiteralExpr::New(gel::ListFromRange(from, to));
     return true;
   } else if (PeekEq(Token::kDot)) {
@@ -1404,7 +1390,7 @@ auto Parser::ParseModule(const std::string& name, Module** result) -> ParseResul
     }
   }
   if (!init_body->IsEmpty()) {
-    const auto init = Module::CreateConstructor(new_module, init_body);
+    const auto init = Module::CreateInitFn(new_module, init_body);
     ASSERT(init);
     new_module->SetInit(init);
     DVLOG(1000) << "created init function for " << new_module << ": " << init;
@@ -1509,8 +1495,8 @@ auto Parser::ParseDefType(LocalVariable** result) -> ParseResult {
 
 auto Parser::ParseDefn(LocalVariable** result) -> ParseResult {
   const auto scope = GetScope();
-  Lambda* lambda = nullptr;
-  CHECK_RESULT(ParseLambda(Token::kDefn, &lambda));
+  LambdaFn* lambda = nullptr;
+  CHECK_RESULT(ParseLambdaFn(Token::kDefn, &lambda));
   ASSERT(lambda && lambda->HasSymbol());
   const auto local = LocalVariable::New(scope, lambda->GetSymbol(), lambda);
   ASSERT(local);
@@ -1592,7 +1578,7 @@ auto Parser::ParseNamespace(Namespace** result) -> ParseResult {
   expr::SeqExpr* body = nullptr;
   CHECK_RESULT(ParseSeqExpr(&body));
   if (body && !body->IsEmpty()) {
-    const auto init = Namespace::CreateConstructor(ns, body);
+    const auto init = Namespace::CreateInitFn(ns, body);
     ASSERT(init);
     ns->SetInit(init);
   }

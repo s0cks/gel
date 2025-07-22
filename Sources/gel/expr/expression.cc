@@ -9,7 +9,6 @@
 #include "gel/expr/exprs.h"
 #include "gel/heap.h"
 #include "gel/local.h"
-#include "gel/map.h"
 #include "gel/module.h"
 #include "gel/natives.h"
 #include "gel/object.h"
@@ -127,43 +126,4 @@ FOR_EACH_EXPRESSION_NODE(DEFINE_ACCEPT)
 //   }
 //   return value;
 // }
-
-static inline auto IsConstantExpr(const NewMapExpr::Entry& entry) -> bool {
-  return entry.first && entry.second->IsConstantExpr();
-}
-
-auto NewMapExpr::IsConstantExpr() const -> bool {
-  for (const auto& entry : data_) {
-    if (!expr::IsConstantExpr(entry))
-      return false;
-  }
-  return true;
-}
-
-auto NewMapExpr::EvalToConstant(LocalScope* scope) const -> Object* {
-  ASSERT(scope);
-  Map::StorageType data{};
-  for (const auto& entry : data_) {
-    ASSERT(entry.first && entry.second);
-    const auto value = entry.second->EvalToConstant(scope);
-    ASSERT(value);
-    data.insert({entry.first, value});  // TODO: prolly should check this insertion
-  }
-  return Map::New(data);
-}
-
-auto NewMapExpr::ToString() const -> std::string {
-  ToStringHelper<NewMapExpr> helper;
-  helper.AddField("num_entries", GetNumberOfChildren());
-  return helper;
-}
-
-auto NewMapExpr::VisitChildren(ExpressionVisitor& vis) -> bool {
-  for (const auto& e : data()) {
-    ASSERT(e.first && e.second);
-    if (!e.second->Accept(vis))
-      return false;
-  }
-  return true;
-}
 }  // namespace gel::expr

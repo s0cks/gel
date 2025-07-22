@@ -8,35 +8,35 @@
 #include "gel/type.h"
 
 namespace gel {
-auto Constructor::Equals(Object* rhs) const -> bool {
-  if (!rhs || !rhs->IsConstructor())
+auto InitFn::Equals(Object* rhs) const -> bool {
+  if (!rhs || !rhs->IsInitFn())
     return false;
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return false;
 }
 
-auto Constructor::GetHashCode() const -> HashCode {
+auto InitFn::GetHashCode() const -> HashCode {
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return 0;
 }
 
-auto Constructor::Compare(Object* rhs) const -> bool {
+auto InitFn::Compare(Object* rhs) const -> bool {
   ASSERT(rhs);
   NOT_IMPLEMENTED(ERROR);  // TODO: implement
   return -1;
 }
 
-auto Constructor::ToString() const -> std::string {
-  ToStringHelper<Constructor> helper{};
+auto InitFn::ToString() const -> std::string {
+  ToStringHelper<InitFn> helper{};
   return helper;
 }
 
-auto Constructor::CreateClass() -> Class* {
+auto InitFn::CreateClass() -> Class* {
   ASSERT(kClass == nullptr);
-  return Class::New(Fn::GetClass(), "Constructor");
+  return Class::New(Fn::GetClass(), "InitFn");
 }
 
-auto Constructor::New(const ObjectList& args) -> Constructor* {
+auto InitFn::New(const ObjectList& args) -> InitFn* {
   NOT_IMPLEMENTED(FATAL);  // TODO: implement?
   return nullptr;
 }

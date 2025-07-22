@@ -35,9 +35,9 @@ auto Module::Compare(Object* rhs) const -> bool {
   return -1;
 }
 
-auto Module::CreateConstructor(Module* rhs, expr::SeqExpr* body) -> Constructor* {
+auto Module::CreateInitFn(Module* rhs, expr::SeqExpr* body) -> InitFn* {
   ASSERT(rhs);
-  const auto init = Constructor::New(rhs->GetSymbol(), body);
+  const auto init = InitFn::New(rhs->GetSymbol(), body);
   init->SetArgs(Array<Argument*>::New(1));
   init->SetScope(LocalScope::NewWithThis(rhs));
   return init;
@@ -46,7 +46,7 @@ auto Module::CreateConstructor(Module* rhs, expr::SeqExpr* body) -> Constructor*
 auto Module::Init(Runtime* runtime) -> bool {
   ASSERT(runtime);
   ASSERT(!IsInitialized() && HasInit());
-  runtime->InvokeConstructor(this);
+  runtime->InvokeInitFn(this);
   for (auto idx = 0; idx < namespaces_->GetLength(); idx++) {
     const auto ns = namespaces_->Get(idx);
     ASSERT(ns);

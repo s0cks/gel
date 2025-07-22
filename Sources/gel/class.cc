@@ -28,7 +28,7 @@ static inline auto Register(Class* cls) -> Class* {
   classes_->Push(cls);
   return cls;
 }
-Class::Class(ClassId id, Class* parent, String* name) :
+Class::Class(ClassId id, Class* parent, Str* name) :
   Object(),
   id_(id),
   parent_(parent),
@@ -38,7 +38,7 @@ Class::Class(ClassId id, Class* parent, String* name) :
   ASSERT(fields_);
 }
 
-auto Class::New(const ClassId id, Class* parent, String* name) -> Class* {
+auto Class::New(const ClassId id, Class* parent, Str* name) -> Class* {
   ASSERT(name);
   const auto cls = new Class(id, parent, name);
   ASSERT(cls);
@@ -47,29 +47,29 @@ auto Class::New(const ClassId id, Class* parent, String* name) -> Class* {
 
 auto Class::New(const ClassId id, Class* parent, const std::string& name) -> Class* {
   ASSERT(parent);
-  return New(id, parent, String::New(name));
+  return New(id, parent, Str::New(name));
 }
 
-auto Class::New(Class* parent, String* name) -> Class* {
+auto Class::New(Class* parent, Str* name) -> Class* {
   ASSERT(parent);
   ASSERT(name);
   return New(classes_->GetLength() + 1, parent, name);
 }
 
-auto Class::New(const ClassId id, String* name) -> Class* {
+auto Class::New(const ClassId id, Str* name) -> Class* {
   ASSERT(name);
   return Class::New(id, nullptr, name);
 }
 
 auto Class::New(const ClassId id, const std::string& name) -> Class* {
   ASSERT(!name.empty());
-  return New(id, String::New(name));
+  return New(id, Str::New(name));
 }
 
 auto Class::New(Class* parent, const std::string& name) -> Class* {
   ASSERT(parent);
   ASSERT(!name.empty());
-  return New(parent, String::New(name));
+  return New(parent, Str::New(name));
 }
 
 auto Class::CreateClass() -> Class* {
@@ -104,8 +104,8 @@ auto Class::GetAllocationSize() const -> uword {
     return total_size;
   } else if (Equals(Field::kClass))
     return sizeof(Field);
-  else if (Equals(String::kClass))
-    return sizeof(String);
+  else if (Equals(Str::kClass))
+    return sizeof(Str);
   else if (Equals(Module::kClass)) {
     const auto cls = Module::GetClass();
     ASSERT(cls);
@@ -134,7 +134,7 @@ auto Class::GetAllocationSize() const -> uword {
 
 auto Class::AddField(const std::string& name) -> Field* {
   ASSERT(!name.empty());
-  const auto field = Field::New(this, String::New(name));
+  const auto field = Field::New(this, Str::New(name));
   ASSERT(field);
   Add(field);
   return field;
@@ -460,7 +460,7 @@ void Class::Init() {
 
 namespace proc {
 NATIVE_PROCEDURE_F(get_class) {
-  REQUIRED_NATIVE_ARG(0, String, name);
+  REQUIRED_NATIVE_ARG(0, Str, name);
   return Return(Class::FindClass(*name));
 }
 
@@ -516,7 +516,7 @@ CLASS_PROCEDURE_F(get_id) {
     return ThrowError(ss);
   }
   ASSERT(cls);
-  return ReturnLong(cls->GetClassId());
+  return ReturnNumber(cls->GetClassId());
 }
 
 CLASS_PROCEDURE_F(get_fields) {

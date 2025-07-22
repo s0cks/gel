@@ -267,23 +267,6 @@ FOR_EACH_TYPE(DEFINE_TYPE_PRED)
   }
 FOR_EACH_TYPE(DEFINE_TYPE_CAST)
 #undef DEFINE_TYPE_CAST
-
-template <typename T>
-static inline auto Stringify(std::ostream& stream, const std::vector<T*>& values,
-                             std::enable_if_t<gel::has_to_string<T>::value>* = nullptr) -> std::ostream& {
-  auto remaining = values.size();
-  for (const auto& value : values) {
-    stream << (value)->ToString();
-    if (--remaining >= 1)
-      stream << ", ";
-  }
-  stream << "]";
-  return stream;
-}
-
-static inline auto operator<<(std::ostream& stream, const ObjectList& values) -> std::ostream& {
-  return Stringify(stream, values);
-}
 }  // namespace gel
 
 #endif  // GEL_OBJECT_H

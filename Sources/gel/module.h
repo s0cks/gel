@@ -29,7 +29,7 @@ class Module : public Object {
 
  private:
   LocalScope* scope_;
-  Constructor* init_ = nullptr;
+  InitFn* init_ = nullptr;
   Array<Namespace*>* namespaces_ = nullptr;
   ModuleLoader* loader_ = nullptr;
 
@@ -64,7 +64,7 @@ class Module : public Object {
     loader_ = rhs;
   }
 
-  void SetInit(Constructor* rhs) {
+  void SetInit(InitFn* rhs) {
     ASSERT(rhs);
     init_ = rhs;
   }
@@ -162,7 +162,7 @@ class Module : public Object {
     return namespaces_->Get(idx);
   }
 
-  auto GetInit() const -> Constructor* {
+  auto GetInit() const -> InitFn* {
     return init_;
   }
 
@@ -192,7 +192,7 @@ class Module : public Object {
   static void GetAllLoadedModules(std::vector<Module*>& modules);
   static auto Find(const std::string& name) -> Module*;
   static auto New(Symbol* name, LocalScope* scope) -> Module*;
-  static auto CreateConstructor(Module* rhs, expr::SeqExpr* body = nullptr) -> Constructor*;
+  static auto CreateInitFn(Module* rhs, expr::SeqExpr* body = nullptr) -> InitFn*;
   static auto FindOrLoad(const std::string& name) -> Module*;
   static auto LoadFrom(const std::filesystem::path& abs_path) -> Module*;
   static auto VisitAllModules(ModuleVisitor* vis) -> bool;

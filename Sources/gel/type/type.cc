@@ -1,7 +1,7 @@
-#include "gel/type.h"
+#include "gel/type/type.h"
 
 #include "gel/common.h"
-#include "gel/types.h"
+#include "gel/type/types.h"
 
 namespace gel {
 #ifdef GEL_DEBUG

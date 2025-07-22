@@ -148,7 +148,7 @@ auto Namespace::Equals(Object* rhs) const -> bool {
 }
 
 auto Namespace::Init(Runtime* runtime) -> bool {
-  runtime->InvokeConstructor(this);
+  runtime->InvokeInitFn(this);
   return true;
 }
 
@@ -162,7 +162,7 @@ auto Namespace::ToString() const -> std::string {
 auto Namespace::InitNamespace() -> Namespace* {
   const auto runtime = GetRuntime();
   ASSERT(runtime);
-  runtime->InvokeConstructor(this);
+  runtime->InvokeInitFn(this);
   return this;
 }
 
@@ -181,9 +181,9 @@ auto Namespace::FindNativeFn(const std::string& name) -> NativeFn* {
   return proc && proc->IsNative() ? proc->AsNativeFn() : nullptr;
 }
 
-auto Namespace::FindLambda(const std::string& name) -> Lambda* {
+auto Namespace::FindLambdaFn(const std::string& name) -> LambdaFn* {
   const auto proc = FindFn(name);
-  return proc && proc->IsLambda() ? proc->AsLambda() : nullptr;
+  return proc && proc->IsLambdaFn() ? proc->AsLambdaFn() : nullptr;
 }
 
 void Namespace::Init() {
@@ -202,8 +202,8 @@ void Namespace::Init() {
   InitNative<namespace_get_procedures>();
 }
 
-auto Namespace::CreateConstructor(Namespace* ns, expr::SeqExpr* body) -> Constructor* {
-  const auto init = Constructor::New(ns->GetSymbol(), body);
+auto Namespace::CreateInitFn(Namespace* ns, expr::SeqExpr* body) -> InitFn* {
+  const auto init = InitFn::New(ns->GetSymbol(), body);
   init->SetArgs(Array<Argument*>::New(1));
   init->SetScope(LocalScope::NewWithThis(ns));
   return init;
@@ -348,9 +348,9 @@ NAMESPACE_PROCEDURE_F(get_lambdas) {
     result = Cons(fn, result);
     return true;
   };
-  if (!target->VisitAllLambdaFns(visitor)) {
+  if (!target->VisitAllLambdaFnFns(visitor)) {
     std::stringstream ss;
-    ss << "failed to get all Lambdas for: " << target->ToString();
+    ss << "failed to get all LambdaFns for: " << target->ToString();
     return ThrowError(ss);
   }
   return Return(result);

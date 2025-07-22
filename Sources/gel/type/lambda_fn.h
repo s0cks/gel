@@ -20,14 +20,14 @@ namespace gel {
 class Parser;
 class MacroExpander;
 namespace expr {
-class LambdaExpr;
+class LambdaFnExpr;
 class Expression;
 }  // namespace expr
 namespace ir {
 class GraphEntryInstr;
 }  // namespace ir
 
-class Lambda : public Fn {
+class LambdaFn : public Fn {
   friend class Parser;
   friend class Module;
   friend class Runtime;
@@ -56,7 +56,7 @@ class Lambda : public Fn {
 
  protected:
   // TODO: remove args from constructor
-  Lambda(Symbol* symbol, Array<Argument*>* args, expr::SeqExpr* body = nullptr) :
+  LambdaFn(Symbol* symbol, Array<Argument*>* args, expr::SeqExpr* body = nullptr) :
     Fn(symbol),
     body_(body) {
     if (args)
@@ -67,10 +67,10 @@ class Lambda : public Fn {
   auto VisitPointerPointers(PointerPointerVisitor* vis) -> bool override;
 
  public:
-  ~Lambda() override = default;
+  ~LambdaFn() override = default;
 
   auto GetTargetName() const -> std::string {
-    return HasSymbol() ? GetSymbol()->GetSymbolName() : "Lambda";
+    return HasSymbol() ? GetSymbol()->GetSymbolName() : "LambdaFnFn";
   }
 
   auto GetScope() const -> LocalScope* {  // TODO: this should never return nullptr
@@ -82,7 +82,7 @@ class Lambda : public Fn {
   }
 
   auto GetFullyQualifiedName() const -> std::string {
-    return HasSymbol() ? GetSymbol()->GetFullyQualifiedName() : "Lambda";
+    return HasSymbol() ? GetSymbol()->GetFullyQualifiedName() : "LambdaFnFn";
   }
 
   auto GetBody() const -> expr::SeqExpr* {
@@ -105,24 +105,24 @@ class Lambda : public Fn {
     return GetCode() != nullptr;
   }
 
-  friend auto operator<<(std::ostream& stream, const Lambda& rhs) -> std::ostream& {
+  friend auto operator<<(std::ostream& stream, const LambdaFn& rhs) -> std::ostream& {
     return stream << rhs.ToString();
   }
 
-  DECLARE_TYPE(Lambda);
+  DECLARE_TYPE(LambdaFn);
 
  public:
-  static inline auto New(Symbol* name, Array<Argument*>* args, expr::SeqExpr* body = nullptr) -> Lambda* {
-    return new Lambda(name, args, body);
+  static inline auto New(Symbol* name, Array<Argument*>* args, expr::SeqExpr* body = nullptr) -> LambdaFn* {
+    return new LambdaFn(name, args, body);
   }
 
-  static inline auto New(Array<Argument*>* args = nullptr, expr::SeqExpr* body = nullptr) -> Lambda* {
-    return new Lambda(nullptr, args, body);
+  static inline auto New(Array<Argument*>* args = nullptr, expr::SeqExpr* body = nullptr) -> LambdaFn* {
+    return new LambdaFn(nullptr, args, body);
   }
 };
-static_assert(WithSymbol<Lambda>);
-static_assert(HasMutableSymbol<Lambda>);
-static_assert(HasDocstring<Lambda>);
+static_assert(WithSymbol<LambdaFn>);
+static_assert(HasMutableSymbol<LambdaFn>);
+static_assert(HasDocstring<LambdaFn>);
 }  // namespace gel
 
 #endif  // GEL_LAMBDA_H
