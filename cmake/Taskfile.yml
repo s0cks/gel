@@ -1,0 +1,14 @@
+---
+version: '3'
+tasks:
+  configure:
+    cmds:
+    - cmake --preset={{.preset}} .
+  build:
+    dir: "{{.ROOT_DIR}}/build/"
+    cmds:
+    - cmake --build --preset={{.preset}} . 
+  build-target:
+    dir: "{{.ROOT_DIR}}/build/"
+    cmds:
+    - cmake --build . --target={{.target}}

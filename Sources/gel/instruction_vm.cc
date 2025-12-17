@@ -1,9 +1,9 @@
-#include "gel/assembler.h"
-#include "gel/assembler_base.h"
+#include "gel/backend/assembler.h"
+#include "gel/backend/assembler_base.h"
 #include "gel/bytecode.h"
 #include "gel/common.h"
-#include "gel/expr/expression.h"
-#include "gel/flow_graph_compiler.h"
+#include "gel/frontend/expr/expr.h"
+#include "gel/frontend/flow_graph_compiler.h"
 #include "gel/instruction.h"
 // TODO: add platform guard
 

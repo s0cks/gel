@@ -1,0 +1,8 @@
+---
+version: '3'
+tasks:
+  logs:
+    cmds:
+    - echo "cleaning log files...."
+    - rm *.log*
+    dir: "{{.ROOT_DIR}}/logs/"

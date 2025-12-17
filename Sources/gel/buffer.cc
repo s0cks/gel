@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "gel/allocator.h"
+#include "gel/heap/allocator.h"
 #include "gel/class.h"
 #include "gel/common.h"
 #include "gel/hashcode.h"

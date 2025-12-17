@@ -1,7 +1,7 @@
 #ifndef GEL_NATIVES_H
 #define GEL_NATIVES_H
 
-#include "gel/native_procedure.h"
+#include "gel/type/fn.h"
 
 namespace gel::proc {
 #define _DECLARE_GEL_NATIVE_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(gel_##Name, "gel/" Sym)

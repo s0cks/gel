@@ -16,22 +16,13 @@
 #include <sstream>
 #include <string>
 #include <type_traits>
-#include <units.h>
 #include <unordered_set>
 #include <utility>
 #include <vector>
+#include <units.h>
 
-#include "gel/platform.h"
-#ifdef GEL_DEBUG
-
-#include <cassert>
-#define ASSERT(x) assert(x);
-
-#else
-
-#define ASSERT(x)
-
-#endif  // GEL_DEBUG
+#include "gel/platform.h" // IWYU pragma: expor
+#include "gel/assert.h"
 
 #ifdef __cplusplus
 
@@ -322,13 +313,11 @@ static inline auto Contains(const std::string& value, const char c) -> bool {
 
 #endif  // GEL_DEBUG
 
-static inline auto bytes(const uword nbytes) -> units::data::byte_t {
-  return units::data::byte_t(static_cast<double>(nbytes));
+static inline auto bytes(const uword nbytes) -> units::data::bytes<double> {
+  return units::data::bytes<double>(static_cast<double>(nbytes));
 }
 
 static inline auto PrettyPrintBytes(const uword num_bytes) -> std::string {
-  using namespace units::data;
-
   static constexpr const auto kScale = 1024;
 
   std::stringstream ss;
@@ -340,23 +329,23 @@ static inline auto PrettyPrintBytes(const uword num_bytes) -> std::string {
   }
   switch (scale) {
     case 1:
-      ss << kilobyte_t(static_cast<double>(remaining));
+      ss << units::data::kilobytes<double>(static_cast<double>(remaining));
       break;
     case 2:
-      ss << megabyte_t(static_cast<double>(remaining));
+      ss << units::data::megabytes<double>(static_cast<double>(remaining));
       break;
     case 3:
-      ss << gigabyte_t(static_cast<double>(remaining));
+      ss << units::data::gigabytes<double>(static_cast<double>(remaining));
       break;
     case 4:
-      ss << terabyte_t(static_cast<double>(remaining));
+      ss << units::data::terabytes<double>(static_cast<double>(remaining));
       break;
     case 5:  // NOLINT(cppcoreguidelines-avoid-magic-numbers)
-      ss << petabyte_t(static_cast<double>(remaining));
+      ss << units::data::petabytes<double>(static_cast<double>(remaining));
       break;
     case 0:
     default:
-      ss << byte_t(static_cast<double>(remaining));
+      ss << units::data::bytes(static_cast<double>(remaining));
       break;
   }
   return ss.str();

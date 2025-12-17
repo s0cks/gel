@@ -4,18 +4,19 @@
 #include <units.h>
 
 #include "gel/common.h"
-#include "gel/expr/expression_dot.h"
 #include "gel/flags.h"
-#include "gel/flow_graph_builder.h"
-#include "gel/flow_graph_compiler.h"
-#include "gel/flow_graph_dot.h"
 #include "gel/hashcode.h"
-#include "gel/lambda.h"
-#include "gel/macro.h"
-#include "gel/namespace.h"
-#include "gel/parser.h"
 #include "gel/to_string_helper.h"
-#include "gel/type.h"
+
+#include "gel/frontend/flow_graph_builder.h"
+#include "gel/frontend/flow_graph_compiler.h"
+#include "gel/frontend/flow_graph_dot.h"
+#include "gel/frontend/expr/expression_dot.h"
+#include "gel/frontend/parser.h"
+
+#include "gel/type/type.h"
+#include "gel/type/macro_fn.h"
+#include "gel/type/namespace.h"
 
 namespace gel {
 auto Script::New(const ObjectList& args) -> Script* {

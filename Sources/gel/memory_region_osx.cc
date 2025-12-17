@@ -5,8 +5,6 @@
 #include <sys/mman.h>
 #include <units.h>
 
-#include "gel/common.h"
-
 #undef MAP_FAILED
 #define MAP_FAILED (reinterpret_cast<void*>(-1))
 

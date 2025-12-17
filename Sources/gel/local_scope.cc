@@ -6,13 +6,12 @@
 #include <string>
 #include <vector>
 
-#include "gel/array.h"
+#include "gel/type/array.h"
 #include "gel/common.h"
-#include "gel/heap.h"
+#include "gel/heap/heap.h"
 #include "gel/local.h"
-#include "gel/object.h"
-#include "gel/platform.h"
-#include "gel/pointer.h"
+#include "gel/type/object.h"
+#include "gel/heap/pointer.h"
 #include "gel/to_string_helper.h"
 
 namespace gel {

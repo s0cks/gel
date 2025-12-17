@@ -1,10 +1,6 @@
 #include "gel/type/bool.h"
 
-#include <__compare/compare_three_way.h>
 #include <compare>
-
-#include "gel/class.h"
-#include "gel/number.h"
 
 namespace gel {
 static Bool* kTrue = nullptr;   // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
@@ -13,12 +9,6 @@ static Bool* kFalse = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-glob
 void Bool::Init() {
   kTrue = NewTrue();
   kFalse = NewFalse();
-}
-
-auto Bool::Equals(Value* rhs) const -> bool {
-  if (!rhs->IsBool())
-    return false;
-  return Get() == rhs->AsBool()->Get();
 }
 
 auto Bool::New(const bool value) -> Bool* {
@@ -51,4 +41,21 @@ auto Bool::GetHashCode() const -> HashCode {
 auto Bool::ToString() const -> std::string {
   return Get() ? "#T" : "#F";
 }
+
+#ifdef GEL_ENABLE_HEAP
+
+auto Bool::operator new(const size_t sz) -> void* {
+  ASSERT(CurrentThreadHasHeap());
+  const auto new_address = GetCurrentThreadHeap()->TryAllocate(sz);
+  LOG_IF(FATAL, IsUnallocated(new_address)) << "failed to allocate memory for new nil instance.";
+  return reinterpret_cast<void*>(new_address);
+}
+
+#else
+
+auto Bool::operator new(const size_t sz) -> void* {
+  return reinterpret_cast<void*>(sys::malloc(sz));
+}
+
+#endif  // GEL_ENABLE_HEAP
 }  // namespace gel

@@ -1,7 +1,12 @@
 #include "gel/type/type.h"
 
 #include "gel/common.h"
-#include "gel/type/types.h"
+#include "gel/type/bool.h"
+#include "gel/type/nil.h"
+#include "gel/type/number.h"
+#include "gel/type/obj.h"
+#include "gel/type/pair.h"
+#include "gel/type/str.h"
 
 namespace gel {
 #ifdef GEL_DEBUG

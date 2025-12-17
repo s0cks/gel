@@ -1,0 +1,6 @@
+{
+  "Set Parent Scope": {
+    "prefix": "set-parent-scope",
+    "body": "set(${1:MyValue} \\${${2:${1}}} PARENT_SCOPE)$0"
+  }
+}

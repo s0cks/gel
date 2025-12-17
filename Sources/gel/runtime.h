@@ -11,20 +11,19 @@
 
 #include "gel/call_stack.h"
 #include "gel/common.h"
-#include "gel/constructor.h"
 #include "gel/environment.h"
-#include "gel/error.h"
+#include "gel/type/error.h"
 #include "gel/flags.h"
-#include "gel/flow_graph.h"
+#include "gel/frontend/flow_graph.h"
 #include "gel/instruction.h"
-#include "gel/interpreter.h"
+#include "gel/vm/interpreter.h"
 #include "gel/local_scope.h"
-#include "gel/native_procedure.h"
 #include "gel/natives.h"
-#include "gel/object.h"
-#include "gel/pointer.h"
-#include "gel/stack_frame.h"
-#include "gel/type_traits.h"
+#include "gel/type/object.h"
+#include "gel/type/fn.h"
+#include "gel/heap/pointer.h"
+#include "gel/vm/stack_frame.h"
+#include "gel/type/type_traits.h"
 
 namespace gel {
 DECLARE_bool(log_script_instrs);

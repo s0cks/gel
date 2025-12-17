@@ -5,7 +5,7 @@
 
 #include "gel/common.h"
 #include "gel/local_scope.h"
-#include "gel/stack_frame.h"
+#include "gel/vm/stack_frame.h"
 
 namespace gel {
 class CallStack {

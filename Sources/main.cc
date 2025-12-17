@@ -9,136 +9,78 @@
 #include <utility>
 
 #include "gel/common.h"
-#include "gel/error.h"
-#include "gel/expr/expression.h"
-#include "gel/flags.h"
-#include "gel/flow_graph_compiler.h"
-#include "gel/heap.h"
-#include "gel/instruction.h"
-#include "gel/local_scope.h"
-#include "gel/object.h"
-#include "gel/parser.h"
-#include "gel/repl.h"
-#include "gel/runtime.h"
-#include "gel/rx.h"
-#include "gel/type.h"
-#include "gel/zone.h"
+#include "gel/type/type_traits.h"
 
 using namespace gel;
 
-struct TimedResult {
-  DEFINE_DEFAULT_COPYABLE_TYPE(TimedResult);
-
- public:
-  gel::Object* result;
-  Clock::duration duration;
-
-  TimedResult() = default;
-  TimedResult(gel::Object* r, const Clock::duration& d) :
-    result(r),
-    duration(d) {}
-  TimedResult(const std::pair<gel::Object*, Clock::duration>& value) :
-    result(value.first),
-    duration(value.second) {}
-  ~TimedResult() = default;
-
-  auto IsError() const -> bool {
-    return gel::IsError(result);
-  }
-
-  auto IsNull() const -> bool {
-    return gel::IsNil(result);
-  }
-
-  operator bool() const {
-    return !IsError();
-  }
-
-  friend auto operator<<(std::ostream& stream, const TimedResult& rhs) -> std::ostream& {
-    const auto& result = rhs.result;
-    const auto& duration = rhs.duration;
-    DVLOG(1) << "finished in " << units::time::nanosecond_t(static_cast<double>(duration.count()));
-    if (result->IsNil())
-      return stream;
-    if (gel::IsError(result))
-      return stream << "error: " << ToError(result)->GetMessage()->Get();
-    ASSERT(!result->IsNil());
-    stream << "result: ";
-    PrintValue(stream, result) << std::endl;
-    return stream;
-  }
-};
-
 // TODO: cleanup
-static inline auto Execute(const std::string& expr) -> int {
-  if (FLAGS_dump_ast) {
-    try {
-      const auto lambda = Parser::ParseExpr(expr);
-      LOG_IF(FATAL, !FlowGraphCompiler::Compile(*lambda, GetRuntime()->GetScope())) << "failed to compile: " << expr;
-    } catch (const gel::Exception& exc) {
-      LOG(ERROR) << "failed to execute expression.";
-      std::cerr << " * expression: " << expr << std::endl;
-      std::cerr << " * message: " << exc.GetMessage() << std::endl;
-      return EXIT_FAILURE;
-    }
-  }
-
-  if (!FLAGS_eval)
-    return EXIT_SUCCESS;
-  const TimedResult result = TimedExecution<Object*>([&expr]() -> Object* {
-    try {
-      return Runtime::Eval(expr);
-    } catch (const gel::Exception& exc) {
-      return Error::New(fmt::format("failed to execute expression: {}", exc.GetMessage()));
-    }
-  });
-  if (!result) {
-    std::cerr << result;
-    return EXIT_FAILURE;
-  }
-  std::cout << result;
-  return EXIT_SUCCESS;
-}
-
-static inline auto ExecuteScript(const std::string& filename) -> int {
-  const auto script = Script::FromFile(filename);
-  ASSERT(script);
-  if (!FLAGS_eval)
-    return EXIT_SUCCESS;
-  const TimedResult result = TimedExecution<Object*>([script]() -> Object* {
-    try {
-      return Runtime::Exec(script);
-    } catch (const gel::Exception& exc) {
-      return Error::New(fmt::format("failed to execute script: {}", exc.GetMessage()));
-    }
-  });
-  if (!result) {
-    std::cerr << result;
-    return EXIT_FAILURE;
-  }
-  std::cout << result;
-  return EXIT_SUCCESS;
-}
+// static inline auto Execute(const std::string& expr) -> int {
+//   if (FLAGS_dump_ast) {
+//     try {
+//       const auto lambda = Parser::ParseExpr(expr);
+//       LOG_IF(FATAL, !FlowGraphCompiler::Compile(*lambda, GetRuntime()->GetScope())) << "failed to compile: " << expr;
+//     } catch (const gel::Exception& exc) {
+//       LOG(ERROR) << "failed to execute expression.";
+//       std::cerr << " * expression: " << expr << std::endl;
+//       std::cerr << " * message: " << exc.GetMessage() << std::endl;
+//       return EXIT_FAILURE;
+//     }
+//   }
+//
+//   if (!FLAGS_eval)
+//     return EXIT_SUCCESS;
+//   const TimedResult result = TimedExecution<Object*>([&expr]() -> Object* {
+//     try {
+//       return Runtime::Eval(expr);
+//     } catch (const gel::Exception& exc) {
+//       return Error::New(fmt::format("failed to execute expression: {}", exc.GetMessage()));
+//     }
+//   });
+//   if (!result) {
+//     std::cerr << result;
+//     return EXIT_FAILURE;
+//   }
+//   std::cout << result;
+//   return EXIT_SUCCESS;
+// }
+//
+// static inline auto ExecuteScript(const std::string& filename) -> int {
+//   const auto script = Script::FromFile(filename);
+//   ASSERT(script);
+//   if (!FLAGS_eval)
+//     return EXIT_SUCCESS;
+//   const TimedResult result = TimedExecution<Object*>([script]() -> Object* {
+//     try {
+//       return Runtime::Exec(script);
+//     } catch (const gel::Exception& exc) {
+//       return Error::New(fmt::format("failed to execute script: {}", exc.GetMessage()));
+//     }
+//   });
+//   if (!result) {
+//     std::cerr << result;
+//     return EXIT_FAILURE;
+//   }
+//   std::cout << result;
+//   return EXIT_SUCCESS;
+// }
 
 auto main(int argc, char** argv) -> int {
   ::google::InitGoogleLogging(argv[0]);
   ::google::ParseCommandLineFlags(&argc, &argv, true);
-  Parser::Init();
-  Heap::Init();
-  Runtime::Init();
-
-  DLOG(WARNING) << "sizeof(Fn) := " << sizeof(Fn);
+  // Parser::Init();
+  // Heap::Init();
+  // Runtime::Init();
 
   int result = EXIT_FAILURE;
-  const auto expr = GetExpressionFlag();
-  if (expr) {
-    result = Execute((*expr));
-  } else if (argc >= 2) {
-    result = ExecuteScript(std::string(argv[1]));
-  } else {
-    ASSERT(argc <= 1);
-    result = Repl::Run();
-  }
-  GetRuntime()->Shutdown();
+  // const auto expr = GetExpressionFlag();
+  // if (expr) {
+  //   result = Execute((*expr));
+  // } else if (argc >= 2) {
+  //   result = ExecuteScript(std::string(argv[1]));
+  // } else {
+  //   ASSERT(argc <= 1);
+  //   result = Repl::Run();
+  // }
+  // GetRuntime()->Shutdown();
   return result;
 }

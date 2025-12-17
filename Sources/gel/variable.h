@@ -7,15 +7,15 @@
 #include <vector>
 
 #include "gel/common.h"
-#include "gel/object.h"
+#include "gel/type/object.h"
 
 namespace gel {
 class Variable {
   DEFINE_DEFAULT_COPYABLE_TYPE(Variable);
 
  private:
-  std::string name_;
-  Object* value_;
+  std::string name_{};
+  Object* value_ = nullptr;
 
  public:
   explicit Variable(std::string name, Object* value = nullptr) :

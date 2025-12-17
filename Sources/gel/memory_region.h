@@ -4,14 +4,11 @@
 #include <ostream>
 #include <units.h>
 
-#include "gel/common.h"
 #include "gel/platform.h"
-#include "gel/region.h"
+#include "gel/heap/region.h"
 
 namespace gel {
 class MemoryRegion : public Region {
-  DEFINE_DEFAULT_COPYABLE_TYPE(MemoryRegion);
-
  public:
   enum ProtectionMode : int {
     kNoAccess,
@@ -37,14 +34,12 @@ class MemoryRegion : public Region {
         return stream << "[unknown]";
     }
   }
-
  public:
   MemoryRegion() = default;
   MemoryRegion(const uword start, const uword size) :
     Region(start, size) {}
   MemoryRegion(const uword size, const ProtectionMode mode = kNoAccess);
-  explicit MemoryRegion(const Region& section) :
-    Region(section) {}
+  MemoryRegion(const MemoryRegion& rhs) = default;
   ~MemoryRegion() override = default;
 
   virtual void FreeRegion();

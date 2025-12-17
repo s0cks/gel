@@ -6,9 +6,8 @@
 
 #include "gel/common.h"
 #include "gel/natives.h"
-#include "gel/object.h"
-#include "gel/platform.h"
-#include "gel/type.h"
+#include "gel/type/object.h"
+#include "gel/type/type.h"
 
 namespace gel {
 class Timer : public Object {

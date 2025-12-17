@@ -8,11 +8,9 @@
 #include <glog/logging.h>
 #include <ios>
 #include <pthread.h>
-#include <pthread_spis.h>
 #include <string>
 #include <utility>
 
-#include "gel/common.h"
 namespace gel {
 class ThreadStartData {
   DEFINE_NON_COPYABLE_TYPE(ThreadStartData);

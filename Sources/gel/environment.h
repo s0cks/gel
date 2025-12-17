@@ -2,9 +2,9 @@
 #define GEL_ENVIRONMENT_H
 
 #include "gel/common.h"
-#include "gel/object.h"
+#include "gel/type/object.h"
 #include "gel/ref.h"
-#include "gel/symbol.h"
+#include "gel/type/symbol.h"
 
 namespace gel {
 class Environment {

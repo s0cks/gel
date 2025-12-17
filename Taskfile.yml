@@ -1,16 +1,34 @@
 ---
 version: '3'
+vars:
+  arch:
+    sh: uname -m
+  triplet: "{{.arch | lower }}-{{if eq OS \"darwin\"}}osx{{else}}{{.OS | lower}}{{end}}"
+includes:
+  cmake:
+    taskfile: "./cmake/"
+    internal: true
+    dir: "{{.ROOT_DIR}}"
+  clean:
+    taskfile: ./.tasks/clean.taskfile.yml
 tasks:
-  configure:*:
-    dir: build/
+  debug:configure:
+    cmds:
+    - task: cmake:configure
+      vars:
+        preset: debug-{{.triplet}}
+  release:configure:
+    cmds:
+    - task: cmake:configure
+      vars:
+        preset: release-{{.triplet}}
+  build:*:
     vars:
-      PRESET: "{{index .MATCH 0 }}"
-    cmds:
-    - echo "configuring using {{.PRESET}} preset..."
-    - cmake --preset={{.PRESET}} ..
+      target: "{{ index .MATCH 0 }}"
     silent: true
-  build:
-    dir: build/
     cmds:
-    - cmake --build .
-    silent: true
+    - echo "building {{.target}} target...."
+    - task: cmake:build-target
+      vars:
+        target: "{{ .target }}"
+    - echo "%{$fg[yellow]%}%{$reset_color%} {{.target}} finished."

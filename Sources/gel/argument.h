@@ -7,10 +7,9 @@
 #include <string>
 
 #include "gel/common.h"
-#include "gel/object.h"
-#include "gel/platform.h"
-#include "gel/pointer.h"
-#include "gel/str.h"
+#include "gel/type/object.h"
+#include "gel/heap/pointer.h"
+#include "gel/type/str.h"
 
 namespace gel {
 class Argument : public Object {
@@ -18,10 +17,10 @@ class Argument : public Object {
   DEFINE_NON_COPYABLE_TYPE(Argument);
 
  private:
-  uint64_t index_;
-  Str* name_;
-  bool optional_;
-  bool vararg_;
+  uint64_t index_ = 0;
+  Str* name_ = nullptr;
+  bool optional_ = false;
+  bool vararg_ = false;
 
   Argument(const uint64_t index, Str* name, const bool optional, const bool vararg) :
     index_(index),

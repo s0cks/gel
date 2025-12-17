@@ -4,8 +4,8 @@
 
 #include "gel/common.h"
 #include "gel/local_scope.h"
-#include "gel/module.h"
-#include "gel/parser.h"
+#include "gel/type/module.h"
+#include "gel/frontend/parser.h"
 #include "gel/runtime.h"
 #include "gel/thread_local.h"
 

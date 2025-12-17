@@ -30,7 +30,7 @@
       }
     },
     {
-      "name": "darwin-arm64",
+      "name": "arm64-osx",
       "hidden": true,
       "environment": {
         "CC": "clang",
@@ -70,11 +70,11 @@
       ]
     },
     {
-      "name": "debug-darwin-arm64",
+      "name": "debug-arm64-osx",
       "displayName": "Debug (Darwin/arm64)",
       "inherits": [
         "debug",
-        "darwin-arm64"
+        "arm64-osx"
       ]
     },
     {
@@ -94,11 +94,11 @@
       ]
     },
     {
-      "name": "release-darwin-arm64",
+      "name": "release-arm64-osx",
       "displayName": "Release (Darwin/arm64)",
       "inherits": [
         "release",
-        "darwin-arm64"
+        "arm64-osx"
       ]
     }
   ],
@@ -109,9 +109,12 @@
       "configurePreset": "debug"
     },
     {
-      "name": "debug-darwin-arm64",
+      "name": "debug-arm64-osx",
       "displayName": "Debug (Darwin/arm64)",
-      "configurePreset": "debug-darwin-arm64"
+      "configurePreset": "debug-arm64-osx",
+      "inherits": [
+        "debug"
+      ]
     },
     {
       "name": "release",
@@ -120,10 +123,12 @@
       "cleanFirst": true
     },
     {
-      "name": "release-darwin-arm64",
+      "name": "release-arm64-osx",
       "displayName": "Release (Darwin/arm64)",
-      "configurePreset": "release-darwin-arm64",
-      "cleanFirst": true
+      "configurePreset": "release-arm64-osx",
+      "inherits": [
+        "release"
+      ]
     }
   ]
 }

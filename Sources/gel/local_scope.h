@@ -6,18 +6,16 @@
 #include <type_traits>
 #include <vector>
 
-#include "gel/allocator.h"
-#include "gel/array.h"
 #include "gel/common.h"
-#include "gel/local.h"
-#include "gel/object.h"
+#include "gel/heap/allocator.h"
+#include "gel/heap/pointer.h"
 #include "gel/platform.h"
-#include "gel/pointer.h"
 #include "gel/rx.h"
-#include "gel/type_traits.h"
+#include "gel/type/array.h"
+#include "gel/type/type_traits.h"
 
 namespace gel {
-class Symbol;
+class LocalVariable;
 class LocalScope : public HeapObject {
   friend class Repl;
   friend class Parser;
@@ -151,16 +149,16 @@ class LocalScope : public HeapObject {
     return locals_->GetLength();
   }
 
-  virtual auto Has(Symbol* rhs, const bool recursive = true) const -> bool;
+  virtual auto Has(Str* rhs, const bool recursive = true) const -> bool;
   auto Has(const std::string& symbol, const bool recursive = true) const -> bool;
 
-  inline auto HasLocal(Symbol* rhs) const -> bool {
+  inline auto HasLocal(Str* rhs) const -> bool {
     return Has(rhs, false);
   }
 
   auto HasLocal(const std::string& symbol) const -> bool;
 
-  virtual auto Lookup(Symbol* symbol, LocalVariable** local, const bool recursive = true) const -> bool;
+  virtual auto Lookup(Str* symbol, LocalVariable** local, const bool recursive = true) const -> bool;
   auto Lookup(const std::string& symbol, LocalVariable** local, const bool recursive = true) const -> bool;
 
   virtual auto Add(LocalVariable* local) -> LocalVariable* {
@@ -169,7 +167,7 @@ class LocalScope : public HeapObject {
     return local;
   }
 
-  auto Add(Symbol* symbol, Object* value = nullptr) -> LocalVariable*;
+  auto Add(Str* symbol, Object* value = nullptr) -> LocalVariable*;
   auto Add(const std::string& symbol, Object* value = nullptr) -> LocalVariable*;
 
   inline auto AddThisValue(Object* rhs) -> LocalVariable* {
@@ -187,9 +185,9 @@ class LocalScope : public HeapObject {
   }
 
   template <class T>
-  inline auto Add(T* value) -> LocalVariable* requires(WithSymbol<T>&& IsGelObject<T>) {
+  inline auto Add(T* value) -> LocalVariable* requires(WithStr<T>&& IsGelObject<T>) {
     ASSERT(value);
-    return Add(value->GetSymbol(), value);
+    return Add(value->GetStr(), value);
   }
 
   virtual auto VisitAllLocals(LocalVariableVisitor* vis, const bool recursive = false) -> bool;

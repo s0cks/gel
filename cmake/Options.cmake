@@ -32,7 +32,7 @@ if(ENABLE_TRACING)
   add_compile_definitions(GEL_TRACING)
 endif()
 
-option(ENABLE_CLANG_TIDY "Enable clang-tidy" ON)
+option(ENABLE_CLANG_TIDY "Enable clang-tidy" OFF)
 if(ENABLE_CLANG_TIDY)
   include(ClangTidy)
   enable_clang_tidy()

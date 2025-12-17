@@ -6,11 +6,11 @@
 #include <ostream>
 #include <string>
 
-#include "gel/allocator.h"
 #include "gel/common.h"
-#include "gel/object.h"
-#include "gel/pointer.h"
-#include "gel/type_traits.h"
+#include "gel/heap/allocator.h"
+#include "gel/heap/pointer.h"
+#include "gel/type/type_traits.h"
+#include "gel/type/value.h"
 
 namespace gel {
 class LocalVariable;
@@ -33,16 +33,16 @@ class LocalVariable : public HeapObject {
   using Predicate = std::function<bool(LocalVariable*)>;
 
  public:
-  static auto HasSymbol(Symbol* rhs) -> Predicate;
+  static auto HasSymbol(Str* rhs) -> Predicate;
   static auto HasSymbol(const std::string& symbol) -> Predicate;
 
  private:
   LocalScope* owner_;
   uint64_t index_;
-  Symbol* symbol_;
-  Object* value_;
+  Str* symbol_;
+  Value* value_;
 
-  LocalVariable(LocalScope* owner, uint64_t index, Symbol* symbol, Object* value) :
+  LocalVariable(LocalScope* owner, uint64_t index, Str* symbol, Value* value) :
     owner_(owner),
     index_(index),
     symbol_(symbol),
@@ -60,7 +60,7 @@ class LocalVariable : public HeapObject {
     index_ = index;
   }
 
-  void SetSymbol(Symbol* rhs) {
+  void SetSymbol(Str* rhs) {
     ASSERT(rhs);
     symbol_ = rhs;
   }
@@ -83,7 +83,7 @@ class LocalVariable : public HeapObject {
     return index_;
   }
 
-  auto GetSymbol() const -> Symbol* {
+  auto GetSymbol() const -> Str* {
     return symbol_;
   }
 
@@ -91,8 +91,8 @@ class LocalVariable : public HeapObject {
     return GetSymbol() != nullptr;
   }
 
-  auto GetValue() const -> Object*;
-  void SetValue(Object* rhs);
+  auto GetValue() const -> Value*;
+  void SetValue(Value* rhs);
 
   auto HasValue() const -> bool {
     return GetValue() != nullptr;
@@ -108,7 +108,7 @@ class LocalVariable : public HeapObject {
   DECLARE_HEAP_ALLOC_TYPE(LocalVariable);
 
  public:
-  static inline auto New(LocalScope* owner, const uint64_t index, Symbol* symbol, Object* value = nullptr)
+  static inline auto New(LocalScope* owner, const uint64_t index, Str* symbol, Value* value = nullptr)
       -> LocalVariable* {
     ASSERT(owner);
     ASSERT(index >= 0);
@@ -116,12 +116,11 @@ class LocalVariable : public HeapObject {
     return new LocalVariable(owner, index, symbol, value);
   }
 
-  static auto New(LocalScope* owner, Str* name, Object* value = nullptr) -> LocalVariable*;
-  static auto New(LocalScope* owner, Symbol* symbol, Object* value = nullptr) -> LocalVariable*;
-
-  static auto New(LocalScope* owner, const std::string& name, Object* value = nullptr) -> LocalVariable*;
+  static auto New(LocalScope* owner, Str* name, Value* value = nullptr) -> LocalVariable*;
+  static auto New(LocalScope* owner, const std::string& name, Value* value = nullptr) -> LocalVariable*;
 };
-static_assert(WithSymbol<LocalVariable>);
+// TODO(@s0cks): implement
+// static_assert(WithSymbol<LocalVariable>);
 }  // namespace gel
 
 #endif  // GEL_LOCAL_H

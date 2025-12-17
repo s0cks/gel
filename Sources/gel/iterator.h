@@ -2,9 +2,8 @@
 #define GEL_ITERATOR_H
 
 #include "gel/common.h"
-#include "gel/native_procedure.h"
-#include "gel/object.h"
-#include "gel/set.h"
+#include "gel/type/object.h"
+#include "gel/type/fn.h"
 
 namespace gel {
 class Iterator : public Object {

@@ -4,9 +4,8 @@
 #include <functional>
 #include <ostream>
 
-#include "gel/common.h"
 #include "gel/os_thread.h"
-#include "gel/platform.h"
+#include "gel/common.h"
 
 namespace gel {
 auto InitThreadLocal(ThreadLocalKey& local, const uword init_value = UNALLOCATED) -> bool;

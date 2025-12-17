@@ -5,7 +5,6 @@
 #include "gel/type/value.h"
 
 namespace gel {
-
 class Pair : public Value {
  private:
   Value* first_ = nullptr;
@@ -76,56 +75,56 @@ static inline auto Cons(Value* lhs, Value* rhs) -> Pair* {
   return Pair::New(lhs, rhs);
 }
 
-static inline auto ToList(const ObjectList& values, const bool reverse = false) -> Value* {
-  Value* result = Nil::Get();
-  if (reverse) {
-    for (const auto& next : std::ranges::reverse_view(values)) {
-      result = Pair::New(next, result);
-    }
-  } else {
-    for (const auto& next : values) {
-      result = Pair::New(next, result);
-    }
-  }
-  ASSERT(result);
-  return result;
-}
-
-template <class Iter>
-static inline auto ToList(Iter& iter) -> Value* {
-  Value* result = Nil::Get();
-  while (iter.HasNext()) {
-    const auto next = iter.Next();
-    ASSERT(next);
-    result = Pair::New(next, result);
-  }
-  return result;
-}
-
-auto ListFromRange(const uint64_t from, const uint64_t to) -> gel::Value*;
-
-template <class Iter, typename T>
-static inline auto ToList(Iter& iter, const std::function<Value*(T)>& map) -> Value* {
-  Value* result = Nil::Get();
-  while (iter.HasNext()) {
-    const auto next = iter.Next();
-    ASSERT(next);
-    result = Pair::New(map(next), result);
-  }
-  return result;
-}
-
-static inline auto Car(Value* rhs) -> Value* {
-  ASSERT(rhs && rhs->IsPair());
-  const auto value = rhs->AsPair()->GetFirst();
-  return value ? value : Nil::Get();
-}
-
-static inline auto Cdr(Value* rhs) -> Value* {
-  ASSERT(rhs && rhs->IsPair());
-  const auto value = rhs->AsPair()->GetSecond();
-  return value ? value : Nil::Get();
-}
+// static inline auto ToList(const ObjectList& values, const bool reverse = false) -> Value* {
+//   Value* result = Nil::Get();
+//   if (reverse) {
+//     for (const auto& next : std::ranges::reverse_view(values)) {
+//       result = Pair::New(next, result);
+//     }
+//   } else {
+//     for (const auto& next : values) {
+//       result = Pair::New(next, result);
+//     }
+//   }
+//   ASSERT(result);
+//   return result;
+// }
+//
+// template <class Iter>
+// static inline auto ToList(Iter& iter) -> Value* {
+//   Value* result = Nil::Get();
+//   while (iter.HasNext()) {
+//     const auto next = iter.Next();
+//     ASSERT(next);
+//     result = Pair::New(next, result);
+//   }
+//   return result;
+// }
+//
+// auto ListFromRange(const uint64_t from, const uint64_t to) -> gel::Value*;
+//
+// template <class Iter, typename T>
+// static inline auto ToList(Iter& iter, const std::function<Value*(T)>& map) -> Value* {
+//   Value* result = Nil::Get();
+//   while (iter.HasNext()) {
+//     const auto next = iter.Next();
+//     ASSERT(next);
+//     result = Pair::New(map(next), result);
+//   }
+//   return result;
+// }
+//
+// static inline auto Car(Value* rhs) -> Value* {
+//   ASSERT(rhs && rhs->IsPair());
+//   const auto value = rhs->AsPair()->GetFirst();
+//   return value ? value : Nil::Get();
+// }
+//
+// static inline auto Cdr(Value* rhs) -> Value* {
+//   ASSERT(rhs && rhs->IsPair());
+//   const auto value = rhs->AsPair()->GetSecond();
+//   return value ? value : Nil::Get();
+// }
 }  // namespace gel
 
 namespace fmt {

@@ -19,12 +19,6 @@ find_package(gflags CONFIG REQUIRED)
 
 set(OPENSSL_USE_STATIC_LIBS FALSE)
 find_package(OpenSSL REQUIRED)
-if(WIN32)
-  # TODO: Implement
-else()
-  set(CURSES_NEED_NCURSES TRUE)
-  find_package(Curses REQUIRED)
-endif()
 
 if(GEL_ENABLE_GLM)
   add_compile_definitions(GEL_ENABLE_GLM)
@@ -40,20 +34,21 @@ find_package(Backward CONFIG REQUIRED)
 find_package(Bzip2 REQUIRED)
 find_package(FunctionalPlus CONFIG REQUIRED)
 find_package(elfio CONFIG REQUIRED)
+find_package(RPP CONFIG REQUIRED)
 
 if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
   add_compile_definitions(GEL_DEBUG)
 endif()
 
-add_subdirectory(Sources)
-add_subdirectory(scripts)
+add_subdirectory(vm/)
+add_subdirectory(scripts/)
 
 option(ENABLE_TESTS "Enable tests." ON)
 if(ENABLE_TESTS)
-  add_subdirectory(Tests)
+  add_subdirectory(Tests/)
 endif()
 
 option(ENABLE_BENCHMARKS "Enable benchmarks." ON)
 if(ENABLE_BENCHMARKS)
-  add_subdirectory(Benchmarks)
+  add_subdirectory(Benchmarks/)
 endif()

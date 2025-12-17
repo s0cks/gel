@@ -6,12 +6,10 @@
 #include "gel/common.h"
 #include "gel/event_loop.h"
 #include "gel/hashcode.h"
-#include "gel/object.h"
-#include "gel/platform.h"
-#include "gel/procedure.h"
+#include "gel/type/object.h"
 #include "gel/runtime.h"
 #include "gel/to_string_helper.h"
-#include "gel/type.h"
+#include "gel/type/type.h"
 
 namespace gel {
 Timer::Timer(uword id, Fn* on_tick) :

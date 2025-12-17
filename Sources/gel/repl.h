@@ -1,12 +1,16 @@
 #ifndef GEL_REPL_H
 #define GEL_REPL_H
 
+#include <exception>
 #include <iostream>
+#include <string_view>
 
-#include "gel/error.h"
-#include "gel/local_scope.h"
+#include "gel/common.h"
 
 namespace gel {
+class Error;
+class Object;
+class LocalScope;
 class Repl {
   DEFINE_NON_COPYABLE_TYPE(Repl);
 
@@ -16,54 +20,40 @@ class Repl {
   LocalScope* scope_;
   std::string expression_{};
   bool running_ = false;
-
-  auto Prompt() -> bool;
-
-  void SetRunning(const bool rhs = true) {
-    running_ = rhs;
-  }
-
-  inline void Respond(Error* rhs) {
-    out() << std::endl;
-    out() << "Error: " << rhs->AsError()->GetMessage()->Get() << std::endl;
-  }
-
-  inline void Respond(const Exception& rhs) {
-    out() << std::endl;
-    out() << "Error: " << rhs.what() << std::endl;
-  }
-
-  inline void Respond(Object* rhs) {
-    ASSERT(rhs);
-    if (rhs->IsError())
-      return Respond(rhs->AsError());
-    out() << std::endl;
-    if (VLOG_IS_ON(10))
-      out() << "Result: ";
-    PrintValue(out(), rhs) << std::endl;
-  }
-
-  inline void Respond(const std::string& rhs) {
-    ASSERT(!rhs.empty());
-    out() << std::endl << rhs << std::endl;
-  }
-
-  inline void ClearOut() {
-#if defined(OS_IS_OSX) || defined(OS_IS_LINUX)
-    system("clear");
-#elif defined(OS_IS_WINDOWS)
-    system("cls");
-#else
-#error "Unsupported Operating System"
-#endif
-  }
-
+  
   inline auto in() const -> std::istream& {
     return in_;
   }
 
   inline auto out() const -> std::ostream& {
     return out_;
+  }
+
+  void SetRunning(const bool rhs = true) {
+    running_ = rhs;
+  }
+
+
+  void ClearOut();
+  void Respond(Error* rhs);
+  void Respond(Object* rhs);
+  auto Prompt() -> bool;
+
+  inline void Respond(const std::exception& rhs) {
+    out() << std::endl;
+    out() << "Error: " << rhs.what() << std::endl;
+  }
+
+  inline void Respond(std::exception_ptr rhs) {
+    try {
+      std::rethrow_exception(rhs);
+    } catch (const std::exception& exc) {
+      return Respond(rhs);
+    }
+  }
+
+  inline void Respond(const std::string_view& rhs) {
+    out() << std::endl << rhs << std::endl;
   }
 
  public:
@@ -81,13 +71,13 @@ class Repl {
   auto RunRepl() -> int;
 
  public:
-  // TODO: clean this function up
-  static inline auto Run(std::istream& is = std::cin, std::ostream& os = std::cout,
-                         LocalScope* scope = LocalScope::New()) -> int {
+  static inline auto RunWithScope(std::istream& is = std::cin, std::ostream& os = std::cout, LocalScope* scope) -> int {
     ASSERT(scope);
     Repl repl(is, os, scope);
     return repl.RunRepl();
   }
+
+  static auto Run(std::istream& is, std::ostream& os = std::cout) -> int;
 };
 }  // namespace gel
 

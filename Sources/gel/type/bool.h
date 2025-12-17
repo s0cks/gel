@@ -2,7 +2,6 @@
 #define GEL_BOOL_H
 
 #include "gel/common.h"
-#include "gel/type/pair.h"
 #include "gel/type/value.h"
 
 namespace gel {

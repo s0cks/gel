@@ -1,0 +1,121 @@
+{
+  "Include-What-You-Use Pragma": {
+    "prefix": "iwyu-pragma",
+    "body": " // IWYU pragma: $1$0"
+  },
+  "Include-What-You-Use Keep": {
+    "prefix": "iwyu-keep",
+    "body": " // IWYU pragma: keep$0"
+  },
+  "Include-What-You-Use Begin Keep Block": {
+    "prefix": "iwyu-keep-begin",
+    "body": " // IWYU pragma: begin_keep$0"
+  },
+  "Include-What-You-Use End Keep Block": {
+    "prefix": "iwyu-keep-end",
+    "body": " // IWYU pragma: end_keep$0"
+  },
+  "Include-What-You-Use Keep Block": {
+    "prefix": "iwyu-keep-block",
+    "body": [
+      " // IWYU pragma: begin_keep",
+      "$1",
+      " // IWYU pragma: end_keep",
+      "$0"
+    ]
+  },
+  "Include-What-You-Use Export": {
+    "prefix": "iwyu-export",
+    "body": " // IWYU pragma: export$0"
+  },
+  "Include-What-You-Use Begin Export Block": {
+    "prefix": "iwyu-export-begin",
+    "body": " // IWYU pragma: begin_export$0"
+  },
+  "Include-What-You-Use End Export Block": {
+    "prefix": "iwyu-export-end",
+    "body": " // IWYU pragma: end_export$0"
+  },
+  "Include-What-You-Use Export Block": {
+    "prefix": "iwyu-export-block",
+    "body": [
+      " // IWYU pragma: begin_export",
+      "$1",
+      " // IWYU pragma: end_export",
+      "$0"
+    ]
+  },
+  "Include-What-You-Use Private": {
+    "prefix": "iwyu-private",
+    "body": " // IWYU pragma: private, include \"$1\"$0"
+  },
+  "Include-What-You-Use No Include": {
+    "prefix": "iwyu-no-include",
+    "body": " // IWYU pragma: no_include \"$1\"$0"
+  },
+  "Include-What-You-Use Friend": {
+    "prefix": "iwyu-friend",
+    "body": " // IWYU pragma: friend$0"
+  },
+  "Include-What-You-Use Associated": {
+    "prefix": "iwyu-associated",
+    "body": " // IWYU pragma: associated$0"
+  },
+  "Include-What-You-Use Always Keep": {
+    "prefix": "iwyu-always-keep",
+    "body": " // IWYU pragma: always_keep$0"
+  },
+  "Include-What-You-Use No Forward Declare": {
+    "prefix": "iwyu-no-fwd-decls",
+    "body": " // IWYU pragma: no_forward_declare$0"
+  },
+  "clang-format on": {
+    "prefix": "clang-fmt-on",
+    "body": " // clang-format on"
+  },
+  "clang-format off": {
+    "prefix": "clang-fmt-off",
+    "body": " // clang-format off"
+  },
+  "clang-format block": {
+    "prefix": "clang-fmt-block",
+    "body": [
+      " // clang-format on",
+      "$1",
+      " // clang-format off",
+      "$0"
+    ]
+  },
+  "clang-format inverted block": {
+    "prefix": "clang-fmt-iblock",
+    "body": [
+      " // clang-format off",
+      "$1",
+      " // clang-format on",
+      "$0"
+    ]
+  },
+  "Begin Header Guard": {
+    "prefix": "begin-header-guard",
+    "body": [
+      "#ifndef $1",
+      "#define $1",
+      "$0"
+    ]
+  },
+  "End Header Guard": {
+    "prefix": "end-header-guard",
+    "body": [
+      "#endif // $1"
+    ]
+  },
+  "Header Guard": {
+    "prefix": "header-guard",
+    "body": [
+      "#ifndef $1",
+      "#define $1",
+      "$0",
+      "#endif // $1"
+    ]
+  }
+}

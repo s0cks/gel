@@ -2,6 +2,9 @@
 #define GEL_PLATFORM_H
 
 #include <cstdint>
+#include <cstdlib>
+
+#include "gel/assert.h"
 
 #if defined(_M_X64) || defined(__x86_64__)
 #define ARCH_IS_X64 1
@@ -72,9 +75,21 @@ static constexpr int kBitsPerWord = 1 << kBitsPerWordLog2;
 static constexpr uword kUWordOne = 1U;
 
 namespace sys {
-auto malloc(const uword sz) -> uword;
-auto realloc(const uword ptr, const uword sz) -> uword;
-void free(const uword ptr);
+static inline auto malloc(const uword sz) -> uword {
+  ASSERT(sz > 0);
+  return reinterpret_cast<uword>(std::malloc(sz));  
+}
+
+static inline auto realloc(const uword ptr, const uword sz) -> uword {
+  ASSERT(ptr);
+  ASSERT(sz >= 0);
+  return reinterpret_cast<uword>(std::realloc(reinterpret_cast<void*>(ptr), sz));
+}
+
+static inline void free(const uword ptr) {
+  ASSERT(ptr);
+  return std::free(reinterpret_cast<void*>(ptr));
+}
 }  // namespace sys
 }  // namespace gel
 

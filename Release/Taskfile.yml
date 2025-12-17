@@ -1,0 +1,20 @@
+---
+version: '3'
+includes:
+  cmake:
+    taskfile: "../cmake/" 
+    internal: true
+    vars:
+      preset: "release-{{.triplet}}"
+tasks:
+  configure:
+    cmds:
+    - task: cmake:configure
+  build:
+    cmds:
+    - task: cmake:build
+  build:platform:
+    cmds:
+    - task: cmake:build-target
+      vars:
+        target: gel-platform

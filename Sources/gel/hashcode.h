@@ -70,6 +70,10 @@ class HashCode {
     return *this;
   }
 
+  inline auto operator^=(const HashCode& rhs) -> HashCode& {
+    return operator^=(rhs.value());
+  }
+
   template <typename T>
   inline auto operator^=(const T& rhs) -> HashCode& {
     std::hash<T> h{};

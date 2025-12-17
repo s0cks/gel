@@ -3,7 +3,6 @@
 #ifndef GEL_OS_THREAD_OSX_H
 #define GEL_OS_THREAD_OSX_H
 
-#include "gel/common.h"
 #ifndef GEL_OS_THREAD_H
 #error "Please #include <scheme/os_thread.h> instead of <scheme/os_thread_osx.h>"
 #endif  // GEL_OS_THREAD_H

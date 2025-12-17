@@ -4,10 +4,9 @@
 #include <string>
 
 #include "gel/common.h"
-#include "gel/native_procedure.h"
-#include "gel/object.h"
-#include "gel/pair.h"
-#include "gel/procedure.h"
+#include "gel/type/fn.h"
+#include "gel/type/object.h"
+#include "gel/type/pair.h"
 #include "gel/trie.h"
 
 namespace gel {

@@ -1,16 +1,17 @@
 #ifndef GEL_NUMBER_H
 #define GEL_NUMBER_H
 
+#include <fmt/format.h>
 #include <type_traits>
 
-#include "gel/object.h"
+#include "gel/type/value.h"
 
 namespace gel {
 template <typename T>
 concept is_raw_num_v = std::is_integral_v<T> || std::same_as<T, double> || std::same_as<T, float>;
 
 using RawNumber = double;
-class Number : public Object {
+class Number : public Value {
   friend class Number;
   friend class Double;
 
@@ -22,7 +23,7 @@ class Number : public Object {
   explicit Number(const T value)
     requires(is_raw_num_v<T>)
     :
-    Object(),
+    Value(),
     value_(static_cast<RawNumber>(value)) {}
 
  public:
@@ -39,9 +40,7 @@ class Number : public Object {
     return static_cast<T>(Get());
   }
 
-  auto BitNot() const -> Object*;
-
-  DECLARE_TYPE(Number);
+  DECLARE_VALUE_TYPE(Number);
 
  public:
   template <typename T>

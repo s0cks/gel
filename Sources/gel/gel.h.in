@@ -1,8 +1,6 @@
 #ifndef GEL_H
 #define GEL_H
 
-#include <gflags/gflags.h>
-
 #include <string>
 
 // clang-format off

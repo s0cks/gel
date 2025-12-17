@@ -10,18 +10,13 @@
 namespace gel {
 #define FOR_EACH_TYPE(V) \
   V(Nil)                 \
-  V(Str)                 \
-  V(Set)                 \
-  V(Pair)                \
   V(Bool)                \
-  V(Macro)               \
-  V(Object)              \
+  V(Str)                 \
+  V(Obj)                 \
   V(Number)              \
-  V(Fn)                  \
-  V(InitFn)              \
-  V(NativeFn)            \
-  V(LambdaFn)
+  V(Pair)
 
+class Value;
 #define FORWARD_DECLARE(Name) class Name;
 FOR_EACH_TYPE(FORWARD_DECLARE)
 #undef FORWARD_DECLARE
@@ -52,6 +47,22 @@ FOR_EACH_TYPE(DEFINE_TYPE_PREDICATE);
 FOR_EACH_TYPE(DEFINE_TYPE_VISITOR);
 // NOLINTEND(cppcoreguidelines-special-member-functions)
 #undef DEFINE_TYPE_VISITOR
+
+#define DEFINE_OPTIONAL_PROPERTY(Type, Name, Field) \
+  auto Get##Name() const->Type {                    \
+    return Field;                                   \
+  }                                                 \
+  auto Has##Name() const->bool {                    \
+    return Get##Name() != nullptr;                  \
+  }                                                 \
+  void Set##Name(Type rhs) {                        \
+    ASSERT(rhs);                                    \
+    Field = rhs;                                    \
+  }                                                 \
+  inline void Remoe##Name() {                       \
+    ASSERT(Has##Name());                            \
+    Field = nullptr;                                \
+  }
 
 }  // namespace gel
 

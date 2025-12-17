@@ -13,13 +13,6 @@
 #include <vector>
 
 #include "gel/common.h"
-#include "gel/compiled_code.h"
-#include "gel/expr/expression.h"
-#include "gel/instruction.h"
-#include "gel/local_scope.h"
-#include "gel/object.h"
-#include "gel/platform.h"
-#include "gel/type.h"
 
 #if defined(__clang__)
 #include <cxxabi.h>
@@ -123,8 +116,8 @@ class ToStringHelperBase {
     DEFINE_DEFAULT_COPYABLE_TYPE(Field);
 
    private:
-    std::string name_;
-    std::string value_;
+    std::string name_{};
+    std::string value_{};
 
    public:
     explicit Field(const std::string_view name, const std::string value = "") :
@@ -162,7 +155,7 @@ class ToStringHelperBase {
 
   template <typename V>
   inline void AddField(const std::string_view name, V value) {
-    std::stringstream ss;
+    std::stringstream ss{};
     ss << value;
     return AddField(std::move(name), ss.str());
   }
@@ -179,7 +172,7 @@ class ToStringHelperBase {
 
   template <HasToString V>
   inline void AddField(const std::string_view name, const std::vector<V>& value) {
-    std::stringstream ss;
+    std::stringstream ss{};
     ss << "[";
     for (auto idx = 0; idx < value.size(); idx++) {
       ss << value[idx]->ToString();
@@ -208,12 +201,10 @@ class ToStringHelperBase {
   inline void AddField(const std::string_view name, const V value)
     requires(std::is_integral_v<V>)
   {
-    std::stringstream ss;
+    std::stringstream ss{};
     ss << value;
     return AddField(std::move(name), ss.str());
   }
-
-  inline void AddSymbolField(const Symbol& value, const std::string_view name = "symbol");
 
   void AddBytesField(const std::string_view name, const uword num_bytes);
   auto ToString() const -> std::string;
@@ -291,10 +282,6 @@ inline void ToStringHelperBase::AddField<const void*>(const std::string_view nam
 template <>
 inline void ToStringHelperBase::AddField<bool>(const std::string_view name, const bool value) {
   return AddField<std::string_view>(name, value ? "true" : "false");
-}
-
-inline void ToStringHelperBase::AddSymbolField(const Symbol& value, const std::string_view name) {
-  return AddField(name, value.GetFullyQualifiedName());
 }
 
 // template <HasToString V>

@@ -1,0 +1,374 @@
+#ifndef GEL_TOKEN_H
+#define GEL_TOKEN_H
+
+#include <algorithm>
+#include <array>
+#include <bitset>
+#include <cmath>
+#include <cstdint>
+#include <cstdlib>
+#include <optional>
+#include <ostream>
+#include <string>
+#include <vector>
+
+#include "gel/common.h"
+#include "gel/frontend/expr/unary_op.h"
+#include "gel/frontend/expr/binary_op.h"
+#include "gel/frontend/expr/expr.h"
+#include "gel/type/object.h"
+
+namespace gel {
+struct Position {
+  uint64_t row;
+  uint64_t column;
+
+  friend auto operator<<(std::ostream& stream, const Position& rhs) -> std::ostream& {
+    return stream << "(" << rhs.row << ", " << rhs.column << ")";
+  }
+
+  auto operator==(const Position& rhs) const -> bool {
+    return row == rhs.row && column == rhs.column;
+  }
+
+  auto operator!=(const Position& rhs) const -> bool {
+    return row != rhs.row || column != rhs.column;
+  }
+
+  auto operator-(const Position& rhs) const -> word {
+    return floor(sqrt(pow(rhs.row - row, 2.0) +
+                      pow(rhs.column - column, 2.0)));  // NOLINT(cppcoreguidelines-avoid-magic-numbers)
+  }
+};
+
+#define FOR_EACH_TOKEN(V)     \
+  FOR_EACH_EXPRESSION_NODE(V) \
+  FOR_EACH_BINARY_OP(V)       \
+  FOR_EACH_UNARY_OP(V)        \
+  V(Fn)                       \
+  V(DefNamespace)             \
+  V(DefNative)                \
+  V(DefMacro)                 \
+  V(DefType)                  \
+  V(Set)                      \
+  V(SetFirst)                 \
+  V(SetSecond)                \
+  V(Def)                      \
+  V(Defn)                     \
+  V(Comment)                  \
+  V(Hash)                     \
+  V(Quote)                    \
+  V(DoubleQuote)              \
+  V(Cond)                     \
+  V(LParen)                   \
+  V(RParen)                   \
+  V(Dot)                      \
+  V(DotDotDot)                \
+  V(Range)                    \
+  V(Identifier)               \
+  V(LBrace)                   \
+  V(RBrace)                   \
+  V(LBracket)                 \
+  V(RBracket)                 \
+  V(Question)                 \
+  V(Comma)                    \
+  V(Colon)                    \
+  V(Dollar)                   \
+  V(Dispatch)                 \
+  V(BeginSet)                 \
+  V(LiteralNumber)            \
+  V(LiteralTrue)              \
+  V(LiteralFalse)             \
+  V(LiteralString)            \
+  V(LiteralNil)
+
+struct Token {
+ public:
+  // clang-format off
+  enum Kind : int16_t {
+    kEndOfStream = -1,
+    kInvalid = 0,
+#define DEFINE_TOKEN(Name) \
+    k##Name,
+    FOR_EACH_TOKEN(DEFINE_TOKEN)
+#undef DEFINE_TOKEN
+    kTotalNumberOfTokens,
+  };
+  // clang-format on
+
+  friend auto operator<<(std::ostream& stream, const Kind& rhs) -> std::ostream& {
+    switch (rhs) {
+      case kEndOfStream:
+        return stream << "EndOfStream";
+#define DEFINE_TO_STRING(Name) \
+  case Kind::k##Name:          \
+    return stream << #Name;
+        FOR_EACH_TOKEN(DEFINE_TO_STRING)
+#undef DEFINE_TO_STRING
+      default:
+        return stream << "Unknown Token::Kind: " << static_cast<uint16_t>(rhs);
+    }
+  }
+
+  static inline auto GetChar(const Kind rhs) -> char {
+    switch (rhs) {
+      case kLParen:
+        return '(';
+      case kRParen:
+        return ')';
+      case kDot:
+        return '.';
+      case kAdd:
+        return '+';
+      case kSubtract:
+        return '-';
+      case kMultiply:
+        return '*';
+      case kDivide:
+        return '/';
+      case kEq:
+        return '=';
+      case kModulus:
+        return '%';
+      case kNot:
+        return '!';
+      case kLBracket:
+        return '[';
+      case kRBracket:
+        return ']';
+      case kComma:
+        return ',';
+      case kLBrace:
+        return '{';
+      case kRBrace:
+        return '}';
+      case kQuestion:
+        return '?';
+      case kDollar:
+        return '$';
+      case kLessThan:
+        return '<';
+      case kGreaterThan:
+        return '>';
+      default:
+        return '\0';
+    }
+  }
+
+  using KindSet = std::bitset<kTotalNumberOfTokens>;
+
+  static inline constexpr auto AnyOf(const Token::Kind a, const Token::Kind b) -> KindSet {
+    KindSet data;
+    data.set(a);
+    data.set(b);
+    return data;
+  }
+
+  static inline constexpr auto AnyOf(const std::vector<Token::Kind>& kinds) -> KindSet {
+    KindSet data;
+    std::ranges::for_each(kinds, [&data](Token::Kind kind) {
+      data.set(kind);
+    });
+    return data;
+  }
+
+  static inline constexpr auto AnyBool() -> KindSet {
+    return AnyOf(Token::kLiteralTrue, Token::kLiteralFalse);
+  }
+
+ public:
+  Kind kind = kInvalid;
+  Position pos{};
+  std::string text{};
+
+  auto IsInvalid() const -> bool {
+    return kind == kInvalid;
+  }
+
+  auto IsEmpty() const -> bool {
+    return text.empty();
+  }
+
+  auto IsEndOfStream() const -> bool {
+    return kind == kEndOfStream;
+  }
+
+  auto IsFunctionLiteral() const -> bool {
+    return kind == Token::kDispatch || kind == Token::kFn;
+  }
+
+  auto IsSymbol() const -> bool {
+    return kind == Token::kIdentifier;
+  }
+
+  auto IsLiteral() const -> bool {
+    return IsFunctionLiteral() || IsSymbol() || kind == Token::kLiteralTrue || kind == Token::kLiteralFalse ||
+           kind == Token::kLiteralNumber || kind == Token::kLiteralString || kind == Token::kBeginSet ||
+           kind == Token::kLiteralNil;
+  }
+
+  auto IsIdentifier() const -> bool {
+    return kind == Token::kIdentifier;
+  }
+
+  auto IsQuote() const -> bool {
+    return kind == Token::kQuote;
+  }
+
+  auto IsBinaryOp() const -> bool {
+    switch (kind) {
+#define DEFINE_OP_CHECK(Name) case Kind::k##Name:
+      FOR_EACH_BINARY_OP(DEFINE_OP_CHECK)
+#undef DEFINE_OP_CHECK
+      return true;
+      default:
+        return false;
+    }
+  }
+
+  auto ToBinaryOp() const -> std::optional<BinaryOp> {
+    ASSERT(IsBinaryOp());
+    switch (kind) {
+#define DEFINE_TO_BINARY_OP(Name) \
+  case Token::k##Name:            \
+    return {BinaryOp::k##Name};
+      FOR_EACH_BINARY_OP(DEFINE_TO_BINARY_OP)
+#undef DEFINE_TO_BINARY_OP
+      default:
+        return std::nullopt;
+    }
+  }
+
+  auto IsUnaryOp() const -> bool {
+    switch (kind) {
+#define DEFINE_OP_CHECK(Name) case Kind::k##Name:
+      FOR_EACH_UNARY_OP(DEFINE_OP_CHECK)
+#undef DEFINE_OP_CHECK
+      return true;
+      default:
+        return false;
+    }
+  }
+
+  auto ToUnaryOp() const -> std::optional<UnaryOp> {
+    ASSERT(IsUnaryOp());
+    switch (kind) {
+#define TO_UNARY_OP(Name) \
+  case Token::k##Name:    \
+    return {UnaryOp::k##Name};
+      FOR_EACH_UNARY_OP(TO_UNARY_OP)
+#undef TO_UNARY_OP
+      default:
+        return std::nullopt;
+    }
+  }
+
+  auto AsDouble() const -> double {
+    return atof(text.data());
+  }
+
+  auto AsNumber() const -> RawNumber {
+    return static_cast<RawNumber>(atol(text.data()));
+  }
+
+  auto AsInt() const -> uint32_t {
+    return atoi(text.data());
+  }
+
+  auto Test(const KindSet& kinds) const -> bool {
+    return kinds.test(kind);
+  }
+
+  auto operator==(const Token::Kind& rhs) const -> bool {
+    return kind == rhs;
+  }
+
+  friend auto operator<<(std::ostream& stream, const Token& rhs) -> std::ostream& {
+    stream << "Token(";
+    stream << "kind=" << rhs.kind << ", ";
+    stream << "pos=" << rhs.pos << ", ";
+    if (!rhs.text.empty())
+      stream << "text=" << rhs.text;
+    stream << ")";
+    return stream;
+  }
+};
+
+using TokenKindBitSet = std::bitset<Token::kTotalNumberOfTokens>;
+
+static inline auto operator<<(std::ostream& stream, const Token::KindSet& rhs) -> std::ostream& {
+  for (auto idx = 0; idx < Token::kTotalNumberOfTokens; idx++) {
+    if (rhs.test(idx))
+      stream << static_cast<Token::Kind>(idx) << " ";
+  }
+  return stream;
+}
+
+class KeywordTrie {
+  static constexpr const auto kAlphabetSize = 127;
+  DEFINE_NON_COPYABLE_TYPE(KeywordTrie);
+
+ public:
+  struct Node {
+    bool epsilon;
+    Token::Kind kind;
+    std::array<Node*, kAlphabetSize> children;
+  };
+
+  static inline auto Insert(Node* root, const std::string& key, const Token::Kind kind) -> bool {
+    ASSERT(root);
+    auto current = root;
+    for (const auto& c : key) {
+      if (current->children.at(c) == nullptr) {
+        current->children.at(c) = new Node();
+      }
+      current = current->children.at(c);
+    }
+    current->kind = kind;
+    current->epsilon = true;
+    return true;
+  }
+
+  static inline auto Search(Node* root, const std::string& key, Token::Kind* result) -> bool {
+    ASSERT(root);
+    auto current = root;
+    for (const auto& c : key) {
+      if (current->children.at(c) == nullptr) {
+        (*result) = Token::kInvalid;
+        return false;
+      }
+      current = current->children.at(c);
+    }
+    if (!current || !current->epsilon) {
+      (*result) = Token::kInvalid;
+      return false;
+    }
+    (*result) = current->kind;
+    return true;
+  }
+
+ private:
+  Node* root_;
+
+ public:
+  KeywordTrie() :
+    root_(new Node()) {
+    ASSERT(root_);
+  }
+  ~KeywordTrie() = default;
+
+  auto GetRoot() const -> Node* {
+    return root_;
+  }
+
+  auto Insert(const std::string& value, const Token::Kind kind) -> bool {
+    return Insert(GetRoot(), value, kind);
+  }
+
+  auto Contains(const std::string& value, Token::Kind* result) -> bool {
+    return Search(GetRoot(), value, result);
+  }
+};
+}  // namespace gel
+
+#endif  // GEL_TOKEN_H

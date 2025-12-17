@@ -4,7 +4,7 @@
 #include <filesystem>
 
 #include "gel/common.h"
-#include "gel/module.h"
+#include "gel/type/module.h"
 
 namespace gel {
 class Module;

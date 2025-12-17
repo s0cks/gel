@@ -1,23 +1,35 @@
 #include "gel/type/nil.h"
+#include <compare>
 
-#include "gel/allocator.h"
 #include "gel/common.h"
-#include "gel/heap.h"
 #include "gel/os_thread.h"
 #include "gel/thread_local.h"
 #include "gel/to_string_helper.h"
+
+#ifdef GEL_ENABLE_HEAP
+#include "gel/heap/heap.h"
+#include "gel/heap/allocator.h"
+#endif //GEL_ENABLE_HEAP
 
 namespace gel {
 static LazyThreadLocal<Nil> instance_([]() -> Nil* {
   return Nil::New();
 });
 
+#ifdef GEL_ENABLE_HEAP
 auto Nil::operator new(const size_t sz) -> void* {
   ASSERT(CurrentThreadHasHeap());
   const auto new_address = GetCurrentThreadHeap()->TryAllocate(sz);
   LOG_IF(FATAL, IsUnallocated(new_address)) << "failed to allocate memory for new nil instance.";
   return reinterpret_cast<void*>(new_address);
 }
+#else
+
+auto Nil::operator new(const size_t sz) -> void* {
+  return reinterpret_cast<void*>(sys::malloc(sz));
+}
+
+#endif //GEL_ENABLE_HEAP
 
 auto Nil::GetHashCode() const -> HashCode {
   HashCode hash{};
@@ -30,13 +42,9 @@ auto Nil::ToString() const -> std::string {
   return helper;
 }
 
-auto Nil::Equals(Value* rhs) const -> bool {
-  return rhs && rhs->IsNil();
-}
-
-auto Nil::Compare(Value* rhs) const -> int {
+auto Nil::Compare(Value* rhs) const -> std::strong_ordering {
   NOT_IMPLEMENTED(ERROR);  // TODO: @s0cks implement
-  return -1;
+  return std::strong_ordering::equivalent;
 }
 
 auto Nil::Get() -> Nil* {

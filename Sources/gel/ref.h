@@ -2,8 +2,7 @@
 #define GEL_REF_H
 
 #include "gel/common.h"
-#include "gel/object.h"
-#include "gel/platform.h"
+#include "gel/type/object.h"
 
 namespace gel {
 class RefBase {
