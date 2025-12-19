@@ -8,21 +8,21 @@
 #include <units.h>
 #include <utility>
 
-#include "gel/common.h"
-#include "gel/error.h"
-#include "gel/expr/expression.h"
-#include "gel/flags.h"
-#include "gel/flow_graph_compiler.h"
-#include "gel/heap.h"
-#include "gel/instruction.h"
-#include "gel/local_scope.h"
-#include "gel/object.h"
-#include "gel/parser.h"
-#include "gel/repl.h"
-#include "gel/runtime.h"
-#include "gel/rx.h"
-#include "gel/type.h"
-#include "gel/zone.h"
+#include "common.h"
+#include "error.h"
+#include "expr/expression.h"
+#include "flags.h"
+#include "flow_graph_compiler.h"
+#include "heap.h"
+#include "instruction.h"
+#include "local_scope.h"
+#include "object.h"
+#include "parser.h"
+#include "repl.h"
+#include "runtime.h"
+#include "rx.h"
+#include "type.h"
+#include "zone.h"
 
 using namespace gel;
 
@@ -71,16 +71,14 @@ struct TimedResult {
 
 // TODO: cleanup
 static inline auto Execute(const std::string& expr) -> int {
-  if (FLAGS_dump_ast) {
-    try {
-      const auto lambda = Parser::ParseExpr(expr);
-      LOG_IF(FATAL, !FlowGraphCompiler::Compile(*lambda, GetRuntime()->GetScope())) << "failed to compile: " << expr;
-    } catch (const gel::Exception& exc) {
-      LOG(ERROR) << "failed to execute expression.";
-      std::cerr << " * expression: " << expr << std::endl;
-      std::cerr << " * message: " << exc.GetMessage() << std::endl;
-      return EXIT_FAILURE;
-    }
+  try {
+    const auto lambda = Parser::ParseExpr(expr);
+    LOG_IF(FATAL, !FlowGraphCompiler::Compile(*lambda, GetRuntime()->GetScope())) << "failed to compile: " << expr;
+  } catch (const gel::Exception& exc) {
+    LOG(ERROR) << "failed to execute expression.";
+    std::cerr << " * expression: " << expr << std::endl;
+    std::cerr << " * message: " << exc.GetMessage() << std::endl;
+    return EXIT_FAILURE;
   }
 
   if (!FLAGS_eval)

@@ -1,7 +1,7 @@
 #ifndef GEL_IMPORT_EXPR_H
 #define GEL_IMPORT_EXPR_H
 
-#include "gel/expr/expression.h"
+#include "expr/expression.h"
 
 namespace gel::expr {
 class ImportExpr : public Expression {

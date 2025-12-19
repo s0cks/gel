@@ -5,13 +5,13 @@
 #include <string_view>
 #include <type_traits>
 
-#include "gel/common.h"
-#include "gel/compiled_code.h"
-#include "gel/disassembler_vm.h"
-#include "gel/hashcode.h"
-#include "gel/local.h"
-#include "gel/local_scope.h"
-#include "gel/type_traits.h"
+#include "common.h"
+#include "compiled_code.h"
+#include "disassembler_vm.h"
+#include "hashcode.h"
+#include "local.h"
+#include "local_scope.h"
+#include "type_traits.h"
 
 namespace gel {
 template <class T>

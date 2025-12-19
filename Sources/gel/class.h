@@ -11,9 +11,9 @@
 
 #include <vector>
 
-#include "gel/common.h"
-#include "gel/platform.h"
-#include "gel/type.h"
+#include "common.h"
+#include "platform.h"
+#include "type.h"
 
 namespace gel {
 using ClassId = uword;

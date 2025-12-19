@@ -3,10 +3,10 @@
 
 #include <type_traits>
 
-#include "gel/assembler.h"
-#include "gel/common.h"
-#include "gel/to_string_helper.h"
-#include "gel/type_traits.h"
+#include "assembler.h"
+#include "common.h"
+#include "to_string_helper.h"
+#include "type_traits.h"
 
 namespace gel {
 template <class T>

@@ -1,14 +1,14 @@
-#include "gel/common.h"
-#include "gel/native_procedure.h"
-#include "gel/natives.h"
-#include "gel/object.h"
+#include "common.h"
+#include "native_procedure.h"
+#include "natives.h"
+#include "object.h"
 #ifdef GEL_DEBUG
 
-#include "gel/collector.h"
-#include "gel/gel.h"
-#include "gel/heap.h"
-#include "gel/module.h"
-#include "gel/runtime.h"
+#include "collector.h"
+#include "gel.h"
+#include "heap.h"
+#include "module.h"
+#include "runtime.h"
 
 namespace gel::proc {
 NATIVE_PROCEDURE_F(gel_print_heap) {

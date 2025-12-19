@@ -1,3 +1,3 @@
-#include "gel/operation_stack.h"
+#include "operation_stack.h"
 
 namespace gel {}

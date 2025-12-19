@@ -1,7 +1,7 @@
 #ifndef GEL_INVOKE_INSTANCE_EXPR_H
 #define GEL_INVOKE_INSTANCE_EXPR_H
 
-#include "gel/expr/invoke_expr.h"
+#include "expr/invoke_expr.h"
 
 namespace gel::expr {
 class InvokeInstanceExpr : public TemplateInvokeExpr<Procedure> {

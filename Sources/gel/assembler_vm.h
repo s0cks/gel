@@ -1,4 +1,4 @@
-#include "gel/platform.h"
+#include "platform.h"
 #ifndef GEL_ASSEMBLER_H
 #error "Please #include <gel/assembler.h> instead."
 #endif  // GEL_ASSEMBLER_H
@@ -6,11 +6,11 @@
 #ifndef GEL_ASSEMBLER_VM_H
 #define GEL_ASSEMBLER_VM_H
 
-#include "gel/assembler_base.h"
-#include "gel/bytecode.h"
-#include "gel/common.h"
-#include "gel/expr/expression.h"
-#include "gel/to_string_helper.h"
+#include "assembler_base.h"
+#include "bytecode.h"
+#include "common.h"
+#include "expr/expression.h"
+#include "to_string_helper.h"
 
 namespace gel {
 using namespace vm;

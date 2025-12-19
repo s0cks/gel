@@ -1,3 +1,3 @@
-#include "gel/exception.h"
+#include "exception.h"
 
 namespace gel {}

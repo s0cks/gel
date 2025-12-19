@@ -1,8 +1,8 @@
 #ifndef GEL_REGION_H
 #define GEL_REGION_H
 
-#include "gel/common.h"
-#include "gel/platform.h"
+#include "common.h"
+#include "platform.h"
 
 namespace gel {
 class Region {

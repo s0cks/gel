@@ -1,16 +1,18 @@
 #ifndef GEL_EXPRESSION_DOT_H
 #define GEL_EXPRESSION_DOT_H
 
+#ifdef GEL_ENABLE_GRAPHVIZ
+
 #include <cstdint>
 #include <filesystem>
 #include <fmt/format.h>
 #include <glog/logging.h>
 #include <string>
 
-#include "gel/common.h"
-#include "gel/expr/expression.h"
-#include "gel/gv.h"
-#include "gel/symbol.h"
+#include "common.h"
+#include "expr/expression.h"
+#include "gv.h"
+#include "symbol.h"
 
 namespace gel {
 namespace expr {
@@ -150,4 +152,5 @@ void GenerateExprDotPng(const std::filesystem::path& file, const std::string& na
 using namespace expr;
 }  // namespace gel
 
+#endif  // GEL_ENABLE_GRAPHVIZ
 #endif  // GEL_EXPRESSION_DOT_H

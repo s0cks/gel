@@ -4,10 +4,10 @@
 #include <ostream>
 #include <string>
 
-#include "gel/common.h"
-#include "gel/platform.h"
-#include "gel/region.h"
-#include "gel/tag.h"
+#include "common.h"
+#include "platform.h"
+#include "region.h"
+#include "tag.h"
 
 namespace gel {
 class FreePointer;

@@ -1,8 +1,8 @@
-#include "gel/assembler_base.h"
+#include "assembler_base.h"
 
-#include "gel/common.h"
-#include "gel/memory_region.h"
-#include "gel/platform.h"
+#include "common.h"
+#include "memory_region.h"
+#include "platform.h"
 
 namespace gel {
 AssemblerBuffer::AssemblerBuffer(const uword init_size) {

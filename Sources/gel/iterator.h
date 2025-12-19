@@ -1,10 +1,10 @@
 #ifndef GEL_ITERATOR_H
 #define GEL_ITERATOR_H
 
-#include "gel/common.h"
-#include "gel/native_procedure.h"
-#include "gel/object.h"
-#include "gel/set.h"
+#include "common.h"
+#include "native_procedure.h"
+#include "object.h"
+#include "set.h"
 
 namespace gel {
 class Iterator : public Object {

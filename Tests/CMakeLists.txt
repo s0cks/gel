@@ -1,5 +1,6 @@
 enable_testing()
 
+find_package(gflags CONFIG REQUIRED)
 find_package(GTest CONFIG REQUIRED)
 
 file(GLOB_RECURSE GEL_TEST_SOURCES

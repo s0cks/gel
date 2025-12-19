@@ -2,7 +2,7 @@
 #include <sstream>
 #include <string>
 
-#include "gel/gel.h"
+#include "gel.h"
 
 namespace gel {
 auto GetVersion() -> std::string {

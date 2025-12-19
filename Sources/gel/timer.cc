@@ -1,17 +1,17 @@
-#include "gel/timer.h"
+#include "timer.h"
 
 #include <string>
 #include <uv.h>
 
-#include "gel/common.h"
-#include "gel/event_loop.h"
-#include "gel/hashcode.h"
-#include "gel/object.h"
-#include "gel/platform.h"
-#include "gel/procedure.h"
-#include "gel/runtime.h"
-#include "gel/to_string_helper.h"
-#include "gel/type.h"
+#include "common.h"
+#include "event_loop.h"
+#include "hashcode.h"
+#include "object.h"
+#include "platform.h"
+#include "procedure.h"
+#include "runtime.h"
+#include "to_string_helper.h"
+#include "type.h"
 
 namespace gel {
 Timer::Timer(uword id, Procedure* on_tick) :

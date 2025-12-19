@@ -1,7 +1,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "gel/object.h"
+#include "object.h"
 
 namespace gel {
 using namespace ::testing;

@@ -1,10 +1,10 @@
 #ifndef GEL_NATIVES_H
 #define GEL_NATIVES_H
 
-#include "gel/native_procedure.h"
+#include "native_procedure.h"
 
 namespace gel::proc {
-#define _DECLARE_GEL_NATIVE_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(gel_##Name, "gel/" Sym)
+#define _DECLARE_GEL_NATIVE_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(gel_##Name, "" Sym)
 #define DECLARE_GEL_NATIVE_PROCEDURE(Name)       _DECLARE_GEL_NATIVE_PROCEDURE(Name, #Name)
 
 DECLARE_GEL_NATIVE_PROCEDURE(print);
@@ -42,8 +42,8 @@ DECLARE_OBJECT_PROCEDURE(hashcode);
 // ----------------------------------------------------------------------------------------------------
 // Class
 // ----------------------------------------------------------------------------------------------------
-_DECLARE_NATIVE_PROCEDURE(get_class, "gel/get-class");
-_DECLARE_NATIVE_PROCEDURE(get_classes, "gel/get-classes");
+_DECLARE_NATIVE_PROCEDURE(get_class, "get-class");
+_DECLARE_NATIVE_PROCEDURE(get_classes, "get-classes");
 
 _DECLARE_NATIVE_PROCEDURE(class_is_primitive, "Class:is-primitive?");
 _DECLARE_NATIVE_PROCEDURE(class_get_id, "Class:get-id");
@@ -144,23 +144,23 @@ _DECLARE_NATIVE_RX_PROCEDURE(get_operators, "get-operators");
 
 #endif  // GEL_ENABLE_RX
 
-_DECLARE_NATIVE_PROCEDURE(gel_get_debug, "gel/debug?");
+_DECLARE_NATIVE_PROCEDURE(gel_get_debug, "debug?");
 
 #ifdef GEL_DEBUG
-_DECLARE_NATIVE_PROCEDURE(gel_print_roots, "gel/print-roots");
-_DECLARE_NATIVE_PROCEDURE(gel_minor_gc, "gel/minor-gc!");
-_DECLARE_NATIVE_PROCEDURE(gel_major_gc, "gel/major-gc!");
-_DECLARE_NATIVE_PROCEDURE(gel_print_heap, "gel/print-heap");
-_DECLARE_NATIVE_PROCEDURE(gel_print_new_zone, "gel/print-new-zone");
-_DECLARE_NATIVE_PROCEDURE(gel_print_old_zone, "gel/print-old-zone");
-_DECLARE_NATIVE_PROCEDURE(gel_numrefs, "gel/numrefs");
+_DECLARE_NATIVE_PROCEDURE(gel_print_roots, "print-roots");
+_DECLARE_NATIVE_PROCEDURE(gel_minor_gc, "minor-gc!");
+_DECLARE_NATIVE_PROCEDURE(gel_major_gc, "major-gc!");
+_DECLARE_NATIVE_PROCEDURE(gel_print_heap, "print-heap");
+_DECLARE_NATIVE_PROCEDURE(gel_print_new_zone, "print-new-zone");
+_DECLARE_NATIVE_PROCEDURE(gel_print_old_zone, "print-old-zone");
+_DECLARE_NATIVE_PROCEDURE(gel_numrefs, "numrefs");
 
-_DECLARE_NATIVE_PROCEDURE(gel_get_locals, "gel/get-locals");
-_DECLARE_NATIVE_PROCEDURE(gel_get_target_triple, "gel/get-target-triple");
-_DECLARE_NATIVE_PROCEDURE(gel_get_natives, "gel/get-natives");
-_DECLARE_NATIVE_PROCEDURE(gel_get_compile_time, "gel/compile-time?");
-_DECLARE_NATIVE_PROCEDURE(gel_get_symbol_pool_size, "gel/get-symbol-pool-size");
-_DECLARE_NATIVE_PROCEDURE(gel_get_symbol_pool_max_size, "gel/get-symbol-pool-max-size");
+_DECLARE_NATIVE_PROCEDURE(gel_get_locals, "get-locals");
+_DECLARE_NATIVE_PROCEDURE(gel_get_target_triple, "get-target-triple");
+_DECLARE_NATIVE_PROCEDURE(gel_get_natives, "get-natives");
+_DECLARE_NATIVE_PROCEDURE(gel_get_compile_time, "compile-time?");
+_DECLARE_NATIVE_PROCEDURE(gel_get_symbol_pool_size, "get-symbol-pool-size");
+_DECLARE_NATIVE_PROCEDURE(gel_get_symbol_pool_max_size, "get-symbol-pool-max-size");
 #endif  // GEL_DEBUG
 
 }  // namespace gel::proc

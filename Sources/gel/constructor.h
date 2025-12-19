@@ -3,14 +3,14 @@
 
 #include <string>
 
-#include "gel/common.h"
-#include "gel/compiled_code.h"
-#include "gel/expr/expression.h"
-#include "gel/expr/seq_expr.h"
-#include "gel/local_scope.h"
-#include "gel/object.h"
-#include "gel/procedure.h"
-#include "gel/type.h"
+#include "common.h"
+#include "compiled_code.h"
+#include "expr/expression.h"
+#include "expr/seq_expr.h"
+#include "local_scope.h"
+#include "object.h"
+#include "procedure.h"
+#include "type.h"
 
 namespace gel {
 class Constructor : public Procedure {

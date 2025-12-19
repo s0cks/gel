@@ -1,7 +1,7 @@
 #ifndef GEL_LITERAL_EXPR_H
 #define GEL_LITERAL_EXPR_H
 
-#include "gel/expr/expression.h"
+#include "expr/expression.h"
 
 namespace gel::expr {
 class LiteralExpr : public Expression {

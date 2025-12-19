@@ -1,13 +1,13 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "gel/common.h"
-#include "gel/local.h"
-#include "gel/local_assertions.h"
-#include "gel/local_scope.h"
-#include "gel/mock_local_scope.h"
-#include "gel/object.h"
-#include "gel/type_assertions.h"
+#include "common.h"
+#include "local.h"
+#include "local_assertions.h"
+#include "local_scope.h"
+#include "mock_local_scope.h"
+#include "object.h"
+#include "type_assertions.h"
 #include "gtest/gtest.h"
 
 namespace gel {

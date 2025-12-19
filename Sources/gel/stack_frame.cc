@@ -1,15 +1,15 @@
-#include "gel/stack_frame.h"
+#include "stack_frame.h"
 
 #include <exception>
 #include <set>
 
-#include "gel/local_scope.h"
-#include "gel/native_procedure.h"
-#include "gel/object.h"
-#include "gel/pointer.h"
-#include "gel/runtime.h"
-#include "gel/script.h"
-#include "gel/to_string_helper.h"
+#include "local_scope.h"
+#include "native_procedure.h"
+#include "object.h"
+#include "pointer.h"
+#include "runtime.h"
+#include "script.h"
+#include "to_string_helper.h"
 
 namespace gel {
 auto StackFrame::VisitAllPointerPointers(const std::function<bool(Pointer**)>& vis) -> bool {

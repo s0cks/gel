@@ -1,11 +1,11 @@
-#include "gel/repl.h"
+#include "repl.h"
 
 #include <iostream>
 
-#include "gel/common.h"
-#include "gel/module.h"
-#include "gel/parser.h"
-#include "gel/runtime.h"
+#include "common.h"
+#include "module.h"
+#include "parser.h"
+#include "runtime.h"
 
 namespace gel {
 Repl::Repl(std::istream& is, std::ostream& os, LocalScope* scope) :

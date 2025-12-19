@@ -1,12 +1,12 @@
-#include "gel/heap.h"
+#include "heap.h"
 
 #include <units.h>
 
-#include "gel/collector.h"
-#include "gel/common.h"
-#include "gel/platform.h"
-#include "gel/thread_local.h"
-#include "gel/zone.h"
+#include "collector.h"
+#include "common.h"
+#include "platform.h"
+#include "thread_local.h"
+#include "zone.h"
 
 namespace gel {
 Heap::Heap() :

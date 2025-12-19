@@ -6,14 +6,14 @@
 #include <string>
 #include <type_traits>
 
-#include "gel/argument.h"
-#include "gel/array.h"
-#include "gel/common.h"
-#include "gel/expr/expression.h"
-#include "gel/native_procedure.h"
-#include "gel/object.h"
-#include "gel/symbol.h"
-#include "gel/type_traits.h"
+#include "argument.h"
+#include "array.h"
+#include "common.h"
+#include "expr/expression.h"
+#include "native_procedure.h"
+#include "object.h"
+#include "symbol.h"
+#include "type_traits.h"
 
 namespace gel {
 class Macro;

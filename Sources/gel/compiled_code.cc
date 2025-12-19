@@ -1,12 +1,12 @@
-#include "gel/compiled_code.h"
+#include "compiled_code.h"
 
 #include <cstddef>
 #include <string>
 
-#include "gel/common.h"
-#include "gel/heap.h"
-#include "gel/platform.h"
-#include "gel/to_string_helper.h"
+#include "common.h"
+#include "heap.h"
+#include "platform.h"
+#include "to_string_helper.h"
 
 namespace gel {
 #ifdef GEL_DISABLE_HEAP

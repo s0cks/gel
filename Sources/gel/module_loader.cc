@@ -1,13 +1,13 @@
-#include "gel/module_loader.h"
+#include "module_loader.h"
 
 #include <filesystem>
 
-#include "gel/common.h"
-#include "gel/local_scope.h"
-#include "gel/module.h"
-#include "gel/parser.h"
-#include "gel/runtime.h"
-#include "gel/thread_local.h"
+#include "common.h"
+#include "local_scope.h"
+#include "module.h"
+#include "parser.h"
+#include "runtime.h"
+#include "thread_local.h"
 
 namespace gel {
 using Result = ModuleLoader::Result;

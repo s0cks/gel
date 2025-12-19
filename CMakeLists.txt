@@ -10,26 +10,7 @@ project(
 
 include(IWYU)
 include(Options)
-find_package(Threads REQUIRED)
-find_package(glog CONFIG REQUIRED)
-
-set(GFLAGS_USE_TARGET_NAMESPACE ON)
-set(GFLAGS_BUILD_SHARED_LIBS ON)
-find_package(gflags CONFIG REQUIRED)
-
-if(GEL_ENABLE_GLM)
-  add_compile_definitions(GEL_ENABLE_GLM)
-  find_package(glm CONFIG REQUIRED)
-endif()
-
-find_package(Graphviz REQUIRED)
-find_package(fmt CONFIG REQUIRED)
-find_package(units CONFIG REQUIRED)
-find_package(libuv CONFIG REQUIRED)
-find_package(RapidJSON CONFIG REQUIRED)
-find_package(Backward CONFIG REQUIRED)
-find_package(FunctionalPlus CONFIG REQUIRED)
-find_package(elfio CONFIG REQUIRED)
+include(Tracing)
 
 if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
   add_compile_definitions(GEL_DEBUG)
@@ -46,4 +27,9 @@ endif()
 option(ENABLE_BENCHMARKS "Enable benchmarks." ON)
 if(ENABLE_BENCHMARKS)
   add_subdirectory(Benchmarks)
+endif()
+
+option(GEL_BUILD_BINDINGS "Build bindings" ON)
+if(GEL_BUILD_BINDINGS)
+  add_subdirectory(Bindings/)
 endif()

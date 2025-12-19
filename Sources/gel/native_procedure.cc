@@ -1,13 +1,13 @@
-#include "gel/native_procedure.h"
+#include "native_procedure.h"
 
-#include "gel/argument.h"
-#include "gel/common.h"
-#include "gel/local.h"
-#include "gel/natives.h"
-#include "gel/pointer.h"
-#include "gel/runtime.h"
-#include "gel/to_string_helper.h"
-#include "gel/type.h"
+#include "argument.h"
+#include "common.h"
+#include "local.h"
+#include "natives.h"
+#include "pointer.h"
+#include "runtime.h"
+#include "to_string_helper.h"
+#include "type.h"
 
 namespace gel {
 auto NativeProcedureEntry::Return(Object* rhs) const -> bool {

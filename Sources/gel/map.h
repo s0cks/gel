@@ -1,9 +1,9 @@
 #ifndef GEL_MAP_H
 #define GEL_MAP_H
 
-#include "gel/common.h"
-#include "gel/native_procedure.h"
-#include "gel/object.h"
+#include "common.h"
+#include "native_procedure.h"
+#include "object.h"
 
 namespace gel {
 class Map : public Object {

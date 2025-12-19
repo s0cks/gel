@@ -1,4 +1,4 @@
-#include "gel/call_stack.h"
+#include "call_stack.h"
 
 namespace gel {
 auto CallStack::Pop() -> StackFrame* {

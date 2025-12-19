@@ -5,15 +5,15 @@
 #include <string>
 #include <utility>
 
-#include "gel/argument.h"
-#include "gel/common.h"
-#include "gel/hashcode.h"
-#include "gel/local.h"
-#include "gel/local_scope.h"
-#include "gel/native_procedure.h"
-#include "gel/object.h"
-#include "gel/symbol.h"
-#include "gel/variable.h"
+#include "argument.h"
+#include "common.h"
+#include "hashcode.h"
+#include "local.h"
+#include "local_scope.h"
+#include "native_procedure.h"
+#include "object.h"
+#include "symbol.h"
+#include "variable.h"
 
 #define FOR_EACH_EXPRESSION_NODE(V) \
   V(SeqExpr)                        \

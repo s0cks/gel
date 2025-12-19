@@ -1,11 +1,11 @@
-#include "gel/nil.h"
+#include "nil.h"
 
-#include "gel/allocator.h"
-#include "gel/common.h"
-#include "gel/heap.h"
-#include "gel/os_thread.h"
-#include "gel/thread_local.h"
-#include "gel/to_string_helper.h"
+#include "allocator.h"
+#include "common.h"
+#include "heap.h"
+#include "os_thread.h"
+#include "thread_local.h"
+#include "to_string_helper.h"
 
 namespace gel {
 static LazyThreadLocal<Nil> instance_([]() -> Nil* {

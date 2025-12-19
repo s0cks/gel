@@ -1,6 +1,6 @@
-#include "gel/expr/invoke_instance_expr.h"
+#include "expr/invoke_instance_expr.h"
 
-#include "gel/to_string_helper.h"
+#include "to_string_helper.h"
 
 namespace gel::expr {
 auto InvokeInstanceExpr::ToString() const -> std::string {

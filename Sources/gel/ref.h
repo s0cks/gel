@@ -1,9 +1,9 @@
 #ifndef GEL_REF_H
 #define GEL_REF_H
 
-#include "gel/common.h"
-#include "gel/object.h"
-#include "gel/platform.h"
+#include "common.h"
+#include "object.h"
+#include "platform.h"
 
 namespace gel {
 class RefBase {

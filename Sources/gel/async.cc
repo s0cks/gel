@@ -1,3 +1,3 @@
-#include "gel/async.h"
+#include "async.h"
 
 namespace gel {}

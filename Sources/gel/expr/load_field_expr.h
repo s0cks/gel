@@ -1,7 +1,7 @@
 #ifndef GEL_LOAD_FIELD_EXPR_H
 #define GEL_LOAD_FIELD_EXPR_H
 
-#include "gel/expr/expression.h"
+#include "expr/expression.h"
 
 namespace gel::expr {
 class LoadFieldExpr : public TemplateExpression<1> {

@@ -1,8 +1,8 @@
 #ifndef GEL_PAIR_H
 #define GEL_PAIR_H
 
-#include "gel/nil.h"
-#include "gel/object.h"
+#include "nil.h"
+#include "object.h"
 
 namespace gel {
 

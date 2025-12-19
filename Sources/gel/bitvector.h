@@ -3,8 +3,8 @@
 
 #include <cstdlib>
 
-#include "gel/common.h"
-#include "gel/platform.h"
+#include "common.h"
+#include "platform.h"
 
 namespace gel {
 class BitVector {

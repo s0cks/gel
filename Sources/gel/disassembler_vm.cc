@@ -6,13 +6,13 @@
 #include <ostream>
 #include <string>
 
-#include "gel/bytecode.h"
-#include "gel/common.h"
-#include "gel/disassembler.h"
-#include "gel/local.h"
-#include "gel/object.h"
-#include "gel/platform.h"
-#include "gel/region.h"
+#include "bytecode.h"
+#include "common.h"
+#include "disassembler.h"
+#include "local.h"
+#include "object.h"
+#include "platform.h"
+#include "region.h"
 
 namespace gel {
 void Disassembler::WritePrefix(const uword address, const uword pos) {

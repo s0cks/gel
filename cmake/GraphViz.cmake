@@ -1,0 +1,5 @@
+option(GEL_ENABLE_GRAPHVIZ "Compile w/ GraphViz support" OFF)
+if(GEL_ENABLE_GRAPHVIZ)
+  find_package(GraphViz REQUIRED)
+  enable_compile_definitions(GEL_GRAPHVIZ_ENABLED)
+endif()

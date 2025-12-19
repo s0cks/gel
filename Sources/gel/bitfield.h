@@ -3,7 +3,7 @@
 
 #include <type_traits>
 
-#include "gel/platform.h"
+#include "platform.h"
 
 namespace gel {
 template <typename S, typename T, int Position, int Size = (sizeof(S) * kBitsPerByte) - Position>

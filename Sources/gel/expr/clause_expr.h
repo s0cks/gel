@@ -1,8 +1,8 @@
 #ifndef GEL_CLAUSE_EXPR_H
 #define GEL_CLAUSE_EXPR_H
 
-#include "gel/expr/expression.h"
-#include "gel/expr/seq_expr.h"
+#include "expr/expression.h"
+#include "expr/seq_expr.h"
 
 namespace gel::expr {
 class ClauseExpr : public Expression {  // TODO: should this be a WhenExpr?

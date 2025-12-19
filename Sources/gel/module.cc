@@ -1,15 +1,15 @@
-#include "gel/module.h"
+#include "module.h"
 
-#include "gel/array.h"
-#include "gel/common.h"
-#include "gel/constructor.h"
-#include "gel/expr/expression.h"
-#include "gel/macro.h"
-#include "gel/native_procedure.h"
-#include "gel/parser.h"
-#include "gel/platform.h"
-#include "gel/pointer.h"
-#include "gel/to_string_helper.h"
+#include "array.h"
+#include "common.h"
+#include "constructor.h"
+#include "expr/expression.h"
+#include "macro.h"
+#include "native_procedure.h"
+#include "parser.h"
+#include "platform.h"
+#include "pointer.h"
+#include "to_string_helper.h"
 
 namespace gel {
 static Array<Module*>* modules_ = nullptr;

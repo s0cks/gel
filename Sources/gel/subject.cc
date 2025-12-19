@@ -1,7 +1,7 @@
-#include "gel/subject.h"
+#include "subject.h"
 
-#include "gel/heap.h"
-#include "gel/to_string_helper.h"
+#include "heap.h"
+#include "to_string_helper.h"
 
 namespace gel {
 DEFINE_NEW_OPERATOR(Subject);         // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)

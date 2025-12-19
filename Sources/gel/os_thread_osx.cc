@@ -1,4 +1,4 @@
-#include "gel/os_thread.h"
+#include "os_thread.h"
 #ifdef OS_IS_OSX
 
 #include <array>
@@ -12,7 +12,7 @@
 #include <string>
 #include <utility>
 
-#include "gel/common.h"
+#include "common.h"
 namespace gel {
 class ThreadStartData {
   DEFINE_NON_COPYABLE_TYPE(ThreadStartData);

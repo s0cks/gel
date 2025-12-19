@@ -3,9 +3,9 @@
 
 #include <units.h>
 
-#include "gel/common.h"
-#include "gel/pointer.h"
-#include "gel/region.h"
+#include "common.h"
+#include "pointer.h"
+#include "region.h"
 
 namespace gel {
 class Semispace : public AllocationRegion {

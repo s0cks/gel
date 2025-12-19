@@ -2,12 +2,12 @@
 #include <glog/logging.h>
 #include <uv.h>
 
-#include "gel/common.h"
-#include "gel/event_loop.h"
-#include "gel/native_procedure.h"
-#include "gel/plugin.h"
-#include "gel/procedure.h"
-#include "gel/runtime.h"
+#include "common.h"
+#include "event_loop.h"
+#include "native_procedure.h"
+#include "plugin.h"
+#include "procedure.h"
+#include "runtime.h"
 
 using namespace gel;
 

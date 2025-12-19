@@ -8,12 +8,12 @@
 #include <stack>
 #include <vector>
 
-#include "gel/common.h"
-#include "gel/object.h"
-#include "gel/pair.h"
-#include "gel/platform.h"
-#include "gel/rx.h"
-#include "gel/type.h"
+#include "common.h"
+#include "object.h"
+#include "pair.h"
+#include "platform.h"
+#include "rx.h"
+#include "type.h"
 
 namespace gel {
 

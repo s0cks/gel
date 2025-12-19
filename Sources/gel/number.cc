@@ -1,7 +1,7 @@
-#include "gel/number.h"
+#include "number.h"
 
-#include "gel/exception.h"
-#include "gel/to_string_helper.h"
+#include "exception.h"
+#include "to_string_helper.h"
 
 namespace gel {
 

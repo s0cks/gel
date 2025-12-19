@@ -6,20 +6,20 @@
 #include <type_traits>
 #include <vector>
 
-#include "gel/common.h"
-#include "gel/constructor.h"
-#include "gel/expr/clause_expr.h"
-#include "gel/expr/expression.h"
-#include "gel/flags.h"
-#include "gel/flow_graph.h"
-#include "gel/instruction.h"
-#include "gel/lambda.h"
-#include "gel/local.h"
-#include "gel/local_scope.h"
-#include "gel/object.h"
-#include "gel/platform.h"
-#include "gel/type.h"
-#include "gel/type_traits.h"
+#include "common.h"
+#include "constructor.h"
+#include "expr/clause_expr.h"
+#include "expr/expression.h"
+#include "flags.h"
+#include "flow_graph.h"
+#include "instruction.h"
+#include "lambda.h"
+#include "local.h"
+#include "local_scope.h"
+#include "object.h"
+#include "platform.h"
+#include "type.h"
+#include "type_traits.h"
 
 namespace gel {
 template <class I>

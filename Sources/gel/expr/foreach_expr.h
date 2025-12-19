@@ -1,8 +1,8 @@
 #ifndef GEL_FOREACH_EXPR_H
 #define GEL_FOREACH_EXPR_H
 
-#include "gel/expr/binding_expr.h"
-#include "gel/expr/expression.h"
+#include "expr/binding_expr.h"
+#include "expr/expression.h"
 
 namespace gel::expr {
 class ForeachExpr : public Expression {

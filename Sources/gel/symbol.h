@@ -1,10 +1,10 @@
 #ifndef GEL_SYMBOL_H
 #define GEL_SYMBOL_H
 
-#include "gel/common.h"
-#include "gel/flags.h"
-#include "gel/object.h"
-#include "gel/trie.h"
+#include "common.h"
+#include "flags.h"
+#include "object.h"
+#include "trie.h"
 
 namespace gel {
 DECLARE_uword(symbol_pool_size);

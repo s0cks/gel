@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include "gel/rx.h"
+#include "rx.h"
 
 namespace gel {
 namespace expr {

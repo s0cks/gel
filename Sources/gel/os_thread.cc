@@ -1,3 +1,3 @@
-#include "gel/os_thread.h"
+#include "os_thread.h"
 
 namespace gel {}

@@ -4,9 +4,9 @@
 #include <ostream>
 #include <units.h>
 
-#include "gel/common.h"
-#include "gel/platform.h"
-#include "gel/region.h"
+#include "common.h"
+#include "platform.h"
+#include "region.h"
 
 namespace gel {
 class MemoryRegion : public Region {

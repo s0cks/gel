@@ -3,8 +3,8 @@
 
 #include <deque>
 
-#include "gel/common.h"
-#include "gel/pointer.h"
+#include "common.h"
+#include "pointer.h"
 
 namespace gel {
 class Marker : public PointerVisitor {

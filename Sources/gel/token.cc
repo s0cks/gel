@@ -1,3 +1,3 @@
-#include "gel/token.h"
+#include "token.h"
 
 namespace gel {}  // namespace gel

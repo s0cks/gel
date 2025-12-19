@@ -1,4 +1,5 @@
-#include "gel/expr/expression_dot.h"
+#include "expr/expression_dot.h"
+#ifdef GEL_ENABLE_GRAPHVIZ
 
 #include <cstdio>
 #include <filesystem>
@@ -7,10 +8,10 @@
 #include <sstream>
 #include <string>
 
-#include "gel/common.h"
-#include "gel/expr/exprs.h"
-#include "gel/gv.h"
-#include "gel/types.h"
+#include "common.h"
+#include "expr/exprs.h"
+#include "gv.h"
+#include "types.h"
 
 namespace gel::expr {
 ExpressionToDot::ExpressionToDot(const char* graph_name) :
@@ -384,3 +385,5 @@ void GenerateExprDotPng(const std::filesystem::path& path, const std::string& na
   fclose(file);
 }
 }  // namespace gel::expr
+
+#endif  // GEL_ENABLE_GRAPHVIZ

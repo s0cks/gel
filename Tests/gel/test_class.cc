@@ -1,8 +1,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "gel/mock_pointer_visitor.h"
-#include "gel/types.h"
+#include "mock_pointer_visitor.h"
+#include "types.h"
 #include "gmock/gmock.h"
 
 namespace gel {

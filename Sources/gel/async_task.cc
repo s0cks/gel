@@ -1,7 +1,7 @@
-#include "gel/async_task.h"
+#include "async_task.h"
 
-#include "gel/common.h"
-#include "gel/runtime.h"
+#include "common.h"
+#include "runtime.h"
 
 namespace gel {
 void Task::Execute() {

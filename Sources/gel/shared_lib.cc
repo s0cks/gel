@@ -1,3 +1,3 @@
-#include "gel/shared_lib.h"
+#include "shared_lib.h"
 
 namespace gel {}

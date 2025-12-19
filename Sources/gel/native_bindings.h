@@ -7,8 +7,8 @@
 #include <new>
 #include <rpp/observables/dynamic_observable.hpp>
 
-#include "gel/common.h"
-#include "gel/rx.h"
+#include "common.h"
+#include "rx.h"
 
 namespace gel {
 using PathPredicate = std::function<bool(std::filesystem::path)>;

@@ -2,9 +2,9 @@
 #include <cstdlib>
 #include <glog/logging.h>
 
-#include "gel/native_procedure.h"
-#include "gel/object.h"
-#include "gel/plugin.h"
+#include "native_procedure.h"
+#include "object.h"
+#include "plugin.h"
 
 using namespace gel;
 

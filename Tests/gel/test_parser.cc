@@ -3,11 +3,11 @@
 
 // #include <fstream>
 
-// #include "gel/common.h"
-// #include "gel/expr/expression.h"
-// #include "gel/expr/expression_dot.h"
-// #include "gel/module.h"
-// #include "gel/parser.h"
+// #include "common.h"
+// #include "expr/expression.h"
+// #include "expr/expression_dot.h"
+// #include "module.h"
+// #include "parser.h"
 // #include "gmock/gmock.h"
 
 // namespace gel {

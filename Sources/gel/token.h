@@ -12,12 +12,12 @@
 #include <string>
 #include <vector>
 
-#include "gel/binary_op.h"
-#include "gel/common.h"
-#include "gel/expr/expression.h"
-#include "gel/object.h"
-#include "gel/platform.h"
-#include "gel/unary_op.h"
+#include "binary_op.h"
+#include "common.h"
+#include "expr/expression.h"
+#include "object.h"
+#include "platform.h"
+#include "unary_op.h"
 
 namespace gel {
 struct Position {

@@ -1,14 +1,14 @@
-#include "gel/vec.h"
+#include "vec.h"
 
 #include <cstddef>
 #include <string>
 #include <vector>
 
-#include "gel/common.h"
-#include "gel/heap.h"
-#include "gel/object.h"
-#include "gel/platform.h"
-#include "gel/to_string_helper.h"
+#include "common.h"
+#include "heap.h"
+#include "object.h"
+#include "platform.h"
+#include "to_string_helper.h"
 
 namespace gel {
 #ifdef GEL_DISABLE_HEAP

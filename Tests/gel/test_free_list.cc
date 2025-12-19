@@ -1,9 +1,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "gel/common.h"
-#include "gel/free_list.h"
-#include "gel/memory_region.h"
+#include "common.h"
+#include "free_list.h"
+#include "memory_region.h"
 #include "gmock/gmock.h"
 
 namespace gel {

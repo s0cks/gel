@@ -1,23 +1,23 @@
-#include "gel/collector.h"
+#include "collector.h"
 
 #include <cstring>
 #include <functional>
 
-#include "gel/buffer.h"
-#include "gel/common.h"
-#include "gel/event_emitter.h"
-#include "gel/event_loop.h"
-#include "gel/heap.h"
-#include "gel/macro.h"
-#include "gel/module.h"
-#include "gel/object.h"
-#include "gel/platform.h"
-#include "gel/pointer.h"
-#include "gel/region.h"
-#include "gel/runtime.h"
-#include "gel/script.h"
-#include "gel/stack_frame.h"
-#include "gel/zone.h"
+#include "buffer.h"
+#include "common.h"
+#include "event_emitter.h"
+#include "event_loop.h"
+#include "heap.h"
+#include "macro.h"
+#include "module.h"
+#include "object.h"
+#include "platform.h"
+#include "pointer.h"
+#include "region.h"
+#include "runtime.h"
+#include "script.h"
+#include "stack_frame.h"
+#include "zone.h"
 
 namespace gel {
 auto Collector::VisitRoots(const std::function<bool(Pointer**)>& vis) -> bool {

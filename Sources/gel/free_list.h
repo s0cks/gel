@@ -4,13 +4,13 @@
 #include <ostream>
 #include <string>
 
-#include "gel/common.h"
-#include "gel/free_pointer.h"
-#include "gel/memory_region.h"
-#include "gel/platform.h"
-#include "gel/pointer.h"
-#include "gel/region.h"
-#include "gel/tag.h"
+#include "common.h"
+#include "free_pointer.h"
+#include "memory_region.h"
+#include "platform.h"
+#include "pointer.h"
+#include "region.h"
+#include "tag.h"
 
 namespace gel {
 class FreeList : public Region {

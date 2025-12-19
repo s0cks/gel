@@ -3,11 +3,11 @@
 
 #include <vector>
 
-#include "gel/bitvector.h"
-#include "gel/common.h"
-#include "gel/instruction.h"
-#include "gel/object.h"
-#include "gel/platform.h"
+#include "bitvector.h"
+#include "common.h"
+#include "instruction.h"
+#include "object.h"
+#include "platform.h"
 
 namespace gel {
 class FlowGraph {

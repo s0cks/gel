@@ -4,7 +4,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "gel/local_scope.h"
+#include "local_scope.h"
 
 namespace gel {
 class MockLocalScope : public LocalScope {

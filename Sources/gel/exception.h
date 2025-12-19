@@ -4,7 +4,7 @@
 #include <string>
 #include <utility>
 
-#include "gel/common.h"
+#include "common.h"
 
 namespace gel {
 class IllegalArgumentException : public Exception {

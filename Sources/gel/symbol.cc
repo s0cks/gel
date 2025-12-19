@@ -1,11 +1,11 @@
-#include "gel/symbol.h"
+#include "symbol.h"
 
-#include "gel/common.h"
-#include "gel/namespace.h"
-#include "gel/natives.h"
-#include "gel/thread_local.h"
-#include "gel/to_string_helper.h"
-#include "gel/trie.h"
+#include "common.h"
+#include "namespace.h"
+#include "natives.h"
+#include "thread_local.h"
+#include "to_string_helper.h"
+#include "trie.h"
 
 namespace gel {
 DEFINE_uword(symbol_pool_size, 65535, "Defines the maximum number of Symbols to be pooled (interned).");

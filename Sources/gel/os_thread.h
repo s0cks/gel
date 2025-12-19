@@ -3,13 +3,13 @@
 
 #include <string>
 
-#include "gel/platform.h"
+#include "platform.h"
 #ifdef OS_IS_LINUX
-#include "gel/os_thread_linux.h"
+#include "os_thread_linux.h"
 #elif OS_IS_OSX
-#include "gel/os_thread_osx.h"
+#include "os_thread_osx.h"
 #elif OS_IS_WINDOWS
-#include "gel/os_thread_windows.h"
+#include "os_thread_windows.h"
 #endif
 
 namespace gel {

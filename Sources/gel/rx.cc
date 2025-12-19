@@ -1,14 +1,14 @@
-#include "gel/rx.h"
+#include "rx.h"
 #ifdef GEL_ENABLE_RX
 #include <exception>
 #include <rpp/operators/map.hpp>
 
-#include "gel/common.h"
-#include "gel/local_scope.h"
-#include "gel/object.h"
-#include "gel/procedure.h"
-#include "gel/runtime.h"
-#include "gel/thread_local.h"
+#include "common.h"
+#include "local_scope.h"
+#include "object.h"
+#include "procedure.h"
+#include "runtime.h"
+#include "thread_local.h"
 
 namespace gel::rx {
 static LazyThreadLocal<LocalScope> kRxScope([]() {

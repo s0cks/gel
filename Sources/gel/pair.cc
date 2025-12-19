@@ -1,7 +1,7 @@
-#include "gel/pair.h"
+#include "pair.h"
 
-#include "gel/number.h"
-#include "gel/to_string_helper.h"
+#include "number.h"
+#include "to_string_helper.h"
 
 namespace gel {
 auto Pair::New(const ObjectList& args) -> Pair* {

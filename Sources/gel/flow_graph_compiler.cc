@@ -1,20 +1,20 @@
-#include "gel/flow_graph_compiler.h"
+#include "flow_graph_compiler.h"
 
 #include <chrono>
 #include <iostream>
 #include <sstream>
 #include <type_traits>
 
-#include "gel/assembler.h"
-#include "gel/common.h"
-#include "gel/disassembler.h"
-#include "gel/flow_graph_builder.h"
-#include "gel/instruction.h"
-#include "gel/local.h"
-#include "gel/local_scope.h"
-#include "gel/macro_expander.h"
-#include "gel/script.h"
-#include "gel/tracing.h"
+#include "assembler.h"
+#include "common.h"
+#include "disassembler.h"
+#include "flow_graph_builder.h"
+#include "instruction.h"
+#include "local.h"
+#include "local_scope.h"
+#include "macro_expander.h"
+#include "script.h"
+#include "tracing.h"
 
 namespace gel {
 void FlowGraphCompiler::AssembleFlowGraph(FlowGraph* flow_graph) {

@@ -1,8 +1,8 @@
 #ifndef GEL_ASYNC_TASK_H
 #define GEL_ASYNC_TASK_H
 
-#include "gel/common.h"
-#include "gel/rx.h"
+#include "common.h"
+#include "rx.h"
 
 namespace gel {
 class Task {

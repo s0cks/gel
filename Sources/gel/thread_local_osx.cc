@@ -2,10 +2,10 @@
 #include <ostream>
 #include <pthread.h>
 
-#include "gel/common.h"
-#include "gel/os_thread.h"
-#include "gel/platform.h"
-#include "gel/thread_local.h"
+#include "common.h"
+#include "os_thread.h"
+#include "platform.h"
+#include "thread_local.h"
 #ifdef OS_IS_OSX
 
 namespace gel {

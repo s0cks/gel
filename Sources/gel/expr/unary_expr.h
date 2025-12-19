@@ -1,8 +1,8 @@
 #ifndef GEL_UNARY_EXPR_H
 #define GEL_UNARY_EXPR_H
 
-#include "gel/expr/expression.h"
-#include "gel/unary_op.h"
+#include "expr/expression.h"
+#include "unary_op.h"
 
 namespace gel::expr {
 class UnaryOpExpr : public TemplateOpExpression<UnaryOp, 1> {

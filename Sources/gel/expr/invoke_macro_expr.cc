@@ -1,6 +1,6 @@
-#include "gel/expr/invoke_macro_expr.h"
+#include "expr/invoke_macro_expr.h"
 
-#include "gel/to_string_helper.h"
+#include "to_string_helper.h"
 
 namespace gel::expr {
 auto InvokeMacroExpr::ToString() const -> std::string {

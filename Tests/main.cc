@@ -1,11 +1,11 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
-#include "gel/gel.h"
-#include "gel/heap.h"
-#include "gel/object.h"
-#include "gel/parser.h"
-#include "gel/runtime.h"
+#include "gel.h"
+#include "heap.h"
+#include "object.h"
+#include "parser.h"
+#include "runtime.h"
 
 using namespace gel;
 

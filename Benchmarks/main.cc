@@ -2,10 +2,10 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
-#include "gel/gel.h"
-#include "gel/heap.h"
-#include "gel/parser.h"
-#include "gel/runtime.h"
+#include "gel.h"
+#include "heap.h"
+#include "parser.h"
+#include "runtime.h"
 
 using namespace gel;
 

@@ -1,10 +1,10 @@
-#include "gel/disassembler.h"
+#include "disassembler.h"
 
 #include <type_traits>
 
-#include "gel/compiled_code.h"
-#include "gel/lambda.h"
-#include "gel/script.h"
-#include "gel/type_traits.h"
+#include "compiled_code.h"
+#include "lambda.h"
+#include "script.h"
+#include "type_traits.h"
 
 namespace gel {}  // namespace gel

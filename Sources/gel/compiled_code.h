@@ -5,9 +5,9 @@
 #include <ostream>
 #include <string>
 
-#include "gel/allocator.h"
-#include "gel/platform.h"
-#include "gel/region.h"
+#include "allocator.h"
+#include "platform.h"
+#include "region.h"
 
 namespace gel {
 class CompiledCode : public HeapObject {

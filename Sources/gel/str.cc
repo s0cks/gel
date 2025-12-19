@@ -1,10 +1,10 @@
-#include "gel/str.h"
+#include "str.h"
 
-#include "gel/boolean.h"
-#include "gel/buffer.h"
-#include "gel/number.h"
-#include "gel/symbol.h"
-#include "gel/to_string_helper.h"
+#include "boolean.h"
+#include "buffer.h"
+#include "number.h"
+#include "symbol.h"
+#include "to_string_helper.h"
 
 namespace gel {
 auto StringObject::Equals(Object* rhs) const -> bool {

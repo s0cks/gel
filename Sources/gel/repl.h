@@ -3,8 +3,8 @@
 
 #include <iostream>
 
-#include "gel/error.h"
-#include "gel/local_scope.h"
+#include "error.h"
+#include "local_scope.h"
 
 namespace gel {
 class Repl {

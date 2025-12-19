@@ -1,14 +1,13 @@
 #ifndef GEL_FLAGS_H
 #define GEL_FLAGS_H
 
+#include <filesystem>
 #include <fmt/format.h>
 #include <gflags/gflags.h>
-
-#include <filesystem>
 #include <optional>
 #include <string>
 
-#include "gel/platform.h"
+#include "platform.h"
 
 namespace gel {
 #if defined(ARCH_IS_X64) || defined(ARCH_IS_ARM64)
@@ -30,8 +29,12 @@ namespace gel {
 #endif
 
 DECLARE_bool(eval);
+
+#ifdef GEL_ENABLE_GRAPHVIZ
 DECLARE_bool(dump_ast);
 DECLARE_bool(dump_flow_graph);
+#endif  // GEL_ENABLE_GRAPHVIZ
+
 DECLARE_bool(pedantic);
 DECLARE_bool(print_ir);
 DECLARE_bool(print_bytecode);

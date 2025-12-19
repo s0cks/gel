@@ -1,8 +1,8 @@
 #include <cstdlib>
 #include <glog/logging.h>
 
-#include "gel/native_procedure.h"
-#include "gel/plugin.h"
+#include "native_procedure.h"
+#include "plugin.h"
 
 using namespace gel;
 

@@ -1,6 +1,6 @@
-#include "gel/exception_table.h"
+#include "exception_table.h"
 
-#include "gel/to_string_helper.h"
+#include "to_string_helper.h"
 
 namespace gel {
 auto ExceptionTable::Entry::ToString() const -> std::string {

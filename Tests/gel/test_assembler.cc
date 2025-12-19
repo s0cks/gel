@@ -4,9 +4,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "gel/assembler.h"
-#include "gel/common.h"
-#include "gel/compiled_code.h"
+#include "assembler.h"
+#include "common.h"
+#include "compiled_code.h"
 
 namespace gel {
 using namespace ::testing;

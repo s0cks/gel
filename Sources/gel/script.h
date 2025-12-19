@@ -1,12 +1,12 @@
 #ifndef GEL_SCRIPT_H
 #define GEL_SCRIPT_H
 
-#include "gel/common.h"
-#include "gel/compiled_code.h"
-#include "gel/expr/expression.h"
-#include "gel/lambda.h"
-#include "gel/local_scope.h"
-#include "gel/namespace.h"
+#include "common.h"
+#include "compiled_code.h"
+#include "expr/expression.h"
+#include "lambda.h"
+#include "local_scope.h"
+#include "namespace.h"
 
 namespace gel {
 class Script : public Object {

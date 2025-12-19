@@ -3,9 +3,9 @@
 
 #include <gtest/gtest.h>
 
-#include "gel/local.h"
-#include "gel/object.h"
-#include "gel/symbol.h"
+#include "local.h"
+#include "object.h"
+#include "symbol.h"
 
 namespace gel {
 using namespace ::testing;

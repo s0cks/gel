@@ -1,6 +1,6 @@
-#include "gel/boolean.h"
+#include "boolean.h"
 
-#include "gel/number.h"
+#include "number.h"
 
 namespace gel {
 static Bool* kTrue = nullptr;   // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)

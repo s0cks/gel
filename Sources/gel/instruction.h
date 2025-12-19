@@ -7,17 +7,17 @@
 #include <type_traits>
 #include <vector>
 
-#include "gel/binary_op.h"
-#include "gel/bitvector.h"
-#include "gel/common.h"
-#include "gel/expr/expression.h"
-#include "gel/lambda.h"
-#include "gel/local.h"
-#include "gel/object.h"
-#include "gel/platform.h"
-#include "gel/procedure.h"
-#include "gel/type_traits.h"
-#include "gel/unary_op.h"
+#include "binary_op.h"
+#include "bitvector.h"
+#include "common.h"
+#include "expr/expression.h"
+#include "lambda.h"
+#include "local.h"
+#include "object.h"
+#include "platform.h"
+#include "procedure.h"
+#include "type_traits.h"
+#include "unary_op.h"
 
 #define FOR_EACH_INSTRUCTION(V) \
   V(Constant)                   \

@@ -1,9 +1,9 @@
-#include "gel/procedure.h"
+#include "procedure.h"
 
 #include <glog/logging.h>
 
-#include "gel/common.h"
-#include "gel/runtime.h"
+#include "common.h"
+#include "runtime.h"
 
 namespace gel {
 auto Procedure::CreateClass() -> Class* {

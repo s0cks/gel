@@ -1,4 +1,4 @@
-#include "gel/semispace.h"
+#include "semispace.h"
 
 namespace gel {
 auto Semispace::TryAllocate(const uword size) -> uword {

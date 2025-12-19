@@ -6,15 +6,15 @@
 #include <units.h>
 #include <utility>
 
-#include "gel/common.h"
-#include "gel/flags.h"
-#include "gel/free_list.h"
-#include "gel/memory_region.h"
-#include "gel/platform.h"
-#include "gel/pointer.h"
-#include "gel/region.h"
-#include "gel/semispace.h"
-#include "gel/tag.h"
+#include "common.h"
+#include "flags.h"
+#include "free_list.h"
+#include "memory_region.h"
+#include "platform.h"
+#include "pointer.h"
+#include "region.h"
+#include "semispace.h"
+#include "tag.h"
 
 namespace gel {
 class Zone : public AllocationRegion {

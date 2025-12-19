@@ -1,15 +1,15 @@
 #ifndef GEL_MACRO_EXPANDER_H
 #define GEL_MACRO_EXPANDER_H
 
-#include "gel/common.h"
-#include "gel/expr/expression.h"
-#include "gel/expr/expression_dot.h"
-#include "gel/expr/invoke_macro_expr.h"
-#include "gel/expr/seq_expr.h"
-#include "gel/flags.h"
-#include "gel/flow_graph_builder.h"
-#include "gel/local.h"
-#include "gel/local_scope.h"
+#include "common.h"
+#include "expr/expression.h"
+#include "expr/expression_dot.h"
+#include "expr/invoke_macro_expr.h"
+#include "expr/seq_expr.h"
+#include "flags.h"
+#include "flow_graph_builder.h"
+#include "local.h"
+#include "local_scope.h"
 
 namespace gel {
 class Macro;
@@ -83,18 +83,20 @@ class MacroExpander {
     ASSERT(target);
     ASSERT(locals);
     const auto target_name = target->GetTargetName();
+#ifdef GEL_ENABLE_GRAPHVIZ
     if (FLAGS_dump_ast) {
       expr::GenerateExprDotPng(fmt::format("reports/{}-pre-expansion.png", target_name), target_name,
                                target->GetBody());
     }
+#endif  // GEL_ENABLE_GRAPHVIZ
     MacroExpander expander(locals);
     LOG_IF(FATAL, !expander.ExpandAll(target)) << "failed to expand macros in " << target->ToString();
+#ifdef GEL_ENABLE_GRAPHVIZ
     if (FLAGS_dump_ast) {
-      if (FLAGS_dump_ast) {
-        expr::GenerateExprDotPng(fmt::format("reports/{}-post-expansion.png", target_name), target_name,
-                                 target->GetBody());
-      }
+      expr::GenerateExprDotPng(fmt::format("reports/{}-post-expansion.png", target_name), target_name,
+                               target->GetBody());
     }
+#endif  // GEL_ENABLE_GRAPHVIZ
   }
 };
 

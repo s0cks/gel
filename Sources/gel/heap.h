@@ -4,10 +4,10 @@
 #include <ostream>
 #include <units.h>
 
-#include "gel/common.h"
-#include "gel/platform.h"
-#include "gel/region.h"
-#include "gel/zone.h"
+#include "common.h"
+#include "platform.h"
+#include "region.h"
+#include "zone.h"
 
 namespace gel {
 static constexpr const auto kLargeObjectSize = 4 * 1024;

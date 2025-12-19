@@ -1,4 +1,4 @@
-#include "gel/native_bindings.h"
+#include "native_bindings.h"
 
 #include <exception>
 #include <filesystem>
@@ -6,9 +6,9 @@
 #include <glog/logging.h>
 #include <utility>
 
-#include "gel/common.h"
-#include "gel/runtime.h"
-#include "gel/shared_lib.h"
+#include "common.h"
+#include "runtime.h"
+#include "shared_lib.h"
 
 namespace gel {
 class NativeBinding {

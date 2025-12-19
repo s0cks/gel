@@ -1,10 +1,10 @@
-#include "gel/free_pointer.h"
+#include "free_pointer.h"
 
 #include <string>
 
-#include "gel/common.h"
-#include "gel/region.h"
-#include "gel/to_string_helper.h"
+#include "common.h"
+#include "region.h"
+#include "to_string_helper.h"
 
 namespace gel {
 auto FreePointer::ToString() const -> std::string {

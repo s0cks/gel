@@ -6,15 +6,15 @@
 #include <type_traits>
 #include <vector>
 
-#include "gel/allocator.h"
-#include "gel/array.h"
-#include "gel/common.h"
-#include "gel/local.h"
-#include "gel/object.h"
-#include "gel/platform.h"
-#include "gel/pointer.h"
-#include "gel/rx.h"
-#include "gel/type_traits.h"
+#include "allocator.h"
+#include "array.h"
+#include "common.h"
+#include "local.h"
+#include "object.h"
+#include "platform.h"
+#include "pointer.h"
+#include "rx.h"
+#include "type_traits.h"
 
 namespace gel {
 class Symbol;

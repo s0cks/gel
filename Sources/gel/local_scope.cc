@@ -1,4 +1,4 @@
-#include "gel/local_scope.h"
+#include "local_scope.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -6,14 +6,14 @@
 #include <string>
 #include <vector>
 
-#include "gel/array.h"
-#include "gel/common.h"
-#include "gel/heap.h"
-#include "gel/local.h"
-#include "gel/object.h"
-#include "gel/platform.h"
-#include "gel/pointer.h"
-#include "gel/to_string_helper.h"
+#include "array.h"
+#include "common.h"
+#include "heap.h"
+#include "local.h"
+#include "object.h"
+#include "platform.h"
+#include "pointer.h"
+#include "to_string_helper.h"
 
 namespace gel {
 auto LocalScope::operator new(const size_t sz) -> void* {

@@ -21,7 +21,7 @@
 #include <utility>
 #include <vector>
 
-#include "gel/platform.h"
+#include "platform.h"
 #ifdef GEL_DEBUG
 
 #include <cassert>

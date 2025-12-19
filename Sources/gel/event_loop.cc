@@ -1,4 +1,4 @@
-#include "gel/event_loop.h"
+#include "event_loop.h"
 
 #include <algorithm>
 #include <fmt/format.h>
@@ -8,18 +8,18 @@
 #include <utility>
 #include <uv.h>
 
-#include "gel/common.h"
-#include "gel/error.h"
-#include "gel/hashcode.h"
-#include "gel/object.h"
-#include "gel/platform.h"
-#include "gel/pointer.h"
-#include "gel/procedure.h"
-#include "gel/runtime.h"
-#include "gel/thread_local.h"
-#include "gel/timer.h"
-#include "gel/to_string_helper.h"
-#include "gel/type.h"
+#include "common.h"
+#include "error.h"
+#include "hashcode.h"
+#include "object.h"
+#include "platform.h"
+#include "pointer.h"
+#include "procedure.h"
+#include "runtime.h"
+#include "thread_local.h"
+#include "timer.h"
+#include "to_string_helper.h"
+#include "type.h"
 
 namespace gel {
 auto WrapOnError(Procedure* on_error) -> OnErrorCallback {

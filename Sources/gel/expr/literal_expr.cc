@@ -1,6 +1,6 @@
-#include "gel/expr/literal_expr.h"
+#include "expr/literal_expr.h"
 
-#include "gel/to_string_helper.h"
+#include "to_string_helper.h"
 
 namespace gel::expr {
 auto LiteralExpr::ToString() const -> std::string {

@@ -1,14 +1,14 @@
-#include "gel/argument.h"
+#include "argument.h"
 
 #include <cstddef>
 #include <string>
 
-#include "gel/common.h"
-#include "gel/hashcode.h"
-#include "gel/heap.h"
-#include "gel/object.h"
-#include "gel/platform.h"
-#include "gel/to_string_helper.h"
+#include "common.h"
+#include "hashcode.h"
+#include "heap.h"
+#include "object.h"
+#include "platform.h"
+#include "to_string_helper.h"
 
 namespace gel {
 Class* Argument::kClass = nullptr;

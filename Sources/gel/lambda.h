@@ -4,17 +4,17 @@
 #include <fmt/base.h>
 #include <string>
 
-#include "gel/argument.h"
-#include "gel/common.h"
-#include "gel/compiled_code.h"
-#include "gel/expr/expression.h"
-#include "gel/expr/seq_expr.h"
-#include "gel/local_scope.h"
-#include "gel/native_procedure.h"
-#include "gel/object.h"
-#include "gel/pointer.h"
-#include "gel/procedure.h"
-#include "gel/type.h"
+#include "argument.h"
+#include "common.h"
+#include "compiled_code.h"
+#include "expr/expression.h"
+#include "expr/seq_expr.h"
+#include "local_scope.h"
+#include "native_procedure.h"
+#include "object.h"
+#include "pointer.h"
+#include "procedure.h"
+#include "type.h"
 
 namespace gel {
 class Parser;

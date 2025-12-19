@@ -1,8 +1,8 @@
-#include "gel/allocator.h"
+#include "allocator.h"
 
-#include "gel/common.h"
-#include "gel/platform.h"
-#include "gel/pointer.h"
+#include "common.h"
+#include "platform.h"
+#include "pointer.h"
 
 namespace gel {
 auto Allocator::malloc(const uword size) -> void* {

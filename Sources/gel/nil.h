@@ -1,7 +1,7 @@
 #ifndef GEL_NIL_H
 #define GEL_NIL_H
 
-#include "gel/object.h"
+#include "object.h"
 
 namespace gel {
 class Nil : public Object {

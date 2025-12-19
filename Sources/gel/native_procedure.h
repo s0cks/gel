@@ -4,16 +4,16 @@
 #include <type_traits>
 #include <variant>
 
-#include "gel/argument.h"
-#include "gel/array.h"
-#include "gel/boolean.h"
-#include "gel/common.h"
-#include "gel/error.h"
-#include "gel/fmt.h"
-#include "gel/nil.h"
-#include "gel/number.h"
-#include "gel/pointer.h"
-#include "gel/procedure.h"
+#include "argument.h"
+#include "array.h"
+#include "boolean.h"
+#include "common.h"
+#include "error.h"
+#include "fmt.h"
+#include "nil.h"
+#include "number.h"
+#include "pointer.h"
+#include "procedure.h"
 
 namespace gel {
 

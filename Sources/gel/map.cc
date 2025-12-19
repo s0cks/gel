@@ -1,8 +1,8 @@
-#include "gel/map.h"
+#include "map.h"
 
-#include "gel/hashcode.h"
-#include "gel/native_procedure.h"
-#include "gel/to_string_helper.h"
+#include "hashcode.h"
+#include "native_procedure.h"
+#include "to_string_helper.h"
 
 namespace gel {
 void Map::Init() {

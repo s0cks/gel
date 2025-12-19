@@ -1,4 +1,4 @@
-#include "gel/flow_graph_dot.h"
+#include "flow_graph_dot.h"
 #ifdef GEL_ENABLE_GV
 
 #include <cmath>
@@ -7,14 +7,14 @@
 #include <glog/logging.h>
 #include <sstream>
 
-#include "gel/common.h"
-#include "gel/expr/expression.h"
-#include "gel/flow_graph.h"
-#include "gel/flow_graph_builder.h"
-#include "gel/gv.h"
-#include "gel/instruction.h"
-#include "gel/native_procedure.h"
-#include "gel/object.h"
+#include "common.h"
+#include "expr/expression.h"
+#include "flow_graph.h"
+#include "flow_graph_builder.h"
+#include "gv.h"
+#include "instruction.h"
+#include "native_procedure.h"
+#include "object.h"
 
 namespace gel {
 namespace dot {

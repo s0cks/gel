@@ -1,6 +1,6 @@
-#include "gel/expr/seq_expr.h"
+#include "expr/seq_expr.h"
 
-#include "gel/to_string_helper.h"
+#include "to_string_helper.h"
 
 namespace gel::expr {
 auto SeqExpr::ToString() const -> std::string {

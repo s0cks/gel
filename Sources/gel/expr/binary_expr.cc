@@ -1,6 +1,6 @@
-#include "gel/expr/binary_expr.h"
+#include "expr/binary_expr.h"
 
-#include "gel/to_string_helper.h"
+#include "to_string_helper.h"
 
 namespace gel::expr {
 auto BinaryOpExpr::IsConstantExpr() const -> bool {

@@ -1,7 +1,7 @@
 #ifndef GEL_STR_H
 #define GEL_STR_H
 
-#include "gel/object.h"
+#include "object.h"
 
 namespace gel {
 class StringObject : public Object {

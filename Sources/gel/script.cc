@@ -1,21 +1,21 @@
-#include "gel/script.h"
+#include "script.h"
 
 #include <fstream>
 #include <units.h>
 
-#include "gel/common.h"
-#include "gel/expr/expression_dot.h"
-#include "gel/flags.h"
-#include "gel/flow_graph_builder.h"
-#include "gel/flow_graph_compiler.h"
-#include "gel/flow_graph_dot.h"
-#include "gel/hashcode.h"
-#include "gel/lambda.h"
-#include "gel/macro.h"
-#include "gel/namespace.h"
-#include "gel/parser.h"
-#include "gel/to_string_helper.h"
-#include "gel/type.h"
+#include "common.h"
+#include "expr/expression_dot.h"
+#include "flags.h"
+#include "flow_graph_builder.h"
+#include "flow_graph_compiler.h"
+#include "flow_graph_dot.h"
+#include "hashcode.h"
+#include "lambda.h"
+#include "macro.h"
+#include "namespace.h"
+#include "parser.h"
+#include "to_string_helper.h"
+#include "type.h"
 
 namespace gel {
 auto Script::New(const ObjectList& args) -> Script* {

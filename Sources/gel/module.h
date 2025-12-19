@@ -4,12 +4,12 @@
 #include <algorithm>
 #include <filesystem>
 
-#include "gel/common.h"
-#include "gel/expr/expression.h"
-#include "gel/macro.h"
-#include "gel/namespace.h"
-#include "gel/object.h"
-#include "gel/pointer.h"
+#include "common.h"
+#include "expr/expression.h"
+#include "macro.h"
+#include "namespace.h"
+#include "object.h"
+#include "pointer.h"
 
 namespace gel {
 class Module;
@@ -218,8 +218,8 @@ static_assert(WithSymbol<Module>);
 static_assert(WithInit<Module>);
 
 namespace proc {
-_DECLARE_NATIVE_PROCEDURE(gel_get_modules, "gel/get-modules");
-_DECLARE_NATIVE_PROCEDURE(gel_get_module, "gel/get-module");
+_DECLARE_NATIVE_PROCEDURE(gel_get_modules, "get-modules");
+_DECLARE_NATIVE_PROCEDURE(gel_get_module, "get-module");
 
 #define _DECLARE_MODULE_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(module_##Name, "Module:" Sym);
 #define DECLARE_MODULE_PROCEDURE(Name)       _DECLARE_MODULE_PROCEDURE(Name, #Name);

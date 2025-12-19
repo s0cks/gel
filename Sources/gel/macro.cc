@@ -1,17 +1,17 @@
-#include "gel/macro.h"
+#include "macro.h"
 
 #include <sstream>
 
-#include "gel/common.h"
-#include "gel/expr/expression.h"
-#include "gel/hashcode.h"
-#include "gel/local.h"
-#include "gel/local_scope.h"
-#include "gel/namespace.h"
-#include "gel/native_procedure.h"
-#include "gel/symbol.h"
-#include "gel/to_string_helper.h"
-#include "gel/type.h"
+#include "common.h"
+#include "expr/expression.h"
+#include "hashcode.h"
+#include "local.h"
+#include "local_scope.h"
+#include "namespace.h"
+#include "native_procedure.h"
+#include "symbol.h"
+#include "to_string_helper.h"
+#include "type.h"
 
 namespace gel {
 auto Macro::New(const ObjectList& args) -> Macro* {

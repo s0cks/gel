@@ -11,22 +11,22 @@
 #include <type_traits>
 #include <utility>
 
-#include "gel/call_stack.h"
-#include "gel/common.h"
-#include "gel/constructor.h"
-#include "gel/environment.h"
-#include "gel/error.h"
-#include "gel/flags.h"
-#include "gel/flow_graph.h"
-#include "gel/instruction.h"
-#include "gel/interpreter.h"
-#include "gel/local_scope.h"
-#include "gel/native_procedure.h"
-#include "gel/natives.h"
-#include "gel/object.h"
-#include "gel/pointer.h"
-#include "gel/stack_frame.h"
-#include "gel/type_traits.h"
+#include "call_stack.h"
+#include "common.h"
+#include "constructor.h"
+#include "environment.h"
+#include "error.h"
+#include "flags.h"
+#include "flow_graph.h"
+#include "instruction.h"
+#include "interpreter.h"
+#include "local_scope.h"
+#include "native_procedure.h"
+#include "natives.h"
+#include "object.h"
+#include "pointer.h"
+#include "stack_frame.h"
+#include "type_traits.h"
 
 namespace gel {
 DECLARE_bool(log_script_instrs);

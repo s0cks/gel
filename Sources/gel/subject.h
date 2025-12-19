@@ -1,7 +1,7 @@
 #ifndef GEL_SUBJECT_H
 #define GEL_SUBJECT_H
 
-#include "gel/object.h"
+#include "object.h"
 
 namespace gel {
 class Subject : public Object {

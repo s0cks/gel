@@ -5,10 +5,10 @@
 #include <units.h>
 #include <uv.h>
 
-#include "gel/native_procedure.h"
-#include "gel/object.h"
-#include "gel/plugin.h"
-#include "gel/uv.h"  // IWYU pragma: keep
+#include "native_procedure.h"
+#include "object.h"
+#include "plugin.h"
+#include "uvutils.h"  // IWYU pragma: keep
 
 #if defined(OS_IS_OSX) || defined(OS_IS_LINUX)
 #include <sys/syslimits.h>

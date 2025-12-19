@@ -1,8 +1,8 @@
 #include <benchmark/benchmark.h>
 #include <fmt/format.h>
 
-#include "gel/common.h"
-#include "gel/parser.h"
+#include "common.h"
+#include "parser.h"
 
 namespace gel {
 void BM_Parser_Parse_InvokeClosure(benchmark::State& state) {

@@ -1,7 +1,7 @@
 #ifndef GEL_PLUGIN_H
 #define GEL_PLUGIN_H
 
-#include "gel/common.h"
+#include "common.h"
 
 namespace gel {
 #define DEFINE_PLUGIN(Name)                        \

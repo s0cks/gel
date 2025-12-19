@@ -4,7 +4,7 @@
 #include <glog/logging.h>
 #include <string>
 
-#include "gel/common.h"
+#include "common.h"
 
 namespace gel {
 class PrettyLogger {

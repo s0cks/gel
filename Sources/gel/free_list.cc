@@ -1,12 +1,12 @@
-#include "gel/free_list.h"
+#include "free_list.h"
 
 #include <string>
 
-#include "gel/common.h"
-#include "gel/free_pointer.h"
-#include "gel/platform.h"
-#include "gel/region.h"
-#include "gel/to_string_helper.h"
+#include "common.h"
+#include "free_pointer.h"
+#include "platform.h"
+#include "region.h"
+#include "to_string_helper.h"
 
 namespace gel {
 auto FreeList::ToString() const -> std::string {

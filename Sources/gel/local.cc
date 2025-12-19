@@ -1,15 +1,15 @@
-#include "gel/local.h"
+#include "local.h"
 
 #include <cstddef>
 #include <functional>
 #include <string>
 
-#include "gel/common.h"
-#include "gel/heap.h"
-#include "gel/local_scope.h"
-#include "gel/platform.h"
-#include "gel/symbol.h"
-#include "gel/to_string_helper.h"
+#include "common.h"
+#include "heap.h"
+#include "local_scope.h"
+#include "platform.h"
+#include "symbol.h"
+#include "to_string_helper.h"
 
 namespace gel {
 auto LocalVariable::operator new(const size_t sz) -> void* {

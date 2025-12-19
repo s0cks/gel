@@ -1,12 +1,12 @@
-#include "gel/set.h"
+#include "set.h"
 
 #include <algorithm>
 
-#include "gel/common.h"
-#include "gel/hashcode.h"
-#include "gel/native_procedure.h"
-#include "gel/object.h"
-#include "gel/to_string_helper.h"
+#include "common.h"
+#include "hashcode.h"
+#include "native_procedure.h"
+#include "object.h"
+#include "to_string_helper.h"
 
 namespace gel {
 auto Set::Union(Set* lhs, Set* rhs) -> Set* {

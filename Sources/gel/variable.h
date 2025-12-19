@@ -6,8 +6,8 @@
 #include <utility>
 #include <vector>
 
-#include "gel/common.h"
-#include "gel/object.h"
+#include "common.h"
+#include "object.h"
 
 namespace gel {
 class Variable {

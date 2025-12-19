@@ -6,7 +6,7 @@
 #include <string>
 #include <type_traits>
 
-#include "gel/type.h"
+#include "type.h"
 
 namespace gel {
 class FlowGraph;

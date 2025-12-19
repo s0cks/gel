@@ -1,8 +1,8 @@
 #ifndef GEL_EXCEPTION_TABLE_H
 #define GEL_EXCEPTION_TABLE_H
 
-#include "gel/common.h"
-#include "gel/platform.h"
+#include "common.h"
+#include "platform.h"
 
 namespace gel {
 class ExceptionTable {

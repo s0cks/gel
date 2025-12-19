@@ -1,14 +1,14 @@
-#include "gel/lambda.h"
+#include "lambda.h"
 
 #include <glog/logging.h>
 #include <string>
 
-#include "gel/common.h"
-#include "gel/local_scope.h"
-#include "gel/platform.h"
-#include "gel/pointer.h"
-#include "gel/to_string_helper.h"
-#include "gel/type.h"
+#include "common.h"
+#include "local_scope.h"
+#include "platform.h"
+#include "pointer.h"
+#include "to_string_helper.h"
+#include "type.h"
 
 namespace gel {
 auto Lambda::CreateClass() -> Class* {

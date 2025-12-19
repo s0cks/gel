@@ -4,13 +4,13 @@
 #include <type_traits>
 #include <vector>
 
-#include "gel/argument.h"
-#include "gel/common.h"
-#include "gel/constructor.h"
-#include "gel/expr/expression.h"
-#include "gel/object.h"
-#include "gel/pointer.h"
-#include "gel/type_traits.h"
+#include "argument.h"
+#include "common.h"
+#include "constructor.h"
+#include "expr/expression.h"
+#include "object.h"
+#include "pointer.h"
+#include "type_traits.h"
 
 namespace gel {
 class Namespace;
@@ -187,8 +187,8 @@ static_assert(HasDocstring<Namespace>);
 static_assert(WithInit<Namespace>);
 
 namespace proc {
-_DECLARE_NATIVE_PROCEDURE(gel_get_namespace, "gel/get-namespace");
-_DECLARE_NATIVE_PROCEDURE(gel_get_namespaces, "gel/get-namespaces");
+_DECLARE_NATIVE_PROCEDURE(gel_get_namespace, "get-namespace");
+_DECLARE_NATIVE_PROCEDURE(gel_get_namespaces, "get-namespaces");
 
 #define _DECLARE_NAMESPACE_PROCEDURE(Name, Sym) _DECLARE_NATIVE_PROCEDURE(namespace_##Name, "Namespace:" Sym)
 #define DECLARE_NAMESPACE_PROCEDURE(Name)       _DECLARE_NAMESPACE_PROCEDURE(Name, #Name);

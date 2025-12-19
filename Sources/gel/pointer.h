@@ -3,9 +3,9 @@
 
 #include <functional>
 
-#include "gel/common.h"
-#include "gel/platform.h"
-#include "gel/tag.h"
+#include "common.h"
+#include "platform.h"
+#include "tag.h"
 
 namespace gel {
 class Object;

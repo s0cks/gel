@@ -5,7 +5,7 @@
 #include <utility>
 #include <uv.h>
 
-#include "gel/common.h"
+#include "common.h"
 
 namespace gel {
 class OpenFileRequest {

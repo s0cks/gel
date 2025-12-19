@@ -1,4 +1,6 @@
-#include "gel/gv.h"
+#ifdef GEL_ENABLE_GRAPHVIZ
+
+#include "gv.h"
 
 #include <cstdio>
 #include <glog/logging.h>
@@ -6,7 +8,7 @@
 #include <graphviz/gvc.h>
 #include <string>
 
-#include "gel/common.h"
+#include "common.h"
 
 namespace gel::dot {
 void SetGraphAttr(Graph* graph, const int kind, const char* name, const char* value) {
@@ -93,3 +95,5 @@ void DotGraph::RenderPngToFilename(const std::string& filename) {
   LOG_IF(FATAL, result != 0) << "failed to close: " << filename;
 }
 }  // namespace gel::dot
+
+#endif  // GEL_ENABLE_GRAPHVIZ

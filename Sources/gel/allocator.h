@@ -3,9 +3,9 @@
 
 #include <string>
 
-#include "gel/common.h"
-#include "gel/platform.h"
-#include "gel/pointer.h"
+#include "common.h"
+#include "platform.h"
+#include "pointer.h"
 
 namespace gel {
 class Allocator {

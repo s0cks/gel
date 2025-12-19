@@ -15,16 +15,16 @@
 #include <unordered_set>
 #include <utility>
 
-#include "gel/allocator.h"
-#include "gel/binary_op.h"
-#include "gel/common.h"
-#include "gel/hashcode.h"
-#include "gel/platform.h"
-#include "gel/region.h"
-#include "gel/rx.h"
-#include "gel/type.h"
-#include "gel/type_traits.h"
-#include "gel/unary_op.h"
+#include "allocator.h"
+#include "binary_op.h"
+#include "common.h"
+#include "hashcode.h"
+#include "platform.h"
+#include "region.h"
+#include "rx.h"
+#include "type.h"
+#include "type_traits.h"
+#include "unary_op.h"
 
 namespace gel {
 namespace proc {
@@ -206,7 +206,7 @@ static inline auto operator<<(std::ostream& stream, Object* rhs) -> std::ostream
 
 }  // namespace gel
 
-#include "gel/class.h"
+#include "class.h"
 
 namespace gel {
 class Seq : public Object {
@@ -290,7 +290,7 @@ static inline auto operator<<(std::ostream& stream, const ObjectList& values) ->
 }  // namespace gel
 
 #ifdef GEL_ENABLE_RX
-#include "gel/rx_object.h"
+#include "rx_object.h"
 #endif  // GEL_ENABLE_RX
 
 #endif  // GEL_OBJECT_H

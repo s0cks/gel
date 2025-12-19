@@ -1,7 +1,7 @@
 #ifndef GEL_BINDING_EXPR_H
 #define GEL_BINDING_EXPR_H
 
-#include "gel/expr/expression.h"
+#include "expr/expression.h"
 
 namespace gel::expr {
 class BindingExpr : public TemplateExpression<1> {

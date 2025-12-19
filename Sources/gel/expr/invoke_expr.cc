@@ -1,7 +1,7 @@
-#include "gel/expr/invoke_expr.h"
+#include "expr/invoke_expr.h"
 
-#include "gel/expr/literal_expr.h"
-#include "gel/to_string_helper.h"
+#include "expr/literal_expr.h"
+#include "to_string_helper.h"
 
 namespace gel::expr {
 auto InvokeExpr::IsMacroCall(LocalScope* scope) const -> bool {

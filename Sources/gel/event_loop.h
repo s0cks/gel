@@ -8,13 +8,13 @@
 #include <uv.h>
 #include <vector>
 
-#include "gel/async_task.h"
-#include "gel/common.h"
-#include "gel/object.h"
-#include "gel/platform.h"
-#include "gel/pointer.h"
-#include "gel/rx.h"
-#include "gel/type.h"
+#include "async_task.h"
+#include "common.h"
+#include "object.h"
+#include "platform.h"
+#include "pointer.h"
+#include "rx.h"
+#include "type.h"
 
 namespace gel {
 // TODO: move to async namespace

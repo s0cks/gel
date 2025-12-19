@@ -1,8 +1,8 @@
 #ifndef GEL_BINARY_EXPR_H
 #define GEL_BINARY_EXPR_H
 
-#include "gel/binary_op.h"
-#include "gel/expr/expression.h"
+#include "binary_op.h"
+#include "expr/expression.h"
 
 namespace gel::expr {
 class BinaryOpExpr : public TemplateOpExpression<BinaryOp, 2> {

@@ -1,12 +1,12 @@
-#include "gel/to_string_helper.h"
+#include "to_string_helper.h"
 
 #include <algorithm>
 #include <sstream>
 #include <string>
 
-#include "gel/common.h"
-#include "gel/object.h"
-#include "gel/platform.h"
+#include "common.h"
+#include "object.h"
+#include "platform.h"
 
 namespace gel::tostring {
 void ToStringHelperBase::AddBytesField(const std::string_view name, const uword num_bytes) {

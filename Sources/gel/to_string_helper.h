@@ -12,14 +12,14 @@
 #include <utility>
 #include <vector>
 
-#include "gel/common.h"
-#include "gel/compiled_code.h"
-#include "gel/expr/expression.h"
-#include "gel/instruction.h"
-#include "gel/local_scope.h"
-#include "gel/object.h"
-#include "gel/platform.h"
-#include "gel/type.h"
+#include "common.h"
+#include "compiled_code.h"
+#include "expr/expression.h"
+#include "instruction.h"
+#include "local_scope.h"
+#include "object.h"
+#include "platform.h"
+#include "type.h"
 
 #if defined(__clang__)
 #include <cxxabi.h>

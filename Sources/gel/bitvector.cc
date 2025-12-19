@@ -1,6 +1,6 @@
-#include "gel/bitvector.h"
+#include "bitvector.h"
 
-#include "gel/platform.h"
+#include "platform.h"
 
 namespace gel {
 void BitVector::Intersect(BitVector* rhs) {

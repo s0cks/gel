@@ -1,8 +1,8 @@
-#include "gel/marker.h"
+#include "marker.h"
 
-#include "gel/module.h"
-#include "gel/object.h"
-#include "gel/platform.h"
+#include "module.h"
+#include "object.h"
+#include "platform.h"
 
 namespace gel {
 void Marker::Mark(Pointer* ptr) {

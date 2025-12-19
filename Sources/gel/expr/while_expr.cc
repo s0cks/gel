@@ -1,6 +1,6 @@
-#include "gel/expr/while_expr.h"
+#include "expr/while_expr.h"
 
-#include "gel/to_string_helper.h"
+#include "to_string_helper.h"
 
 namespace gel::expr {
 auto WhileExpr::ToString() const -> std::string {

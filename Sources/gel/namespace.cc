@@ -1,17 +1,17 @@
-#include "gel/namespace.h"
+#include "namespace.h"
 
 #include <algorithm>
 
-#include "gel/common.h"
-#include "gel/expr/expression.h"
-#include "gel/hashcode.h"
-#include "gel/local.h"
-#include "gel/macro.h"
-#include "gel/native_procedure.h"
-#include "gel/pointer.h"
-#include "gel/procedure.h"
-#include "gel/runtime.h"
-#include "gel/to_string_helper.h"
+#include "common.h"
+#include "expr/expression.h"
+#include "hashcode.h"
+#include "local.h"
+#include "macro.h"
+#include "native_procedure.h"
+#include "pointer.h"
+#include "procedure.h"
+#include "runtime.h"
+#include "to_string_helper.h"
 
 namespace gel {
 static Array<Namespace*>* namespaces_ = nullptr;

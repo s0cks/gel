@@ -7,17 +7,17 @@
 #include <type_traits>
 #include <variant>
 
-#include "gel/common.h"
-#include "gel/compiled_code.h"
-#include "gel/disassembler.h"
-#include "gel/instruction.h"
-#include "gel/native_procedure.h"
-#include "gel/object.h"
-#include "gel/operation_stack.h"
-#include "gel/platform.h"
-#include "gel/procedure.h"
-#include "gel/type_traits.h"
-#include "gel/util.h"
+#include "common.h"
+#include "compiled_code.h"
+#include "disassembler.h"
+#include "instruction.h"
+#include "native_procedure.h"
+#include "object.h"
+#include "operation_stack.h"
+#include "platform.h"
+#include "procedure.h"
+#include "type_traits.h"
+#include "util.h"
 
 namespace gel {
 

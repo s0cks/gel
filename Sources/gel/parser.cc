@@ -1,4 +1,4 @@
-#include "gel/parser.h"
+#include "parser.h"
 
 #include <cctype>
 #include <cstdlib>
@@ -6,23 +6,23 @@
 #include <glog/logging.h>
 #include <optional>
 
-#include "gel/argument.h"
-#include "gel/common.h"
-#include "gel/expr/expression.h"
-#include "gel/expr/exprs.h"
-#include "gel/expr/seq_expr.h"
-#include "gel/lambda.h"
-#include "gel/local.h"
-#include "gel/local_scope.h"
-#include "gel/module.h"
-#include "gel/module_loader.h"
-#include "gel/namespace.h"
-#include "gel/procedure.h"
-#include "gel/script.h"
-#include "gel/token.h"
-#include "gel/tracing.h"
-#include "gel/type_traits.h"
-#include "gel/types.h"
+#include "argument.h"
+#include "common.h"
+#include "expr/expression.h"
+#include "expr/exprs.h"
+#include "expr/seq_expr.h"
+#include "lambda.h"
+#include "local.h"
+#include "local_scope.h"
+#include "module.h"
+#include "module_loader.h"
+#include "namespace.h"
+#include "procedure.h"
+#include "script.h"
+#include "token.h"
+#include "tracing.h"
+#include "type_traits.h"
+#include "types.h"
 
 namespace gel {
 static KeywordTrie::Node* keywords_ = new KeywordTrie::Node();

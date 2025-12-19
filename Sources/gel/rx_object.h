@@ -1,4 +1,4 @@
-#include "gel/common.h"
+#include "common.h"
 #ifndef GEL_OBJECT_H
 #error "Please #include <gel/object.h> instead."
 #endif  // GEL_OBJECT_H
@@ -11,9 +11,9 @@
 #include <exception>
 #include <new>
 
-#include "gel/hashcode.h"
-#include "gel/object.h"
-#include "gel/rx.h"
+#include "hashcode.h"
+#include "object.h"
+#include "rx.h"
 
 namespace gel {
 class Observer : public Object {

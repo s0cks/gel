@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "gel/local_scope.h"
-#include "gel/type_assertions.h"
+#include "local_scope.h"
+#include "type_assertions.h"
 
 namespace gel {
 using namespace ::testing;

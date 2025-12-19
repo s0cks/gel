@@ -1,6 +1,6 @@
-#include "gel/expr/clause_expr.h"
+#include "expr/clause_expr.h"
 
-#include "gel/to_string_helper.h"
+#include "to_string_helper.h"
 
 namespace gel::expr {
 auto ClauseExpr::ToString() const -> std::string {

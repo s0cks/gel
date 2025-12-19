@@ -1,6 +1,6 @@
-#include "gel/expr/load_instance_method_expr.h"
+#include "expr/load_instance_method_expr.h"
 
-#include "gel/to_string_helper.h"
+#include "to_string_helper.h"
 
 namespace gel::expr {
 auto LoadInstanceMethodExpr::IsConstantExpr() const -> bool {

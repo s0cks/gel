@@ -1,7 +1,7 @@
 #ifndef GEL_COND_EXPR_H
 #define GEL_COND_EXPR_H
 
-#include "gel/expr/clause_expr.h"
+#include "expr/clause_expr.h"
 
 namespace gel::expr {
 class CondExpr : public Expression {

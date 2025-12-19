@@ -4,15 +4,15 @@
 #include <sstream>
 #include <type_traits>
 
-#include "gel/bytecode.h"
-#include "gel/call_stack.h"
-#include "gel/common.h"
-#include "gel/local_scope.h"
-#include "gel/operation_stack.h"
-#include "gel/platform.h"
-#include "gel/region.h"
-#include "gel/type.h"
-#include "gel/type_traits.h"
+#include "bytecode.h"
+#include "call_stack.h"
+#include "common.h"
+#include "local_scope.h"
+#include "operation_stack.h"
+#include "platform.h"
+#include "region.h"
+#include "type.h"
+#include "type_traits.h"
 
 namespace gel {
 template <class T>

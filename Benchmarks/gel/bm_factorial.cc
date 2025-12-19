@@ -1,8 +1,8 @@
 #include <benchmark/benchmark.h>
 #include <fmt/format.h>
 
-#include "gel/common.h"
-#include "gel/runtime.h"
+#include "common.h"
+#include "runtime.h"
 
 namespace gel {
 void BM_Factorial_Execution(benchmark::State& state) {

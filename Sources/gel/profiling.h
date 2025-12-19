@@ -11,7 +11,7 @@
 #include <chrono>
 #include <string>
 
-#include "gel/common.h"
+#include "common.h"
 
 namespace gel {
 class TimeSlice {

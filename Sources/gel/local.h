@@ -6,11 +6,11 @@
 #include <ostream>
 #include <string>
 
-#include "gel/allocator.h"
-#include "gel/common.h"
-#include "gel/object.h"
-#include "gel/pointer.h"
-#include "gel/type_traits.h"
+#include "allocator.h"
+#include "common.h"
+#include "object.h"
+#include "pointer.h"
+#include "type_traits.h"
 
 namespace gel {
 class LocalVariable;

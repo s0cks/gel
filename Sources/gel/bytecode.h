@@ -7,11 +7,11 @@
 #include <ostream>
 #include <type_traits>
 
-#include "gel/binary_op.h"
-#include "gel/common.h"
-#include "gel/expr/expression.h"  // IWYU pragma: keep
-#include "gel/platform.h"
-#include "gel/unary_op.h"
+#include "binary_op.h"
+#include "common.h"
+#include "expr/expression.h"  // IWYU pragma: keep
+#include "platform.h"
+#include "unary_op.h"
 
 #define FOR_EACH_BYTECODE(V) \
   V(Nop)                     \

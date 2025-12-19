@@ -3,13 +3,13 @@
 
 #include <utility>
 
-#include "gel/common.h"
+#include "common.h"
 #ifdef GEL_ENABLE_GLM
 
 #include <glm/glm.hpp>
 
-#include "gel/number.h"
-#include "gel/object.h"
+#include "number.h"
+#include "object.h"
 
 namespace gel {
 class Vec2 : public Object {

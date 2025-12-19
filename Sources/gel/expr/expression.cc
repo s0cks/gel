@@ -1,20 +1,20 @@
-#include "gel/expr/expression.h"
+#include "expr/expression.h"
 
 #include <algorithm>
 #include <glog/logging.h>
 #include <sstream>
 #include <string>
 
-#include "gel/common.h"
-#include "gel/expr/exprs.h"
-#include "gel/heap.h"
-#include "gel/local.h"
-#include "gel/map.h"
-#include "gel/module.h"
-#include "gel/natives.h"
-#include "gel/object.h"
-#include "gel/runtime.h"
-#include "gel/to_string_helper.h"
+#include "common.h"
+#include "expr/exprs.h"
+#include "heap.h"
+#include "local.h"
+#include "map.h"
+#include "module.h"
+#include "natives.h"
+#include "object.h"
+#include "runtime.h"
+#include "to_string_helper.h"
 
 namespace gel::expr {
 Class* Expression::kClass = nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)

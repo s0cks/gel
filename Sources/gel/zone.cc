@@ -1,18 +1,18 @@
-#include "gel/zone.h"
+#include "zone.h"
 
 #include <cstring>
 #include <functional>
 #include <units.h>
 
-#include "gel/common.h"
-#include "gel/flags.h"
-#include "gel/free_list.h"
-#include "gel/free_pointer.h"
-#include "gel/memory_region.h"
-#include "gel/object.h"
-#include "gel/platform.h"
-#include "gel/pointer.h"
-#include "gel/tag.h"
+#include "common.h"
+#include "flags.h"
+#include "free_list.h"
+#include "free_pointer.h"
+#include "memory_region.h"
+#include "object.h"
+#include "platform.h"
+#include "pointer.h"
+#include "tag.h"
 
 namespace gel {
 DEFINE_uword(new_zone_size, 4 * 1024 * 1024, "The size of the new zone.");

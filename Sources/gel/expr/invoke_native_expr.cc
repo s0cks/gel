@@ -1,6 +1,6 @@
-#include "gel/expr/invoke_native_expr.h"
+#include "expr/invoke_native_expr.h"
 
-#include "gel/to_string_helper.h"
+#include "to_string_helper.h"
 
 namespace gel::expr {
 auto InvokeNativeExpr::ToString() const -> std::string {

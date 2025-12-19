@@ -1,16 +1,16 @@
-#include "gel/array.h"
+#include "array.h"
 
 #include <cstring>
 #include <functional>
 #include <sstream>
 #include <string>
 
-#include "gel/common.h"
-#include "gel/hashcode.h"
-#include "gel/heap.h"
-#include "gel/object.h"
-#include "gel/platform.h"
-#include "gel/pointer.h"
+#include "common.h"
+#include "hashcode.h"
+#include "heap.h"
+#include "object.h"
+#include "platform.h"
+#include "pointer.h"
 
 namespace gel {
 ArrayBase::ArrayBase(const word init_cap) {

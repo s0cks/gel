@@ -1,7 +1,7 @@
 #ifndef GEL_NUMBER_H
 #define GEL_NUMBER_H
 
-#include "gel/object.h"
+#include "object.h"
 
 namespace gel {
 using RawLong = int64_t;

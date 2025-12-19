@@ -3,8 +3,8 @@
 
 #include <filesystem>
 
-#include "gel/common.h"
-#include "gel/module.h"
+#include "common.h"
+#include "module.h"
 
 namespace gel {
 class Module;

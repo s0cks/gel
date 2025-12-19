@@ -1,11 +1,11 @@
-#include "gel/instruction.h"
+#include "instruction.h"
 
 #include <string>
 #include <vector>
 
-#include "gel/common.h"
-#include "gel/platform.h"
-#include "gel/to_string_helper.h"
+#include "common.h"
+#include "platform.h"
+#include "to_string_helper.h"
 
 namespace gel::ir {
 void Input::Bind(Definition* rhs) {

@@ -5,11 +5,11 @@
 #ifndef GEL_DISASSEMBLER_VM_H
 #define GEL_DISASSEMBLER_VM_H
 
-#include "gel/bytecode.h"
-#include "gel/common.h"
-#include "gel/object.h"
-#include "gel/platform.h"
-#include "gel/region.h"
+#include "bytecode.h"
+#include "common.h"
+#include "object.h"
+#include "platform.h"
+#include "region.h"
 
 namespace gel {
 using namespace vm;

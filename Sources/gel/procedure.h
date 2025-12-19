@@ -1,14 +1,14 @@
 #ifndef GEL_PROCEDURE_H
 #define GEL_PROCEDURE_H
 
-#include "gel/argument.h"
-#include "gel/common.h"
-#include "gel/hashcode.h"
-#include "gel/local_scope.h"
-#include "gel/object.h"
-#include "gel/pointer.h"
-#include "gel/symbol.h"
-#include "gel/type_traits.h"
+#include "argument.h"
+#include "common.h"
+#include "hashcode.h"
+#include "local_scope.h"
+#include "object.h"
+#include "pointer.h"
+#include "symbol.h"
+#include "type_traits.h"
 
 namespace gel {
 class Procedure;

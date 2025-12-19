@@ -10,20 +10,20 @@
 #include <utility>
 #include <variant>
 
-#include "gel/common.h"
-#include "gel/expr/binding_expr.h"
-#include "gel/expr/clause_expr.h"
-#include "gel/expr/expression.h"
-#include "gel/instruction.h"
-#include "gel/lambda.h"
-#include "gel/local.h"
-#include "gel/local_scope.h"
-#include "gel/module_loader.h"
-#include "gel/namespace.h"
-#include "gel/runtime.h"
-#include "gel/script.h"
-#include "gel/token.h"
-#include "gel/type_traits.h"
+#include "common.h"
+#include "expr/binding_expr.h"
+#include "expr/clause_expr.h"
+#include "expr/expression.h"
+#include "instruction.h"
+#include "lambda.h"
+#include "local.h"
+#include "local_scope.h"
+#include "module_loader.h"
+#include "namespace.h"
+#include "runtime.h"
+#include "script.h"
+#include "token.h"
+#include "type_traits.h"
 
 namespace gel {
 class ParseError {

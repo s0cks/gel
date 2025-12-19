@@ -1,6 +1,6 @@
-#include "gel/platform.h"
+#include "platform.h"
 
-#include "gel/common.h"
+#include "common.h"
 
 namespace gel::sys {
 auto malloc(const uword sz) -> uword {

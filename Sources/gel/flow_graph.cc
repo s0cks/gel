@@ -1,15 +1,15 @@
-#include "gel/flow_graph.h"
+#include "flow_graph.h"
 
 #include <fmt/format.h>
 #include <glog/logging.h>
 #include <ostream>
 #include <vector>
 
-#include "gel/bitvector.h"
-#include "gel/common.h"
-#include "gel/instruction.h"
-#include "gel/platform.h"
-#include "gel/to_string_helper.h"
+#include "bitvector.h"
+#include "common.h"
+#include "instruction.h"
+#include "platform.h"
+#include "to_string_helper.h"
 
 namespace gel {
 auto FlowGraph::Accept(InstructionVisitor* vis) const -> bool {

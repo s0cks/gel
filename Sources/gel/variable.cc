@@ -1,9 +1,9 @@
-#include "gel/variable.h"
+#include "variable.h"
 
 #include <sstream>
 #include <string>
 
-#include "gel/to_string_helper.h"
+#include "to_string_helper.h"
 
 namespace gel {
 auto Variable::ToString() const -> std::string {

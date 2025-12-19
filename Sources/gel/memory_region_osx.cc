@@ -1,11 +1,11 @@
-#include "gel/memory_region.h"
+#include "memory_region.h"
 #ifdef OS_IS_OSX
 
 #include <glog/logging.h>
 #include <sys/mman.h>
 #include <units.h>
 
-#include "gel/common.h"
+#include "common.h"
 
 #undef MAP_FAILED
 #define MAP_FAILED (reinterpret_cast<void*>(-1))

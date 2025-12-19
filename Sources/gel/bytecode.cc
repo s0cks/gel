@@ -1,3 +1,3 @@
-#include "gel/bytecode.h"
+#include "bytecode.h"
 
 namespace gel {}  // namespace gel

@@ -4,20 +4,20 @@
 #include <sstream>
 #include <string>
 
-#include "gel/array.h"
-#include "gel/common.h"
-#include "gel/heap.h"
-#include "gel/module.h"
-#include "gel/native_procedure.h"
-#include "gel/natives.h"
-#include "gel/object.h"
-#include "gel/pair.h"
-#include "gel/platform.h"
-#include "gel/pointer.h"
-#include "gel/procedure.h"
-#include "gel/to_string_helper.h"
-#include "gel/type.h"
-#include "gel/types.h"
+#include "array.h"
+#include "common.h"
+#include "heap.h"
+#include "module.h"
+#include "native_procedure.h"
+#include "natives.h"
+#include "object.h"
+#include "pair.h"
+#include "platform.h"
+#include "pointer.h"
+#include "procedure.h"
+#include "to_string_helper.h"
+#include "type.h"
+#include "types.h"
 
 namespace gel {
 static Array<Class*>* classes_ = nullptr;

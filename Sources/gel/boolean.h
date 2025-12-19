@@ -1,8 +1,8 @@
 #ifndef GEL_BOOLEAN_H
 #define GEL_BOOLEAN_H
 
-#include "gel/object.h"
-#include "gel/pair.h"
+#include "object.h"
+#include "pair.h"
 
 namespace gel {
 class Bool : public Object {

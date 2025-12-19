@@ -6,6 +6,7 @@ file(
   "${CMAKE_CURRENT_SOURCE_DIR}/gel/**/*.h"
   "${CMAKE_CURRENT_SOURCE_DIR}/gel/**/*.cc")
 
+find_package(gflags CONFIG REQUIRED)
 find_package(benchmark CONFIG REQUIRED)
 
 add_executable(gel-benchmarks main.cc ${GEL_BENCHMARK_SOURCES})

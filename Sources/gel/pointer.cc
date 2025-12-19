@@ -1,6 +1,6 @@
-#include "gel/pointer.h"
+#include "pointer.h"
 
-#include "gel/object.h"
+#include "object.h"
 
 namespace gel {
 auto PointerVisitor::Visit(Object* ptr) -> bool {

@@ -3,16 +3,16 @@
 #include <rpp/observers/dynamic_observer.hpp>
 #include <rpp/observers/fwd.hpp>
 
-#include "gel/common.h"
-#include "gel/hashcode.h"
-#include "gel/object.h"
-#include "gel/rx.h"
-#include "gel/subject.h"
+#include "common.h"
+#include "hashcode.h"
+#include "object.h"
+#include "rx.h"
+#include "subject.h"
 
 #ifdef GEL_ENABLE_RX
-#include "gel/error.h"
-#include "gel/runtime.h"
-#include "gel/to_string_helper.h"
+#include "error.h"
+#include "runtime.h"
+#include "to_string_helper.h"
 
 namespace gel {
 auto Observable::CreateClass() -> Class* {

@@ -1,8 +1,8 @@
 #ifndef GEL_LET_EXPR_H
 #define GEL_LET_EXPR_H
 
-#include "gel/expr/binding_expr.h"
-#include "gel/expr/seq_expr.h"
+#include "expr/binding_expr.h"
+#include "expr/seq_expr.h"
 
 namespace gel::expr {
 class TemplateLetExpr : public SeqExpr {

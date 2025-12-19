@@ -3,9 +3,9 @@
 
 #include <units.h>
 
-#include "gel/bitfield.h"
-#include "gel/common.h"
-#include "gel/platform.h"
+#include "bitfield.h"
+#include "common.h"
+#include "platform.h"
 
 namespace gel {
 using RawTag = uword;

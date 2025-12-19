@@ -3,7 +3,7 @@
 
 #include <gtest/gtest.h>
 
-#include "gel/types.h"
+#include "types.h"
 
 namespace gel::testing {
 using namespace ::testing;

@@ -3,7 +3,7 @@
 
 #include <fmt/format.h>
 
-#include "gel/object.h"
+#include "object.h"
 
 namespace fmt {
 template <>

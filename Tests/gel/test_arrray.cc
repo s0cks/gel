@@ -1,9 +1,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "gel/array.h"
-#include "gel/common.h"
-#include "gel/mock_pointer_visitor.h"
+#include "array.h"
+#include "common.h"
+#include "mock_pointer_visitor.h"
 
 namespace gel {
 class ArrayTest : public ::testing::Test {

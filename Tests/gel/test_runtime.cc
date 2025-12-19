@@ -1,9 +1,9 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
-#include "gel/common.h"
-#include "gel/runtime.h"
-#include "gel/type_assertions.h"
+#include "common.h"
+#include "runtime.h"
+#include "type_assertions.h"
 #include "gtest/gtest.h"
 
 namespace gel {

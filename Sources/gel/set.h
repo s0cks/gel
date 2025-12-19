@@ -1,9 +1,9 @@
 #ifndef GEL_SET_H
 #define GEL_SET_H
 
-#include "gel/native_procedure.h"
-#include "gel/natives.h"
-#include "gel/object.h"
+#include "native_procedure.h"
+#include "natives.h"
+#include "object.h"
 
 namespace gel {
 class Set : public Object {

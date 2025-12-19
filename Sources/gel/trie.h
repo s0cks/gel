@@ -5,7 +5,7 @@
 #include <functional>
 #include <string>
 
-#include "gel/platform.h"
+#include "platform.h"
 
 namespace gel::trie {
 template <typename K, typename V, const uword AlphabetSize>

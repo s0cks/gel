@@ -1,6 +1,8 @@
 #ifndef GEL_GV_H
 #define GEL_GV_H
 
+#ifdef GEL_GRAPHVIZ_ENABLED
+
 #include <cstdio>
 #include <fmt/format.h>
 #include <glog/logging.h>
@@ -12,7 +14,7 @@
 #include <type_traits>
 #include <vector>
 
-#include "gel/common.h"
+#include "common.h"
 
 namespace gel::dot {
 using Symbol = Agsym_t;
@@ -245,5 +247,7 @@ class GraphRenderer {
   }
 };
 }  // namespace gel::dot
+
+#endif  // GEL_GRAPHVIZ_ENABLED
 
 #endif  // GEL_GV_H

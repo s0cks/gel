@@ -1,6 +1,6 @@
-#include "gel/expr/binding_expr.h"
+#include "expr/binding_expr.h"
 
-#include "gel/to_string_helper.h"
+#include "to_string_helper.h"
 
 namespace gel::expr {
 auto BindingExpr::ToString() const -> std::string {

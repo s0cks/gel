@@ -1,20 +1,20 @@
-#include "gel/buffer.h"
+#include "buffer.h"
 
 #include <cstddef>
 #include <sstream>
 #include <string>
 #include <vector>
 
-#include "gel/allocator.h"
-#include "gel/common.h"
-#include "gel/hashcode.h"
-#include "gel/heap.h"  // IWYU pragma: keep
-#include "gel/native_procedure.h"
-#include "gel/object.h"
-#include "gel/os_thread.h"  // IWYU pragma: keep
-#include "gel/platform.h"
-#include "gel/to_string_helper.h"
-#include "gel/type.h"
+#include "allocator.h"
+#include "common.h"
+#include "hashcode.h"
+#include "heap.h"  // IWYU pragma: keep
+#include "native_procedure.h"
+#include "object.h"
+#include "os_thread.h"  // IWYU pragma: keep
+#include "platform.h"
+#include "to_string_helper.h"
+#include "type.h"
 
 namespace gel {
 DEFINE_NEW_OPERATOR(Buffer);

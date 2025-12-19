@@ -7,10 +7,10 @@
 
 #include <vector>
 
-#include "gel/common.h"
-#include "gel/flow_graph.h"
-#include "gel/gv.h"
-#include "gel/instruction.h"
+#include "common.h"
+#include "flow_graph.h"
+#include "gv.h"
+#include "instruction.h"
 
 namespace gel {
 namespace dot {

@@ -1,10 +1,10 @@
 #ifndef GEL_ENVIRONMENT_H
 #define GEL_ENVIRONMENT_H
 
-#include "gel/common.h"
-#include "gel/object.h"
-#include "gel/ref.h"
-#include "gel/symbol.h"
+#include "common.h"
+#include "object.h"
+#include "ref.h"
+#include "symbol.h"
 
 namespace gel {
 class Environment {

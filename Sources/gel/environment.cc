@@ -1,6 +1,6 @@
-#include "gel/environment.h"
+#include "environment.h"
 
-#include "gel/to_string_helper.h"
+#include "to_string_helper.h"
 
 namespace gel {
 auto Environment::ToString() const -> std::string {

@@ -4,7 +4,7 @@ Completion:
   AllScopes: Yes
 # Style:
 #   QuotedHeaders:
-#   - "gel/.*"
+#   - ".*"
 Diagnostics:
   UnusedIncludes: None
   MissingIncludes: None

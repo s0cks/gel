@@ -1,9 +1,9 @@
-#include "gel/type_traits.h"
+#include "type_traits.h"
 
 #include <type_traits>
 
-#include "gel/object.h"
-#include "gel/str.h"
+#include "object.h"
+#include "str.h"
 
 namespace gel {
 template <class T>

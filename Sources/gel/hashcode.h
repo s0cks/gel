@@ -4,8 +4,8 @@
 #include <concepts>
 #include <ios>
 
-#include "gel/common.h"
-#include "gel/platform.h"
+#include "common.h"
+#include "platform.h"
 
 namespace gel {
 using RawHashCode = uword;

@@ -6,10 +6,10 @@
 #include <string>
 #include <units.h>
 
-#include "gel/common.h"
-#include "gel/native_procedure.h"
-#include "gel/object.h"
-#include "gel/platform.h"
+#include "common.h"
+#include "native_procedure.h"
+#include "object.h"
+#include "platform.h"
 
 namespace gel {
 #define FOR_EACH_BUFFER_ELEMENT_SIZE(V) \

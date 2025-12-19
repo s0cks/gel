@@ -1,13 +1,13 @@
-#include "gel/macro_expander.h"
+#include "macro_expander.h"
 
-#include "gel/common.h"
-#include "gel/expr/expression.h"
-#include "gel/expr/exprs.h"
-#include "gel/local.h"
-#include "gel/local_scope.h"
-#include "gel/macro.h"
-#include "gel/object.h"
-#include "gel/script.h"
+#include "common.h"
+#include "expr/expression.h"
+#include "expr/exprs.h"
+#include "local.h"
+#include "local_scope.h"
+#include "macro.h"
+#include "object.h"
+#include "script.h"
 
 namespace gel {
 #define VISIT(Visitor, Expr)                                  \
@@ -202,7 +202,7 @@ auto MacroEffectVisitor::VisitClauseExpr(expr::ClauseExpr* expr) -> bool {
 auto MacroEffectVisitor::VisitCondExpr(expr::CondExpr* expr) -> bool {
   ASSERT(expr);
   bool changed = false;
-  ClauseList clauses{};
+  expr::ClauseList clauses{};
   for (const auto& clause : expr->GetClauses()) {
     MacroEffectVisitor for_effect(GetOwner());
     VISIT(for_effect, clause);

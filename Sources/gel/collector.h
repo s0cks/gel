@@ -3,10 +3,10 @@
 
 #include <functional>
 
-#include "gel/common.h"
-#include "gel/platform.h"
-#include "gel/pointer.h"
-#include "gel/zone.h"
+#include "common.h"
+#include "platform.h"
+#include "pointer.h"
+#include "zone.h"
 
 namespace gel {
 class Collector : public PointerPointerVisitor {

@@ -1,21 +1,21 @@
-#include "gel/interpreter.h"
+#include "interpreter.h"
 
 #include <sstream>
 
-#include "gel/binary_op.h"
-#include "gel/bytecode.h"
-#include "gel/common.h"
-#include "gel/error.h"
-#include "gel/local.h"
-#include "gel/local_scope.h"
-#include "gel/namespace.h"
-#include "gel/native_procedure.h"
-#include "gel/object.h"
-#include "gel/operation_stack.h"
-#include "gel/platform.h"
-#include "gel/runtime.h"
-#include "gel/type.h"
-#include "gel/unary_op.h"
+#include "binary_op.h"
+#include "bytecode.h"
+#include "common.h"
+#include "error.h"
+#include "local.h"
+#include "local_scope.h"
+#include "namespace.h"
+#include "native_procedure.h"
+#include "object.h"
+#include "operation_stack.h"
+#include "platform.h"
+#include "runtime.h"
+#include "type.h"
+#include "unary_op.h"
 
 namespace gel {
 #define TOP             (GetOperationStack()->GetTop())

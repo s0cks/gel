@@ -6,10 +6,10 @@
 #include <ostream>
 #include <string>
 
-#include "gel/common.h"
-#include "gel/object.h"
-#include "gel/platform.h"
-#include "gel/pointer.h"
+#include "common.h"
+#include "object.h"
+#include "platform.h"
+#include "pointer.h"
 
 namespace gel {
 class Pointer;

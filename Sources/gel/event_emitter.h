@@ -3,12 +3,12 @@
 
 #include <string>
 
-#include "gel/common.h"
-#include "gel/native_procedure.h"
-#include "gel/object.h"
-#include "gel/pair.h"
-#include "gel/procedure.h"
-#include "gel/trie.h"
+#include "common.h"
+#include "native_procedure.h"
+#include "object.h"
+#include "pair.h"
+#include "procedure.h"
+#include "trie.h"
 
 namespace gel {
 class EventEmitter : public Object {
