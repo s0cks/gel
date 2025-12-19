@@ -1,6 +1,6 @@
 function(add_gel_binding target_name target_sources)
   add_library(${target_name}-bindings SHARED ${target_sources})
-  target_link_libraries(${target_name}-bindings PUBLIC gelle)
+  target_link_libraries(${target_name}-bindings PUBLIC gelrt)
   if(CMAKE_BUILD_TYPE MATCHES "^[rR]elease")
     target_enable_iwyu(${target_name}-bindings)
   endif()

@@ -19,5 +19,4 @@
 #include "subject.h"
 #include "symbol.h"
 #include "timer.h"
-#include "vec.h"
 // IWYU pragma: end_exports

@@ -500,7 +500,6 @@ class Parser {
   auto ParseLiteralString(String** result) -> ParseResult;
   auto ParseLiteralSymbol(Symbol** result) -> ParseResult;
   auto ParseLiteralValue(Object** result) -> ParseResult;
-  auto ParseLiteralVec(expr::Expression** result) -> ParseResult;
   auto ParseLiteralSet(expr::Expression** result) -> ParseResult;
 
   auto ParseLiteralLambda(const Token::Kind kind, expr::LiteralExpr** result) -> ParseResult;

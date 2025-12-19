@@ -10,8 +10,6 @@ if(ENABLE_RX)
   add_compile_definitions(GEL_ENABLE_RX)
 endif()
 
-option(GEL_ENABLE_GLM "Enable glm bindings" ON)
-
 option(ENABLE_SYMBOL_POOL "Enable the symbol pool" OFF)
 if(ENABLE_SYMBOL_POOL)
   add_compile_definitions(GEL_ENABLE_SYMBOL_POOL)

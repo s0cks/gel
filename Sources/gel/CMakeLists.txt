@@ -19,11 +19,6 @@ find_package(Backward CONFIG REQUIRED)
 find_package(FunctionalPlus CONFIG REQUIRED)
 find_package(elfio CONFIG REQUIRED)
 
-if(GEL_ENABLE_GLM)
-  add_compile_definitions(GEL_ENABLE_GLM)
-  find_package(glm CONFIG REQUIRED)
-endif()
-
 include(Terminal)
 list(APPEND GEL_LIBRARIES
   gflags::gflags
@@ -36,7 +31,6 @@ list(APPEND GEL_LIBRARIES
   FunctionalPlus::fplus
   $<IF:$<TARGET_EXISTS:libuv::uv_a>,libuv::uv_a,libuv::uv>
   Backward::Backward
-  glm::glm
   rapidjson)
 
 include(GraphViz)
@@ -45,16 +39,16 @@ if(GEL_ENABLE_GRAPHVIZ)
     graphviz::gvc graphviz::cgraph)
 endif()
 
-add_library(gelle SHARED
+add_library(gelrt SHARED
   ${GEL_SOURCES})
-target_compile_options(gelle
+target_compile_options(gelrt
   PUBLIC ${GEL_CXX_FLAGS})
-target_include_directories(gelle
+target_include_directories(gelrt
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
          ${CMAKE_CURRENT_BINARY_DIR}
   PRIVATE ${TERMCOLOR_INCLUDE_DIRS})
-target_link_libraries(gelle
+target_link_libraries(gelrt
   PUBLIC ${GEL_LIBRARIES})
 if(CMAKE_BUILD_TYPE MATCHES "^[rR]elease")
-  target_enable_iwyu(gelle)
+  target_enable_iwyu(gelrt)
 endif()

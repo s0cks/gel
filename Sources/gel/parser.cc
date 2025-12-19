@@ -328,33 +328,6 @@ auto Parser::ParseLiteralNumber(Number** result) -> ParseResult {
   }
 }
 
-auto Parser::ParseLiteralVec(expr::Expression** result) -> ParseResult {
-  EXPECT_NEXT(Token::kLBracket);
-
-  expr::Expression* value = nullptr;
-  expr::ExpressionList values{};
-  do {
-    CHECK_RESULT(ParseExpression(&value));
-    ASSERT(value);
-    values.push_back(value);
-    if (PeekEq(Token::kRBracket)) {
-      if (values.size() >= 2)
-        break;
-      return UnexpectedError(NextToken());
-    }
-  } while (values.size() < 3);
-  EXPECT_NEXT(Token::kRBracket);
-
-  if (values.size() == 2) {
-    (*result) = expr::NewExpr::New(Vec2::GetClass(), values);
-    return true;
-  } else if (values.size() == 3) {
-    (*result) = expr::NewExpr::New(Vec3::GetClass(), values);
-    return true;
-  }
-  NOT_IMPLEMENTED(FATAL);
-}
-
 auto Parser::ParseLiteralSet(expr::Expression** result) -> ParseResult {
   EXPECT_NEXT(Token::kBeginSet);
 
@@ -399,8 +372,6 @@ auto Parser::ParseLiteralExpr(expr::Expression** result) -> ParseResult {
                               (expr::LiteralExpr**)result);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   } else if (PeekEq(Token::kLBrace)) {
     return ParseMap(result);
-  } else if (PeekEq(Token::kLBracket)) {
-    return ParseLiteralVec(result);
   } else if (PeekEq(Token::kBeginSet)) {
     return ParseLiteralSet(result);
   }
@@ -849,9 +820,6 @@ auto Parser::ParseExpression(expr::Expression** result, const int depth) -> Pars
     auto next = PeekToken();
     if (next.IsLiteral()) {
       CHECK_RESULT(ParseLiteralExpr(result));
-      return true;
-    } else if (next.kind == Token::kLBracket) {
-      CHECK_RESULT(ParseLiteralVec(result));
       return true;
     } else if (next.kind == Token::kLBrace) {
       CHECK_RESULT(ParseMap(result));

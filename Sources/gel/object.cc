@@ -171,11 +171,6 @@ void Object::Init() {
   EventEmitter::Init();
   Iterator::Init();
 
-#ifdef GEL_ENABLE_GLM
-  Vec2::InitClass();
-  Vec3::InitClass();
-#endif  // GEL_ENABLE_GLM
-
 #ifdef GEL_ENABLE_RX
   Observable::InitClass();
   Observer::InitClass();
