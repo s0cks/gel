@@ -17,10 +17,10 @@ auto Heap::TryAllocateOld(const uword size) -> uword {
   using namespace units::data;
   uword result = UNALLOCATED;
   if ((result = old_zone_.TryAllocate(size)) == UNALLOCATED) {
-    LOG(ERROR) << "failed to allocate large object of " << byte_t(static_cast<double>(size));
+    LOG(ERROR) << "failed to allocate large object of " << bytes(size);
     gel::MajorCollection();
     result = old_zone_.TryAllocate(size);
-    LOG_IF(FATAL, IsUnallocated(result)) << "failed to allocate large object of " << byte_t(static_cast<double>(size));
+    LOG_IF(FATAL, IsUnallocated(result)) << "failed to allocate large object of " << bytes(size);
   }
   ASSERT(result != UNALLOCATED);
   return result;
@@ -30,10 +30,10 @@ auto Heap::TryAllocateNew(const uword size) -> uword {
   using namespace units::data;
   uword result = UNALLOCATED;
   if ((result = new_zone_.TryAllocate(size)) == UNALLOCATED) {
-    LOG(ERROR) << "failed to allocate new object of " << byte_t(static_cast<double>(size));
+    LOG(ERROR) << "failed to allocate new object of " << bytes(size);
     gel::MinorCollection();
     result = new_zone_.TryAllocate(size);
-    LOG_IF(FATAL, IsUnallocated(result)) << "failed to allocate new object of " << byte_t(static_cast<double>(size));
+    LOG_IF(FATAL, IsUnallocated(result)) << "failed to allocate new object of " << bytes(size);
   }
   ASSERT(result != UNALLOCATED);
   return result;
@@ -77,7 +77,7 @@ using namespace units::data;
 
 void PrintHeap(Heap& heap) {
   DLOG(INFO) << "Heap:";
-  DLOG(INFO) << "  Total Size: " << byte_t(static_cast<double>(heap.GetTotalSize()));
+  DLOG(INFO) << "  Total Size: " << bytes(heap.GetTotalSize());
   PrintNewZone(heap.GetNewZone());
   PrintOldZone(heap.GetOldZone());
 }

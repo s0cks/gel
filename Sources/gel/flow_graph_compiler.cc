@@ -1,6 +1,7 @@
 #include "gel/flow_graph_compiler.h"
 
 #include <chrono>
+#include <iostream>
 #include <sstream>
 #include <type_traits>
 
@@ -74,7 +75,7 @@ auto FlowGraphCompiler::CompileTarget(Target& target) -> bool {
   }
   code->SetCompileTime(total_ns);
   target.SetCode(code);
-  DVLOG(10) << (*code) << " compiled in " << units::time::nanosecond_t(static_cast<double>(total_ns));
+  DVLOG(10) << (*code) << " compiled in " << units::time::nanoseconds(static_cast<double>(total_ns));
   if (VLOG_IS_ON(1) || FLAGS_print_bytecode)
     Disassembler::Disassemble(std::cout, target, GetScope());
   TRACE_TAG_STR(target.GetFullyQualifiedName());

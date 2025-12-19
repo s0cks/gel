@@ -68,7 +68,7 @@ auto Repl::RunRepl() -> int {
     if (!result->IsNil())
       Respond(result);
     if (VLOG_IS_ON(10))
-      out() << "finished in " << units::time::nanosecond_t(static_cast<double>(duration.count())) << std::endl;
+      out() << "finished in " << units::time::nanoseconds(static_cast<double>(duration.count())) << std::endl;
   }
   return EXIT_SUCCESS;
 }

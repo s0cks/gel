@@ -57,7 +57,7 @@ struct TimedResult {
   friend auto operator<<(std::ostream& stream, const TimedResult& rhs) -> std::ostream& {
     const auto& result = rhs.result;
     const auto& duration = rhs.duration;
-    DVLOG(1) << "finished in " << units::time::nanosecond_t(static_cast<double>(duration.count()));
+    DVLOG(1) << "finished in " << units::time::nanoseconds(static_cast<double>(duration.count()));
     if (result->IsNil())
       return stream;
     if (gel::IsError(result))

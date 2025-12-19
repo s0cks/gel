@@ -32,14 +32,13 @@
     {
       "name": "darwin-arm64",
       "hidden": true,
-      "environment": {
-        "CC": "clang",
-        "CXX": "clang++"
-      },
       "cacheVariables": {
-        "VCPKG_TARGET_TRIPLET": "arm64-osx-dynamic",
-        "CMAKE_C_COMPILER": "clang",
-        "CMAKE_CXX_COMPILER": "clang++"
+        "VCPKG_TARGET_TRIPLET": "arm64-osx-dynamic"
+      },
+      "environment": {
+        "LDFLAGS": "-fuse-ld=lld -L/opt/homebrew/Cellar/llvm/21.1.8/lib/c++ -Wl,-search_paths_first -Wl,-headerpad_max_install_names -stdlib=libc++",
+        "CPPFLAGS": "-I/opt/homebrew/opt/llvm/include",
+        "CMAKE_PREFIX_PATH": "/opt/homebrew/opt/llvm"
       },
       "vendor": {
         "microsoft.com/VisualStudioSettings/CMake/1.0": {

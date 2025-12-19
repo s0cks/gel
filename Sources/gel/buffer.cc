@@ -1,8 +1,6 @@
 #include "gel/buffer.h"
 
 #include <cstddef>
-#include <openssl/crypto.h>
-#include <openssl/evp.h>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -48,19 +46,22 @@ auto HexBufferEncoding::Decode(const String& rhs) const -> Buffer* {
 }
 
 auto HexBufferEncoding::Encode(const Buffer& rhs) const -> String* {
-  const auto buff_length = rhs.write_pos();
-  const auto hex_buff_length = 1 + buff_length * 2;
-  std::vector<char> hex{};
-  hex.resize(hex_buff_length);
-  size_t hex_length = 0;
-  OPENSSL_buf2hexstr_ex(&hex[0], hex_buff_length, &hex_length, rhs.data(), rhs.write_pos(), '\0');
-  std::string result(hex.data(), hex_length);
-  return String::New(result);
+  // const auto buff_length = rhs.write_pos();
+  // const auto hex_buff_length = 1 + buff_length * 2;
+  // std::vector<char> hex{};
+  // hex.resize(hex_buff_length);
+  // size_t hex_length = 0;
+  // OPENSSL_buf2hexstr_ex(&hex[0], hex_buff_length, &hex_length, rhs.data(), rhs.write_pos(), '\0');
+  // std::string result(hex.data(), hex_length);
+  // return String::New(result);
+  NOT_IMPLEMENTED(FATAL);  // TODO(@s0cks): implement
+  return nullptr;
 }
 
 auto Base64BufferEncoding::DecodeBlockData(std::string& out, const uint8_t* data, const uint64_t num_bytes) const
     -> uword {
-  return EVP_DecodeBlock(reinterpret_cast<unsigned char*>(out.data()), data, static_cast<int>(num_bytes));
+  // TODO(@s0cks): implement
+  return 0;
 }
 
 auto Base64BufferEncoding::Decode(const String& rhs) const -> Buffer* {
@@ -71,8 +72,8 @@ auto Base64BufferEncoding::Decode(const String& rhs) const -> Buffer* {
 
 auto Base64BufferEncoding::EncodeBlockData(std::string& out, const uint8_t* data, const uint64_t num_bytes) const
     -> uword {
-  return static_cast<uword>(
-      EVP_EncodeBlock(reinterpret_cast<unsigned char*>(out.data()), data, static_cast<int>(num_bytes)));
+  // TODO(@s0cks): implement
+  return 0;
 }
 
 auto Base64BufferEncoding::Encode(const Buffer& rhs) const -> String* {

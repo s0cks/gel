@@ -37,7 +37,7 @@ NATIVE_PROCEDURE_F(process_get_cwd) {
 #endif
   size_t size = cwd.size();
   LOG_IF(FATAL, uv_cwd(cwd.data(), &size) != 0)
-      << "failed to get cwd buffer of size: " << units::data::byte_t(static_cast<double>(size));
+      << "failed to get cwd buffer of size: " << units::data::bytes(static_cast<double>(size));
   return ReturnNew<String>(std::string(cwd.data(), size));
 }
 

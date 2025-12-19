@@ -2,7 +2,9 @@
 #define GEL_RUNTIME_H
 
 #include <concepts>
+#include <exception>
 #include <gflags/gflags_declare.h>
+#include <new>
 #include <rpp/observers/dynamic_observer.hpp>
 #include <rpp/sources/fwd.hpp>
 #include <stack>

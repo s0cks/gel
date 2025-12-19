@@ -25,8 +25,8 @@ MemoryRegion::MemoryRegion(const uword size, const ProtectionMode mode) :
   MemoryRegion() {
   const auto total_size = RoundUpPow2(static_cast<word>(size));
   const auto ptr = mmap(nullptr, total_size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
-  LOG_IF(FATAL, IsMapFailed(ptr)) << "failed to mmap MemoryRegion of " << byte_t(static_cast<double>(total_size))
-                                  << ": " << GetError();
+  LOG_IF(FATAL, IsMapFailed(ptr)) << "failed to mmap MemoryRegion of " << bytes(static_cast<double>(total_size)) << ": "
+                                  << GetError();
   SetStartingAddress((uword)ptr);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   SetSize(size);
   Protect(mode);

@@ -48,7 +48,7 @@ class Buffer : public Object {
   inline auto ReadAt(const uint64_t pos, T* result) -> bool {
     static constexpr const auto kValueSize = sizeof(T);
     if ((pos + kValueSize) > GetCapacity()) {
-      LOG(ERROR) << "cannot read " << units::data::byte_t(kValueSize) << " from " << ToString();
+      LOG(ERROR) << "cannot read " << units::data::bytes(kValueSize) << " from " << ToString();
       return false;
     }
     read_pos_ = pos + kValueSize;
@@ -65,7 +65,7 @@ class Buffer : public Object {
   inline auto PutAt(const uint64_t pos, const T value) -> bool {
     static constexpr const auto kValueSize = sizeof(T);
     if ((pos + kValueSize) > GetCapacity()) {
-      LOG(ERROR) << "cannot read " << units::data::byte_t(kValueSize) << " from " << ToString();
+      LOG(ERROR) << "cannot read " << units::data::bytes(kValueSize) << " from " << ToString();
       return false;
     }
     *((T*)(data() + pos)) = value;

@@ -4,27 +4,15 @@
     "fmt",
     "gflags",
     "glog",
-    {
-      "name": "gtest",
-      "version>=": "1.17.0"
-    },
+    "gtest",
     "reactiveplusplus",
     "tracy",
     "units",
     "libuv",
     "functionalplus",
-    {
-      "name": "ncurses",
-      "platform": "!windows | mingw"
-    },
-    {
-      "name": "pdcurses",
-      "platform": "windows & !uwp & !mingw"
-    },
     "termcolor",
     "rapidjson",
     "backward-cpp",
-    "openssl",
     "bzip2",
     "elfio",
     "glm"

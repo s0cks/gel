@@ -322,8 +322,8 @@ static inline auto Contains(const std::string& value, const char c) -> bool {
 
 #endif  // GEL_DEBUG
 
-static inline auto bytes(const uword nbytes) -> units::data::byte_t {
-  return units::data::byte_t(static_cast<double>(nbytes));
+static inline auto bytes(const uword nbytes) -> units::data::bytes<double> {
+  return units::data::bytes(static_cast<double>(nbytes));
 }
 
 static inline auto PrettyPrintBytes(const uword num_bytes) -> std::string {
@@ -340,23 +340,23 @@ static inline auto PrettyPrintBytes(const uword num_bytes) -> std::string {
   }
   switch (scale) {
     case 1:
-      ss << kilobyte_t(static_cast<double>(remaining));
+      ss << kilobytes(static_cast<double>(remaining));
       break;
     case 2:
-      ss << megabyte_t(static_cast<double>(remaining));
+      ss << megabytes(static_cast<double>(remaining));
       break;
     case 3:
-      ss << gigabyte_t(static_cast<double>(remaining));
+      ss << gigabytes(static_cast<double>(remaining));
       break;
     case 4:
-      ss << terabyte_t(static_cast<double>(remaining));
+      ss << terabytes(static_cast<double>(remaining));
       break;
     case 5:  // NOLINT(cppcoreguidelines-avoid-magic-numbers)
-      ss << petabyte_t(static_cast<double>(remaining));
+      ss << petabytes(static_cast<double>(remaining));
       break;
     case 0:
     default:
-      ss << byte_t(static_cast<double>(remaining));
+      ss << bytes(static_cast<double>(remaining));
       break;
   }
   return ss.str();

@@ -1,10 +1,10 @@
 #include "gel/native_bindings.h"
 
+#include <exception>
+#include <filesystem>
 #include <fmt/format.h>
 #include <glog/logging.h>
-
-#include <filesystem>
-#include <rpp/observables/dynamic_observable.hpp>
+#include <utility>
 
 #include "gel/common.h"
 #include "gel/runtime.h"

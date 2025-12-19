@@ -2,6 +2,7 @@
 #define GEL_RX_H
 
 #include <exception>
+#include <functional>
 #include <rpp/observables/fwd.hpp>
 #include <rpp/observers/dynamic_observer.hpp>
 #include <rpp/sources/fwd.hpp>

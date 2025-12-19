@@ -17,15 +17,6 @@ set(GFLAGS_USE_TARGET_NAMESPACE ON)
 set(GFLAGS_BUILD_SHARED_LIBS ON)
 find_package(gflags CONFIG REQUIRED)
 
-set(OPENSSL_USE_STATIC_LIBS FALSE)
-find_package(OpenSSL REQUIRED)
-if(WIN32)
-  # TODO: Implement
-else()
-  set(CURSES_NEED_NCURSES TRUE)
-  find_package(Curses REQUIRED)
-endif()
-
 if(GEL_ENABLE_GLM)
   add_compile_definitions(GEL_ENABLE_GLM)
   find_package(glm CONFIG REQUIRED)
@@ -37,7 +28,6 @@ find_package(units CONFIG REQUIRED)
 find_package(libuv CONFIG REQUIRED)
 find_package(RapidJSON CONFIG REQUIRED)
 find_package(Backward CONFIG REQUIRED)
-find_package(Bzip2 REQUIRED)
 find_package(FunctionalPlus CONFIG REQUIRED)
 find_package(elfio CONFIG REQUIRED)
 

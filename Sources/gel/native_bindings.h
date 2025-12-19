@@ -1,7 +1,10 @@
 #ifndef GEL_NATIVE_BINDINGS_H
 #define GEL_NATIVE_BINDINGS_H
 
+#include <exception>
 #include <filesystem>
+#include <functional>
+#include <new>
 #include <rpp/observables/dynamic_observable.hpp>
 
 #include "gel/common.h"

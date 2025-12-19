@@ -18,8 +18,6 @@ namespace gel {
 DEFINE_uword(new_zone_size, 4 * 1024 * 1024, "The size of the new zone.");
 DEFINE_uword(old_zone_size, 4 * 1024 * 1024, "The initial size of the old zone (tenured & large object space).");
 
-using namespace units::data;
-
 static inline auto CalcSemispaceSize(const uword size) -> uword {
   ASSERT(IsPow2(size));
   return size / 2;
@@ -35,11 +33,11 @@ auto NewZone::TryAllocate(const uword size) -> uword {
   ASSERT(size > 0);
   const auto total_size = (sizeof(Pointer) + size);
   if ((GetCurrentAddress() + total_size) >= (fromspace() + semisize())) {
-    LOG(WARNING) << "cannot allocate " << byte_t(static_cast<double>(total_size)) << " in: " << (*this);
+    LOG(WARNING) << "cannot allocate " << bytes(total_size) << " in: " << (*this);
     // TODO: minor collection
   }
   if ((GetCurrentAddress() + total_size) >= (fromspace() + semisize())) {
-    LOG(FATAL) << "cannot allocate " << byte_t(static_cast<double>(total_size)) << " in: " << (*this);
+    LOG(FATAL) << "cannot allocate " << bytes(total_size) << " in: " << (*this);
   }
   const auto new_address = GetCurrentAddress();
   current_ += total_size;

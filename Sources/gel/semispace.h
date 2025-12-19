@@ -56,13 +56,12 @@ class Semispace : public AllocationRegion {
   }
 
   friend auto operator<<(std::ostream& stream, const Semispace& rhs) -> std::ostream& {
-    using namespace units::data;
     stream << "Semispace(";
     stream << "start=" << rhs.GetStartingAddressPointer() << ", ";
     stream << "size=" << rhs.GetSize() << ", ";
-    stream << "num_allocated=" << byte_t(static_cast<double>(rhs.GetNumberOfBytesAllocated()));
+    stream << "num_allocated=" << bytes(rhs.GetNumberOfBytesAllocated());
     stream << " (" << rhs.GetAllocationPercent() << "), ";
-    stream << "num_remaining=" << byte_t(static_cast<double>(rhs.GetNumberOfBytesRemaining()));
+    stream << "num_remaining=" << bytes(rhs.GetNumberOfBytesRemaining());
     stream << " (" << rhs.GetRemainingPercent() << ")";
     stream << ")";
     return stream;

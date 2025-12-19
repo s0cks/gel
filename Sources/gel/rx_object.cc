@@ -1,3 +1,5 @@
+#include <exception>
+#include <new>
 #include <rpp/observers/dynamic_observer.hpp>
 #include <rpp/observers/fwd.hpp>
 

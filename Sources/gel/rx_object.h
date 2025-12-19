@@ -8,6 +8,9 @@
 
 #ifdef GEL_ENABLE_RX
 
+#include <exception>
+#include <new>
+
 #include "gel/hashcode.h"
 #include "gel/object.h"
 #include "gel/rx.h"

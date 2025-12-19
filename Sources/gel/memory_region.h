@@ -53,7 +53,7 @@ class MemoryRegion : public Region {
   friend auto operator<<(std::ostream& stream, const MemoryRegion& rhs) -> std::ostream& {
     stream << "MemoryRegion(";
     stream << "start=" << rhs.GetStartingAddressPointer() << ", ";
-    stream << "size=" << units::data::byte_t(static_cast<double>(rhs.GetSize()));
+    stream << "size=" << units::data::bytes(static_cast<double>(rhs.GetSize()));
     stream << ")";
     return stream;
   }

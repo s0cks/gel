@@ -17,7 +17,6 @@ auto Error::CreateClass() -> Class* {
 
 auto Error::GetHashCode() const -> HashCode {
   uword hash = 0;
-  CombineHash(hash, GetMessage()->Get());
   return hash;
 }
 
