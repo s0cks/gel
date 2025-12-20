@@ -22,14 +22,14 @@
 namespace gel {
 
 template <class T>
-concept StackFrameTarget = HasCompiledCode<T> || std::same_as<T, NativeProcedure>;
+concept StackFrameTarget = HasCompiledCode<T> || std::same_as<T, NativeFn>;
 
 class StackFrame {  // TODO: extend Object
   friend class Runtime;
   friend class CallStack;
   friend class Collector;
   friend class Interpreter;
-  friend class NativeProcedureEntry;
+  friend class NativeFnEntry;
   DEFINE_DEFAULT_COPYABLE_TYPE(StackFrame);
 
  private:
@@ -95,7 +95,7 @@ class StackFrame {  // TODO: extend Object
   }
 
   auto IsNativeFrame() const -> bool {
-    return GetTarget()->IsNativeProcedure();
+    return GetTarget()->IsNativeFn();
   }
 
   auto IsInitFrame() const -> bool {
@@ -194,7 +194,7 @@ class StackFrameGuard : public StackFrameGuardBase {
       ASSERT(target);
       // TODO:
       //  LOG(ERROR) << "Target: " << ((void*)target) << " ; " << target->ToString();
-      //  if (!target->IsNativeProcedure()) {
+      //  if (!target->IsNativeFn()) {
       //    LOG(ERROR) << "Target Instructions:";
       //    Disassembler disassembler(std::cerr, LocalScope::New());  // TODO: need to get local scope
       //    disassembler.Disassemble(target->GetCode(), target->GetType()->GetName()->Get().c_str());

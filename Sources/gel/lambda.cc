@@ -12,7 +12,7 @@
 
 namespace gel {
 auto Lambda::CreateClass() -> Class* {
-  return Class::New(Procedure::GetClass(), kClassName);
+  return Class::New(Fn::GetClass(), kClassName);
 }
 
 auto Lambda::Equals(Object* rhs) const -> bool {
@@ -23,7 +23,7 @@ auto Lambda::Equals(Object* rhs) const -> bool {
 }
 
 auto Lambda::GetHashCode() const -> HashCode {
-  return Procedure::GetHashCode();
+  return Fn::GetHashCode();
 }
 
 auto Lambda::Compare(Object* rhs) const -> bool {
@@ -34,7 +34,7 @@ auto Lambda::Compare(Object* rhs) const -> bool {
 
 auto Lambda::VisitPointers(PointerVisitor* vis) -> bool {
   ASSERT(vis);
-  if (!Procedure::VisitPointers(vis))
+  if (!Fn::VisitPointers(vis))
     return false;
   if (!Visit(body_, *vis))
     return false;
@@ -44,7 +44,7 @@ auto Lambda::VisitPointers(PointerVisitor* vis) -> bool {
 
 auto Lambda::VisitPointerPointers(PointerPointerVisitor* vis) -> bool {
   ASSERT(vis);
-  if (!Procedure::VisitPointerPointers(vis))
+  if (!Fn::VisitPointerPointers(vis))
     return false;
   // TODO: visit body_
   return true;

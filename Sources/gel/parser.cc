@@ -237,7 +237,7 @@ auto Parser::ParseLiteralString(String** result) -> ParseResult {
 auto Parser::ParseLiteralSymbol(Symbol** result) -> ParseResult {
   const auto& next = NextToken();  // TODO: fix the weird logic where kNewExpr check is needed
   if (next.kind != Token::kIdentifier && next.kind != Token::kNewExpr) {
-    std::stringstream ss;
+    std::stringstream ss{};
     ss << "unexpected " << next << ", expected a Symbol or new-expr.";
     return ReturnError(ss, next.pos);
   }
@@ -402,7 +402,7 @@ static inline auto IsClassReference(expr::Expression* expr) -> bool {
   return false;
 }
 
-static inline auto IsNativeCall(LocalScope* scope, expr::Expression* expr, NativeProcedure** target) -> bool {
+static inline auto IsNativeCall(LocalScope* scope, expr::Expression* expr, NativeFn** target) -> bool {
   ASSERT(scope);
   ASSERT(expr);
   if (!expr->IsLiteralExpr()) {
@@ -411,8 +411,8 @@ static inline auto IsNativeCall(LocalScope* scope, expr::Expression* expr, Nativ
   }
 
   const auto literal = expr->AsLiteralExpr();
-  if (literal->GetValue()->IsNativeProcedure()) {
-    (*target) = literal->GetValue()->AsNativeProcedure();
+  if (literal->GetValue()->IsNativeFn()) {
+    (*target) = literal->GetValue()->AsNativeFn();
     return true;
   } else if (literal->GetValue()->IsSymbol()) {
     const auto symbol = literal->GetValue()->AsSymbol();
@@ -422,11 +422,11 @@ static inline auto IsNativeCall(LocalScope* scope, expr::Expression* expr, Nativ
       (*target) = nullptr;
       return false;
     }
-    if (!local->HasValue() || !local->GetValue()->IsNativeProcedure()) {
+    if (!local->HasValue() || !local->GetValue()->IsNativeFn()) {
       (*target) = nullptr;
       return false;
     }
-    (*target) = local->GetValue()->AsNativeProcedure();
+    (*target) = local->GetValue()->AsNativeFn();
     return true;
   }
   (*target) = nullptr;
@@ -465,7 +465,7 @@ static inline auto IsMacroCall(LocalScope* scope, expr::Expression* expr, Macro*
 }
 
 static inline auto IsCallable(LocalVariable* local) -> bool {
-  return local && local->HasValue() && (local->GetValue()->IsProcedure() || local->GetValue()->IsMacro());
+  return local && local->HasValue() && (local->GetValue()->IsFn() || local->GetValue()->IsMacro());
 }
 
 auto Parser::ParseCallExpr(expr::Expression** result) -> ParseResult {
@@ -565,8 +565,8 @@ auto Parser::ParseCallExpr(expr::Expression** result) -> ParseResult {
     if (literal->GetValue()->IsMacro()) {
       (*result) = expr::InvokeMacroExpr::New(literal->GetValue()->AsMacro(), args);
       return true;
-    } else if (literal->GetValue()->IsNativeProcedure()) {
-      (*result) = expr::InvokeNativeExpr::New(literal->GetValue()->AsNativeProcedure(), args);
+    } else if (literal->GetValue()->IsNativeFn()) {
+      (*result) = expr::InvokeNativeExpr::New(literal->GetValue()->AsNativeFn(), args);
       return true;
     } else if (literal->GetValue()->IsSymbol()) {
       const auto symbol = literal->GetValue()->AsSymbol();
@@ -576,8 +576,8 @@ auto Parser::ParseCallExpr(expr::Expression** result) -> ParseResult {
         if (local->GetValue()->IsMacro()) {
           (*result) = expr::InvokeMacroExpr::New(literal->GetValue()->AsMacro(), args);
           return true;
-        } else if (local->GetValue()->IsNativeProcedure()) {
-          (*result) = expr::InvokeNativeExpr::New(literal->GetValue()->AsNativeProcedure(), args);
+        } else if (local->GetValue()->IsNativeFn()) {
+          (*result) = expr::InvokeNativeExpr::New(literal->GetValue()->AsNativeFn(), args);
           return true;
         }
       }
@@ -624,7 +624,7 @@ auto Parser::ParseBinaryExpr(expr::Expression** result) -> ParseResult {
 auto Parser::ParseCondExpr(expr::Expression** result) -> ParseResult {
   const auto start_pos = GetPos();
   EXPECT_NEXT(Token::kCond);
-  expr::ClauseList clauses;
+  expr::ClauseList clauses{};
   expr::Expression* a = nullptr;
   expr::Expression* b = nullptr;
   expr::Expression* alt = nullptr;
@@ -693,7 +693,7 @@ auto Parser::ParseArguments(Array<Argument*>** args, const bool bind) -> ParseRe
       const auto local = LocalVariable::New(scope, Symbol::New(name));
       ASSERT(local);
       if (!scope->Add(local)) {
-        std::stringstream ss;
+        std::stringstream ss{};
         ss << "failed to add " << (*local) << " to current scope.";
         return ReturnError(ss, pos_);
       }
@@ -801,7 +801,7 @@ auto Parser::ParseSetExpr(expr::Expression** result) -> ParseResult {
     local = LocalVariable::New(scope, symbol, nullptr);
     ASSERT(local);
     if (!scope->Add(local)) {
-      std::stringstream ss;
+      std::stringstream ss{};
       ss << "failed to add " << (*local) << " to current scope.";
       (*result) = nullptr;
       return ReturnError(ss, start_pos);
@@ -852,7 +852,7 @@ auto Parser::ParseExpression(expr::Expression** result, const int depth) -> Pars
       case Token::kDefNative: {
         LocalVariable* local = nullptr;
         CHECK_RESULT(ParseDefNative(&local));
-        ASSERT(local && local->HasValue() && local->GetValue()->IsNativeProcedure());
+        ASSERT(local && local->HasValue() && local->GetValue()->IsNativeFn());
         break;
       }
       case Token::kDef: {
@@ -939,7 +939,7 @@ auto Parser::ParseImportExpr(expr::Expression** result) -> ParseResult {
   const auto target_module = GetModuleLoader()->LoadModule(module_path);
   if (!target_module) {
     const auto& ident = next.text;
-    std::stringstream ss;
+    std::stringstream ss{};
     ss << "failed to import Module from `" << ident << "`";
     (*result) = nullptr;
     return ReturnError(ss, start_pos);
@@ -983,7 +983,7 @@ auto Parser::ParseNewExpr(expr::Expression** result) -> ParseResult {
   ASSERT(symbol);
   const auto cls = Class::FindClass(symbol);
   if (!cls) {
-    std::stringstream ss;
+    std::stringstream ss{};
     ss << "failed to find Class w/ symbol: " << symbol;
     return ReturnError(ss, new_expr_token.pos);
   }
@@ -1255,7 +1255,7 @@ auto Parser::ParseLambda(const Token::Kind kind, Lambda** result) -> ParseResult
     ASSERT(local);
     LOG_IF(FATAL, !GetScope()->Add(local)) << "cannot add " << local << " to scope.";
 
-    expr::ExpressionList body;
+    expr::ExpressionList body{};
     LOG_IF(FATAL, !ParseExpressionList(body)) << "failed to parse expression list.";
     if (!body.empty())
       lambda->SetBody(expr::SeqExpr::New(body));
@@ -1321,7 +1321,7 @@ auto Parser::ParseListExpr(expr::Expression** result) -> ParseResult {
   if (PeekEq(Token::kRange)) {
     NextToken();
     if (!IsLiteralLong(first)) {
-      std::stringstream ss;
+      std::stringstream ss{};
       ss << "expected " << first << " to be a literal number.";
       return ReturnError(ss, pos_);  // TODO: fix pos
     }
@@ -1329,7 +1329,7 @@ auto Parser::ParseListExpr(expr::Expression** result) -> ParseResult {
     CHECK_RESULT(ParseExpression(&end));
     ASSERT(end);
     if (!IsLiteralLong(end)) {
-      std::stringstream ss;
+      std::stringstream ss{};
       ss << "unexpected " << end << ", expected a literal number.";
       return ReturnError(ss, pos_);  // TODO: fix pos
     }
@@ -1435,7 +1435,7 @@ auto Parser::ParseDef(expr::Expression** result) -> ParseResult {
   const auto local = LocalVariable::New(scope, symbol);
   ASSERT(local);
   if (!scope->Add(local)) {
-    std::stringstream ss;
+    std::stringstream ss{};
     ss << "failed to add " << (*local) << " to current scope.";
     return ReturnError(ss, pos_);
   }
@@ -1458,7 +1458,7 @@ auto Parser::ParseDefType(LocalVariable** result) -> ParseResult {
   ASSERT(symbol);
   const auto cls = Class::FindClass(symbol);
   if (!cls) {
-    std::stringstream ss;
+    std::stringstream ss{};
     ss << "cannot find type: " << symbol;
     return NewParseError(ss.str(), start_pos);
   }
@@ -1579,7 +1579,7 @@ auto Parser::ParseDefNamespace(LocalVariable** result) -> ParseResult {
   ASSERT(local);
   if (!scope_->Add(local)) {
     (*result) = nullptr;
-    std::stringstream ss;
+    std::stringstream ss{};
     ss << "failed to add " << (*local) << " to current scope.";
     return ReturnError(ss, start_pos);
   }
@@ -1607,13 +1607,12 @@ auto Parser::ParseDefNative(LocalVariable** local) -> ParseResult {
   CHECK_RESULT(ParseLiteralSymbol(&symbol));
   ASSERT(symbol);
 
-  const auto native = HasTopLevel() && GetTopLevel()->IsClass()
-                        ? GetTopLevel()->AsClass()->FindOrCreateNativeProcedure(symbol)
-                        : NativeProcedure::FindOrCreate(symbol);
+  const auto native = HasTopLevel() && GetTopLevel()->IsClass() ? GetTopLevel()->AsClass()->FindOrCreateNativeFn(symbol)
+                                                                : NativeFn::FindOrCreate(symbol);
   if (!native) {
     (*local) = nullptr;
-    std::stringstream ss;
-    ss << "failed to find NativeProcedure w/ Symbol: " << symbol;
+    std::stringstream ss{};
+    ss << "failed to find NativeFn w/ Symbol: " << symbol;
     return ReturnError(ss, start_pos);
   }
   // arguments
@@ -1625,13 +1624,13 @@ auto Parser::ParseDefNative(LocalVariable** local) -> ParseResult {
   CHECK_RESULT(TryParseDocstring(native));
   if (!((*local) = LocalVariable::New(GetScope(), symbol, native))) {
     (*local) = nullptr;
-    std::stringstream ss;
+    std::stringstream ss{};
     ss << "failed to create local for: " << native;
     return ReturnError(ss, start_pos);
   }
   ASSERT((*local));
   if (!GetScope()->Add((*local))) {
-    std::stringstream ss;
+    std::stringstream ss{};
     ss << "failed to add " << *(*local) << " to current scope.";
     (*local) = nullptr;
     return ReturnError(ss, start_pos);

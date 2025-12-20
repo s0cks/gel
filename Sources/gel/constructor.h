@@ -13,7 +13,7 @@
 #include "type.h"
 
 namespace gel {
-class Constructor : public Procedure {
+class Constructor : public Fn {
   friend class Module;
   friend class Namespace;
   friend class MacroExpander;
@@ -25,7 +25,7 @@ class Constructor : public Procedure {
   CompiledCode* code_ = nullptr;
 
   explicit Constructor(Symbol* symbol, expr::SeqExpr* body) :
-    Procedure(symbol),
+    Fn(symbol),
     body_(body) {}
 
   void SetScope(LocalScope* rhs) {

@@ -142,13 +142,13 @@ COMPILE(UnaryOpInstr) {
 
 COMPILE(InvokeInstr) {
   ASSERT(compiler);
-  ASSERT(GetProcedure()->IsLambda());
-  __ invoke(GetProcedure()->AsLambda(), GetNumberOfArgs());
+  ASSERT(GetFn()->IsLambda());
+  __ invoke(GetFn()->AsLambda(), GetNumberOfArgs());
 }
 
 COMPILE(InvokeNativeInstr) {
   ASSERT(compiler);
-  __ invokenative(GetNativeProcedure(), GetNumberOfArgs());
+  __ invokenative(GetNativeFn(), GetNumberOfArgs());
 }
 
 COMPILE(InvokeDynamicInstr) {

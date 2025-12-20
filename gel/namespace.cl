@@ -11,8 +11,8 @@
     (defnative get-macros [ns]
       "Returns the list of Macros for Namespace [ns].")
     (defnative get-procedures [ns]
-      "Returns the list of Procedures for Namespace [ns].")
+      "Returns the list of Fns for Namespace [ns].")
     (defnative get-lambdas [ns]
       "Returns the list of Lambdas for Namespace [ns].")
     (defnative get-native-procedures [ns]
-      "Returns the list of NativeProcedures for Namespace [ns].")))
+      "Returns the list of NativeFns for Namespace [ns].")))

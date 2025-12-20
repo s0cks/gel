@@ -119,25 +119,25 @@ template <const uword Index, class T>
 using RequiredNativeArgument = NativeArgument<Index, T>;
 
 class Runtime;
-class NativeProcedure;
-using NativeProcedureList = std::vector<NativeProcedure*>;
+class NativeFn;
+using NativeFnList = std::vector<NativeFn*>;
 
-class NativeProcedureEntry {
+class NativeFnEntry {
   friend class Runtime;
   friend class EffectVisitor;
-  friend class NativeProcedure;
-  DEFINE_NON_COPYABLE_TYPE(NativeProcedureEntry);
+  friend class NativeFn;
+  DEFINE_NON_COPYABLE_TYPE(NativeFnEntry);
 
  private:
-  NativeProcedure* native_ = nullptr;
+  NativeFn* native_ = nullptr;
 
-  void SetNative(NativeProcedure* native) {
+  void SetNative(NativeFn* native) {
     ASSERT(native);
     native_ = native;
   }
 
  protected:
-  NativeProcedureEntry() = default;
+  NativeFnEntry() = default;
   virtual auto Apply(const ObjectList& args) const -> bool = 0;
 
   auto Return(Object* rhs = Nil::Get()) const -> bool;
@@ -208,9 +208,9 @@ class NativeProcedureEntry {
   }
 
  public:
-  virtual ~NativeProcedureEntry() = default;
+  virtual ~NativeFnEntry() = default;
 
-  auto GetNative() const -> NativeProcedure* {
+  auto GetNative() const -> NativeFn* {
     return native_;
   }
 
@@ -222,47 +222,47 @@ class NativeProcedureEntry {
     return HasNative();
   }
 
-  friend auto operator<<(std::ostream& stream, const NativeProcedureEntry& rhs) -> std::ostream& {
+  friend auto operator<<(std::ostream& stream, const NativeFnEntry& rhs) -> std::ostream& {
     NOT_IMPLEMENTED(ERROR);
-    return stream << "NativeProcedureEntry()";
+    return stream << "NativeFnEntry()";
   }
 };
 
-class NativeProcedure : public Procedure {
+class NativeFn : public Fn {
   friend class Parser;
   friend class Runtime;
   friend class Interpreter;
-  friend class NativeProcedureEntry;
+  friend class NativeFnEntry;
 
  private:
-  NativeProcedureEntry* entry_ = nullptr;
+  NativeFnEntry* entry_ = nullptr;
 
-  inline void SetEntry(NativeProcedureEntry* entry) {
+  inline void SetEntry(NativeFnEntry* entry) {
     LOG_IF(FATAL, HasEntry()) << "cannot relink " << this << " to: " << (*entry);
     ASSERT(entry);
     entry_ = entry;
   }
 
-  static auto FindOrCreate(Symbol* symbol) -> NativeProcedure*;
+  static auto FindOrCreate(Symbol* symbol) -> NativeFn*;
 
  public:
-  static void Link(Symbol* symbol, NativeProcedureEntry* entry);
+  static void Link(Symbol* symbol, NativeFnEntry* entry);
 
  protected:
-  explicit NativeProcedure(Symbol* symbol) :
-    Procedure(symbol) {}
+  explicit NativeFn(Symbol* symbol) :
+    Fn(symbol) {}
 
   auto VisitPointers(PointerVisitor* vis) -> bool override;
   auto VisitPointerPointers(PointerPointerVisitor* vis) -> bool override;
 
  public:
-  ~NativeProcedure() override = default;
+  ~NativeFn() override = default;
 
   auto IsNative() const -> bool override {
     return true;
   }
 
-  auto GetEntry() const -> NativeProcedureEntry* {
+  auto GetEntry() const -> NativeFnEntry* {
     return entry_;
   }
 
@@ -283,25 +283,25 @@ class NativeProcedure : public Procedure {
     return Apply(std::move(args));
   }
 
-  friend auto operator<<(std::ostream& stream, const NativeProcedure& rhs) -> std::ostream& {
+  friend auto operator<<(std::ostream& stream, const NativeFn& rhs) -> std::ostream& {
     return stream << rhs.ToString();
   }
 
-  DECLARE_TYPE(NativeProcedure);
+  DECLARE_TYPE(NativeFn);
 
  private:
-  static NativeProcedureList all_;
+  static NativeFnList all_;
   static void InitNatives();
 
  protected:
-  static void Register(NativeProcedure* native);
+  static void Register(NativeFn* native);
 
  public:
   static void Init();
-  static auto Find(const std::string& name) -> NativeProcedure*;
-  static auto Find(Symbol* symbol) -> NativeProcedure*;
+  static auto Find(const std::string& name) -> NativeFn*;
+  static auto Find(Symbol* symbol) -> NativeFn*;
 
-  static inline auto GetAll() -> const NativeProcedureList& {
+  static inline auto GetAll() -> const NativeFnList& {
     return all_;
   }
 };
@@ -317,7 +317,7 @@ static inline auto InitNative() -> Native* {
 
 #define _DEFINE_NATIVE_PROCEDURE_TYPE(Name, Sym)             \
   friend class gel::Runtime;                                 \
-  friend class NativeProcedure;                              \
+  friend class NativeFn;                                     \
   DEFINE_NON_COPYABLE_TYPE(Name);                            \
                                                              \
  protected:                                                  \
@@ -325,7 +325,7 @@ static inline auto InitNative() -> Native* {
                                                              \
  public:                                                     \
   Name() :                                                   \
-    NativeProcedureEntry() {}                                \
+    NativeFnEntry() {}                                       \
   ~Name() override = default;                                \
                                                              \
  private:                                                    \
@@ -345,7 +345,7 @@ static inline auto InitNative() -> Native* {
   }
 
 #define DEFINE_NATIVE_PROCEDURE_TYPE(Name) _DEFINE_NATIVE_PROCEDURE_TYPE(Name, #Name)
-#define _NATIVE_PROCEDURE_NAMED(Name)      class Name : public NativeProcedureEntry
+#define _NATIVE_PROCEDURE_NAMED(Name)      class Name : public NativeFnEntry
 
 #define _DECLARE_NATIVE_PROCEDURE(Name, Sym)  \
   _NATIVE_PROCEDURE_NAMED(Name) {             \
@@ -367,7 +367,7 @@ static inline auto InitNative() -> Native* {
     ASSERT(kInstance);                                  \
     kSymbol = Symbol::New(kSymbolString);               \
     ASSERT(kSymbol);                                    \
-    NativeProcedure::Link(kSymbol, kInstance);          \
+    NativeFn::Link(kSymbol, kInstance);                 \
   }                                                     \
   auto Name::Apply(const ObjectList& args) const -> bool
 
@@ -506,9 +506,9 @@ using OptionalVariadicNativeArgument = VariantNativeArgument<Index, false, Types
 
 namespace fmt {
 template <>
-struct formatter<gel::NativeProcedure> : public formatter<std::string> {
+struct formatter<gel::NativeFn> : public formatter<std::string> {
   template <typename FormatContext>
-  constexpr auto format(const gel::NativeProcedure& value, FormatContext& ctx) const -> decltype(ctx.out()) {
+  constexpr auto format(const gel::NativeFn& value, FormatContext& ctx) const -> decltype(ctx.out()) {
     return format_to(ctx.out(), "{}", value.ToString());
   }
 };

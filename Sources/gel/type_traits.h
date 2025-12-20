@@ -103,7 +103,7 @@ DECLARE_TRAIT(has_docs);
 DECLARE_HAS_DOCS(Macro);
 DECLARE_HAS_DOCS(Lambda);
 DECLARE_HAS_DOCS(Namespace);
-DECLARE_HAS_DOCS(NativeProcedure);
+DECLARE_HAS_DOCS(NativeFn);
 #undef DECLARE_HAS_DOCS
 
 template <class T>

@@ -62,7 +62,7 @@ auto EventEmitter::New(const ObjectList& args) -> EventEmitter* {
   return New();
 }
 
-void EventEmitter::Insert(const Path& key, Procedure* callback) {
+void EventEmitter::Insert(const Path& key, Fn* callback) {
   auto current = GetRoot();
   for (const auto& c : key) {
     if (current->children.at(c) == nullptr)
@@ -73,7 +73,7 @@ void EventEmitter::Insert(const Path& key, Procedure* callback) {
   EventListener::Append(&current->value, callback);
 }
 
-void EventEmitter::On(String* event, Procedure* callback) {
+void EventEmitter::On(String* event, Fn* callback) {
   ASSERT(event && !event->IsEmpty());
   ASSERT(callback);
   return Insert(event->Get(), callback);
@@ -113,7 +113,7 @@ EVENT_EMITTER_PROCEEDURE_F(emit) {
 EVENT_EMITTER_PROCEEDURE_F(on) {
   REQUIRED_NATIVE_ARG(0, EventEmitter, emitter);
   REQUIRED_NATIVE_ARG(1, String, event);
-  REQUIRED_NATIVE_ARG(2, Procedure, callback);
+  REQUIRED_NATIVE_ARG(2, Fn, callback);
   emitter->On(event, callback);
   return ReturnNull();
 }

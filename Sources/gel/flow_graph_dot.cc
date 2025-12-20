@@ -191,11 +191,11 @@ auto EffectVisitor::VisitInvokeDynamicInstr(ir::InvokeDynamicInstr* instr) -> bo
   return true;
 }
 
-static inline auto GetTargetNativeProcedure(ir::InvokeNativeInstr* instr) -> NativeProcedure* {
+static inline auto GetTargetNativeFn(ir::InvokeNativeInstr* instr) -> NativeFn* {
   ASSERT(instr->GetTarget() && instr->GetTarget()->IsConstantInstr());
   const auto target = instr->GetTarget()->AsConstantInstr();
-  ASSERT(target && target->GetValue()->IsNativeProcedure());
-  return target->GetValue()->AsNativeProcedure();
+  ASSERT(target && target->GetValue()->IsNativeFn());
+  return target->GetValue()->AsNativeFn();
 }
 
 auto EffectVisitor::VisitInvokeNativeInstr(ir::InvokeNativeInstr* instr) -> bool {
@@ -204,9 +204,9 @@ auto EffectVisitor::VisitInvokeNativeInstr(ir::InvokeNativeInstr* instr) -> bool
   ASSERT(node);
   std::stringstream label;
   label << instr->GetName() << std::endl;
-  const auto target = GetTargetNativeProcedure(instr);
+  const auto target = GetTargetNativeFn(instr);
   ASSERT(target);
-  label << "Procedure: " << target->GetSymbol()->Get();
+  label << "Fn: " << target->GetSymbol()->Get();
   SetNodeLabel(node, label);
   return true;
 }

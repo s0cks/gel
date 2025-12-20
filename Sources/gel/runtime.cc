@@ -365,7 +365,7 @@ void Runtime::Call(Lambda& lambda, const ObjectList args) {
 }
 
 template <>
-void Runtime::Call(NativeProcedure& native, const ObjectList args) {
+void Runtime::Call(NativeFn& native, const ObjectList args) {
   if (!native.IsLinked())
     throw IllegalArgumentException(fmt::format("`{}` is not linked", native));
   {
@@ -374,7 +374,7 @@ void Runtime::Call(NativeProcedure& native, const ObjectList args) {
       locals->Add(Symbol::New(fmt::format("arg{}", idx)), args[idx]);
     }
     {
-      StackFrameGuard<NativeProcedure> guard(&native);
+      StackFrameGuard<NativeFn> guard(&native);
       CallStackFrame stack_frame(GetCallStack(), &native, locals);
       LOG_IF(FATAL, !native(args)) << "failed to apply `" << native << "` with args: " << args;
     }
@@ -402,11 +402,11 @@ void Runtime::Call(Script& script, const ObjectList args) {
     EmptyTaskQueue();
 }
 
-void Runtime::Call(Procedure& target, const ObjectList args) {
+void Runtime::Call(Fn& target, const ObjectList args) {
   if (target.IsConstructor())
     return Call(reinterpret_cast<Constructor&>(target), std::move(args));
   else if (target.IsNative())
-    return Call(dynamic_cast<NativeProcedure&>(target), std::move(args));
+    return Call(dynamic_cast<NativeFn&>(target), std::move(args));
   else if (target.IsScript())
     return Call(reinterpret_cast<Script&>(target), std::move(args));
   else if (target.IsLambda())

@@ -81,7 +81,7 @@ static inline auto IsNativeCall(ir::Instruction* instr) -> bool {
     return false;
   const auto target = instr->AsConstantInstr()->GetValue();
   ASSERT(target);
-  return target->IsNativeProcedure();
+  return target->IsNativeFn();
 }
 
 static inline auto IsLambdaCall(ir::Instruction* instr) -> bool {
@@ -102,7 +102,7 @@ auto EffectVisitor::CreateCallFor(ir::Definition* defn, const uword num_args) ->
   ASSERT(defn);
   ASSERT(num_args >= 0);
   if (IsNativeCall(defn)) {
-    const auto native = defn->AsConstantInstr()->GetValue()->AsNativeProcedure();
+    const auto native = defn->AsConstantInstr()->GetValue()->AsNativeFn();
     ASSERT(native);
     return ir::InvokeNativeInstr::New(defn, num_args);
   } else if (IsLambdaCall(defn)) {
@@ -123,7 +123,7 @@ auto EffectVisitor::CreateCallFor(ir::Definition* defn, const uword num_args) ->
 
 auto EffectVisitor::ReturnCall(ir::InvokeInstr* instr) -> bool {
   if (gel::IsPedantic() && !instr->IsInvokeNativeInstr())
-    AddInstanceOf(instr, Procedure::GetClass());
+    AddInstanceOf(instr, Fn::GetClass());
   ReturnDefinition(instr);
   return true;
 }
@@ -135,7 +135,7 @@ auto EffectVisitor::ReturnCallTo(ir::Definition* defn, const uword num_args) -> 
   return true;
 }
 
-auto EffectVisitor::ReturnCallTo(Procedure* target, const uword num_args) -> bool {
+auto EffectVisitor::ReturnCallTo(Fn* target, const uword num_args) -> bool {
   ASSERT(target);
   const auto defn = ir::ConstantInstr::New(target);
   ASSERT(defn);

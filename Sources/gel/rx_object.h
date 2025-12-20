@@ -34,19 +34,18 @@ class Observer : public Object {
   DECLARE_TYPE(Observer);
 
  private:
-  static auto CreateDynamicObserver(Procedure* on_next, Procedure* on_error, Procedure* on_completed)
-      -> rx::DynamicObjectObserver;
+  static auto CreateDynamicObserver(Fn* on_next, Fn* on_error, Fn* on_completed) -> rx::DynamicObjectObserver;
 
  public:
   static auto New() -> Observer*;
-  static inline auto New(Procedure* on_next, Procedure* on_error, Procedure* on_completed) -> Observer* {
+  static inline auto New(Fn* on_next, Fn* on_error, Fn* on_completed) -> Observer* {
     ASSERT(on_next);
     return new Observer(CreateDynamicObserver(on_next, on_error, on_completed));
   }
 
   static inline auto New(Object* on_next, Object* on_error, Object* on_completed) -> Observer* {
-    ASSERT(on_next && on_next->IsProcedure());
-    return New(gel::ToProcedure(on_next), gel::ToProcedure(on_error), gel::ToProcedure(on_completed));
+    ASSERT(on_next && on_next->IsFn());
+    return New(gel::ToFn(on_next), gel::ToFn(on_error), gel::ToFn(on_completed));
   }
 };
 

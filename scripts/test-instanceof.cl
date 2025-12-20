@@ -4,5 +4,5 @@
 (print (#String? "Hello World"))
 (print (#Long? 10))
 (print (#Number? 10))
-(print (#Procedure? print))
-(print (#Procedure? (fn (x) (print x))))
+(print (#Fn? print))
+(print (#Fn? (fn (x) (print x))))

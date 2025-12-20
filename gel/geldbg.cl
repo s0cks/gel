@@ -20,7 +20,7 @@
   (defnative print-roots []
     "Prints the roots for the GC.")
   ; (defn inspect [o]
-  ;   (when (#Procedure? o)
+  ;   (when (#Fn? o)
   ;     (print (format "compiled in {}ns." (gel:compile-time? o)))))
   (defnative print-heap []
     "Prints the heap information to the terminal.")

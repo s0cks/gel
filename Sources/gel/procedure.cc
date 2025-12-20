@@ -6,7 +6,7 @@
 #include "runtime.h"
 
 namespace gel {
-auto Procedure::CreateClass() -> Class* {
-  return Class::New(Object::GetClass(), "Procedure");
+auto Fn::CreateClass() -> Class* {
+  return Class::New(Object::GetClass(), "Fn");
 }
 }  // namespace gel

@@ -19,13 +19,13 @@
 namespace gel {
 // TODO: move to async namespace
 using OnSuccessCallback = std::function<void()>;
-auto WrapOnSuccess(Procedure* func) -> OnSuccessCallback;
+auto WrapOnSuccess(Fn* func) -> OnSuccessCallback;
 
 using OnErrorCallback = std::function<void(Error*)>;
-auto WrapOnError(Procedure* func) -> OnErrorCallback;
+auto WrapOnError(Fn* func) -> OnErrorCallback;
 
 using OnFinishedCallback = std::function<void()>;
-auto WrapOnFinished(Procedure* func) -> OnFinishedCallback;
+auto WrapOnFinished(Fn* func) -> OnFinishedCallback;
 
 namespace fs {
 class RequestBase;
@@ -61,7 +61,7 @@ class EventLoop : public Object {
  public:
   ~EventLoop() override = default;
 
-  inline void AddTask(Procedure* rhs) {
+  inline void AddTask(Fn* rhs) {
     ASSERT(rhs);
     tasks_.emplace_back(rhs);
   }
@@ -81,26 +81,25 @@ class EventLoop : public Object {
 
   auto Stat(const std::string& path, const std::function<void(uword)>& on_next, const OnErrorCallback& on_error = {},
             const OnFinishedCallback& on_finished = {}) -> bool;
-  auto Stat(const std::string& path, Procedure* on_next, Procedure* on_error, Procedure* on_finished) -> bool;
+  auto Stat(const std::string& path, Fn* on_next, Fn* on_error, Fn* on_finished) -> bool;
 
   auto Rename(const std::string& old_path, const std::string& new_path, const OnSuccessCallback& on_success = {},
               const OnErrorCallback& on_error = {}, const OnFinishedCallback& on_finished = {}) -> bool;
-  auto Rename(const std::string& old_path, const std::string& new_path, Procedure* on_success, Procedure* on_error,
-              Procedure* on_finished) -> bool;
+  auto Rename(const std::string& old_path, const std::string& new_path, Fn* on_success, Fn* on_error, Fn* on_finished)
+      -> bool;
 
   auto Mkdir(const std::string& path, const int mode, const OnSuccessCallback& on_success = {},
              const OnErrorCallback& on_error = {}, const OnFinishedCallback& on_finished = {}) -> bool;
-  auto Mkdir(const std::string& path, const int mode, Procedure* on_success, Procedure* on_error,
-             Procedure* on_finished) -> bool;
+  auto Mkdir(const std::string& path, const int mode, Fn* on_success, Fn* on_error, Fn* on_finished) -> bool;
 
   auto Rmdir(const std::string& path, const OnSuccessCallback& on_success = {}, const OnErrorCallback& on_error = {},
              const OnFinishedCallback& on_finished = {}) -> bool;
-  auto Rmdir(const std::string& path, Procedure* on_success, Procedure* on_error, Procedure* on_finished) -> bool;
+  auto Rmdir(const std::string& path, Fn* on_success, Fn* on_error, Fn* on_finished) -> bool;
 
   auto Run(const uv_run_mode mode) -> int;
   auto Submit(fs::RequestBase* request) -> int;
   auto GetTimer(const uword idx) const -> Timer*;
-  auto CreateTimer(Procedure* on_tick) -> Timer*;
+  auto CreateTimer(Fn* on_tick) -> Timer*;
 
   friend auto operator<<(std::ostream& stream, const EventLoop& rhs) -> std::ostream& {
     return stream << rhs.ToString();

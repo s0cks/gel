@@ -49,8 +49,8 @@ concept HasArgs = requires(const T value) {
 };
 
 template <class T>
-concept RuntimeTarget = std::same_as<T, Constructor> || std::same_as<T, Lambda> || std::same_as<T, NativeProcedure> ||
-                        std::same_as<T, Script>;
+concept RuntimeTarget =
+    std::same_as<T, Constructor> || std::same_as<T, Lambda> || std::same_as<T, NativeFn> || std::same_as<T, Script>;
 
 class Module;
 class Runtime {
@@ -69,9 +69,9 @@ class Runtime {
   friend class Interpreter;
   friend class RuntimeTest;
   friend class ModuleLoader;
-  friend class NativeProcedure;
+  friend class NativeFn;
   friend class RuntimeScopeScope;
-  friend class NativeProcedureEntry;
+  friend class NativeFnEntry;
   DEFINE_NON_COPYABLE_TYPE(Runtime);
 
  private:
@@ -160,7 +160,7 @@ class Runtime {
 
   template <RuntimeTarget T>
   void Call(T& target, const ObjectList args = {});
-  void Call(Procedure& target, const ObjectList args = {});
+  void Call(Fn& target, const ObjectList args = {});
 
   template <WithInit I>
   inline void InvokeConstructor(I* this_value, const ObjectList& args = {}) {
@@ -224,7 +224,7 @@ class Runtime {
     return PopOr();
   }
 
-  inline auto CallPop(Procedure& target, const ObjectList& args = {}) -> Object* {
+  inline auto CallPop(Fn& target, const ObjectList& args = {}) -> Object* {
     Call(target, args);
     return PopOr();
   }
@@ -240,9 +240,9 @@ class Runtime {
     });
   }
 
-  inline void AddShutdownListener(Procedure& target) {
+  inline void AddShutdownListener(Fn& target) {
     if (target.IsNative())
-      return AddShutdownListener(dynamic_cast<NativeProcedure&>(target));
+      return AddShutdownListener(dynamic_cast<NativeFn&>(target));
     else if (target.IsScript())
       return AddShutdownListener(reinterpret_cast<Script&>(target));
     else if (target.IsLambda())

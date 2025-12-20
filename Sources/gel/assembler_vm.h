@@ -15,7 +15,7 @@
 namespace gel {
 using namespace vm;
 
-class NativeProcedure;
+class NativeFn;
 class Assembler {
   friend class AssemblerTest;
   DEFINE_NON_COPYABLE_TYPE(Assembler);
@@ -160,7 +160,7 @@ class Assembler {
     EmitUWord(num_args);
   }
 
-  inline void invokenative(Procedure* func, const uword num_args) {
+  inline void invokenative(Fn* func, const uword num_args) {
     ASSERT(func);
     EmitOp(Bytecode::kInvokeNative);
     EmitAddress(func);

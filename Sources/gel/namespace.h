@@ -19,8 +19,8 @@ DECLARE_VISITOR(Namespace);
 
 class Macro;
 class MacroVisitor;
-class Procedure;
-class ProcedureVisitor;
+class Fn;
+class FnVisitor;
 class Namespace : public Object {
   friend class Script;
   friend class Parser;
@@ -36,7 +36,7 @@ class Namespace : public Object {
   LocalScope* scope_;
   String* docs_ = nullptr;
   Constructor* init_ = nullptr;
-  Array<Procedure*>* procedures_;
+  Array<Fn*>* procedures_;
   Array<Macro*>* macros_;
 
  protected:
@@ -48,7 +48,7 @@ class Namespace : public Object {
     ASSERT(scope_);
     macros_ = Array<Macro*>::New();
     ASSERT(macros_);
-    procedures_ = Array<Procedure*>::New();
+    procedures_ = Array<Fn*>::New();
     ASSERT(procedures_);
   }
 
@@ -109,7 +109,7 @@ class Namespace : public Object {
     return macros_;
   }
 
-  auto GetProcedures() const -> Array<Procedure*>* {
+  auto GetFns() const -> Array<Fn*>* {
     return procedures_;
   }
 
@@ -135,28 +135,28 @@ class Namespace : public Object {
   auto CreateSymbol(const std::string& value) -> Symbol*;
 
   auto FindMacro(const std::string& name) -> Macro*;
-  auto FindProcedure(const std::string& name) -> Procedure*;
+  auto FindFn(const std::string& name) -> Fn*;
   auto FindLambda(const std::string& name) -> Lambda*;
-  auto FindNativeProcedure(const std::string& name) -> NativeProcedure*;
+  auto FindNativeFn(const std::string& name) -> NativeFn*;
 
   template <VisitorLike<Macro*> Visitor>
   inline auto VisitAllMacros(Visitor& vis) const -> bool {
     return macros_->VisitAll(vis);
   }
 
-  template <VisitorLike<Procedure*> Visitor>
-  inline auto VisitAllProcedures(Visitor& vis) const -> bool {
+  template <VisitorLike<Fn*> Visitor>
+  inline auto VisitAllFns(Visitor& vis) const -> bool {
     return procedures_->VisitAll(vis);
   }
 
-  template <VisitorLike<Procedure*> Visitor>
-  inline auto VisitAllNativeProcedures(Visitor& vis) const -> bool {
-    return procedures_->VisitIf(vis, Procedure::IsNativeProc);
+  template <VisitorLike<Fn*> Visitor>
+  inline auto VisitAllNativeFns(Visitor& vis) const -> bool {
+    return procedures_->VisitIf(vis, Fn::IsNativeProc);
   }
 
-  template <VisitorLike<Procedure*> Visitor>
-  inline auto VisitAllLambdaProcedures(Visitor& vis) const -> bool {
-    return procedures_->VisitIf(vis, Procedure::IsLambdaProc);
+  template <VisitorLike<Fn*> Visitor>
+  inline auto VisitAllLambdaFns(Visitor& vis) const -> bool {
+    return procedures_->VisitIf(vis, Fn::IsLambdaProc);
   }
 
   DECLARE_TYPE(Namespace);

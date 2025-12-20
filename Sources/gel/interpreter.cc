@@ -174,12 +174,12 @@ void Interpreter::PopLookup() {
 }
 
 void Interpreter::Invoke(const Bytecode::Op op) {
-  Procedure* func = nullptr;
+  Fn* func = nullptr;
   if (op == Bytecode::kInvokeDynamic) {
     const auto next = (*POP);
     ASSERT(next);
-    if (next->IsProcedure()) {
-      func = next->AsProcedure();
+    if (next->IsFn()) {
+      func = next->AsFn();
     } else if (next->IsSymbol()) {
       const auto scope = GetScope();
       ASSERT(scope);
@@ -196,27 +196,27 @@ void Interpreter::Invoke(const Bytecode::Op op) {
           }
         }
       }
-      if (!local || !local->HasValue() || !local->GetValue()->IsProcedure()) {
+      if (!local || !local->HasValue() || !local->GetValue()->IsFn()) {
         std::stringstream ss;
-        ss << "failed to resolve symbol `" << symbol->GetFullyQualifiedName() << "` to Procedure";
+        ss << "failed to resolve symbol `" << symbol->GetFullyQualifiedName() << "` to Fn";
         return Throw(ss);
       }
-      func = local->GetValue()->AsProcedure();
+      func = local->GetValue()->AsFn();
     } else {
       std::stringstream ss;
-      ss << "expected " << next->ToString() << " to be a Symbol or Procedure.";
+      ss << "expected " << next->ToString() << " to be a Symbol or Fn.";
       return Throw(ss);
     }
   } else {
     const auto next = NextObjectPointer();
-    ASSERT(next && next->IsProcedure());
-    func = next->AsProcedure();
+    ASSERT(next && next->IsFn());
+    func = next->AsFn();
   }
   ASSERT(func);
   const auto num_args = NextUWord();
   if (func->IsNative()) {
     ASSERT(op == Bytecode::kInvokeNative || op == Bytecode::kInvokeDynamic);
-    return GetRuntime()->CallWithNArgs(*(func->AsNativeProcedure()), num_args);
+    return GetRuntime()->CallWithNArgs(*(func->AsNativeFn()), num_args);
   } else if (func->IsLambda()) {
     ASSERT(op == Bytecode::kInvoke || op == Bytecode::kInvokeDynamic);
     return GetRuntime()->CallWithNArgs(*(func->AsLambda()), num_args);

@@ -11,4 +11,4 @@
     (defnative get-fields [c]
       "Returns a list of Fields for Class [c].")
     (defnative get-procedures [c]
-      "Returns the Procedures for Class [c].")))
+      "Returns the Functions for Class [c].")))

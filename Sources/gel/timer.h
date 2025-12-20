@@ -21,9 +21,9 @@ class Timer : public Object {
  private:
   uword id_;
   uv_timer_t handle_{};
-  Procedure* on_tick_;
+  Fn* on_tick_;
 
-  Timer(uword id, Procedure* on_tick);
+  Timer(uword id, Fn* on_tick);
 
   void SetData(void* data) {
     ASSERT(data);
@@ -61,7 +61,7 @@ class Timer : public Object {
     return uv_handle_get_data((uv_handle_t*)this);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
   }
 
-  auto GetCallback() const -> Procedure* {
+  auto GetCallback() const -> Fn* {
     return on_tick_;
   }
 
@@ -90,7 +90,7 @@ class Timer : public Object {
   DECLARE_TYPE(Timer);
 
  public:
-  static inline auto New(uword id, Procedure* on_tick) -> Timer* {
+  static inline auto New(uword id, Fn* on_tick) -> Timer* {
     ASSERT(on_tick);
     return new Timer(id, on_tick);
   }

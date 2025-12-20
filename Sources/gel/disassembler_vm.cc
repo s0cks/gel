@@ -60,7 +60,7 @@ void Disassembler::Invoke(BytecodeDecoder& decoder, const Bytecode::Op op) {
     }
     case Bytecode::kInvokeNative: {
       const auto native = decoder.NextObjectPointer();
-      ASSERT(native && native->IsNativeProcedure());
+      ASSERT(native && native->IsNativeFn());
       Comment(native) << ", num_args=" << decoder.NextUWord();
       break;
     }

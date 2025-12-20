@@ -44,7 +44,7 @@
 namespace gel {
 #define INIT_GEL_NATIVE(Name) InitNative<gel_##Name>();
 
-void NativeProcedure::InitNatives() {
+void NativeFn::InitNatives() {
   using namespace proc;
   INIT_GEL_NATIVE(get_version);
   INIT_GEL_NATIVE(sizeof);
@@ -123,13 +123,13 @@ GEL_NATIVE_PROCEDURE_F(sizeof) {
 }
 
 GEL_NATIVE_PROCEDURE_F(on_shutdown) {
-  REQUIRED_NATIVE_ARG(0, Procedure, callback);
+  REQUIRED_NATIVE_ARG(0, Fn, callback);
   GetRuntime()->AddShutdownListener(*callback.GetValue());
   return ReturnNull();
 }
 
 GEL_NATIVE_PROCEDURE_F(queue_utask) {
-  REQUIRED_NATIVE_ARG(0, Procedure, task);
+  REQUIRED_NATIVE_ARG(0, Fn, task);
   GetThreadEventLoop()->AddTask(task);
   return ReturnNull();
 }
@@ -148,7 +148,7 @@ GEL_NATIVE_PROCEDURE_F(bit_str) {
 }
 
 GEL_NATIVE_PROCEDURE_F(docs) {
-  REQUIRED_NATIVE_ARG(0, Procedure, func);
+  REQUIRED_NATIVE_ARG(0, Fn, func);
   if (func->IsLambda()) {
     const auto lambda = func->AsLambda();
     std::stringstream ss;
@@ -172,7 +172,7 @@ GEL_NATIVE_PROCEDURE_F(docs) {
       ss << lambda->GetDocstring()->Get();
     return ReturnNew<String>(ss.str());
   } else if (func->IsNative()) {
-    const auto native = func->AsNativeProcedure();
+    const auto native = func->AsNativeFn();
     std::stringstream ss;
     ss << native->GetSymbol()->GetFullyQualifiedName() << std::endl;
     ss << "([";
@@ -192,7 +192,7 @@ GEL_NATIVE_PROCEDURE_F(docs) {
       ss << native->GetDocstring()->Get();
     return ReturnNew<String>(ss.str());
   }
-  return ThrowError(fmt::format("`{}` is not a Procedure", func->ToString()));
+  return ThrowError(fmt::format("`{}` is not a Fn", func->ToString()));
 }
 
 NATIVE_PROCEDURE_F(import) {
@@ -338,7 +338,7 @@ TIMER_PROCEDURE_F(get_due_in) {
 }
 
 TIMER_PROCEDURE_F(create) {
-  REQUIRED_NATIVE_ARG(0, Procedure, on_tick);
+  REQUIRED_NATIVE_ARG(0, Fn, on_tick);
   REQUIRED_NATIVE_ARG(1, Long, timeout_value);
   REQUIRED_NATIVE_ARG(2, Long, repeat);
   const auto timer = GetThreadEventLoop()->CreateTimer(on_tick);

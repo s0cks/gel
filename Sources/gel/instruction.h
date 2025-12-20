@@ -48,7 +48,7 @@
 namespace gel {
 class Assembler;
 class EffectVisitor;
-class NativeProcedure;
+class NativeFn;
 class FlowGraphBuilder;
 class FlowGraphCompiler;
 
@@ -68,7 +68,7 @@ class InstructionVisitor {
 
  public:
   virtual ~InstructionVisitor() = default;
-#define DECLARE_VISIT(Name) virtual auto Visit##Name##Instr(Name##Instr* instr) -> bool = 0;
+#define DECLARE_VISIT(Name) virtual auto Visit##Name##Instr(Name##Instr* instr)->bool = 0;
   FOR_EACH_INSTRUCTION(DECLARE_VISIT)
 #undef DECLARE_VISIT
 };
@@ -145,12 +145,12 @@ class Instruction {
     return AsDefinition() != nullptr;
   }
 
-#define DEFINE_TYPE_CHECK(Name)                    \
-  virtual auto As##Name##Instr() -> Name##Instr* { \
-    return nullptr;                                \
-  }                                                \
-  auto Is##Name##Instr() -> bool {                 \
-    return As##Name##Instr() != nullptr;           \
+#define DEFINE_TYPE_CHECK(Name)                  \
+  virtual auto As##Name##Instr()->Name##Instr* { \
+    return nullptr;                              \
+  }                                              \
+  auto Is##Name##Instr()->bool {                 \
+    return As##Name##Instr() != nullptr;         \
   }
   FOR_EACH_INSTRUCTION(DEFINE_TYPE_CHECK)
 #undef DEFINE_TYPE_CHECK
@@ -212,7 +212,7 @@ class InstructionIterator {
   auto GetName() const -> const char* override {         \
     return #Name;                                        \
   }                                                      \
-  auto As##Name() -> Name* override {                    \
+  auto As##Name()->Name* override {                      \
     return this;                                         \
   }
 
@@ -351,7 +351,7 @@ class GraphEntryInstr : public EntryInstr {
  public:
   ~GraphEntryInstr() override = default;
 
-  auto GetProcedure() const -> Object* {
+  auto GetFn() const -> Object* {
     return procedure_;
   }
 
@@ -766,9 +766,9 @@ class InvokeInstr : public Definition {
     return target_;
   }
 
-  auto GetProcedure() const -> Procedure* {
-    ASSERT(GetTarget()->IsConstantInstr() && GetTarget()->AsConstantInstr()->GetValue()->IsProcedure());
-    return GetTarget()->AsConstantInstr()->GetValue()->AsProcedure();
+  auto GetFn() const -> Fn* {
+    ASSERT(GetTarget()->IsConstantInstr() && GetTarget()->AsConstantInstr()->GetValue()->IsFn());
+    return GetTarget()->AsConstantInstr()->GetValue()->AsFn();
   }
 
   DECLARE_INSTRUCTION(InvokeInstr);
@@ -822,9 +822,9 @@ class InvokeNativeInstr : public InvokeInstr {
  public:
   ~InvokeNativeInstr() override = default;
 
-  auto GetNativeProcedure() const -> NativeProcedure* {
-    ASSERT(GetProcedure()->IsNative());
-    return GetProcedure()->AsNativeProcedure();
+  auto GetNativeFn() const -> NativeFn* {
+    ASSERT(GetFn()->IsNative());
+    return GetFn()->AsNativeFn();
   }
 
   DECLARE_INSTRUCTION(InvokeNativeInstr);
@@ -947,9 +947,9 @@ class BinaryOpInstr : public TemplateOpInstr<BinaryOp> {
     return right_;
   }
 
-#define DEFINE_OP_CHECK(Name)                \
-  inline auto Is##Name##Op() const -> bool { \
-    return GetOp() == BinaryOp::k##Name;     \
+#define DEFINE_OP_CHECK(Name)              \
+  inline auto Is##Name##Op() const->bool { \
+    return GetOp() == BinaryOp::k##Name;   \
   }
   FOR_EACH_BINARY_OP(DEFINE_OP_CHECK)
 #undef DEFINE_OP_CHECK
@@ -961,9 +961,9 @@ class BinaryOpInstr : public TemplateOpInstr<BinaryOp> {
     return new BinaryOpInstr(op, left, right);
   }
 
-#define DEFINE_NEW_OP(Name)                                                             \
-  static inline auto New##Name(Definition* left, Definition* right) -> BinaryOpInstr* { \
-    return New(BinaryOp::k##Name, left, right);                                         \
+#define DEFINE_NEW_OP(Name)                                                           \
+  static inline auto New##Name(Definition* left, Definition* right)->BinaryOpInstr* { \
+    return New(BinaryOp::k##Name, left, right);                                       \
   }
   FOR_EACH_BINARY_OP(DEFINE_NEW_OP)
 #undef DEFINE_NEW_OP
@@ -991,9 +991,9 @@ class UnaryOpInstr : public TemplateOpInstr<UnaryOp> {
     return value_;
   }
 
-#define DEFINE_OP_CHECK(Name)                \
-  inline auto Is##Name##Op() const -> bool { \
-    return GetOp() == UnaryOp::k##Name;      \
+#define DEFINE_OP_CHECK(Name)              \
+  inline auto Is##Name##Op() const->bool { \
+    return GetOp() == UnaryOp::k##Name;    \
   }
   FOR_EACH_UNARY_OP(DEFINE_OP_CHECK)
 #undef DEFINE_OP_CHECK
@@ -1005,9 +1005,9 @@ class UnaryOpInstr : public TemplateOpInstr<UnaryOp> {
     return new UnaryOpInstr(op, value);
   }
 
-#define DEFINE_NEW_OP(Name)                                          \
-  static inline auto New##Name(Definition* value) -> UnaryOpInstr* { \
-    return New(UnaryOp::k##Name, value);                             \
+#define DEFINE_NEW_OP(Name)                                        \
+  static inline auto New##Name(Definition* value)->UnaryOpInstr* { \
+    return New(UnaryOp::k##Name, value);                           \
   }
   FOR_EACH_UNARY_OP(DEFINE_NEW_OP)
 #undef DEFINE_NEW_OP

@@ -18,16 +18,16 @@ class EventEmitter : public Object {
 
    public:
     EventListener* next = nullptr;
-    Procedure* callback;
+    Fn* callback;
 
-    explicit EventListener(Procedure* func) :
+    explicit EventListener(Fn* func) :
       callback(func) {}
     ~EventListener() = default;
 
     void Call(Object* data);
 
    public:
-    static void Append(EventListener** head, Procedure* func) {
+    static void Append(EventListener** head, Fn* func) {
       ASSERT(func);
       const auto listener = new EventListener(func);
       ASSERT(listener);
@@ -82,12 +82,12 @@ class EventEmitter : public Object {
     return root_;
   }
 
-  void Insert(const Path& path, Procedure* callback);
+  void Insert(const Path& path, Fn* callback);
 
  public:
   ~EventEmitter() override = default;
 
-  void On(String* event, Procedure* callback);
+  void On(String* event, Fn* callback);
   void Emit(String* event, Object* data = Nil::Get());
 
   DECLARE_TYPE(EventEmitter);
