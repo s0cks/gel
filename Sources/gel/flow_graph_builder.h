@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "common.h"
-#include "constructor.h"
 #include "expr/clause_expr.h"
 #include "expr/expression.h"
 #include "flags.h"
@@ -288,7 +287,7 @@ class EffectVisitor : public ExpressionVisitor {
 
   template <HasBodyExpr T>
   auto Visit(T& rhs) -> bool;
-#define DECLARE_VISIT(Name) virtual auto Visit##Name(Name* name) -> bool override;
+#define DECLARE_VISIT(Name) virtual auto Visit##Name(Name* name)->bool override;
   FOR_EACH_EXPRESSION_NODE(DECLARE_VISIT)
 #undef DECLARE_VISIT
 

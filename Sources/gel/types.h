@@ -2,7 +2,6 @@
 #include "array.h"
 #include "buffer.h"
 #include "class.h"
-#include "constructor.h"
 #include "error.h"
 #include "event_emitter.h"
 #include "event_loop.h"

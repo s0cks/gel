@@ -202,8 +202,10 @@ void Namespace::Init() {
   InitNative<namespace_get_procedures>();
 }
 
-auto Namespace::CreateConstructor(Namespace* ns, expr::SeqExpr* body) -> Constructor* {
-  const auto init = Constructor::New(ns->GetSymbol(), body);
+auto Namespace::CreateConstructor(Namespace* ns, expr::SeqExpr* body) -> Lambda* {
+  const auto init = Lambda::New();
+  init->SetSymbol(ns->GetSymbol());
+  init->SetBody(body);
   init->SetArgs(Array<Argument*>::New(1));
   init->SetScope(LocalScope::NewWithThis(ns));
   return init;

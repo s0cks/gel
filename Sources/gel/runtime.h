@@ -13,7 +13,6 @@
 
 #include "call_stack.h"
 #include "common.h"
-#include "constructor.h"
 #include "environment.h"
 #include "error.h"
 #include "flags.h"
@@ -49,8 +48,7 @@ concept HasArgs = requires(const T value) {
 };
 
 template <class T>
-concept RuntimeTarget =
-    std::same_as<T, Constructor> || std::same_as<T, Lambda> || std::same_as<T, NativeFn> || std::same_as<T, Script>;
+concept RuntimeTarget = std::same_as<T, Lambda> || std::same_as<T, NativeFn> || std::same_as<T, Script>;
 
 class Module;
 class Runtime {

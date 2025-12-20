@@ -2,7 +2,6 @@
 
 #include "array.h"
 #include "common.h"
-#include "constructor.h"
 #include "expr/expression.h"
 #include "macro.h"
 #include "native_procedure.h"
@@ -35,9 +34,11 @@ auto Module::Compare(Object* rhs) const -> bool {
   return -1;
 }
 
-auto Module::CreateConstructor(Module* rhs, expr::SeqExpr* body) -> Constructor* {
+auto Module::CreateConstructor(Module* rhs, expr::SeqExpr* body) -> Lambda* {
   ASSERT(rhs);
-  const auto init = Constructor::New(rhs->GetSymbol(), body);
+  const auto init = Lambda::New();
+  init->SetSymbol(rhs->GetSymbol());
+  init->SetBody(body);
   init->SetArgs(Array<Argument*>::New(1));
   init->SetScope(LocalScope::NewWithThis(rhs));
   return init;

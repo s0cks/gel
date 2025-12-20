@@ -53,7 +53,6 @@ auto FlowGraphCompiler::GetBlockLabel(ir::EntryInstr* blk) -> Label* {
 
 template auto FlowGraphCompiler::CompileTarget(Lambda& lambda) -> bool;
 template auto FlowGraphCompiler::CompileTarget(Script& script) -> bool;
-template auto FlowGraphCompiler::CompileTarget(Constructor& script) -> bool;
 
 template <CompilerTarget Target>
 auto FlowGraphCompiler::CompileTarget(Target& target) -> bool {

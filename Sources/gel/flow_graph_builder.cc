@@ -6,7 +6,6 @@
 #include <utility>
 
 #include "common.h"
-#include "constructor.h"
 #include "expr/expression.h"
 #include "expr/exprs.h"
 #include "flags.h"
@@ -737,7 +736,6 @@ auto EffectVisitor::Visit(T& target) -> bool {
 
 template auto EffectVisitor::Visit(Lambda& rhs) -> bool;
 template auto EffectVisitor::Visit(Script& rhs) -> bool;
-template auto EffectVisitor::Visit(Constructor& rhs) -> bool;
 
 auto EffectVisitor::VisitSeqExpr(expr::SeqExpr* expr) -> bool {
   ASSERT(expr);
@@ -812,5 +810,4 @@ auto FlowGraphBuilder::Build(Target& target, LocalScope* scope) -> FlowGraph* {
 
 template auto FlowGraphBuilder::Build(Lambda& target, LocalScope* scope) -> FlowGraph*;
 template auto FlowGraphBuilder::Build(Script& target, LocalScope* scope) -> FlowGraph*;
-template auto FlowGraphBuilder::Build(Constructor& target, LocalScope* scope) -> FlowGraph*;
 }  // namespace gel

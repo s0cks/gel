@@ -11,7 +11,6 @@
 
 #include "call_stack.h"
 #include "common.h"
-#include "constructor.h"
 #include "error.h"
 #include "event_loop.h"
 #include "exception.h"
@@ -291,43 +290,6 @@ class CallStackFrame {
 };
 
 template <>
-void Runtime::Call(Constructor& init, const ObjectList args) {
-  {
-    CallScope locals(this);
-    if (init.HasScope())
-      locals->AddAll(init.GetScope());
-    if (init.HasArgs()) {
-      const auto& lambda_args = init.GetArgs();
-      ASSERT(lambda_args);
-      for (int idx = static_cast<int>(args.size()); idx > 0; idx--) {
-        const auto arg = lambda_args->Get(static_cast<uword>(idx) - 1);
-        ASSERT(arg);
-        ASSERT((idx - 1) == arg->GetIndex());
-        const auto symbol = Symbol::New(arg->GetName()->Get());
-        ASSERT(symbol);
-        const auto value = args[args.size() - idx];
-        ASSERT(value);
-        const auto local = LocalVariable::New(locals, symbol, value);
-        ASSERT(local);
-        LOG_IF(FATAL, !locals->Add(local)) << "failed to add parameter: " << (*local);
-      }
-    }
-    DLOG(INFO) << init << " scope:";
-    PRINT_SCOPE(INFO, locals);
-    LOG_IF(FATAL, !FlowGraphCompiler::Compile(init, locals)) << "failed to compile: " << init;
-    {
-      StackFrameGuard<Constructor> stack_guard(&init);
-      CallStackFrame call_frame(GetCallStack(), &init, locals);
-      Interpreter interpreter(this);
-      interpreter(init);
-    }
-  }
-
-  if (ShouldEmptyTaskQueue())
-    EmptyTaskQueue();
-}
-
-template <>
 void Runtime::Call(Lambda& lambda, const ObjectList args) {
   {
     CallScope locals(this);
@@ -403,9 +365,7 @@ void Runtime::Call(Script& script, const ObjectList args) {
 }
 
 void Runtime::Call(Fn& target, const ObjectList args) {
-  if (target.IsConstructor())
-    return Call(reinterpret_cast<Constructor&>(target), std::move(args));
-  else if (target.IsNative())
+  if (target.IsNative())
     return Call(dynamic_cast<NativeFn&>(target), std::move(args));
   else if (target.IsScript())
     return Call(reinterpret_cast<Script&>(target), std::move(args));

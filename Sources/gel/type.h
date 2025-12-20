@@ -28,10 +28,9 @@ class Definition;
   V(String)                        \
   V(Symbol)                        \
   V(Macro)                         \
-  V(Fn)                     \
+  V(Fn)                            \
   V(Lambda)                        \
-  V(Constructor)                   \
-  V(NativeFn)               \
+  V(NativeFn)                      \
   V(Pair)                          \
   V(Script)                        \
   V(Error)                         \

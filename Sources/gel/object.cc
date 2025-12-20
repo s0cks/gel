@@ -47,7 +47,6 @@ DEFINE_NEW_OPERATOR(Symbol);        // NOLINT(cppcoreguidelines-pro-type-reinter
 DEFINE_NEW_OPERATOR(Macro);         // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Fn);            // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Lambda);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
-DEFINE_NEW_OPERATOR(Constructor);   // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(NativeFn);      // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Pair);          // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 DEFINE_NEW_OPERATOR(Script);        // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
@@ -152,7 +151,6 @@ void Object::Init() {
   Seq::InitClass();
   Map::Init();
   Fn::InitClass();
-  Constructor::InitClass();
   Lambda::InitClass();
   NativeFn::Init();
   Buffer::Init();

@@ -6,7 +6,6 @@
 
 #include "argument.h"
 #include "common.h"
-#include "constructor.h"
 #include "expr/expression.h"
 #include "object.h"
 #include "pointer.h"
@@ -35,7 +34,7 @@ class Namespace : public Object {
   Symbol* symbol_ = nullptr;
   LocalScope* scope_;
   String* docs_ = nullptr;
-  Constructor* init_ = nullptr;
+  Lambda* init_ = nullptr;
   Array<Fn*>* procedures_;
   Array<Macro*>* macros_;
 
@@ -57,7 +56,7 @@ class Namespace : public Object {
     owner_ = rhs;
   }
 
-  void SetInit(Constructor* rhs) {
+  void SetInit(Lambda* rhs) {
     ASSERT(rhs);
     init_ = rhs;
   }
@@ -70,7 +69,7 @@ class Namespace : public Object {
  public:
   ~Namespace() override = default;
 
-  auto GetInit() const -> Constructor* {
+  auto GetInit() const -> Lambda* {
     return init_;
   }
 
@@ -170,7 +169,7 @@ class Namespace : public Object {
   template <VisitorLike<Namespace*> Visitor>
   static auto VisitAllNamespaces(Visitor& vis) -> bool;
 
-  static auto CreateConstructor(Namespace* ns, expr::SeqExpr* body = nullptr) -> Constructor*;
+  static auto CreateConstructor(Namespace* ns, expr::SeqExpr* body = nullptr) -> Lambda*;
   static auto FindNamespace(const Predicate& filter) -> Namespace*;
 
   static inline auto FindNamespace(const std::string& name) -> Namespace* {

@@ -98,10 +98,6 @@ class StackFrame {  // TODO: extend Object
     return GetTarget()->IsNativeFn();
   }
 
-  auto IsInitFrame() const -> bool {
-    return GetTarget()->IsConstructor();
-  }
-
   auto GetLocals() const -> LocalScope* {
     return locals_;
   }

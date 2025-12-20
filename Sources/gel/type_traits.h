@@ -80,6 +80,11 @@ concept HasName = requires(T value) {
 };
 
 template <typename T>
+concept WithInit = requires(T value) {
+  { value.HasInit() } -> std::convertible_to<bool>;
+};
+
+template <typename T>
 concept HasMutableName = requires(T value) { value.SetName((String*)nullptr); };
 
 template <HasName Named, StringLike Str>
