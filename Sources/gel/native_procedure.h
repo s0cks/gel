@@ -17,11 +17,9 @@
 #include "procedure.h"
 
 namespace gel {
-
 class Runtime;
 class NativeFn;
 using NativeFnList = std::vector<NativeFn*>;
-
 class NativeFn : public Fn {
   friend class Parser;
   friend class Runtime;

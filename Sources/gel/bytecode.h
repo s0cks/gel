@@ -106,9 +106,9 @@ class Bytecode {
     return op() == kInvalid;
   }
 
-#define DEFINE_OP_CHECK(Name)                          \
-  inline constexpr auto Is##Name##Op() const -> bool { \
-    return op() == k##Name;                            \
+#define DEFINE_OP_CHECK(Name)                        \
+  inline constexpr auto Is##Name##Op() const->bool { \
+    return op() == k##Name;                          \
   }
   FOR_EACH_BYTECODE(DEFINE_OP_CHECK)
 #undef DEFINE_OP_CHECK

@@ -1,16 +1,29 @@
 ---
 version: '3'
 tasks:
+  cmake:configure:
+    internal: true
+    cmds:
+    - cmake --preset={{.CMAKE_PRESET}}
+  cmake:build:
+    internal: true
+    cmd: cmake --build . --target {{.CMAKE_TARGET}}
   configure:*:
-    dir: build/
     vars:
       PRESET: "{{index .MATCH 0 }}"
     cmds:
-    - echo "configuring using {{.PRESET}} preset..."
-    - cmake --preset={{.PRESET}} ..
-    silent: true
-  build:
-    dir: build/
+    - task: cmake:configure
+      vars:
+        CMAKE_PRESET: "{{.PRESET}}"
+  build:*:
+    vars:
+      TARGET: "{{index .MATCH 0 }}"
     cmds:
-    - cmake --build .
-    silent: true
+    - task: cmake:build
+      vars:
+        CMAKE_TARGET: "{{.TARGET}}"
+  default:
+    cmds:
+    - task: cmake:build
+      vars:
+        CMAKE_TARGET: "gel"
